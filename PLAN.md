@@ -559,8 +559,13 @@ the direct combat env can produce weak variants.
 **Remaining to run the harness unattended:** `start_seeded_run` still uses standard-mode
 seeded embark (blocked on v0.107.1) — switch it to custom-mode `SetSeed` or seedless
 + read-back; then the seed-search comparison in `validate_real_game_trace.py` can run.
-Note the mod debug work lives in `../STS2MCP` (not the fork repo); preserve it (fork
-Zamiell's STS2MCP under the account, or vendor the two files) so it isn't lost.
+
+**Mod home:** the debug actions are committed to **`github.com/evangambit/STS2MCP`**
+(a fork of `Gennadiyev/STS2MCP`, our commit on top of upstream's v0.107 compat fix).
+Local checkout at `../STS2MCP` has `origin`=fork, `upstream`=Gennadiyev; rebuild with
+`dotnet build STS2_MCP.csproj -c Release -o out/STS2_MCP -p:STS2GameDir="<game dir>"`
+and copy `out/STS2_MCP/STS2_MCP.dll` + `mod_manifest.json` into the game's
+`mods/STS2_MCP/`.
 
 ### Environment quick-reference
 
