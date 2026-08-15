@@ -385,6 +385,183 @@ green, but hasn't been re-verified on a Windows runner here.
 198 unit tests, the decompile/extract/diff patch pipeline, the NativeAOT dylib with
 cross-platform exports, and the Python 3.12 RL env with 17/17 Gym tests.
 
+### STS2MCP mod wired up (2026-08-15)
+
+The oracle/observability mod is live on the local game.
+
+- **Built from source**, not downloaded (official binary v0.4.0 targets game v0.99.1;
+  source tested v0.103.2; local game is v0.107.1). Cloned `Gennadiyev/STS2MCP` to
+  `../STS2MCP` (outside the fork repo) and built against the local v0.107.1
+  assemblies: `dotnet build STS2_MCP.csproj -c Release -o out/STS2_MCP
+  -p:STS2GameDir="<game root>"` → **0 warnings, 0 errors** (the mod's game-API
+  surface still exists in v0.107.1). The csproj already has macOS `.app`-bundle
+  reference paths built in.
+- **Installed** as a subfolder mod (the loader's format, matching MovesViewer et al.):
+  `…/SlayTheSpire2.app/Contents/MacOS/mods/STS2_MCP/{STS2_MCP.dll, mod_manifest.json}`.
+  (The README's "flat dll+json in mods/" is an older loader convention — don't use it.)
+- **Verified live**: launched via `open steam://rungameid/2868840`; API up ~15 s
+  later. `GET /` → `Hello from STS2 MCP v0.4.0`; `GET /api/v1/singleplayer` → live
+  state (`state_type: menu`); `GET /api/v1/compendium` → profile/card data. Base URL
+  `http://localhost:15526`; the emulator scripts use `/api/v1/singleplayer`
+  (GET state / POST action) and `/api/v1/compendium`.
+- **Drove a full run via the API** (2026-08-15): main menu → `singleplayer` →
+  `standard` → `character_select` → Ironclad → embark → Neow → map → into a Monster
+  combat (two Corpse Slugs, 27/29 HP; player 64/80). Menu nav, embark, event/map/combat
+  actions, and live state reads all work — the observability + control loop is proven.
+
+**v0.107.1 script-adaptation findings (for the differential-test phase):**
+
+- **Standard mode blocks custom seeds.** `menu_select confirm` with a `seed` fails:
+  `Seed should not be changed in standard mode!`. Embark *without* a seed instead.
+- **Seed not exposed via the API** at early floors — `compendium.current_run` has no
+  `seed` ("save not found yet"), and no `seed` field appears in singleplayer state.
+  So the seeded-run scripts (`start_real_game_run.py --seed`, and
+  `trace_real_game_run.py` via `start_seeded_run`) don't work as-is on v0.107.1.
+  Need either a seeded/custom mode that exposes the seed, or a post-hoc seed read.
+- **Neow flow has an extra step.** Choosing a blessing then presents a separate
+  `Proceed` event option; `enter_first_combat`'s timing raced past it and timed out.
+  Manual `choose_event_option` sequencing works — the script needs a wait/retry tweak.
+- **Combat state lives under the `battle` key** (`round`, `turn`, `is_play_phase`,
+  `enemies`), not `combat` — confirm the trace scripts read the right key on this version.
+- Replay-based capture (`trace_real_game_run.py`) additionally needs Zamiell's
+  `start_replay` fork of STS2MCP.
+
+**Net:** the mod and API are fully functional on v0.107.1; the *automation scripts*
+need modest adaptation (seed handling + Neow/event timing + `battle` key) before the
+seeded differential-test loop runs unattended.
+
+### Seed alignment — solved, with RNG parity already validated (2026-08-15)
+
+Question: can a real run be aligned to an emulator trace via a seed? **Yes.**
+
+- **Two ways to control the seed.** (1) Custom mode: the mod exposes
+  `menu_select "custom"` (`_customButton`) whose embark path calls
+  `Lobby.SetSeed(seed)` — standard mode rejects this (`Seed should not be changed in
+  standard mode!`), custom accepts a chosen seed. (2) Read-back: after the save
+  writes, the seed is in `compendium.current_run` and the save file.
+- **Careful — the API's reported `seed` is the input field, not the generator.** The
+  save has `/rng/seed = "0"` (custom-input, 0 for a default standard run) *and*
+  `/players[0]/rng/seed = 3452614542` (the derived generation seed). The API surfaces
+  the former. Our API-embarked "standard" run actually ran with input seed **`"0"`**.
+- **RNG parity for seed `"0"` is already validated in-emulator and passing.**
+  `RunEngineTests.RunRngSet_MatchesPythonPinnedNamedStreams`: `new RunRngSet("0")` →
+  `Seed == 3452614542u` (exactly the real save's `players[0].rng.seed`) plus pinned
+  values for every named stream (UpFront, Shuffle, CombatCardGeneration, MonsterAi,
+  …). This test is among the 198 that pass — so the emulator reproduces the real
+  game's RNG streams for this seed. **The hardest parity layer is already done.**
+- **Enemy-stat parity checks out.** Real first combat = two Corpse Slugs at 27 & 29
+  HP; emulator `EnemyDef(CorpseSlug, MinHp: 27, MaxHp: 29)`. Matches.
+- **Encounter-identity quick-compare diverged — but the comparison was confounded,
+  not a proven bug.** Emulator seed-`"0"` first combat via *auto-navigation* was
+  `fuzzy-wurm-crawler` (id 8) vs the real run's `corpse-slugs` (id 9). Two
+  uncontrolled variables: (a) different map path (real: chose node 0; emulator:
+  first-valid-action) — StS2 assigns encounters per node, so path matters; (b)
+  ascension (real A8 vs emulator default ~A0). A real differential test must match
+  **(seed, ascension, action sequence)** — this quick check matched none but seed.
+
+**Takeaway:** alignment is mechanically solved and the RNG foundation is proven. The
+remaining work to run a rigorous live differential test is (1) adapt the driver
+scripts to v0.107.1 (seedless-embark + read-back or custom-mode set-seed; Neow
+timing; `battle` key), (2) pin ascension on both sides, (3) replay the *same* action
+sequence in the emulator and diff — the intended `trace_real_game` → `compare_traces`
+loop.
+
+### The automated harness needs unpublished mod actions (2026-08-15)
+
+Investigated adapting the driver scripts and hit a hard architectural blocker:
+
+- `validate_real_game_trace.py` (the differential harness) drives combats via mod
+  actions **`debug_start_encounter`** and **`debug_force_play_phase`** — it jumps the
+  real game straight into a chosen encounter, then seed-searches for a match.
+- **These actions exist in no public mod.** Not in upstream `Gennadiyev/STS2MCP`,
+  and not in `Zamiell/STS2MCP` (public fork, last commit 2026-05-13). Per the
+  emulator's `AGENTS.md`, Zamiell runs a *local* `D:\Repositories\STS2MCP` with added
+  APIs (`start_replay`, and evidently these debug actions). The harness was written
+  against that unpublished build.
+- So "adapt the scripts" is not sufficient — the harness depends on **mod
+  capabilities that aren't published**. The public mod gives live state + manual
+  navigation + `SetSeed` (custom mode), but not force-encounter setup.
+
+**Concrete direct comparison done anyway** (live seed-0 run's natural Corpse-Slug
+combat vs emulator `Sts2CombatEnv(seed=0, encounter="corpse-slugs")`): **enemies and
+the full 11-card deck match exactly**; the **5-card opening draw differs** — expected,
+because a *direct* combat setup has a different shuffle-RNG context than a *natural
+in-run* combat, and the live run also carries a Neow **Kaleidoscope** relic. This is
+precisely the artifact `debug_start_encounter` exists to eliminate.
+
+**Paths to a rigorous automated differential test (decision needed):**
+1. **Implement `debug_start_encounter` + `debug_force_play_phase` in the public mod
+   ourselves.** We have the decompiled game combat-init code to reference. Unlocks
+   the existing harness directly. Focused mod-dev task; the highest-leverage option.
+2. **Build a bespoke navigation-based test** on the public API: custom-mode set-seed
+   → drive to a natural combat → capture (`battle`) → compare to an emulator *run*
+   (not direct) trace at the same seed/actions. Avoids mod-dev but is more
+   navigation-fragile and needs the v0.107.1 script fixes.
+3. **Spot-check manually** for now (as done above) and defer automation.
+
+### Chose path 1 — debug actions implemented in the mod (2026-08-15)
+
+Reconstructed the two missing debug actions from the decompiled game APIs and added
+them to our STS2MCP build (`../STS2MCP/McpMod.Debug.cs`, wired into the action switch
+in `McpMod.Actions.cs`):
+
+- **`debug_start_encounter`** — looks up the `EncounterModel` by type name from
+  `ModelDb.AllEncounters`, builds `new CombatRoom(encounter.ToMutable(), runState)`,
+  and enters it via `RunManager.Instance.EnterRoom(room)` (fire-and-forget; caller
+  polls). Reconstructed from `CombatRoom`/`RunManager`/`CombatManager` decompiled
+  source.
+- **`debug_force_play_phase`** — reports readiness using the mod's `IsPlayPhase(player)`
+  helper (note: v0.107 moved play-phase onto `player.PlayerCombatState.Phase`, no
+  longer `CombatManager.IsPlayPhase`). The play phase transition happens naturally a
+  beat after entry, so the caller's poll suffices.
+
+Builds clean against v0.107.1; installed; **verified live**: from a seedless-embarked
+run at Neow, `debug_start_encounter CorpseSlugsWeak` lands directly in that combat —
+correct enemies, reaches play phase (`is_play_phase: true`), proper Ironclad opening
+(5-hand / 6-draw / 3 energy), and — because it jumps from the Neow *event* — **no Neow
+relic** (clean Burning-Blood-only state).
+
+**First controlled comparison surfaced a discrepancy — now fully resolved:** live
+`CorpseSlugsWeak` = **2** slugs (27, 29) vs emulator `corpse-slugs` = **3** (27, 28,
+29). Root cause traced (not a model bug):
+
+- The game has `CorpseSlugsWeak` (2 slugs) and `CorpseSlugsNormal` (3 slugs). The
+  emulator models both as one encounter: `CreateCorpseSlugsEncounter(rng, weak)`,
+  `weak = completedCombatRoomsBeforeCurrent is >= 0 and < 3` (early combat → weak).
+- `Sts2CombatEnv` → `Sts2_ResetEncounter` → `CombatFactory.Reset` defaults
+  `completedCombatRoomsBeforeCurrent = -1`, which fails `>= 0` → **always non-weak
+  (3-slug)**. The live combat was the run's first (0 prior) → weak (2-slug). So the
+  comparison was normal-vs-weak, my setup error.
+- **Real harness limitation exposed:** `validate_real_game_trace.emulator_initial_summary`
+  uses that same direct `Sts2CombatEnv`, so it can't produce weak variants — yet it
+  maps many encounters to `*Weak` live combats (`corpse-slugs → CorpseSlugsWeak`,
+  `toadpoles → ToadpolesWeak`, …). It would mismatch enemy counts on every weak-mapped
+  first-floor encounter.
+- (Opening hands also differ, expected: a *direct* emulator combat vs an *in-run* debug
+  combat consume RNG at different offsets.)
+
+**Fix IMPLEMENTED (2026-08-15):** threaded the weak-combat context through the sim so
+the direct combat env can produce weak variants.
+- C#: new `CombatFactory.Reset(state, rng, deckIds, encounterId,
+  completedCombatRoomsBeforeCurrent)` overload → new `NativeCombat.Reset(deckIds,
+  encounterId, completedCombatRooms)` → **new native export `Sts2_ResetEncounterWeak`**
+  (kept `Sts2_ResetEncounter` for ABI stability). Bumped `NATIVE_API_VERSION` 10→11.
+- Python: `native.reset_encounter(..., completed_combat_rooms=-1)` dispatches to the new
+  export when set; `_REQUIRED_NATIVE_API_VERSION` 11; `Sts2CombatEnv(..., completed_combat_rooms=-1)`
+  + a `completed_combat_rooms` reset-option.
+- Verified: `Sts2CombatEnv(seed=0, encounter="corpse-slugs", completed_combat_rooms=0)`
+  → **2 slugs at 27/29, exactly matching the live `CorpseSlugsWeak`**; default (-1)
+  still 3 slugs; **198 C# + 17 Python tests still green**.
+- Remaining (harness wiring): have `emulator_initial_summary` pass
+  `completed_combat_rooms=0` when the live-mapped encounter is a `*Weak` variant, so the
+  seed-search compares like-for-like on first-floor combats.
+
+**Remaining to run the harness unattended:** `start_seeded_run` still uses standard-mode
+seeded embark (blocked on v0.107.1) — switch it to custom-mode `SetSeed` or seedless
++ read-back; then the seed-search comparison in `validate_real_game_trace.py` can run.
+Note the mod debug work lives in `../STS2MCP` (not the fork repo); preserve it (fork
+Zamiell's STS2MCP under the account, or vendor the two files) so it isn't lost.
+
 ### Environment quick-reference
 
 ```
@@ -398,9 +575,10 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 
 ### Next up
 
-1. Re-validate the 6 value-drift tests against fresh v0.107.1 STS2MCP traces, then
-   commit the move to current-patch data (or stay pinned to baseline for now).
-2. Install the STS2MCP mod; capture traces; run the differential harness live against
-   the real game.
+1. Drive a real run through the STS2MCP API (`start_real_game_run.py`), adapting to
+   v0.107.1's menu shape if needed; then `trace_real_game.py` → `compare_traces.py`
+   against a deterministic emulator trace — the first live differential test.
+2. Re-validate the 6 value-drift tests against fresh v0.107.1 traces, then commit the
+   move to current-patch data (or stay pinned to baseline for now).
 3. Begin the AlphaZero layer: MCTS over the sim (C#), then the value/policy net
    (Python) + batched inference bridge, then self-play.
