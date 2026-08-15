@@ -1,0 +1,21 @@
+.env
+*.pyc
+**/bin/
+**/obj/
+__pycache__/
+node_modules/
+out/
+tmp/
+.venv/
+
+# Decompiled game source is MegaCrit's copyrighted code — do not redistribute.
+# Regenerate locally from your own game copy with scripts/decompile.sh.
+/decompiled/
+
+# Generated captures can be large and are usually superseded quickly.
+# Keep only curated trace fixtures intentionally.
+traces/debug/
+traces/full-run/*.json
+!traces/full-run/FULLRUN_INSTANT_5.json
+!traces/full-run/FULLRUN_INSTANT_9.json
+!traces/full-run/FULLRUN_INSTANT_10.json

@@ -1,0 +1,17 @@
+{
+  "name": "slay-the-spire-2-emulator",
+  "version": "1.0.0",
+  "description": "A high-performance emulator for Slay the Spire 2.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zamiell/slay-the-spire-2-emulator.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Zamiell/slay-the-spire-2-emulator/issues"
+  },
+  "homepage": "https://github.com/Zamiell/slay-the-spire-2-emulator#readme",
+  "dependencies": {
+    "prettier": "3.8.3"
+  }
+}

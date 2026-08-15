@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <NativeLib>Shared</NativeLib>
+    <TargetFramework>net9.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="ILLink.Roots.xml" />
+    <!--
+      Native exports are named via [UnmanagedCallersOnly(EntryPoint = "...")] in
+      Interop/NativeExports.cs. ILC honors EntryPoint on every platform (Windows,
+      macOS, Linux), so no per-platform linker alias args are needed. Verified on
+      ILC 9.0.317: nm -gU shows all 33 friendly symbols exported from the .dylib.
+    -->
+    <UnmanagedEntryPointsAssembly Include="Sts2Emulator" />
+  </ItemGroup>
+</Project>

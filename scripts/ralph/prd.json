@@ -1,0 +1,69 @@
+{
+  "project": "Slay the Spire 2 Emulator",
+  "branchName": "ralph/slay-the-spire-2-emulator",
+  "description": "Ralph work queue for the Slay the Spire 2 Emulator project. Add concrete user stories here before running Ralph.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create emulator completion plan",
+      "description": "As a developer, I need a clear plan.md that defines the remaining work needed to make the emulator more complete and reliable.",
+      "acceptanceCriteria": [
+        "Create plan.md at the repository root",
+        "Summarize current emulator scope from README and source structure",
+        "List missing emulator systems and prioritize them",
+        "Break remaining work into actionable implementation milestones",
+        "Do not change runtime behavior"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Implement highest-priority emulator gap from plan",
+      "description": "As a user, I want the highest-priority missing emulator behavior from plan.md implemented so simulation coverage improves.",
+      "acceptanceCriteria": [
+        "Read plan.md and select the highest-priority incomplete implementation item",
+        "Implement the selected emulator behavior with focused changes",
+        "Add or update tests for the implemented behavior",
+        "Run bash lint-and-test.sh successfully",
+        "Update plan.md to mark the item complete or record remaining work"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Expand combat behavior coverage",
+      "description": "As a user, I want more Slay the Spire 2 combat mechanics modeled accurately in the native emulator.",
+      "acceptanceCriteria": [
+        "Select the next highest-priority combat mechanic from plan.md",
+        "Implement the mechanic in the C# emulator",
+        "Expose any required state through interop or observations if needed",
+        "Add regression tests",
+        "Run bash lint-and-test.sh successfully",
+        "Update plan.md"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Expand run-level behavior coverage",
+      "description": "As a user, I want more run-level systems modeled so training and evaluation better approximate real Slay the Spire 2 runs.",
+      "acceptanceCriteria": [
+        "Select the next highest-priority run-level system from plan.md",
+        "Implement deterministic game behavior in the C# emulator and touch Python only for bindings or wrappers",
+        "Keep observations/actions backward-compatible unless plan.md explicitly justifies a change",
+        "Add or update tests",
+        "Run bash lint-and-test.sh successfully",
+        "Update plan.md"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
