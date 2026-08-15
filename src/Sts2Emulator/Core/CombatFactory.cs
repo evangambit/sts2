@@ -174,6 +174,32 @@ public static class CombatFactory
         Reset(state, rng, deckIds, encounterId, []);
     }
 
+    // Same as the deck+encounter reset but lets callers set the "weak" combat
+    // context. completedCombatRoomsBeforeCurrent in [0,3) selects the weak
+    // encounter variant (e.g. CorpseSlugsWeak = 2 slugs vs Normal = 3); -1 (the
+    // default elsewhere) yields the normal variant.
+    public static void Reset(
+        CombatState state,
+        Random rng,
+        ReadOnlySpan<int> deckIds,
+        int? encounterId,
+        int completedCombatRoomsBeforeCurrent
+    )
+    {
+        Reset(
+            state,
+            rng,
+            deckIds,
+            encounterId,
+            [],
+            StartingPlayerHp,
+            StartingPlayerMaxHp,
+            [],
+            playerGold: 0,
+            completedCombatRoomsBeforeCurrent: completedCombatRoomsBeforeCurrent
+        );
+    }
+
     public static void Reset(
         CombatState state,
         Random rng,

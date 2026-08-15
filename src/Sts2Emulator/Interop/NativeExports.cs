@@ -34,7 +34,7 @@ public static class NativeExports
     public const int MAX_ENEMIES = 6;
     public const int MAX_PLAYER_BUFFS = 10;
     public const int MAX_ENEMY_BUFFS = 5;
-    public const int NATIVE_API_VERSION = 10;
+    public const int NATIVE_API_VERSION = 11;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -74,6 +74,14 @@ public static class NativeExports
             State.NicheHpRng = null;
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId);
+        }
+
+        public void Reset(ReadOnlySpan<int> deckIds, int encounterId, int completedCombatRooms)
+        {
+            Rng = new CountingRandom(Seed);
+            State.NicheHpRng = null;
+            LastPlayerWon = false;
+            CombatFactory.Reset(State, Rng, deckIds, encounterId, completedCombatRooms);
         }
 
         public void Reset(ReadOnlySpan<int> deckIds, int encounterId, ReadOnlySpan<int> relicIds)
@@ -124,6 +132,18 @@ public static class NativeExports
     {
         var combat = _pool[handle]!;
         combat.Reset(StarterDeckIds, encounterId);
+        WriteObs(combat.State, obsBuf);
+    }
+
+    // Like Sts2_ResetEncounter but with the weak-combat context:
+    // completedCombatRooms in [0,3) selects weak encounter variants (fewer/weaker
+    // enemies on early floors); -1 keeps the normal variant.
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ResetEncounterWeak")]
+    public static unsafe void Sts2_ResetEncounterWeak(
+        int handle, int encounterId, int completedCombatRooms, int* obsBuf)
+    {
+        var combat = _pool[handle]!;
+        combat.Reset(StarterDeckIds, encounterId, completedCombatRooms);
         WriteObs(combat.State, obsBuf);
     }
 

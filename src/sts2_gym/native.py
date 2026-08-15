@@ -11,7 +11,7 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 10
+_REQUIRED_NATIVE_API_VERSION = 11
 _REQUIRED_RUN_NATIVE_API_VERSION = 8
 
 
@@ -137,6 +137,14 @@ _lib.Sts2_Reset.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_int)]
 
 _lib.Sts2_ResetEncounter.restype = None
 _lib.Sts2_ResetEncounter.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
+
+_lib.Sts2_ResetEncounterWeak.restype = None
+_lib.Sts2_ResetEncounterWeak.argtypes = [
+    ctypes.c_int,
     ctypes.c_int,
     ctypes.c_int,
     ctypes.POINTER(ctypes.c_int),
@@ -312,8 +320,20 @@ def reset(handle: int, obs_buf: ctypes.Array) -> None:
     _lib.Sts2_Reset(handle, obs_buf)
 
 
-def reset_encounter(handle: int, encounter_id: int, obs_buf: ctypes.Array) -> None:
-    _lib.Sts2_ResetEncounter(handle, encounter_id, obs_buf)
+def reset_encounter(
+    handle: int,
+    encounter_id: int,
+    obs_buf: ctypes.Array,
+    completed_combat_rooms: int = -1,
+) -> None:
+    # completed_combat_rooms in [0,3) selects weak encounter variants (fewer/weaker
+    # enemies on early floors); -1 keeps the normal variant (unchanged default).
+    if completed_combat_rooms == -1:
+        _lib.Sts2_ResetEncounter(handle, encounter_id, obs_buf)
+    else:
+        _lib.Sts2_ResetEncounterWeak(
+            handle, encounter_id, completed_combat_rooms, obs_buf
+        )
 
 
 def reset_with_deck(handle: int, deck_ids: list[int], obs_buf: ctypes.Array) -> None:

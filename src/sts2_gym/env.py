@@ -110,11 +110,15 @@ class Sts2CombatEnv(gym.Env):
         seed: int = 0,
         max_episode_steps: int = MAX_EPISODE_STEPS,
         encounter: int | str | None = None,
+        completed_combat_rooms: int = -1,
     ):
         super().__init__()
         self._seed = seed
         self._max_episode_steps = max_episode_steps
         self._forced_encounter = self._normalize_encounter(encounter)
+        # completed_combat_rooms in [0,3) selects weak encounter variants (early-floor
+        # combats, e.g. CorpseSlugsWeak); -1 keeps the normal variant.
+        self._completed_combat_rooms = completed_combat_rooms
         self._elapsed_steps = 0
         self._handle: int | None = None
         self._obs_buf = (ctypes.c_int * native.OBS_SIZE)()
@@ -140,10 +144,17 @@ class Sts2CombatEnv(gym.Env):
         encounter_id = self._normalize_encounter(encounter)
         if encounter_id is None:
             encounter_id = self._forced_encounter
+        completed = (
+            options.get("completed_combat_rooms")
+            if options is not None and "completed_combat_rooms" in options
+            else self._completed_combat_rooms
+        )
         if encounter_id is None:
             native.reset(self._handle, self._obs_buf)
         else:
-            native.reset_encounter(self._handle, encounter_id, self._obs_buf)
+            native.reset_encounter(
+                self._handle, encounter_id, self._obs_buf, completed
+            )
         return self._obs(), self._info()
 
     def step(self, action: int):
