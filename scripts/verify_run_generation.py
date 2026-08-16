@@ -32,6 +32,15 @@ LIST_NORMAL_ENCOUNTERS = 11
 LIST_ELITE_ENCOUNTERS = 12
 LIST_EVENTS = 13
 LIST_GENERATION_SUMMARY = 14  # [act, boss_encounter_id, map_node_count]
+LIST_MAP_NODES = 15  # (col, row, node_type) triples
+
+# RunConstants node types -> the save's MapPointType strings.
+# The emulator carries the start node as NodeNone and calls the treasure row
+# NodeRelic; the save names them "ancient" and "treasure".
+NODE_TYPE_NAMES = {
+    0: "ancient", 1: "monster", 2: "elite", 3: "rest_site",
+    4: "shop", 5: "treasure", 6: "boss", 7: "unknown",
+}
 
 ACT_NAMES = {1: "OVERGROWTH", 2: "UNDERDOCKS"}
 
@@ -100,9 +109,48 @@ def emulator_generation(seed: str) -> dict[str, Any]:
             "normal": list(native.run_state_list(handle, LIST_NORMAL_ENCOUNTERS, 64)),
             "elite": list(native.run_state_list(handle, LIST_ELITE_ENCOUNTERS, 64)),
             "events": list(native.run_state_list(handle, LIST_EVENTS, 64)),
+            "map": list(native.run_state_list(handle, LIST_MAP_NODES, 1024)),
         }
     finally:
         native.run_destroy(handle)
+
+
+def compare_map(emu_triples: list[int], saved_map: dict[str, Any]) -> bool:
+    """Compare map structure row by row.
+
+    The save keeps `start` and `boss` outside `points`, so fold them in — the
+    emulator carries them as ordinary nodes in the same grid.
+    """
+    live: dict[tuple[int, int], str] = {}
+    for pt in saved_map["points"]:
+        live[(pt["coord"]["col"], pt["coord"]["row"])] = pt["type"]
+    for key in ("start", "boss"):
+        node = saved_map.get(key)
+        if node:
+            live[(node["coord"]["col"], node["coord"]["row"])] = node["type"]
+
+    emu: dict[tuple[int, int], str] = {}
+    for i in range(0, len(emu_triples), 3):
+        col, row, node_type = emu_triples[i : i + 3]
+        emu[(col, row)] = NODE_TYPE_NAMES.get(node_type, f"<{node_type}>")
+
+    print(f"\n=== map — emulator {len(emu)} nodes vs live {len(live)} "
+          f"(points + start + boss) ===")
+    rows = sorted({r for _, r in live} | {r for _, r in emu})
+    matched = True
+    for row in rows:
+        live_row = {c: t for (c, r), t in live.items() if r == row}
+        emu_row = {c: t for (c, r), t in emu.items() if r == row}
+        same = live_row == emu_row
+        matched &= same
+        if same:
+            print(f"  row {row:2}: ok  ({len(live_row)} nodes)")
+        else:
+            fmt = lambda d: " ".join(f"c{c}:{d[c]}" for c in sorted(d)) or "-"
+            print(f"  row {row:2}: MISMATCH")
+            print(f"           emu  {fmt(emu_row)}")
+            print(f"           live {fmt(live_row)}")
+    return matched
 
 
 def compare_sequence(
@@ -163,11 +211,7 @@ def main() -> None:
     print(f"  emulator {emu_boss} vs live {rooms['boss_id']} "
           f"{'ok' if results['boss'] else 'MISMATCH'}")
 
-    print("\n=== map ===")
-    live_points = len(act["saved_map"]["points"])
-    results["map"] = emu["map_nodes"] == live_points
-    print(f"  emulator {emu['map_nodes']} nodes vs live {live_points} points "
-          f"{'ok' if results['map'] else 'MISMATCH'}")
+    results["map"] = compare_map(emu["map"], act["saved_map"])
 
     print("\n" + "=" * 60)
     for key, ok in results.items():

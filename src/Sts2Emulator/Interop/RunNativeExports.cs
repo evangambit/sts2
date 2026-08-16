@@ -167,6 +167,18 @@ public static class RunNativeExports
                 [run.State.Act, run.State.BossEncounterId, run.State.MapNodes.Count],
                 output
             ),
+            // 15: the whole map as (col, row, nodeType) triples, ordered so the
+            // readout is stable. Lets the differential test compare map *structure*
+            // against a live save's saved_map.points, not just a node count.
+            15 => WriteIntArray(
+                [
+                    .. run
+                        .State.MapNodes.Values.OrderBy(n => n.Row)
+                        .ThenBy(n => n.Col)
+                        .SelectMany(n => new[] { n.Col, n.Row, n.NodeType }),
+                ],
+                output
+            ),
             _ => -3,
         };
     }

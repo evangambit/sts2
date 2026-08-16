@@ -219,7 +219,7 @@ front is now *run generation*: what the engine rolls up front for a seed.
 | normal encounters | **PASS — 15/15 in order** |
 | elite encounters | **PASS — 15/15 in order** |
 | boss | **PASS** (TheKin) |
-| map | FAIL — 66 nodes vs 62 |
+| map | FAIL — 13/16 rows exact; rows 10-12 differ |
 
 1. ~~Elite pool / boss selection~~ — **DONE**, both were the same root cause and are
    now exact (regression test `RunGeneration_MatchesLiveCaptureForAbcdef`). Two defects,
@@ -240,16 +240,33 @@ front is now *run generation*: what the engine rolls up front for a seed.
      wrong elite draw count silently corrupts the boss. Fixing the elites fixed the boss.
    - ⚠️ Underdocks had both defects too and is fixed by the same rule, but is
      **unverified** — the only live capture so far is an Overgrowth run.
-2. **Map generation is unverified and its calibration is stale.** 66 nodes vs the live
-   62 points. `RunMapGenerator` contains fudges (`for i < 202: upFront.NextDouble()`,
-   then 57/60 `NextInt` calls) that were tuned to reproduce CallCounts *under the old,
-   wrong RNG* — they are now meaningless. It also does not use the game's `act_N_map`
-   stream (`RunRngSet.ActMapRng`); it seeds off the bare run seed. The live map is
-   7 wide x 16 high, start `(col 3, row 0)` type `ancient`, 62 points; `saved_map.points`
-   gives the full graph with `children`, so exact structural comparison is possible.
-   **Also note the act model looks wrong**: the emulator flips a coin between
-   Overgrowth and Underdocks, but the live save shows a fixed 3-act sequence
-   `OVERGROWTH -> HIVE -> GLORY`, with no Underdocks at all.
+2. **Map generation — 13/16 rows exact; the bug is isolated to pruning.**
+   `verify_run_generation.py` now compares map *structure* row by row (native list 15
+   exposes the whole grid as `(col,row,type)` triples), not just a node count.
+   **Everything upstream of pruning is already correct** and was checked:
+   - The map uses the right stream (`ActMapRng` -> `act_1_map`) — an earlier note in
+     this file claiming it seeds off the bare run seed was wrong; that applied to the
+     act coin-flip, not the map.
+   - `GetMapPointTypes` draws match exactly and in order: `NextGaussianInt(7,1,6,7)`
+     for rests then `NextGaussianInt(12,1,10,14)` for unknowns.
+   - Counts match the live map: 8 elites (A8 `SwarmingElites` -> `round(5*1.6)`),
+     3 shops, 12 unknowns, 6 assigned rests + 5 forced on the final row.
+   - Path generation matches: 7 paths, the `i==1` distinct-start retry, and
+     `StableShuffle([-1,0,1])` per step with the same clamping and loop bounds.
+   - Forced rows match live exactly: row 1 all monster, row 9 all treasure,
+     row 15 all rest.
+   **What is left:** the emulator ends up with **2 extra nodes** (rows 10 and 11), i.e.
+   pruning removes 2 fewer segments than the game. Rows 1-9 and 13-16 are exact, so the
+   RNG stream is in sync either side of it. The column differences in rows 10-11 are
+   *downstream* of that count gap — `MapPostProcessing.SpreadAdjacentMapPoints` only
+   moves points to maximise gaps, it never removes them, so it re-spaces a row that has
+   the wrong number of nodes in it. **Fix `FindMatchingSegments` / `PrunePaths` in
+   `RunMapGenerator` against `decompiled/MegaCrit.Sts2.Core.Map/MapPathPruning.cs`
+   (~380 lines).** The surrounding `PruneAndRepair` loop and the repair helpers are
+   already faithful.
+   Note the emulator names two node types differently from the save: the start node is
+   `NodeNone` (save: `ancient`) and the treasure row is `NodeRelic` (save: `treasure`).
+   Cosmetic, but it made an earlier diff look worse than it was.
 3. **Harden the debug/menu mod actions.** Partly done — `start_real_game_run.settle()`
    guards menu transitions, the abandon path is no longer driven, and the embark crash
    has a documented route around it. Remaining: the crash itself is a *game* bug (see
