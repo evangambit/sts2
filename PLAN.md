@@ -472,8 +472,25 @@ path; and gave the direct combat env (`NativeCombat`, which set `NicheHpRng=null
 reason `fixedHp` existed) a **seed-derived Niche stream** (`GameRng(seed,"niche")`) so
 the unique-HP roll applies there too. Verified: corpse-slugs (weak) now yields unique
 HP across {27,28,29}, all orderings, no duplicates — matching the live game. 198 C# +
-17 Python tests pass. **Remaining:** *exact* seed-for-seed match still needs custom-mode
-seeded embark (below) to align a specific live combat with the emulator.
+17 Python tests pass.
+
+### Custom-run seeded embark — SOLVED (2026-08-15)
+
+Built full custom-run screen support into the STS2MCP fork (`McpMod.CustomRun.cs` +
+routing in `McpMod.Actions.cs` + state reporting in `McpMod.StateBuilder.cs`):
+`NCustomRunScreen` now reports as `menu_screen: "character_select"` (`custom_run: true`,
+with characters / `seed_input` / `ascension`), and `menu_select` drives it — select
+character, `confirm` with a seed (via `Lobby.SetSeed`, which custom mode *accepts*),
+set ascension. **Verified live:** `singleplayer → custom → IRONCLAD → confirm(seed=
+"ABCDEF")` embarks with `current_run.seed == "ABCDEF"` (gen seed 3334281563).
+
+**Exact-match feasibility PROVEN:** new test `RunRngSet_DerivesGameSeedForStringSeed`
+asserts `RunRngSet("ABCDEF").Seed == 3334281563u` — the emulator's string→seed
+derivation matches the live game for a non-trivial seed (199 C# tests pass). So with
+(a) faithful enemy-HP rolls, (b) arbitrary seed control in the game, and (c) matched
+seed derivation, **exact seed-for-seed differential verification is unblocked.** The
+remaining work is the comparison itself: seed the emulator run env with the same string
+seed, replay the same actions, and diff — i.e. the full-run replay harness (docs/replay-verification.md).
 
 ### Seed alignment — solved, with RNG parity already validated (2026-08-15)
 
