@@ -488,9 +488,30 @@ set ascension. **Verified live:** `singleplayer → custom → IRONCLAD → conf
 asserts `RunRngSet("ABCDEF").Seed == 3334281563u` — the emulator's string→seed
 derivation matches the live game for a non-trivial seed (199 C# tests pass). So with
 (a) faithful enemy-HP rolls, (b) arbitrary seed control in the game, and (c) matched
-seed derivation, **exact seed-for-seed differential verification is unblocked.** The
-remaining work is the comparison itself: seed the emulator run env with the same string
-seed, replay the same actions, and diff — i.e. the full-run replay harness (docs/replay-verification.md).
+seed derivation, **exact seed-for-seed differential verification is unblocked.**
+
+### First exact-match confirmed (2026-08-15)
+
+Ran the live A/B: custom-embark seed **`ABCDEF`** → `debug_start_encounter
+CorpseSlugsWeak` → live combat = enemies **[28, 29]**, hand [Bash, Defend, Defend,
+Strike, Strike]. Emulator `Sts2CombatEnv(seed=3334281563, encounter="corpse-slugs",
+completed_combat_rooms=0)` (3334281563 = the derived gen seed, and the combat env's
+`NicheHpRng = GameRng(3334281563,"niche")` = the run's Niche stream) → enemies **[28,
+29]**. **ENEMY HP EXACT MATCH** — same values, same order, from a real seed. This
+proves the whole chain (seed derivation + Niche stream + HP-roll fix) is bit-exact.
+
+**Opening hand does NOT yet match** (live 2 Defend/2 Strike vs emu 3 Defend/1 Strike):
+the direct combat env shuffles the draw pile with its main rng via
+`CardEffects.ShufflePile`, whereas the game (and the emulator run env) pre-shuffle with
+the named **Shuffle** stream (`State.Rng.Shuffle.Shuffle(deck)`, then `deckPreShuffled:
+true`). **Follow-on:** wire the combat env to pre-shuffle with `GameRng(seed,"shuffle")`
+using the same `Shuffle` algorithm (not `ShufflePile`) — the Shuffle-stream analog of
+the Niche fix. Note the algorithm must match, so it's a small restructure, not a
+one-liner.
+
+**Robustness note:** rapid abandon→re-embark→`debug_start_encounter` cycling crashes
+the game (error popup); a single clean sequence with generous waits is stable. Harden
+the debug/menu actions with settled-state guards before running unattended sweeps.
 
 ### Seed alignment — solved, with RNG parity already validated (2026-08-15)
 
