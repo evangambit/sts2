@@ -464,10 +464,16 @@ opts out with `fixedHp: 27/29`,** which takes a broken branch — uses the fixed
 `ExceptWith`), desyncing the Niche stream for the next slug too.
 
 **This is NOT an ordering/comparison issue** — order-insensitive matching would mask it
-and still couldn't produce a 28. **Fix:** drop `fixedHp` for any enemy with
-`MinHp != MaxHp` so it uses the existing correct roll path; audit all `fixedHp:` sites
-(valid only when `MinHp == MaxHp`). Verifying the fix end-to-end needs a *seed-aligned*
-live combat → ties to the pending custom-mode seeded embark.
+and still couldn't produce a 28.
+
+**FIX APPLIED (commit `123fecf`):** dropped `fixedHp` from all ranged enemies
+(CorpseSlug, Tracker/Assassin/Brute RubyRaider, FossilStalker) so they take the roll
+path; and gave the direct combat env (`NativeCombat`, which set `NicheHpRng=null` — the
+reason `fixedHp` existed) a **seed-derived Niche stream** (`GameRng(seed,"niche")`) so
+the unique-HP roll applies there too. Verified: corpse-slugs (weak) now yields unique
+HP across {27,28,29}, all orderings, no duplicates — matching the live game. 198 C# +
+17 Python tests pass. **Remaining:** *exact* seed-for-seed match still needs custom-mode
+seeded embark (below) to align a specific live combat with the emulator.
 
 ### Seed alignment — solved, with RNG parity already validated (2026-08-15)
 
