@@ -500,14 +500,18 @@ completed_combat_rooms=0)` (3334281563 = the derived gen seed, and the combat en
 29]**. **ENEMY HP EXACT MATCH** — same values, same order, from a real seed. This
 proves the whole chain (seed derivation + Niche stream + HP-roll fix) is bit-exact.
 
-**Opening hand does NOT yet match** (live 2 Defend/2 Strike vs emu 3 Defend/1 Strike):
-the direct combat env shuffles the draw pile with its main rng via
-`CardEffects.ShufflePile`, whereas the game (and the emulator run env) pre-shuffle with
-the named **Shuffle** stream (`State.Rng.Shuffle.Shuffle(deck)`, then `deckPreShuffled:
-true`). **Follow-on:** wire the combat env to pre-shuffle with `GameRng(seed,"shuffle")`
-using the same `Shuffle` algorithm (not `ShufflePile`) — the Shuffle-stream analog of
-the Niche fix. Note the algorithm must match, so it's a small restructure, not a
-one-liner.
+**Opening hand — Shuffle stream now wired (commit `6e53ee2`), exact match still pending.**
+Gave the combat env `ShuffleRng = GameRng(seed,"shuffle")` and shuffle with it
+(`ShufflePile` is the same Fisher-Yates as `GameRng.Shuffle`). The hand now uses the
+Shuffle stream but doesn't match live yet. Two remaining factors identified:
+1. **Starter-deck pre-shuffle order.** The game's `Ironclad.StartingDeck` is a **10-card**
+   array (5 Strike, 4 Defend, Bash) and **inserts Ascender's Bane at ascension**; the
+   emulator hardcodes an 11-card deck with Bane fixed at the end. Fisher-Yates on a
+   different pre-shuffle order yields a different hand.
+2. **Shuffle stream call-count at combat start** — the emulator uses a fresh
+   `GameRng(seed,"shuffle")` (CallCount 0); confirm the game's Shuffle stream is also
+   fresh at the first combat (Niche was, which is why HP matched).
+Resolving these gives full combat exact-match; enemy HP already matches exactly.
 
 **Robustness note:** rapid abandon→re-embark→`debug_start_encounter` cycling crashes
 the game (error popup); a single clean sequence with generous waits is stable. Harden
