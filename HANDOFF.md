@@ -209,17 +209,49 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 front is now *run generation*: what the engine rolls up front for a seed.
 
 `scripts/verify_run_generation.py` compares the emulator against a live
-`current_run.save` — which is plain JSON and records exactly what the game generated
+`current_run.save` — plain JSON recording exactly what the game generated
 (`acts[i].id`, `rooms.{normal,elite}_encounter_ids`, `boss_id`, `saved_map.points`).
-**No need to drive the game**; just have a run saved. Current result for `"ABCDEF"`:
+**No need to drive the game**; just have a run saved, and note the crashed-embark save
+is still a valid capture. Verified on **two seeds**:
 
-| section | result |
-|---|---|
-| act | PASS (OVERGROWTH) |
-| normal encounters | **PASS — 15/15 in order** |
-| elite encounters | **PASS — 15/15 in order** |
-| boss | **PASS** (TheKin) |
-| map | **PASS — every row, column and type** |
+| section | "ABCDEF" (Overgrowth, A8) | "AAB" (Overgrowth, A8) |
+|---|---|---|
+| act | PASS | PASS |
+| normal encounters | PASS 15/15 | PASS 15/15 |
+| elite encounters | PASS 15/15 | PASS 15/15 |
+| boss | PASS (TheKin) | PASS (CeremonialBeast) |
+| map | PASS (exact) | 15/16 rows; 61/61 nodes, row 1 one column off |
+
+**The second seed earned its keep — it caught three defects one sample could not:**
+- **Act selection was wrong in mechanism and stream.** It was `NextBool()` on the
+  *unnamed* raw-seed stream. The game uses `rng.NextItem` over the unlocked acts for
+  that index on a dedicated **`"act_selection"`** stream
+  (`StartRunLobby.BeginRunLocally`). "ABCDEF" passed by luck — with a two-way roll a
+  single sample cannot distinguish a correct model from a coin flip.
+  ⚠️ **Not seed-pure**: the candidate list is whatever the *profile* has unlocked, and
+  the game force-selects an unlocked-but-undiscovered alt act instead of rolling. We
+  model the mature-profile case. Same caveat as boss discovery.
+- **`NibbitsNormal` was wrongly tagged `Nibbit`.** Only `NibbitsWeak` declares that tag;
+  `NibbitsNormal` overrides nothing and inherits the empty default. The bogus tag made
+  the no-repeat rule block the game's legitimate `NibbitsWeak -> NibbitsNormal` run,
+  shifting the whole remaining sequence by one (2/15 -> 15/15 once fixed).
+- **The map stream was keyed on act *identity*, not act *index*** (`state.Act - 1`).
+  An Underdocks act 1 would have read `"act_2_map"` and desynced the entire map. The
+  index for act 1 is always 0.
+- Two more invented names corrected: `Nibbit` -> `NibbitsWeak`, `Nibbits` ->
+  `NibbitsNormal` (old Python encounter strings still resolve as aliases).
+
+**Open residual — "AAB" map row 1.** Node counts match exactly (61 vs 61) and 15 of 16
+rows are column-for-column identical. Row 1 is `{0,3,5}` where live is `{1,3,5}`. The
+raw path starts give 5 distinct columns `{0,1,2,3,5}` and pruning cuts row 1 to 3 — the
+game drops `{0,2}`, we drop `{1,2}`. So a single pruning choice differs. Ruled out:
+`StraightenPaths` (that node is not a kink — its parent is at col 3, child at col 0),
+`SpreadAdjacentMapPoints` (`GetAllowedPositions` intersects to empty there, so it cannot
+move), and `CenterGrid` (shifts the whole grid uniformly, so it cannot affect one row).
+Best remaining lead: **path/segment enumeration order**. The game stores
+`MapPoint.parents`/`Children` in a `HashSet<MapPoint>` while we use `List`, so
+`FindAllPaths` may enumerate children in a different order, changing which segment
+survives `PruneAllButLast`.
 
 1. ~~Elite pool / boss selection~~ — **DONE**, both were the same root cause and are
    now exact (regression test `RunGeneration_MatchesLiveCaptureForAbcdef`). Two defects,

@@ -13,7 +13,7 @@ MAX_EPISODE_STEPS = 50
 ENCOUNTER_NAMES = {
     0: "cultists",
     1: "chompers",
-    2: "nibbit",
+    2: "nibbits-weak",
     3: "slimes",
     4: "exoskeletons",
     5: "inklets",
@@ -26,7 +26,7 @@ ENCOUNTER_NAMES = {
     12: "seapunk",
     13: "toadpoles",
     14: "mawler",
-    15: "nibbits",
+    15: "nibbits-normal",
     16: "slimes-normal",
     17: "flyconid-normal",
     18: "snapping-jaxfruit-normal",
@@ -111,6 +111,8 @@ ENCOUNTER_IDS.update(
         "slime-and-flyconid": ENCOUNTER_IDS["flyconid-normal"],
         "jaxfruit-and-flyconid": ENCOUNTER_IDS["snapping-jaxfruit-normal"],
         "shrinker-and-fuzzy": ENCOUNTER_IDS["overgrowth-crawlers"],
+        "nibbit": ENCOUNTER_IDS["nibbits-weak"],
+        "nibbits": ENCOUNTER_IDS["nibbits-normal"],
     }
 )
 

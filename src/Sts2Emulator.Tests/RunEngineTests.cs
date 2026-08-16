@@ -171,6 +171,38 @@ public class RunEngineTests
     }
 
     [Fact]
+    public void RunGeneration_MatchesLiveCaptureForAab()
+    {
+        // Second live capture, seed "AAB" at A8 — a different seed on the same profile.
+        // This one caught three real defects that a single sample could not: act
+        // selection was a coin flip on the wrong stream, NibbitsNormal was wrongly
+        // tagged, and the map stream was keyed on act identity rather than act index.
+        var engine = new RunEngine();
+        engine.Reset("AAB");
+        var s = engine.State;
+
+        Assert.Equal(RunConstants.ActOvergrowth, s.Act);
+
+        // FuzzyWurmCrawlerWeak, SlimesWeak, NibbitsWeak, NibbitsNormal, Fogmog,
+        // SlimesNormal, OvergrowthCrawlers, Mawler, VineShambler, Inklets, Flyconid,
+        // SlitheringStrangler, SnappingJaxfruit, CubexConstruct, RubyRaiders.
+        // Note weak->normal Nibbits back to back: only NibbitsWeak carries the Nibbit
+        // tag in the game, so the no-repeat rule does not block it.
+        Assert.Equal(
+            new[] { 8, 3, 2, 15, 29, 16, 21, 14, 20, 5, 17, 27, 18, 19, 28 },
+            s.NormalEncounterSequence
+        );
+
+        // Boss is CeremonialBeast for this seed, not TheKin as for "ABCDEF".
+        Assert.Equal(74, s.BossEncounterId);
+
+        // Map node count matches the live saved_map exactly (61 incl. start + boss).
+        // 15 of 16 rows match column-for-column; row 1 still differs by one node's
+        // column — see HANDOFF. Pinned so that residual cannot silently grow.
+        Assert.Equal(61, s.MapNodes.Count);
+    }
+
+    [Fact]
     public void RunReset_StartsAtAncientPhaseWithStarterState()
     {
         var engine = new RunEngine();

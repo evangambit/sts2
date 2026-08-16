@@ -28,7 +28,7 @@ public static class CombatFactory
     {
         Cultists,
         Chompers,
-        Nibbit,
+        NibbitsWeak,
         Slimes,
         Exoskeletons,
         Inklets,
@@ -41,7 +41,7 @@ public static class CombatFactory
         Seapunk,
         Toadpoles,
         Mawler,
-        Nibbits,
+        NibbitsNormal,
         SlimesNormal,
         FlyconidNormal,
         SnappingJaxfruitNormal,
@@ -117,7 +117,7 @@ public static class CombatFactory
 
     private static readonly ActOneEncounter[] OvergrowthWeakEncounters =
     [
-        ActOneEncounter.Nibbit,
+        ActOneEncounter.NibbitsWeak,
         ActOneEncounter.Slimes,
         ActOneEncounter.ShrinkerBeetle,
         ActOneEncounter.FuzzyWurmCrawler,
@@ -453,7 +453,7 @@ public static class CombatFactory
                 CreateChomper(rng, new Intent(IntentType.Debuff, 3), moveIndex: 1),
             ],
 
-            ActOneEncounter.Nibbit =>
+            ActOneEncounter.NibbitsWeak =>
             [
                 CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Attack, 13)),
             ],
@@ -515,7 +515,7 @@ public static class CombatFactory
                 CreateEnemy(KE.Mawler, rng, new Intent(IntentType.Attack, 10)),
             ],
 
-            ActOneEncounter.Nibbits =>
+            ActOneEncounter.NibbitsNormal =>
             [
                 CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Attack, 7), moveIndex: 1),
                 CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Buff, 0), moveIndex: 2),

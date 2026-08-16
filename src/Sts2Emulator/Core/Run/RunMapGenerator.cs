@@ -6,11 +6,18 @@ public static class RunMapGenerator
 {
     public static void SelectActAndGenerateRooms(RunState state)
     {
-        // GameRng with no stream name seeds exactly as the old raw-seed DotNetRandom
-        // did, but on the game's actual generator and with the game's NextBool
-        // (Next(2) == 0) rather than MegaRandom's sign-bit variant.
-        var actRng = new GameRng(state.Rng.Seed);
-        bool underdocks = actRng.NextBool();
+        // Act 1 is picked by StartRunLobby.BeginRunLocally from the *unlocked* acts for
+        // index 0, via rng.NextItem on a dedicated "act_selection" stream — not a coin
+        // flip on the raw seed, which is what this used to do.
+        //
+        // Caveat: like boss discovery, this is not a pure function of the seed. The
+        // candidate list is whatever the profile has unlocked, and the game
+        // force-selects an unlocked-but-undiscovered alt act instead of rolling. We
+        // model the mature-profile case (both Act-1 options unlocked and discovered),
+        // which is what the differential captures are taken on. A profile without
+        // Underdocks unlocked would always get Overgrowth.
+        var actRng = new GameRng(state.Rng.Seed, "act_selection");
+        bool underdocks = actRng.NextInt(0, 2) == 1;
         state.Act = underdocks ? RunConstants.ActUnderdocks : RunConstants.ActOvergrowth;
         state.EventSequence = GenerateEventSequence(state, underdocks);
         state.EventSequenceIndex = 0;
@@ -196,7 +203,12 @@ public static class RunMapGenerator
         GetOrCreate(state, RunConstants.MapStartCol, RunConstants.MapBossRow).NodeType =
             RunConstants.NodeBoss;
 
-        var mapRng = state.Rng.ActMapRng(Math.Max(0, state.Act - 1));
+        // The game keys this stream on the act *index* — `act_{CurrentActIndex + 1}_map`
+        // — not on which act was rolled. This used to pass `state.Act - 1`, conflating
+        // the two: an Underdocks act 1 would have read "act_2_map" instead of
+        // "act_1_map" and desynced the entire map. The emulator only models act 1, so
+        // the index is always 0.
+        var mapRng = state.Rng.ActMapRng(0);
         int restCount = mapRng.NextGaussianInt(7, 1, 6, 7);
         int unknownCount = mapRng.NextGaussianInt(12, 1, 10, 14);
 
@@ -1347,14 +1359,17 @@ public static class RunMapGenerator
     private static HashSet<string> Tags(int encounterId) =>
         encounterId switch
         {
-            2 => ["Nibbit"],
-            3 => ["Slimes"],
-            8 => ["Crawler"],
-            9 => ["Slugs"],
-            11 => ["Shrinker"],
+            2 => ["Nibbit"], // NibbitsWeak
+            3 => ["Slimes"], // SlimesWeak
+            8 => ["Crawler"], // FuzzyWurmCrawlerWeak
+            9 => ["Slugs"], // CorpseSlugs
+            11 => ["Shrinker"], // ShrinkerBeetleWeak
             12 => ["Seapunk"],
-            15 => ["Nibbit"],
-            16 => ["Slimes"],
+            // 15 is NibbitsNormal, which declares NO Tags in the game — only
+            // NibbitsWeak is tagged Nibbit. Tagging it here wrongly blocked the game's
+            // legitimate NibbitsWeak -> NibbitsNormal run, shifting the whole
+            // remaining sequence by one.
+            16 => ["Slimes"], // SlimesNormal
             17 => ["Mushroom", "Slimes"],
             18 => ["Mushroom"],
             21 => ["Shrinker", "Crawler"],
