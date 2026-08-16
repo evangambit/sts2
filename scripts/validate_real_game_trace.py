@@ -192,8 +192,24 @@ def validate_starter_player(summary: dict[str, Any]) -> None:
         )
 
 
+def emulator_completed_combat_rooms(encounter: str) -> int:
+    """Combat-count context for the emulator's encounter setup.
+
+    First-floor "weak" encounter variants (e.g. CorpseSlugsWeak = 2 slugs vs Normal
+    = 3) are selected when completedCombatRoomsBeforeCurrent is in [0,3); -1 gives the
+    normal variant. Encounters mapped to a "*Weak" live encounter need the weak
+    context, or the emulator would set up the normal variant and mismatch enemy count.
+    """
+    live = LIVE_ENCOUNTER_BY_EMULATOR.get(encounter, "")
+    return 0 if live.endswith("Weak") else -1
+
+
 def emulator_initial_summary(seed: int, encounter: str) -> dict[str, Any]:
-    env = Sts2CombatEnv(seed=seed, encounter=encounter)
+    env = Sts2CombatEnv(
+        seed=seed,
+        encounter=encounter,
+        completed_combat_rooms=emulator_completed_combat_rooms(encounter),
+    )
     try:
         obs, _ = env.reset()
         return emulator_trace.summarize_observation(obs)
@@ -353,7 +369,11 @@ def capture_emulator_trace(
     encounter: str,
     actions: list[int],
 ) -> dict[str, Any]:
-    env = Sts2CombatEnv(seed=seed, encounter=encounter)
+    env = Sts2CombatEnv(
+        seed=seed,
+        encounter=encounter,
+        completed_combat_rooms=emulator_completed_combat_rooms(encounter),
+    )
     try:
         obs, info = env.reset()
         trace = [
