@@ -432,6 +432,27 @@ The oracle/observability mod is live on the local game.
 need modest adaptation (seed handling + Neow/event timing + `battle` key) before the
 seeded differential-test loop runs unattended.
 
+### Live end-to-end harness test (2026-08-15)
+
+Rebuilt/installed the mod (now with `return_to_main_menu`) and ran the harness against
+the live game:
+
+- **Verified working**: `return_to_main_menu` (abandon flow), `debug_start_encounter
+  CorpseSlugsWeak` (lands in combat, 2 slugs, reaches play phase), and
+  `validate_real_game_trace.find_matching_seed` runs end-to-end. All the v0.107.1
+  plumbing works.
+- **New divergence surfaced (real emulator gap):** no emulator seed matched the live
+  combat. Root cause: the game defines `CorpseSlug.MinInitialHp=27 / MaxInitialHp=29`
+  (max-ascension) and **rolls each slug's HP in [27,29] via RNG**; the emulator's
+  `CreateCorpseSlugsEncounter` uses **`fixedHp: 27` / `fixedHp: 29` in fixed order**
+  (and many other encounters use `fixedHp:` too). So the live slugs came out ordered
+  [29, 27] and no fixed-[27,29] emulator seed can reproduce that. Two things to decide:
+  (a) whether the emulator should **roll enemy HP via the game's HP RNG** (`NicheHpRng`)
+  instead of `fixedHp` — likely needed for true parity, and it also keeps the HP-roll
+  RNG *consumed* so downstream streams don't desync; (b) whether enemy comparison needs
+  an **order-insensitive** mode (like `ignore_hand_order`) if slug position isn't
+  semantically meaningful. Investigate before fixing — this is the harness doing its job.
+
 ### Seed alignment — solved, with RNG parity already validated (2026-08-15)
 
 Question: can a real run be aligned to an emulator trace via a seed? **Yes.**
