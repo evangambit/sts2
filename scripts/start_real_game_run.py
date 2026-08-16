@@ -158,6 +158,31 @@ def wait_for_event_options(base_url: str, timeout: float = 10.0) -> dict[str, An
     raise RuntimeError("Timed out waiting for event options")
 
 
+def settle(base_url: str, min_delay: float = 0.4, timeout: float = 5.0) -> None:
+    """Wait for the game to stop changing before sending the next menu action.
+
+    The lobby/character-select screens tear down and rebuild UI nodes between
+    steps. Firing the next action into that window is what produces the
+    "internal error!" popup — the game NREs in NRunMusicController.UpdateTrack or
+    touches an already-disposed node (ObjectDisposedException in NTopBarHp).
+    Two identical consecutive reads is a cheap proxy for "settled".
+    """
+    time.sleep(min_delay)
+    deadline = time.monotonic() + timeout
+    previous = None
+    while time.monotonic() < deadline:
+        state = get_state(base_url)
+        marker = (
+            state.get("state_type"),
+            state.get("menu_screen"),
+            tuple(sorted(option_names(state))),
+        )
+        if marker == previous:
+            return
+        previous = marker
+        time.sleep(0.2)
+
+
 def back_out_to_main_menu(base_url: str, max_hops: int = 6) -> None:
     """Walk 'back' from a submenu up to the main menu.
 
@@ -175,7 +200,7 @@ def back_out_to_main_menu(base_url: str, max_hops: int = 6) -> None:
                 "cannot reach the main menu automatically.",
             )
         post_menu(base_url, "back")
-        time.sleep(0.25)
+        settle(base_url)
     raise RuntimeError(f"Could not reach the main menu within {max_hops} 'back' hops")
 
 
@@ -231,11 +256,16 @@ def start_seeded_run(
     wait_for_menu(base_url, "singleplayer")
     post_menu(base_url, mode)
     wait_for_menu(base_url, "character_select")
+    # Settle between each of these: they run back-to-back against a lobby screen
+    # that is still rebuilding its UI, which is what triggers the crash popup.
+    settle(base_url)
     post_menu(base_url, character)
+    settle(base_url)
     if ascension is not None:
         # menu_select has no extra params, so the mod carries the ascension level
         # in the seed field (see McpMod.CustomRun.cs).
         post_menu(base_url, "ascension", seed=str(ascension))
+        settle(base_url)
     post_menu(base_url, "confirm", seed=seed)
     return wait_for_run(base_url, seed)
 
