@@ -399,6 +399,33 @@ public static class RunMapGenerator
 
     private static bool IsValidSegmentEndMapPoint(RunMapNode node) => node.Parents.Count >= 2;
 
+    /// <summary>
+    /// Our node-type constants to the game's <c>MapPointType</c> enum values.
+    ///
+    /// This matters because segment keys embed the point types as integers and the
+    /// segments live in a SortedDictionary ordered by that key string. Grouping
+    /// survives any relabelling, but *iteration order* does not — and PrunePaths
+    /// walks the groups in order, shuffling and pruning as it goes. Emitting our own
+    /// numbering here sorts the groups differently from the game, which changes both
+    /// the pruning decisions and the RNG draws they consume.
+    ///
+    /// NodeNone maps to Ancient because by the time pruning runs every other node has
+    /// been assigned a type, so the start point is the only one left holding it.
+    /// </summary>
+    private static int GameMapPointType(int nodeType) =>
+        nodeType switch
+        {
+            RunConstants.NodeEvent => 1, // Unknown
+            RunConstants.NodeShop => 2, // Shop
+            RunConstants.NodeRelic => 3, // Treasure
+            RunConstants.NodeRest => 4, // RestSite
+            RunConstants.NodeNormal => 5, // Monster
+            RunConstants.NodeElite => 6, // Elite
+            RunConstants.NodeBoss => 7, // Boss
+            RunConstants.NodeNone => 8, // Ancient
+            _ => 0, // Unassigned
+        };
+
     private static string GenerateSegmentKey(IReadOnlyList<RunMapNode> segment)
     {
         var start = segment[0];
@@ -407,7 +434,7 @@ public static class RunMapGenerator
             start.Row == 0
                 ? $"{start.Row}-{end.Col},{end.Row}-"
                 : $"{start.Col},{start.Row}-{end.Col},{end.Row}-";
-        return prefix + string.Join(",", segment.Select(node => node.NodeType));
+        return prefix + string.Join(",", segment.Select(node => GameMapPointType(node.NodeType)));
     }
 
     private static bool OverlappingSegment(

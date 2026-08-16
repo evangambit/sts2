@@ -272,14 +272,32 @@ front is now *run generation*: what the engine rolls up front for a seed.
    - Pruning is **not** stopping early: instrumented, it runs to exhaustion
      (7 duplicate groups -> 0, 71 -> 66 nodes, 6 RNG draws), then repair finds nothing.
 
-   **Where to look next.** Both sides reach a no-duplicates fixed point, just different
-   ones (66 vs 64), so the graphs must already differ *before* pruning even though the
-   draw count is right. Best remaining hypotheses, in order:
-   a. `MapPostProcessing.CenterGrid` / `SpreadAdjacentMapPoints` / `StraightenPaths` —
-      these were never compared against the decompiled source (273 lines) and
-      `StraightenPaths` in particular could merge nodes.
-   b. The pre-prune graph itself: instrument the emulator to dump the raw 71-node graph
-      with edges, and reason backwards from the live `saved_map.points[].children`.
+   - **`MapPostProcessing` is ELIMINATED as a cause of the count gap.** All three passes
+     (`CenterGrid`, `SpreadAdjacentMapPoints`, `StraightenPaths`) were compared against
+     the decompiled source: every one only *relocates* a node (null the old grid cell,
+     write the new). None can add or remove a node, so none can explain 66 vs 64. They
+     do explain the *column* differences in rows 10-12, which are downstream of a row
+     holding the wrong number of nodes.
+   - **Segment-key type numbering was wrong and is now fixed** (`GameMapPointType`).
+     Keys embed point types as integers and live in a SortedDictionary, so our own
+     numbering sorted the duplicate groups differently from the game — and `PrunePaths`
+     walks groups in order, shuffling as it goes. Correct now, but **it did not change
+     this seed's result**; do not expect it to be the fix.
+
+   ⚠️ **Correction to an earlier claim in this file:** the "207 draws proves path
+   generation matches" argument is **not valid**. Every step consumes exactly 2 draws
+   (`StableShuffle` of a 3-element list) regardless of which direction is chosen, so the
+   draw count is invariant to the path *shape*. It confirms the draw pattern only. Path
+   generation is therefore **not** ruled out.
+
+   **Where to look next**, now that post-processing is out:
+   a. The pre-prune graph. Instrument the emulator to dump the raw 71-node graph with
+      edges and compare topology against the live `saved_map.points[].children` (the
+      save records the full final graph, and post-processing preserves topology while
+      only relabelling columns).
+   b. Path generation shape — see the correction above. `HasInvalidCrossover` and
+      `GenerateNextCoord` read identically to the game, but the resulting *shape*
+      has never actually been verified.
    c. Node identity/dedup in `GetOrCreate` when two paths cross the same coord.
 3. **Harden the debug/menu mod actions.** Partly done — `start_real_game_run.settle()`
    guards menu transitions, the abandon path is no longer driven, and the embark crash
