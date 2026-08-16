@@ -73,6 +73,10 @@ public static class RunMapGenerator
 
         var eliteSequence = new List<int>();
         var eliteBag = new List<int>();
+        // Elites go through the same AddWithoutRepeatingTags path as normals, and
+        // track their own "last" — the game passes _rooms.eliteEncounters, so the
+        // no-repeat rule looks at the previous *elite*, not the previous normal.
+        int? lastElite = null;
         for (int i = 0; i < 15; i++)
         {
             if (eliteBag.Count == 0)
@@ -80,9 +84,9 @@ public static class RunMapGenerator
                 eliteBag = elitePool.ToList();
             }
 
-            int index = (int)(upFront.NextDouble() * eliteBag.Count);
-            eliteSequence.Add(eliteBag[index]);
-            eliteBag.RemoveAt(index);
+            int enc = GrabWithoutRepeatingTags(eliteBag, lastElite, upFront);
+            eliteSequence.Add(enc);
+            lastElite = enc;
         }
         state.EliteEncounterSequence = eliteSequence.ToArray();
         state.BossEncounterId = bossPool[(int)(upFront.NextDouble() * bossPool.Length)];

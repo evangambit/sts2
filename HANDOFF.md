@@ -46,7 +46,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 206 pass)
+# C# unit tests (currently 207 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -99,7 +99,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 206 C# + 25 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 207 C# + 25 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Opening hand is bit-exact vs the live game** — the current headline result.
   Live `"ABCDEF"` custom run at A8 → `debug_start_encounter CorpseSlugsWeak`; the
@@ -217,21 +217,30 @@ front is now *run generation*: what the engine rolls up front for a seed.
 |---|---|
 | act | PASS (OVERGROWTH) |
 | normal encounters | **PASS — 15/15 in order** |
-| elite encounters | FAIL — 6/15 |
-| boss | FAIL |
+| elite encounters | **PASS — 15/15 in order** |
+| boss | **PASS** (TheKin) |
 | map | FAIL — 66 nodes vs 62 |
 
-1. **Elite encounter pool is missing an entry.** The game's Overgrowth pool
-   (decompiled `MegaCrit.Sts2.Core.Models.Acts/Overgrowth.cs`) has **three** elites —
-   `BygoneEffigyElite`, `ByrdonisElite`, `PhrogParasiteElite` — but the emulator only
-   ever emits two (Byrdonis, PhrogParasite), so the sequence desyncs. Note
-   `Overgrowth.cs` also force-places `ByrdonisElite` at index 0 and `PhrogParasiteElite`
-   at index 1 via `RoomSet.SwapToOrCreateAtIndex`, so selection is not a plain roll —
-   port that rule too.
-2. **Boss selection is wrong.** Emulator picks `CeremonialBeast`; live rolled
-   `THE_KIN_BOSS`. The act declares `BossDiscoveryOrder = [VantomBoss,
-   CeremonialBeastBoss, TheKinBoss]` — the emulator does not model that ordering.
-3. **Map generation is unverified and its calibration is stale.** 66 nodes vs the live
+1. ~~Elite pool / boss selection~~ — **DONE**, both were the same root cause and are
+   now exact (regression test `RunGeneration_MatchesLiveCaptureForAbcdef`). Two defects,
+   worth remembering because the pattern will recur for other acts:
+   - **Pool order must be the act's encounter-*declaration* order** (the game builds
+     `AllEliteEncounters`/`AllBossEncounters` by filtering `AllEncounters`, declared
+     alphabetically in e.g. `Acts/Overgrowth.cs`). It is **not** `BossDiscoveryOrder` —
+     that list only feeds `ActModel.ApplyDiscoveryOrderModifications`, an unlock-
+     progression override that overwrites the boss with the first one the *profile*
+     has never seen. On a profile that has seen them all (this one: 390 runs) it does
+     nothing, so boss selection is a plain roll. **Note this means boss choice is not a
+     pure function of the seed on a fresh profile.**
+   - **Elites go through the same no-repeat draw as normals.** The game calls
+     `AddWithoutRepeatingTags` for elites too, so an elite never immediately repeats;
+     we were doing a plain indexed draw. The first 9 matched by luck and diverged at
+     the 4th bag refill.
+   - The boss is rolled from the **same stream immediately after the 15 elites**, so a
+     wrong elite draw count silently corrupts the boss. Fixing the elites fixed the boss.
+   - ⚠️ Underdocks had both defects too and is fixed by the same rule, but is
+     **unverified** — the only live capture so far is an Overgrowth run.
+2. **Map generation is unverified and its calibration is stale.** 66 nodes vs the live
    62 points. `RunMapGenerator` contains fudges (`for i < 202: upFront.NextDouble()`,
    then 57/60 `NextInt` calls) that were tuned to reproduce CallCounts *under the old,
    wrong RNG* — they are now meaningless. It also does not use the game's `act_N_map`
@@ -241,14 +250,14 @@ front is now *run generation*: what the engine rolls up front for a seed.
    **Also note the act model looks wrong**: the emulator flips a coin between
    Overgrowth and Underdocks, but the live save shows a fixed 3-act sequence
    `OVERGROWTH -> HIVE -> GLORY`, with no Underdocks at all.
-4. **Harden the debug/menu mod actions.** Partly done — `start_real_game_run.settle()`
+3. **Harden the debug/menu mod actions.** Partly done — `start_real_game_run.settle()`
    guards menu transitions, the abandon path is no longer driven, and the embark crash
    has a documented route around it. Remaining: the crash itself is a *game* bug (see
    Gotchas); `--jump-encounter` avoids it.
-5. **Implement `start_replay`** in the STS2MCP fork -> clean deterministic full-run
+4. **Implement `start_replay`** in the STS2MCP fork -> clean deterministic full-run
    capture (design in docs/replay-verification.md SS1).
-6. **Full-run replay harness** -> the primary fidelity metric (docs/replay-verification.md).
-7. Then the **AlphaZero layer**: MCTS over the sim (C#) -> value/policy net (Python) ->
+5. **Full-run replay harness** -> the primary fidelity metric (docs/replay-verification.md).
+6. Then the **AlphaZero layer**: MCTS over the sim (C#) -> value/policy net (Python) ->
    self-play (PLAN.md SS2, SS5).
 
 ### Introspection & verification tooling (built)
@@ -272,7 +281,7 @@ front is now *run generation*: what the engine rolls up front for a seed.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 206 pass
+dotnet test src/Sts2Emulator.Tests/        # 207 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 25 pass
 ```

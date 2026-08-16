@@ -113,6 +113,39 @@ public class RunEngineTests
     }
 
     [Fact]
+    public void RunGeneration_MatchesLiveCaptureForAbcdef()
+    {
+        // Ground truth: a live v0.107.1 run seeded "ABCDEF" at A8, read out of its
+        // current_run.save (acts[0].rooms). Unlike the RNG value pins elsewhere in
+        // this file, these are real game outputs — keep them.
+        // Reproduce with: python scripts/verify_run_generation.py
+        var engine = new RunEngine();
+        engine.Reset("ABCDEF");
+        var s = engine.State;
+
+        Assert.Equal(RunConstants.ActOvergrowth, s.Act);
+
+        // ShrinkerBeetle, FuzzyWurmCrawler, Slimes, Inklets, Nibbits,
+        // SlitheringStrangler, OvergrowthCrawlers, VineShambler, RubyRaiders,
+        // CubexConstruct, Mawler, SlimesNormal, Fogmog, Flyconid, SnappingJaxfruit
+        Assert.Equal(
+            new[] { 11, 8, 3, 5, 15, 27, 21, 20, 28, 19, 14, 16, 29, 17, 18 },
+            s.NormalEncounterSequence
+        );
+
+        // BygoneEffigy(62) / Byrdonis(68) / PhrogParasite(65), drawn from a bag that
+        // refills every 3 and never repeats the previous elite.
+        Assert.Equal(
+            new[] { 62, 68, 65, 62, 65, 68, 62, 68, 65, 68, 62, 65, 62, 65, 68 },
+            s.EliteEncounterSequence
+        );
+
+        // TheKin — rolled after the elites on the same stream, so this also guards
+        // the elite draw count.
+        Assert.Equal(82, s.BossEncounterId);
+    }
+
+    [Fact]
     public void RunReset_StartsAtAncientPhaseWithStarterState()
     {
         var engine = new RunEngine();

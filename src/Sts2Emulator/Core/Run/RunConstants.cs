@@ -106,10 +106,23 @@ public static class RunConstants
         [19, 17, 29, 5, 14, 15, 21, 28, 16, 27, 18, 20];
     public static ReadOnlySpan<int> UnderdocksNormalEncounters =>
         [9, 0, 23, 7, 26, 30, 24, 12, 25, 6];
-    public static ReadOnlySpan<int> OvergrowthEliteEncounters => [68, 65];
-    public static ReadOnlySpan<int> UnderdocksEliteEncounters => [72, 67];
-    public static ReadOnlySpan<int> OvergrowthBossEncounters => [83, 74, 82];
-    public static ReadOnlySpan<int> UnderdocksBossEncounters => [84, 79, 77];
+    // Pool order must match the act's own encounter-declaration order (the game
+    // builds AllEliteEncounters/AllBossEncounters by filtering AllEncounters, which
+    // is declared alphabetically in e.g. Acts/Overgrowth.cs). It is NOT the act's
+    // BossDiscoveryOrder — that list only drives the unlock-progression override in
+    // ActModel.ApplyDiscoveryOrderModifications, which does nothing once a profile
+    // has seen every boss.
+    // Overgrowth elites: BygoneEffigy, Byrdonis, PhrogParasite.
+    public static ReadOnlySpan<int> OvergrowthEliteEncounters => [62, 68, 65];
+    // Underdocks elites: PhantasmalGardeners, SkulkingColony, TerrorEel. Same two
+    // defects as Overgrowth had (a missing third elite, and bosses in discovery
+    // order) — fixed by the same rule, but NOT yet verified against a live
+    // Underdocks run, since the only capture so far is an Overgrowth one.
+    public static ReadOnlySpan<int> UnderdocksEliteEncounters => [72, 86, 67];
+    // Overgrowth bosses: CeremonialBeast, TheKin, Vantom.
+    public static ReadOnlySpan<int> OvergrowthBossEncounters => [74, 82, 83];
+    // Underdocks bosses: LagavulinMatriarch, SoulFysh, WaterfallGiant.
+    public static ReadOnlySpan<int> UnderdocksBossEncounters => [77, 79, 84];
 
     public const int RelicBurningBlood = 36;
     public const int RelicBlackBlood = 19;
