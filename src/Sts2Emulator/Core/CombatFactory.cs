@@ -1116,9 +1116,9 @@ public static class CombatFactory
     {
         return
         [
-            CreateEnemy(KE.TrackerRubyRaider, rng, new Intent(IntentType.Debuff, 2), fixedHp: 25),
-            CreateEnemy(KE.AssassinRubyRaider, rng, new Intent(IntentType.Attack, 11), fixedHp: 24),
-            CreateEnemy(KE.BruteRubyRaider, rng, new Intent(IntentType.Attack, 8), fixedHp: 31),
+            CreateEnemy(KE.TrackerRubyRaider, rng, new Intent(IntentType.Debuff, 2)),
+            CreateEnemy(KE.AssassinRubyRaider, rng, new Intent(IntentType.Attack, 11)),
+            CreateEnemy(KE.BruteRubyRaider, rng, new Intent(IntentType.Attack, 8)),
         ];
     }
 
@@ -1148,14 +1148,14 @@ public static class CombatFactory
     {
         if (weak)
         {
-            return [CreateCorpseSlug(rng, 2, fixedHp: 27), CreateCorpseSlug(rng, 0, fixedHp: 29)];
+            return [CreateCorpseSlug(rng, 2), CreateCorpseSlug(rng, 0)];
         }
 
         return
         [
-            CreateCorpseSlug(rng, 2, fixedHp: 27),
-            CreateCorpseSlug(rng, 0, fixedHp: 28),
-            CreateCorpseSlug(rng, 1, fixedHp: 29),
+            CreateCorpseSlug(rng, 2),
+            CreateCorpseSlug(rng, 0),
+            CreateCorpseSlug(rng, 1),
         ];
     }
 
@@ -1303,8 +1303,7 @@ public static class CombatFactory
             KE.FossilStalker,
             rng,
             new Intent(IntentType.Attack, 14),
-            moveIndex: 1,
-            fixedHp: 55
+            moveIndex: 1
         );
         BuffSystem.Apply(enemy.Buffs, BuffId.Suck, 3);
         return enemy;

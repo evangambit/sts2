@@ -55,7 +55,8 @@ public static class NativeExports
         public void Reset()
         {
             Rng = new CountingRandom(Seed);
-            State.NicheHpRng = null;
+            State.NicheHpRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng);
         }
@@ -63,7 +64,8 @@ public static class NativeExports
         public void Reset(ReadOnlySpan<int> deckIds)
         {
             Rng = new CountingRandom(Seed);
-            State.NicheHpRng = null;
+            State.NicheHpRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds);
         }
@@ -71,7 +73,8 @@ public static class NativeExports
         public void Reset(ReadOnlySpan<int> deckIds, int encounterId)
         {
             Rng = new CountingRandom(Seed);
-            State.NicheHpRng = null;
+            State.NicheHpRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId);
         }
@@ -79,7 +82,8 @@ public static class NativeExports
         public void Reset(ReadOnlySpan<int> deckIds, int encounterId, int completedCombatRooms)
         {
             Rng = new CountingRandom(Seed);
-            State.NicheHpRng = null;
+            State.NicheHpRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, completedCombatRooms);
         }
@@ -87,7 +91,8 @@ public static class NativeExports
         public void Reset(ReadOnlySpan<int> deckIds, int encounterId, ReadOnlySpan<int> relicIds)
         {
             Rng = new CountingRandom(Seed);
-            State.NicheHpRng = null;
+            State.NicheHpRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, relicIds);
         }
