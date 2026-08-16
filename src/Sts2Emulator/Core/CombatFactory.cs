@@ -328,7 +328,10 @@ public static class CombatFactory
         state.AttackCardsPlayedThisTurn = 0;
         state.PlayerHpLostThisTurn = 0;
         state.CardsExhaustedThisTurn = 0;
-        state.ShuffleRng = shuffleRng;
+        // Preserve a ShuffleRng the caller set on the state (the direct combat env
+        // wires GameRng(seed,"shuffle") there); only override when a shuffleRng arg
+        // is explicitly passed (the run engine).
+        state.ShuffleRng = shuffleRng ?? state.ShuffleRng;
         state.AiRng = aiRng;
 
         state.DrawPile = deck.ToArray().ToList();
@@ -354,9 +357,11 @@ public static class CombatFactory
         EnemyAI.UpdateSecondaryIntents(state.Enemies);
 
         // Shuffle draw pile (skip if caller pre-shuffled it) and deal opening hand of 5.
+        // Use the dedicated Shuffle stream when available (matches the game's
+        // State.Rng.Shuffle); ShufflePile is the same Fisher-Yates as GameRng.Shuffle.
         if (!deckPreShuffled)
         {
-            CardEffects.ShufflePile(state.DrawPile, rng);
+            CardEffects.ShufflePile(state.DrawPile, state.ShuffleRng ?? rng);
         }
 
         RelicEffects.ApplyBeforeOpeningHand(state, rng);
