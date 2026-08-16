@@ -98,7 +98,9 @@ means of discovering behavior.
    standard and regression corpus.
 3. **Large golden-replay suite** — capture playthroughs, freeze them, run every
    commit. New content = new goldens. Catches update-regressions. See *Capturing
-   playthroughs* below for how.
+   playthroughs* below for how, and **[docs/replay-verification.md](docs/replay-verification.md)**
+   for the full-run corpus + replay-harness design (the primary fidelity signal, and
+   the honest answer to "how do we know a character is correct").
 4. **Property / invariant tests + fuzzing** — energy conservation, deck-count
    conservation, HP bounds, no illegal states — under randomized action fuzzing.
    Catches interaction bugs that per-card unit tests miss.
