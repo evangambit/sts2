@@ -269,11 +269,7 @@ def main() -> None:
             if live_encounter is None:
                 raise SystemExit(f"No live encounter mapped for {args.encounter!r}")
             print(f"Jumping the *existing* run into {live_encounter} ...")
-            start_real_game_run.post_action(
-                args.base_url,
-                {"action": "debug_start_encounter", "encounter": live_encounter},
-            )
-            start_real_game_run.wait_for_combat_ready(args.base_url, timeout=30.0)
+            validate.jump_to_encounter(args.base_url, live_encounter)
         elif args.start_run:
             live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(args.encounter)
             if live_encounter is None:

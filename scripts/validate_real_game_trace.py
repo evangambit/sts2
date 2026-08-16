@@ -493,6 +493,20 @@ def start_debug_encounter(
         abandon_existing=abandon_existing,
         ascension=ascension,
     )
+    jump_to_encounter(base_url, live_encounter, debug_options)
+
+
+def jump_to_encounter(
+    base_url: str,
+    live_encounter: str,
+    debug_options: dict[str, str] | None = None,
+) -> None:
+    """Drop the run already in progress straight into an encounter.
+
+    Split out of start_debug_encounter so it can be used against a run that was
+    embarked by hand or restored from a save — embarking through the lobby is the
+    fragile part, this half is reliable.
+    """
     payload = {"action": "debug_start_encounter", "encounter": live_encounter}
     if debug_options is not None:
         payload.update(debug_options)
