@@ -158,10 +158,34 @@ def wait_for_event_options(base_url: str, timeout: float = 10.0) -> dict[str, An
     raise RuntimeError("Timed out waiting for event options")
 
 
+def back_out_to_main_menu(base_url: str, max_hops: int = 6) -> None:
+    """Walk 'back' from a submenu up to the main menu.
+
+    Distinct from return_to_main_menu, which is a save-and-quit for a run in
+    progress and errors with "No run in progress" when we're merely sitting on a
+    submenu (e.g. a character_select screen left behind by an aborted attempt).
+    """
+    for _ in range(max_hops):
+        state = get_state(base_url)
+        if state.get("state_type") == "menu" and state.get("menu_screen") == "main":
+            return
+        if "back" not in option_names(state):
+            raise RuntimeError(
+                f"Menu screen {state.get('menu_screen')!r} has no 'back' option; "
+                "cannot reach the main menu automatically.",
+            )
+        post_menu(base_url, "back")
+        time.sleep(0.25)
+    raise RuntimeError(f"Could not reach the main menu within {max_hops} 'back' hops")
+
+
 def abandon_existing_run(base_url: str) -> None:
     state = get_state(base_url)
-    if state.get("state_type") != "menu" or state.get("menu_screen") != "main":
+    if state.get("state_type") != "menu":
+        # Actually inside a run — save-and-quit out to the menu.
         post_action(base_url, {"action": "return_to_main_menu"})
+    elif state.get("menu_screen") != "main":
+        back_out_to_main_menu(base_url)
     main = wait_for_menu(base_url, "main", timeout=30.0)
     if "abandon_run" not in option_names(main):
         return
