@@ -143,6 +143,31 @@ public class RunEngineTests
         // TheKin — rolled after the elites on the same stream, so this also guards
         // the elite draw count.
         Assert.Equal(82, s.BossEncounterId);
+
+        // Map, from the same save's saved_map: 64 points including start and boss,
+        // with these per-row counts. Guards the whole generate/assign/prune/
+        // post-process pipeline — reproduce the full column-and-type diff with
+        // scripts/verify_run_generation.py.
+        Assert.Equal(64, s.MapNodes.Count);
+        Assert.Equal(
+            new[] { 1, 3, 4, 3, 3, 4, 5, 5, 3, 5, 5, 3, 5, 4, 5, 5, 1 },
+            Enumerable
+                .Range(0, RunConstants.MapBossRow + 1)
+                .Select(row => s.MapNodes.Values.Count(n => n.Row == row))
+                .ToArray()
+        );
+
+        // The point-type budget the map is built to. NumOfElites is 8 (the game's
+        // round(5 * 1.6) with SwarmingElites), not 5 — assignment and post-prune
+        // repair used to disagree about this, which left the map under-pruned.
+        Assert.Equal(
+            RunConstants.MapEliteCount,
+            s.MapNodes.Values.Count(n => n.NodeType == RunConstants.NodeElite)
+        );
+        Assert.Equal(
+            RunConstants.MapShopCount,
+            s.MapNodes.Values.Count(n => n.NodeType == RunConstants.NodeShop)
+        );
     }
 
     [Fact]

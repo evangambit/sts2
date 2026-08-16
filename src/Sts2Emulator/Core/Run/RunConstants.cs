@@ -13,6 +13,16 @@ public static class RunConstants
     public const int MapWidth = 7;
     public const int MapBossRow = 16;
     public const int MapPathIterations = 7;
+
+    /// <summary>
+    /// The game's <c>MapPointTypeCounts.NumOfElites</c>:
+    /// <c>round(5 * (SwarmingElites ? 1.6 : 1))</c>. The emulator models high
+    /// ascension, so SwarmingElites is on and this is 8.
+    /// </summary>
+    public const int MapEliteCount = 8;
+
+    /// <summary>The game's <c>MapPointTypeCounts.NumOfShops</c>.</summary>
+    public const int MapShopCount = 3;
     public const int MapTreasureRow = MapBossRow - 7;
     public const int MapFinalRestRow = MapBossRow - 1;
     public const int MapStartCol = MapWidth / 2;

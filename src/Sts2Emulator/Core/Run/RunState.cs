@@ -74,6 +74,13 @@ public sealed class RunMapNode
     public List<(int Col, int Row)> Parents { get; } = [];
     public int EncounterId { get; set; }
 
+    /// <summary>
+    /// The game's <c>MapPoint.CanBeModified</c>. False for the rows whose type is
+    /// forced during map generation (row 1, the treasure row, the final rest row);
+    /// those points are excluded from post-prune type repair.
+    /// </summary>
+    public bool CanBeModified { get; set; } = true;
+
     public RunMapNode(int col, int row)
     {
         Col = col;

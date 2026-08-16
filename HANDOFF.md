@@ -219,7 +219,7 @@ front is now *run generation*: what the engine rolls up front for a seed.
 | normal encounters | **PASS — 15/15 in order** |
 | elite encounters | **PASS — 15/15 in order** |
 | boss | **PASS** (TheKin) |
-| map | FAIL — 13/16 rows exact; rows 10-12 differ |
+| map | **PASS — every row, column and type** |
 
 1. ~~Elite pool / boss selection~~ — **DONE**, both were the same root cause and are
    now exact (regression test `RunGeneration_MatchesLiveCaptureForAbcdef`). Two defects,
@@ -240,65 +240,29 @@ front is now *run generation*: what the engine rolls up front for a seed.
      wrong elite draw count silently corrupts the boss. Fixing the elites fixed the boss.
    - ⚠️ Underdocks had both defects too and is fixed by the same rule, but is
      **unverified** — the only live capture so far is an Overgrowth run.
-2. **Map generation — 13/16 rows exact, 2 nodes over. Cause still unknown; the whole
-   pruning port has been audited line-by-line against the game and matches.**
-   `verify_run_generation.py` diffs map structure row by row (native list 15). Rows 0-9
-   and 13-16 are exact; rows 10-12 differ, and the emulator keeps **2 nodes the game
-   prunes** (66 vs 64 incl. start+boss).
-
-   **Ruled out — do not re-audit these, they were compared against the decompiled
-   source and match:**
-   - Stream/seed: uses `ActMapRng` -> `act_1_map`. (An older note here claiming it used
-     the bare run seed was wrong; that was the act coin-flip.)
-   - `GetMapPointTypes`: both draws, in order, right distributions.
-   - Counts: 8 elites (A8 SwarmingElites), 3 shops, 12 unknowns, 6+5 rests.
-   - Path generation: 7 paths, `i==1` distinct-start retry, per-step
-     `StableShuffle([-1,0,1])`, clamping, loop bounds. **RNG accounting confirms it**:
-     207 draws before type assignment = 7 starts + 7 paths x 14 steps x 2 + 4 gaussian,
-     i.e. exactly right with no retries.
-   - Forced rows: row 1 monster, row 9 treasure, row 15 rest — all match live.
-   - Type-assignment structure: 3-pass loop, `StableShuffle` of unassigned points,
-     `GetNextValidPointType` queue rotation, and every validity rule
-     (`IsValidForLower` row<6, `IsValidForUpper` row>=13, parents∪children, children,
-     siblings-via-parents' children). Start/boss are correctly excluded (the game's
-     `GetAllMapPoints` walks only the Grid, and neither is in it).
-   - Pruning: `FindAllPaths`, `AddSegmentsToDictionary`, `GenerateSegmentKey` (incl. the
-     `row == 0` start-node special case), `IsValidSegmentStart/End`, `OverlappingSegment`,
-     `PruneAllButLast`, `PruneSegment`, `BreakAParentChildRelationship...`, `IsInMap`,
-     and the SortedDictionary/Ordinal iteration order. The only textual difference is a
-     missing `&& !IsRemoved(grid, n)` in `PruneSegment`, which is **vacuous** —
-     `RemoveChildPoint` unlinks both directions, so a removed node can never still be in
-     someone's parents list.
-   - Pruning is **not** stopping early: instrumented, it runs to exhaustion
-     (7 duplicate groups -> 0, 71 -> 66 nodes, 6 RNG draws), then repair finds nothing.
-
-   - **`MapPostProcessing` is ELIMINATED as a cause of the count gap.** All three passes
-     (`CenterGrid`, `SpreadAdjacentMapPoints`, `StraightenPaths`) were compared against
-     the decompiled source: every one only *relocates* a node (null the old grid cell,
-     write the new). None can add or remove a node, so none can explain 66 vs 64. They
-     do explain the *column* differences in rows 10-12, which are downstream of a row
-     holding the wrong number of nodes.
-   - **Segment-key type numbering was wrong and is now fixed** (`GameMapPointType`).
-     Keys embed point types as integers and live in a SortedDictionary, so our own
-     numbering sorted the duplicate groups differently from the game — and `PrunePaths`
-     walks groups in order, shuffling as it goes. Correct now, but **it did not change
-     this seed's result**; do not expect it to be the fix.
-
-   ⚠️ **Correction to an earlier claim in this file:** the "207 draws proves path
-   generation matches" argument is **not valid**. Every step consumes exactly 2 draws
-   (`StableShuffle` of a 3-element list) regardless of which direction is chosen, so the
-   draw count is invariant to the path *shape*. It confirms the draw pattern only. Path
-   generation is therefore **not** ruled out.
-
-   **Where to look next**, now that post-processing is out:
-   a. The pre-prune graph. Instrument the emulator to dump the raw 71-node graph with
-      edges and compare topology against the live `saved_map.points[].children` (the
-      save records the full final graph, and post-processing preserves topology while
-      only relabelling columns).
-   b. Path generation shape — see the correction above. `HasInvalidCrossover` and
-      `GenerateNextCoord` read identically to the game, but the resulting *shape*
-      has never actually been verified.
-   c. Node identity/dedup in `GetOrCreate` when two paths cross the same coord.
+2. ~~Map generation~~ — **DONE. `verify_run_generation.py` now reports ALL SECTIONS
+   MATCH** for `"ABCDEF"`: act, 15/15 normals, 15/15 elites, boss, and the map exact on
+   every row, column and point type (64 nodes incl. start + boss). Pinned by
+   `RunGeneration_MatchesLiveCaptureForAbcdef`.
+   Two defects, both in post-prune type repair, and the second only visible once the
+   first was fixed:
+   - **`RepairPrunedPointTypes` repaired elites toward a hardcoded 5 while
+     `AssignPointTypes` placed 8.** So with 7 elites on the map, repair computed
+     `5 - 7 = -2`, decided nothing was missing, returned false — and `PruneAndRepair`
+     broke out of its loop after a single pass. The game computes `8 - 7 = 1`, converts
+     a Monster, returns true, and **prunes again**. That missing second pass was the
+     entire 2-node gap. Both sites now use `RunConstants.MapEliteCount` /
+     `MapShopCount`. **Lesson: the type budget must be one constant** — assignment and
+     repair silently disagreeing is invisible until you diff a real map.
+   - **`CanBeModified` was not modelled.** The game sets it false on the forced rows
+     (row 1, treasure row, final rest row) and repair only considers
+     `PointType == Monster && CanBeModified`. We offered row 1's monsters as repair
+     candidates, which changed both the shuffle length and the chosen node — repair
+     converted (0,8) where the game converted (0,12). `RunMapNode.CanBeModified` now
+     exists and is set in `AssignPointTypes`.
+   Also fixed earlier in the hunt: segment keys embed point types as integers and sort
+   in a SortedDictionary, so they must use the **game's** `MapPointType` values, not our
+   node-type numbering (`GameMapPointType`).
 3. **Harden the debug/menu mod actions.** Partly done — `start_real_game_run.settle()`
    guards menu transitions, the abandon path is no longer driven, and the embark crash
    has a documented route around it. Remaining: the crash itself is a *game* bug (see
