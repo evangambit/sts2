@@ -185,7 +185,16 @@ def main() -> None:
 
     print(f"save : {save_path}")
     print(f"seed : {seed!r} -> gen seed {game_seed(str(seed))}")
-    print(f"act  : index {act_index} = {act['id']}  (ascension {save.get('ascension')})")
+    ascension = save.get("ascension")
+    print(f"act  : index {act_index} = {act['id']}  (ascension {ascension})")
+    if ascension != 8:
+        print(
+            f"\n!! WARNING: this save is ascension {ascension}, not 8.\n"
+            "   The emulator models high ascension, so it always budgets 8 elites\n"
+            "   (the game's round(5 * 1.6) with SwarmingElites). At a lower ascension\n"
+            "   the game budgets 5, and the elite/map sections below will mismatch for\n"
+            "   that reason alone. Re-capture at A8 to make this comparison meaningful.",
+        )
 
     emu = emulator_generation(str(seed))
     names = encounter_names()
