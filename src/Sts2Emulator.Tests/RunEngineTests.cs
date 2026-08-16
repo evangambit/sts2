@@ -18,85 +18,68 @@ public class RunEngineTests
         Assert.Equal(1703902611, DeterministicHash.GetDeterministicHashCode("monster_ai"));
     }
 
-    [Fact]
-    public void DotNetRandom_MatchesPythonPinnedValues()
-    {
-        var rng = new DotNetRandom(42);
 
-        int[] values = Enumerable.Range(0, 5).Select(_ => rng.Next(int.MaxValue)).ToArray();
-        Assert.Equal(new[] { 1434747710, 302596119, 269548474, 1122627734, 361709742 }, values);
-    }
 
     [Fact]
-    public void DotNetRandom_MatchesSystemRandomCompatibilityAssumption()
+    public void GameRng_HelperOutputsAreLocked()
     {
-        foreach (int seed in new[] { 0, 42, -842352754, 930484660 })
-        {
-            var dotNet = new DotNetRandom(seed);
-            var system = new Random(seed);
-
-            for (int i = 0; i < 20; i++)
-            {
-                Assert.Equal(system.Next(int.MaxValue), dotNet.Next(int.MaxValue));
-            }
-        }
-    }
-
-    [Fact]
-    public void GameRng_MatchesPythonPinnedHelpers()
-    {
+        // Regression lock over the MegaRandom (Xoshiro256**) port, NOT ground truth:
+        // these are this implementation's own outputs. The only value here pinned
+        // against the real game is the live-capture check in
+        // MegaRandomHypothesisTests. Re-pinned when the RNG was corrected from
+        // .NET's legacy Random to the game's MegaRandom.
         var ints = new GameRng(123, "shuffle");
         Assert.Equal(
-            new[] { 6, 6, 7, 8, 4 },
+            new[] { 9, 1, 6, 9, 2 },
             Enumerable.Range(0, 5).Select(_ => ints.NextInt(10)).ToArray()
         );
 
         var bools = new GameRng(123, "shuffle");
         Assert.Equal(
-            new[] { false, false, false, false, true },
+            new[] { false, true, false, false, true },
             Enumerable.Range(0, 5).Select(_ => bools.NextBool()).ToArray()
         );
 
         var item = new GameRng(123, "shuffle");
-        Assert.Equal(40, item.NextItem(new[] { 10, 20, 30, 40, 50 }));
+        Assert.Equal(50, item.NextItem(new[] { 10, 20, 30, 40, 50 }));
 
         var shuffle = new GameRng(123, "shuffle");
         var shuffled = Enumerable.Range(0, 10).ToList();
         shuffle.Shuffle(shuffled);
-        Assert.Equal(new[] { 4, 0, 9, 1, 3, 2, 7, 8, 5, 6 }, shuffled);
+        Assert.Equal(new[] { 0, 4, 2, 7, 3, 8, 6, 5, 1, 9 }, shuffled);
         Assert.Equal(9, shuffle.CallCount);
 
         var stable = new GameRng(123, "shuffle");
         var stableShuffled = new List<int> { 3, 1, 2, 5, 4 };
         stable.StableShuffle(stableShuffled, Comparer<int>.Default);
-        Assert.Equal(new[] { 1, 2, 5, 3, 4 }, stableShuffled);
+        Assert.Equal(new[] { 4, 3, 2, 1, 5 }, stableShuffled);
 
         var gaussian = new GameRng(123, "niche");
         Assert.Equal(
-            new[] { 50, 56, 46, 50, 47 },
+            new[] { 52, 42, 55, 61, 40 },
             Enumerable.Range(0, 5).Select(_ => gaussian.NextGaussianInt(50, 10, 30, 70)).ToArray()
         );
         Assert.Equal(10, gaussian.CallCount);
     }
 
     [Fact]
-    public void RunRngSet_MatchesPythonPinnedNamedStreams()
+    public void RunRngSet_NamedStreamOutputsAreLocked()
     {
         var rng = new RunRngSet("0");
 
         Assert.Equal(3452614542u, rng.Seed);
-        Assert.Equal(1763090722, rng.UpFront.NextInt(int.MaxValue));
-        Assert.Equal(930484660, rng.Shuffle.NextInt(int.MaxValue));
-        Assert.Equal(367303668, rng.UnknownMapPoint.NextInt(int.MaxValue));
-        Assert.Equal(1357262181, rng.CombatCardGeneration.NextInt(int.MaxValue));
-        Assert.Equal(1503196172, rng.CombatPotionGeneration.NextInt(int.MaxValue));
-        Assert.Equal(1083354287, rng.CombatCardSelection.NextInt(int.MaxValue));
-        Assert.Equal(1992887511, rng.CombatEnergyCosts.NextInt(int.MaxValue));
-        Assert.Equal(935440644, rng.CombatTargets.NextInt(int.MaxValue));
-        Assert.Equal(985847044, rng.MonsterAi.NextInt(int.MaxValue));
-        Assert.Equal(1880577055, rng.Niche.NextInt(int.MaxValue));
-        Assert.Equal(793692013, rng.CombatOrbs.NextInt(int.MaxValue));
-        Assert.Equal(1429893647, rng.TreasureRoomRelics.NextInt(int.MaxValue));
+        Assert.Equal(1278256123, rng.UpFront.NextInt(int.MaxValue));
+        Assert.Equal(1626764238, rng.Shuffle.NextInt(int.MaxValue));
+        Assert.Equal(445936266, rng.UnknownMapPoint.NextInt(int.MaxValue));
+        Assert.Equal(511159123, rng.CombatCardGeneration.NextInt(int.MaxValue));
+        Assert.Equal(1929685146, rng.CombatPotionGeneration.NextInt(int.MaxValue));
+        Assert.Equal(1069254844, rng.CombatCardSelection.NextInt(int.MaxValue));
+        Assert.Equal(68763658, rng.CombatEnergyCosts.NextInt(int.MaxValue));
+        Assert.Equal(1203427389, rng.CombatTargets.NextInt(int.MaxValue));
+        Assert.Equal(1845763343, rng.MonsterAi.NextInt(int.MaxValue));
+        Assert.Equal(2129060231, rng.Niche.NextInt(int.MaxValue));
+        Assert.Equal(1926858856, rng.CombatOrbs.NextInt(int.MaxValue));
+        Assert.Equal(1577988061, rng.TreasureRoomRelics.NextInt(int.MaxValue));
     }
 
     [Fact]
@@ -109,7 +92,7 @@ public class RunEngineTests
     }
 
     [Fact]
-    public void RunRngSet_FreshSpecialStreamsMatchPythonPins()
+    public void RunRngSet_FreshSpecialStreamOutputsAreLocked()
     {
         var rng = new RunRngSet("0");
         var actMap = rng.ActMapRng();
@@ -117,16 +100,16 @@ public class RunEngineTests
         var player = new PlayerRngSet(rng);
 
         Assert.Equal(
-            new[] { 103, 812, 338, 25, 578 },
+            new[] { 695, 229, 947, 783, 562 },
             Enumerable.Range(0, 5).Select(_ => actMap.NextInt(1000)).ToArray()
         );
         Assert.Equal(
-            new[] { 251, 527, 171, 59, 947 },
+            new[] { 422, 952, 934, 172, 499 },
             Enumerable.Range(0, 5).Select(_ => neow.NextInt(1000)).ToArray()
         );
-        Assert.Equal(1826229476, player.Rewards.NextInt(int.MaxValue));
-        Assert.Equal(271950293, player.Shops.NextInt(int.MaxValue));
-        Assert.Equal(1896126315, player.Transformations.NextInt(int.MaxValue));
+        Assert.Equal(1821698096, player.Rewards.NextInt(int.MaxValue));
+        Assert.Equal(1625900047, player.Shops.NextInt(int.MaxValue));
+        Assert.Equal(1805565444, player.Transformations.NextInt(int.MaxValue));
     }
 
     [Fact]
@@ -141,7 +124,7 @@ public class RunEngineTests
         Assert.Equal(80, engine.State.PlayerMaxHp);
         Assert.Equal(99, engine.State.Gold);
         Assert.Equal(11, engine.State.Deck.Count);
-        Assert.Equal(new[] { 105, 29, 129 }, engine.State.NeowOptions);
+        Assert.Equal(new[] { 140, 242, 134 }, engine.State.NeowOptions);
     }
 
     [Fact]
@@ -241,6 +224,21 @@ public class RunEngineTests
         Assert.All(mask[3..], value => Assert.Equal(0, value));
     }
 
+    /// <summary>
+    /// Step until the run reaches the Map phase. Which phases sit between Neow and
+    /// the map depends on the Neow options rolled for the seed (some grant a card
+    /// reward first), so tests must not assume a fixed number of steps.
+    /// </summary>
+    private static void AdvanceToMapPhase(RunEngine engine, int maxSteps = 8)
+    {
+        for (int i = 0; i < maxSteps && engine.State.Phase != RunPhase.Map; i++)
+        {
+            engine.Step(0, -1, out _, out _, out _);
+        }
+
+        Assert.Equal(RunPhase.Map, engine.State.Phase);
+    }
+
     [Fact]
     public void Reset_GeneratesActRoomsAndMapOptions()
     {
@@ -254,13 +252,13 @@ public class RunEngineTests
         Assert.True(engine.State.BossEncounterId > 0);
         Assert.True(engine.State.MapNodes.Count > 2);
 
-        engine.Step(0, -1, out _, out _, out _);
+        AdvanceToMapPhase(engine);
         engine.WriteObservation(obs);
         engine.WriteActionMask(mask);
 
         int offset = RunConstants.CombatObsSize;
         Assert.Equal((int)RunPhase.Map, obs[offset]);
-        Assert.Equal(249, obs[offset + 4]);
+        Assert.Equal(99, obs[offset + 4]);
         Assert.Equal(2, obs[offset + 7]);
         Assert.Contains(
             obs[(offset + 12)..(offset + 16)],
@@ -276,7 +274,7 @@ public class RunEngineTests
         var obs = new int[RunConstants.RunObsSize];
 
         engine.Reset("0");
-        engine.Step(0, -1, out _, out _, out _);
+        AdvanceToMapPhase(engine);
         int action = Array.FindIndex(
             engine.State.MapNodeTypes,
             nodeType => nodeType == RunConstants.NodeNormal

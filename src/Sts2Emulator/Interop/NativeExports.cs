@@ -34,7 +34,7 @@ public static class NativeExports
     public const int MAX_ENEMIES = 6;
     public const int MAX_PLAYER_BUFFS = 10;
     public const int MAX_ENEMY_BUFFS = 5;
-    public const int NATIVE_API_VERSION = 11;
+    public const int NATIVE_API_VERSION = 12;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -266,6 +266,48 @@ public static class NativeExports
                 maskBuf[a] = 1;
             }
         }
+    }
+
+    /// <summary>
+    /// Dump one combat pile in true order (index 0 = top of pile), for differential
+    /// testing against the live game. The observation vector only carries pile
+    /// *counts*, and the STS2MCP mod sorts its `draw_pile` for display, so neither
+    /// side exposed an ordered readout before this.
+    /// </summary>
+    /// <param name="pileId">0 = draw, 1 = hand, 2 = discard, 3 = exhaust.</param>
+    /// <param name="buf">Receives 2 ints per card: def id, then upgraded (0/1).</param>
+    /// <param name="maxCards">Capacity of <paramref name="buf"/> in cards, not ints.</param>
+    /// <returns>
+    /// The pile's true card count, which may exceed <paramref name="maxCards"/> — only
+    /// the first <paramref name="maxCards"/> are written, so callers can size and retry.
+    /// Returns -1 for an unknown <paramref name="pileId"/>.
+    /// </returns>
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_GetPile")]
+    public static unsafe int Sts2_GetPile(int handle, int pileId, int* buf, int maxCards)
+    {
+        var state = _pool[handle]!.State;
+        var pile = pileId switch
+        {
+            0 => state.DrawPile,
+            1 => state.Hand,
+            2 => state.DiscardPile,
+            3 => state.ExhaustPile,
+            _ => null,
+        };
+
+        if (pile is null)
+        {
+            return -1;
+        }
+
+        int written = Math.Min(pile.Count, maxCards);
+        for (int i = 0; i < written; i++)
+        {
+            buf[i * 2] = pile[i].DefId;
+            buf[i * 2 + 1] = pile[i].Upgraded ? 1 : 0;
+        }
+
+        return pile.Count;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_Destroy")]

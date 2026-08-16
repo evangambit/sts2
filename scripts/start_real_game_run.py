@@ -158,10 +158,59 @@ def wait_for_event_options(base_url: str, timeout: float = 10.0) -> dict[str, An
     raise RuntimeError("Timed out waiting for event options")
 
 
+def settle(base_url: str, min_delay: float = 0.4, timeout: float = 5.0) -> None:
+    """Wait for the game to stop changing before sending the next menu action.
+
+    The lobby/character-select screens tear down and rebuild UI nodes between
+    steps. Firing the next action into that window is what produces the
+    "internal error!" popup — the game NREs in NRunMusicController.UpdateTrack or
+    touches an already-disposed node (ObjectDisposedException in NTopBarHp).
+    Two identical consecutive reads is a cheap proxy for "settled".
+    """
+    time.sleep(min_delay)
+    deadline = time.monotonic() + timeout
+    previous = None
+    while time.monotonic() < deadline:
+        state = get_state(base_url)
+        marker = (
+            state.get("state_type"),
+            state.get("menu_screen"),
+            tuple(sorted(option_names(state))),
+        )
+        if marker == previous:
+            return
+        previous = marker
+        time.sleep(0.2)
+
+
+def back_out_to_main_menu(base_url: str, max_hops: int = 6) -> None:
+    """Walk 'back' from a submenu up to the main menu.
+
+    Distinct from return_to_main_menu, which is a save-and-quit for a run in
+    progress and errors with "No run in progress" when we're merely sitting on a
+    submenu (e.g. a character_select screen left behind by an aborted attempt).
+    """
+    for _ in range(max_hops):
+        state = get_state(base_url)
+        if state.get("state_type") == "menu" and state.get("menu_screen") == "main":
+            return
+        if "back" not in option_names(state):
+            raise RuntimeError(
+                f"Menu screen {state.get('menu_screen')!r} has no 'back' option; "
+                "cannot reach the main menu automatically.",
+            )
+        post_menu(base_url, "back")
+        settle(base_url)
+    raise RuntimeError(f"Could not reach the main menu within {max_hops} 'back' hops")
+
+
 def abandon_existing_run(base_url: str) -> None:
     state = get_state(base_url)
-    if state.get("state_type") != "menu" or state.get("menu_screen") != "main":
+    if state.get("state_type") != "menu":
+        # Actually inside a run — save-and-quit out to the menu.
         post_action(base_url, {"action": "return_to_main_menu"})
+    elif state.get("menu_screen") != "main":
+        back_out_to_main_menu(base_url)
     main = wait_for_menu(base_url, "main", timeout=30.0)
     if "abandon_run" not in option_names(main):
         return
@@ -179,7 +228,16 @@ def start_seeded_run(
     seed: str,
     character: str,
     abandon_existing: bool,
+    mode: str = "custom",
+    ascension: int | None = None,
 ) -> dict[str, Any]:
+    """Start a run on a chosen seed.
+
+    Defaults to ``custom`` mode because **standard mode rejects a seed outright**
+    ("Seed should not be changed in standard mode!") — only the custom-run screen's
+    Lobby.SetSeed accepts one. Custom mode reports as ``character_select`` with
+    ``custom_run: true``. Pass mode="standard" only for a seedless run.
+    """
     if abandon_existing:
         abandon_existing_run(base_url)
         state = wait_for_menu(base_url, "main")
@@ -196,9 +254,18 @@ def start_seeded_run(
 
     post_menu(base_url, "singleplayer")
     wait_for_menu(base_url, "singleplayer")
-    post_menu(base_url, "standard")
+    post_menu(base_url, mode)
     wait_for_menu(base_url, "character_select")
+    # Settle between each of these: they run back-to-back against a lobby screen
+    # that is still rebuilding its UI, which is what triggers the crash popup.
+    settle(base_url)
     post_menu(base_url, character)
+    settle(base_url)
+    if ascension is not None:
+        # menu_select has no extra params, so the mod carries the ascension level
+        # in the seed field (see McpMod.CustomRun.cs).
+        post_menu(base_url, "ascension", seed=str(ascension))
+        settle(base_url)
     post_menu(base_url, "confirm", seed=seed)
     return wait_for_run(base_url, seed)
 

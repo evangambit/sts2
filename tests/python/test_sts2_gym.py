@@ -46,11 +46,11 @@ class Sts2GymTests(unittest.TestCase):
             run_offset = native.OBS_SIZE
             self.assertEqual(
                 list(obs[run_offset : run_offset + 9]),
-                [PHASE_ANCIENT, 1, 1, 11, 99, 64, 80, 1, NODE_NORMAL],
+                [PHASE_ANCIENT, 1, 2, 11, 99, 64, 80, 1, NODE_NORMAL],
             )
             self.assertEqual(
                 list(native.run_info(handle)),
-                [PHASE_ANCIENT, 1, 1, 11, 99, 64, 80, 1, NODE_NORMAL, 0, 0],
+                [PHASE_ANCIENT, 1, 2, 11, 99, 64, 80, 1, NODE_NORMAL, 0, 0],
             )
             self.assertEqual(
                 list(native.run_action_mask(handle, native.RUN_MAX_ACTIONS))[:6],
@@ -71,7 +71,7 @@ class Sts2GymTests(unittest.TestCase):
             )
             self.assertEqual(native.run_state_list(handle, 1, 8), (36,))
             self.assertEqual(native.run_state_list(handle, 2, 3), (0, 0, 0))
-            self.assertEqual(native.run_state_list(handle, 3, 3), (105, 29, 129))
+            self.assertEqual(native.run_state_list(handle, 3, 3), (140, 242, 134))
         finally:
             native.run_destroy(handle)
 
@@ -126,7 +126,7 @@ class Sts2GymTests(unittest.TestCase):
             )
 
             next_obs, reward, terminated, truncated, _ = env.step(0)
-            self.assertEqual(int(next_obs[native.OBS_SIZE]), PHASE_MAP)
+            self.assertEqual(int(next_obs[native.OBS_SIZE]), PHASE_CARD_REWARD)
             self.assertEqual(reward, 0.0)
             self.assertFalse(terminated)
             self.assertFalse(truncated)
@@ -144,8 +144,8 @@ class Sts2GymTests(unittest.TestCase):
                 {"action": "choose_event_option", "index": 0},
             )
 
-            self.assertEqual(int(obs[native.OBS_SIZE]), PHASE_MAP)
-            self.assertEqual(info["phase"], PHASE_MAP)
+            self.assertEqual(int(obs[native.OBS_SIZE]), PHASE_CARD_REWARD)
+            self.assertEqual(info["phase"], PHASE_CARD_REWARD)
             self.assertEqual(reward, 0.0)
             self.assertFalse(terminated)
             self.assertFalse(truncated)
@@ -424,8 +424,8 @@ class Sts2GymTests(unittest.TestCase):
         self.assertEqual(
             [
                 "event",
-                "map",
-                "map",
+                "card_reward",
+                "card_reward",
                 "map",
                 "monster",
             ],

@@ -46,13 +46,13 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 199 pass)
+# C# unit tests (currently 206 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (17 pass) — drives the live dylib via ctypes
+# Python gym tests (25 pass) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -99,12 +99,27 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 199 C# + 17 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 206 C# + 25 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
-- **Bit-exact enemy generation vs the live game** (the headline result): a live custom
-  run seeded `"ABCDEF"` → `debug_start_encounter CorpseSlugsWeak` → enemies `[28,29]`;
-  emulator `Sts2CombatEnv(seed=3334281563, encounter="corpse-slugs",
-  completed_combat_rooms=0)` → `[28,29]`. Exact match.
+- ✅ **Opening hand is bit-exact vs the live game** — the current headline result.
+  Live `"ABCDEF"` custom run at A8 → `debug_start_encounter CorpseSlugsWeak`; the
+  emulator reproduces the **entire 11-card shuffled deck in order** (hand + draw pile),
+  verified by `scripts/compare_draw_pile.py` against the capture in
+  `/tmp/live_abcdef.json`. Odds of coincidence 1 in 13,860.
+- ✅ **Enemy generation matches** (`[28,29]`) — and now *causally*, since the RNG is
+  correct. Note this was previously reported as proof while the RNG was still wrong,
+  where it had ~17% odds of being luck; it is corroborating evidence now, but it is
+  still a single 2-enemy sample and deserves more.
+- ✅ **RNG is now the game's actual generator.** `Core/Rng/MegaRandom.cs` is a faithful
+  port of the game's `MegaRandom` — **Xoshiro256\*\* seeded via Splitmix64** — and
+  `GameRng` mirrors the game's `Rng` wrapper method-for-method (its `Counter`, and
+  `NextBool` as `Next(2) == 0` rather than MegaRandom's own sign-bit variant).
+  `CountingRandom` is backed by it too. **The old `DotNetRandom` (a port of .NET's
+  legacy subtractive Random) was deleted** — it was the wrong algorithm and the root
+  cause of every shuffle divergence; do not reintroduce it.
+  Two subtleties worth keeping: the range mapping is `(int)(NextDouble() * max)`, so
+  reproducing the game means reproducing that bias exactly; and `NextGaussianInt` uses
+  plain `Math.Round` (banker's/to-even), not away-from-zero.
 - **Seed derivation matches the game** (test `RunRngSet_DerivesGameSeedForStringSeed`:
   `RunRngSet("ABCDEF").Seed == 3334281563u`).
 - **Enemy HP now rolled faithfully** (was hardcoded `fixedHp`; now uses the game's
@@ -128,7 +143,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 - **Weak encounter variants:** `completed_combat_rooms` in `[0,3)` selects the weak
   variant (e.g. CorpseSlugsWeak = 2 slugs vs Normal = 3). Wired through
   `Sts2CombatEnv(..., completed_combat_rooms=)` and `Sts2_ResetEncounterWeak` (native
-  API v11).
+  API v11; the API is at v12 as of the pile-introspection export).
 - **Ascension:** the emulator models high ascension (`ToughEnemies` values). Live runs
   at A8 give player 64/80 HP and CorpseSlug 27–29, matching the emulator.
 - **Save file** (custom run): `~/Library/Application Support/SlayTheSpire2/steam/
@@ -137,6 +152,44 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Gotchas / known issues
 
+- **`scripts/extract_data.py` CANNOT reproduce `src/Sts2Emulator/Generated/*.g.cs` — do
+  not run it blind.** Both came from the single "Initial commit", but re-running the
+  script against the current `decompiled/` **renumbers every card/enemy/power/relic id**
+  and **drops the 10000-range status cards** (Infection, Burn, Disintegration, Wound,
+  Wither, SpoilsMap — the script's `SPECIAL_CARD_IDS` only maps `AscendersBane`/`Dazed`,
+  so its `cost < 0` filter discards them). That renumbering silently broke 6 tests when
+  first tried. The committed id order is *not* any filename sort (case-sensitive or not),
+  so it came from some upstream process this script doesn't replicate. **This means
+  `scripts/patch_update.sh` is effectively broken** — it chains `extract_data.py`.
+  Fixing the extractor to be id-stable is a prerequisite for any future patch bump.
+  (The Innate flags were therefore applied to `Cards.g.cs` surgically by name, ids
+  untouched; `extract_data.py` also has the correct Innate logic for when it's fixed.)
+- **`Folly` and `Writhe` are missing from `Cards.g.cs`** — both are canonically Innate
+  cost-`-1` curses dropped by the same `cost < 0` filter. Harmless today (starter decks
+  have neither) but they'd be *unknown cards*, not merely misordered, if ever drawn.
+- **Embarking a run through the lobby CRASHES the game — loading a save does not.**
+  Every mod-driven embark NREs in `NRunMusicController.UpdateTrack()` (its `_runState`
+  is still `NullRunState`, whose `CurrentRoom` is null) from `RunManager.EnterRoomInternal`,
+  giving the "internal error!" popup. **It is a game bug in a UI path — not fixable from
+  our side, so route around it.** Ruled out by log evidence, so don't re-chase these:
+  menu churn / rapid actions, the abandon flow, window focus/backgrounding, and the
+  10s startup 'Common' preload overlapping the embark. All four correlate with *both*
+  successes and failures.
+  **The crash is recoverable** — it fires *after* the run is created and written to
+  `current_run.save`, and loading that save uses a different path
+  (`isRestoringRoomStackBase`) that works cleanly (verified: `Continuing run with
+  character: CHARACTER.IRONCLAD` → Event Room → zero errors). **The working loop:**
+  1. `compare_draw_pile.py --start-run …` → embark → game crashes (save is written).
+  2. `pkill -9 -if "slay the spire 2"; sleep 3; open "steam://rungameid/2868840"`.
+  3. Click **Continue** — *not* New Run, and do **not** abandon.
+  4. `compare_draw_pile.py --jump-encounter …` → captures without touching the lobby.
+  The script detects the popup and prints this recipe (`explain_embark_crash`).
+- **`AbandonRun` also throws** when `current_run.save.backup` is absent ("Error deleting
+  path … Failed"). Independent of the above; the preflight in `compare_draw_pile.py`
+  refuses to drive the in-game abandon unless `--abandon` is passed.
+- **Seeded runs need CUSTOM mode.** Standard mode rejects a chosen seed outright
+  ("Seed should not be changed in standard mode!"). `start_seeded_run` defaults to
+  `mode="custom"` for this reason.
 - **Driving the game hard CRASHES it.** Rapid `abandon → re-embark →
   debug_start_encounter` cycling triggers an error popup (`report_bug`, needs restart).
   A *single* clean sequence with generous `time.sleep` waits is stable. **Follow-on:**
@@ -152,16 +205,50 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Next work (prioritized, with pointers)
 
-1. **Opening-hand exact match** — two residuals (enemy HP already exact):
-   - **Port the game's turn-1 draw-pile reorder** (real emulator bug): after shuffling,
-     game moves `ShouldStartAtBottomOfDrawPile` cards (Ascender's Bane) to the **bottom**
-     and `Innate` cards to the **top**, then draws — see decompiled
-     `MegaCrit.Sts2.Core.Combat/CombatManager.cs` ~line 658. Emulator does neither; add
-     it in `src/Sts2Emulator/Core/CombatFactory.cs` before the opening-hand draw (~line
-     357). Deck order and shuffle algorithm/stream already verified matching.
-   - **Residual shuffle-state factor** — build a small **full-deck introspection** tool
-     (dump the emulator's *ordered* draw pile + a matching live readout) to compare exact
-     sequences, since the combat obs summary doesn't expose ordered draw-pile.
+1. **Opening-hand exact match** — one residual left (enemy HP already exact):
+   - ~~Port the game's turn-1 draw-pile reorder~~ — **DONE**, see
+     `CombatFactory.ApplyTurnOneDrawPileReorder` (8 tests). Note the reorder is a no-op
+     for the *starter* deck (no Innate cards, and `ShouldStartAtBottomOfDrawPile` is the
+     **`Imbued` enchantment** — not Ascender's Bane, as previously written here — and
+     enchantments aren't modelled, so `StartsAtBottomOfDrawPile()` is hardcoded false).
+     So this fixed a real divergence for later decks but **cannot** be the cause of any
+     turn-1 starter-deck mismatch. Two ordering subtleties are ported and pinned by test:
+     innate cards end up **reversed** (the game inserts each at index 0), and the game's
+     `Except` runs on *reference* identity — do not reimplement it with LINQ on
+     `CardInstance`, which is a value type and would dedup equal cards.
+   - ~~Residual shuffle-state factor~~ — **ANSWERED, and it was not shuffle state.**
+     The introspection tooling was built and run against the live game: deck composition
+     matches exactly, the shuffle *algorithm* matches (both are the same descending
+     Fisher-Yates), the master deck order matches the save's `deck` array, and the save
+     shows every combat stream at CallCount **0** — so the fresh-stream assumption was
+     right and there is no offset to find. **The divergence is the RNG algorithm itself**
+     (see above). **The MegaRandom port is DONE and the opening hand now matches
+     exactly.** Item 1 is closed.
+   - ⚠️ **Follow-on from the RNG port — `RunMapGenerator` needs re-verification.**
+     It contains empirically-tuned fudges (a bare `for i < 202: upFront.NextDouble()`,
+     then 57/60 `NextInt` calls) that were tuned to *reproduce CallCounts under the old,
+     wrong RNG*. They are now meaningless as calibration and were never verified against
+     the live game. Map generation also does not use the game's `act_N_map` stream
+     (`RunRngSet.ActMapRng`) — it seeds off the bare run seed. Under the corrected RNG
+     the act for seed `"0"` flipped Overgrowth→Underdocks and the Neow options changed,
+     which is expected, but none of it is validated. **Verify map/act/Neow generation
+     against a live run next.**
+
+   **Introspection tooling (built, live half not yet exercised):**
+   - Emulator: `Sts2_GetPile` (native API **v12**) → `env.get_pile("draw"|"hand"|
+     "discard"|"exhaust")`, returning `(card_def_id, upgraded)` in true order,
+     index 0 = top. The obs vector only ever carried pile *counts*.
+   - Live: our STS2MCP fork now emits `draw_pile_ordered` / `discard_pile_ordered` /
+     `hand_ordered` under `result["player"]` (raw entry ids, true order). **The existing
+     `draw_pile` field is sorted by rarity/id for in-game display** — that's why an
+     ordered comparison was impossible before; both fields are kept.
+   - `scripts/compare_draw_pile.py` joins them and prints a side-by-side diff, and
+     distinguishes *same cards wrong order* (shuffle/reorder bug) from *different cards*
+     (deck construction bug). `--live-json` re-diffs a saved capture with no game running;
+     `--save-live-json` captures one. Verified both ways against fixtures; **the live
+     capture path has not been run against the real game yet.**
+   - `sts2_gym.game_seed("ABCDEF") -> 3334281563` ports the string→gen-seed hash to
+     Python, so harnesses no longer need `find_matching_seed`'s 500k brute-force search.
 2. **Harden the debug/menu mod actions** with settled-state guards (fix the crash-on-churn).
 3. **Implement `start_replay`** in the STS2MCP fork → clean deterministic full-run capture
    (design in docs/replay-verification.md §1).
@@ -174,7 +261,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 199 pass
+dotnet test src/Sts2Emulator.Tests/        # 206 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 17 pass
+uv run python -m unittest discover -s tests/python   # 25 pass
 ```

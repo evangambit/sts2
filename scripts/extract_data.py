@@ -43,6 +43,23 @@ MULTI_ATTACK = re.compile(
 POWER_TYPE = re.compile(r"PowerType\.(Buff|Debuff)")
 POWER_STACK = re.compile(r"PowerStackType\.(\w+)")
 
+# Innate attribution — the CanonicalKeywords property body vs the OnUpgrade body.
+_CANONICAL_KEYWORDS_BODY = re.compile(
+    r"CanonicalKeywords\s*=>(.*?)(?=\n\tprotected|\n\tpublic|\n\tprivate|\Z)",
+    re.S,
+)
+_ON_UPGRADE_BODY = re.compile(r"OnUpgrade\(\)\s*\{(.*?)\n\t\}", re.S)
+
+
+def INNATE_CANONICAL(text: str) -> bool:
+    m = _CANONICAL_KEYWORDS_BODY.search(text)
+    return bool(m and "CardKeyword.Innate" in m.group(1))
+
+
+def INNATE_ON_UPGRADE(text: str) -> bool:
+    m = _ON_UPGRADE_BODY.search(text)
+    return bool(m and "CardKeyword.Innate" in m.group(1))
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -106,6 +123,14 @@ def extract_cards() -> str:
             flags.append("Exhaust: true")
         if "CardKeyword.Unplayable" in text:
             flags.append("Unplayable: true")
+        # Innate needs precise attribution, unlike the flags above: 9 cards declare
+        # it in CanonicalKeywords (always innate) while 15 others only gain it via
+        # OnUpgrade.  A substring check would mark the latter permanently innate and
+        # silently corrupt the turn-1 draw-pile reorder.
+        if INNATE_CANONICAL(text):
+            flags.append("Innate: true")
+        if INNATE_ON_UPGRADE(text):
+            flags.append("InnateWhenUpgraded: true")
         flags_cs = f", {', '.join(flags)}" if flags else ""
 
         entries.append(

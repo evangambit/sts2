@@ -6,7 +6,10 @@ public static class RunMapGenerator
 {
     public static void SelectActAndGenerateRooms(RunState state)
     {
-        var actRng = new DotNetRandom(unchecked((int)state.Rng.Seed));
+        // GameRng with no stream name seeds exactly as the old raw-seed DotNetRandom
+        // did, but on the game's actual generator and with the game's NextBool
+        // (Next(2) == 0) rather than MegaRandom's sign-bit variant.
+        var actRng = new GameRng(state.Rng.Seed);
         bool underdocks = actRng.NextBool();
         state.Act = underdocks ? RunConstants.ActUnderdocks : RunConstants.ActOvergrowth;
         state.EventSequence = GenerateEventSequence(state, underdocks);

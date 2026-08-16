@@ -1,11 +1,22 @@
 namespace Sts2Emulator.Core.Rng;
 
+/// <summary>
+/// Port of the game's <c>MegaCrit.Sts2.Core.Random.Rng</c>: a named, counted
+/// stream over <see cref="MegaRandom" /> (Xoshiro256**).
+///
+/// Method-for-method faithful to the game, because every call both produces a
+/// value and advances shared stream state — a wrapper that consumes a different
+/// number of draws desynchronises everything downstream even when each
+/// individual value looks reasonable.
+/// </summary>
 public sealed class GameRng
 {
-    private readonly DotNetRandom _rng;
+    private readonly MegaRandom _rng;
 
     public int RawSeed { get; }
-    public int CallCount => _rng.CallCount;
+
+    /// <summary>The game's <c>Rng.Counter</c>: how many values this stream has produced.</summary>
+    public int CallCount { get; private set; }
 
     public GameRng(uint seed, string name = "")
     {
@@ -13,19 +24,50 @@ public sealed class GameRng
             ? seed
             : unchecked(seed + (uint)DeterministicHash.GetDeterministicHashCode(name));
         RawSeed = unchecked((int)rawSeed);
-        _rng = new DotNetRandom(RawSeed);
+        // The game constructs MegaRandom from the uint seed; go through uint so the
+        // value is zero-extended rather than sign-extended.
+        _rng = new MegaRandom(rawSeed);
     }
 
     public GameRng(int seed)
         : this(unchecked((uint)seed)) { }
 
-    public int NextInt(int maxExclusive) => _rng.Next(maxExclusive);
+    public int NextInt(int maxExclusive = int.MaxValue)
+    {
+        CallCount++;
+        return _rng.Next(maxExclusive);
+    }
 
-    public int NextInt(int minInclusive, int maxExclusive) => _rng.Next(minInclusive, maxExclusive);
+    public int NextInt(int minInclusive, int maxExclusive)
+    {
+        if (minInclusive >= maxExclusive)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(minInclusive),
+                "Minimum must be lower than maximum."
+            );
+        }
 
-    public bool NextBool() => _rng.NextBool();
+        CallCount++;
+        return _rng.Next(minInclusive, maxExclusive);
+    }
 
-    public double NextDouble() => _rng.NextDouble();
+    /// <summary>
+    /// Matches the game's <c>Rng.NextBool</c>, which is <c>Next(2) == 0</c> — NOT
+    /// MegaRandom's own sign-bit NextBool, which would consume the same draw but
+    /// return the opposite answer roughly half the time.
+    /// </summary>
+    public bool NextBool()
+    {
+        CallCount++;
+        return _rng.Next(2) == 0;
+    }
+
+    public double NextDouble()
+    {
+        CallCount++;
+        return _rng.NextDouble();
+    }
 
     public T NextItem<T>(IReadOnlyList<T> items)
     {
@@ -37,6 +79,10 @@ public sealed class GameRng
         return items[NextInt(items.Count)];
     }
 
+    /// <summary>
+    /// Box–Muller, matching the game. Note the game uses plain <c>Math.Round</c>
+    /// (banker's rounding, to-even) — not away-from-zero.
+    /// </summary>
     public int NextGaussianInt(int mean, int stdDev, int min, int max)
     {
         while (true)
@@ -44,7 +90,7 @@ public sealed class GameRng
             double d = 1.0 - NextDouble();
             double num = 1.0 - NextDouble();
             double sample = Math.Sqrt(-2.0 * Math.Log(d)) * Math.Sin(Math.PI * 2.0 * num);
-            int result = (int)Math.Round(mean + stdDev * sample, MidpointRounding.AwayFromZero);
+            int result = (int)Math.Round(mean + stdDev * sample);
             if (min <= result && result <= max)
             {
                 return result;
@@ -52,6 +98,7 @@ public sealed class GameRng
         }
     }
 
+    /// <summary>The game's <c>ListExtensions.UnstableShuffle</c>.</summary>
     public void Shuffle<T>(IList<T> items)
     {
         for (int i = items.Count - 1; i > 0; i--)
@@ -67,6 +114,7 @@ public sealed class GameRng
         Shuffle(items);
     }
 
+    /// <summary>The game's <c>Rng.FastForwardCounter</c>.</summary>
     public void AdvanceToCallCount(int callCount)
     {
         if (callCount < CallCount)
@@ -79,7 +127,8 @@ public sealed class GameRng
 
         while (CallCount < callCount)
         {
-            NextDouble();
+            CallCount++;
+            _rng.NextInt();
         }
     }
 }
