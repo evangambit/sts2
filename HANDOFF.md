@@ -52,7 +52,7 @@ dotnet test src/Sts2Emulator.Tests/
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (17 pass) — drives the live dylib via ctypes
+# Python gym tests (25 pass) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -99,7 +99,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 207 C# + 17 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 207 C# + 25 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - **Bit-exact enemy generation vs the live game** (the headline result): a live custom
   run seeded `"ABCDEF"` → `debug_start_encounter CorpseSlugsWeak` → enemies `[28,29]`;
@@ -128,7 +128,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 - **Weak encounter variants:** `completed_combat_rooms` in `[0,3)` selects the weak
   variant (e.g. CorpseSlugsWeak = 2 slugs vs Normal = 3). Wired through
   `Sts2CombatEnv(..., completed_combat_rooms=)` and `Sts2_ResetEncounterWeak` (native
-  API v11).
+  API v11; the API is at v12 as of the pile-introspection export).
 - **Ascension:** the emulator models high ascension (`ToughEnemies` values). Live runs
   at A8 give player 64/80 HP and CorpseSlug 27–29, matching the emulator.
 - **Save file** (custom run): `~/Library/Application Support/SlayTheSpire2/steam/
@@ -178,10 +178,25 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
      innate cards end up **reversed** (the game inserts each at index 0), and the game's
      `Except` runs on *reference* identity — do not reimplement it with LINQ on
      `CardInstance`, which is a value type and would dedup equal cards.
-   - **Residual shuffle-state factor** — build a small **full-deck introspection** tool
-     (dump the emulator's *ordered* draw pile + a matching live readout) to compare exact
-     sequences, since the combat obs summary doesn't expose ordered draw-pile.
-     **This is now the only remaining lead for opening-hand mismatch** — start here.
+   - **Residual shuffle-state factor** — the **full-deck introspection tooling is now
+     BUILT** (see below); what remains is to *run* it against the live game and read the
+     answer. **This is the only remaining lead for opening-hand mismatch** — start here.
+
+   **Introspection tooling (built, live half not yet exercised):**
+   - Emulator: `Sts2_GetPile` (native API **v12**) → `env.get_pile("draw"|"hand"|
+     "discard"|"exhaust")`, returning `(card_def_id, upgraded)` in true order,
+     index 0 = top. The obs vector only ever carried pile *counts*.
+   - Live: our STS2MCP fork now emits `draw_pile_ordered` / `discard_pile_ordered` /
+     `hand_ordered` under `result["player"]` (raw entry ids, true order). **The existing
+     `draw_pile` field is sorted by rarity/id for in-game display** — that's why an
+     ordered comparison was impossible before; both fields are kept.
+   - `scripts/compare_draw_pile.py` joins them and prints a side-by-side diff, and
+     distinguishes *same cards wrong order* (shuffle/reorder bug) from *different cards*
+     (deck construction bug). `--live-json` re-diffs a saved capture with no game running;
+     `--save-live-json` captures one. Verified both ways against fixtures; **the live
+     capture path has not been run against the real game yet.**
+   - `sts2_gym.game_seed("ABCDEF") -> 3334281563` ports the string→gen-seed hash to
+     Python, so harnesses no longer need `find_matching_seed`'s 500k brute-force search.
 2. **Harden the debug/menu mod actions** with settled-state guards (fix the crash-on-churn).
 3. **Implement `start_replay`** in the STS2MCP fork → clean deterministic full-run capture
    (design in docs/replay-verification.md §1).
@@ -196,5 +211,5 @@ cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 dotnet test src/Sts2Emulator.Tests/        # 207 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 17 pass
+uv run python -m unittest discover -s tests/python   # 25 pass
 ```

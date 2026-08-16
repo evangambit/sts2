@@ -1,0 +1,215 @@
+"""Compare the emulator's ordered draw pile against the live game's, card for card.
+
+The observation vector only carries pile *counts*, and STS2MCP's `draw_pile` is
+sorted by rarity/id for display — so neither side exposed an ordered readout
+until `Sts2_GetPile` (emulator) and `draw_pile_ordered` (our STS2MCP fork) were
+added. This script joins the two.
+
+Live half requires the game running with our STS2MCP fork installed:
+
+    open "steam://rungameid/2868840"
+    python scripts/compare_draw_pile.py --seed ABCDEF --encounter corpse-slugs
+
+Use --live-json to re-diff a previously captured payload with no game running.
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import re
+import sys
+from pathlib import Path
+from types import ModuleType
+from typing import Any
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent))
+
+from sts2_gym import Sts2CombatEnv, game_seed
+from sts2_gym.commands import card_name_by_id
+
+
+def _load(name: str) -> ModuleType:
+    path = Path(__file__).with_name(f"{name}.py")
+    spec = importlib.util.spec_from_file_location(f"_cdp_{name}", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def normalize(name: str) -> str:
+    """Collapse naming conventions so both sides compare on equal terms.
+
+    The emulator stores PascalCase class names ("StrikeIronclad"); the game uses
+    entry ids ("strike_ironclad"). Upgrade state is carried separately, so a
+    trailing "+" is dropped here.
+    """
+    return re.sub(r"[^A-Za-z0-9]", "", name.strip().removesuffix("+")).lower()
+
+
+def emulator_pile(
+    seed: int, encounter: str, completed_combat_rooms: int, pile: str
+) -> list[tuple[str, bool]]:
+    names = card_name_by_id()
+    env = Sts2CombatEnv(
+        seed=seed,
+        encounter=encounter,
+        completed_combat_rooms=completed_combat_rooms,
+    )
+    try:
+        env.reset()
+        return [
+            (names.get(card_id, f"<unknown:{card_id}>"), upgraded)
+            for card_id, upgraded in env.get_pile(pile)
+        ]
+    finally:
+        env.close()
+
+
+# Emulator pile name -> the field our STS2MCP fork adds under result["player"].
+LIVE_PILE_KEYS = {
+    "hand": "hand_ordered",
+    "draw": "draw_pile_ordered",
+    "discard": "discard_pile_ordered",
+}
+
+
+def live_pile(state: dict[str, Any], pile: str) -> list[tuple[str, bool]]:
+    key = LIVE_PILE_KEYS.get(pile)
+    if key is None:
+        raise SystemExit(
+            f"No live readout for pile {pile!r}; expected one of "
+            f"{sorted(LIVE_PILE_KEYS)}",
+        )
+
+    # The mod nests combat piles under result["player"]; accept a bare player dict
+    # or a battle-wrapped payload too, so saved captures of either shape re-diff.
+    cards = None
+    for scope in (state.get("player"), (state.get("battle") or {}).get("player"), state):
+        if isinstance(scope, dict) and scope.get(key) is not None:
+            cards = scope[key]
+            break
+
+    if cards is None:
+        raise SystemExit(
+            f"Live state has no {key!r}. That field is a fork addition — rebuild and "
+            "reinstall STS2MCP from ~/Projects/STSS/STS2MCP, then restart the game.",
+        )
+    return [(str(c.get("id") or ""), bool(c.get("is_upgraded"))) for c in cards]
+
+
+def render(
+    emu: list[tuple[str, bool]], live: list[tuple[str, bool]], label: str
+) -> bool:
+    """Print a side-by-side comparison. Returns True when the piles match."""
+    matched = True
+    print(f"\n=== {label} (index 0 = top of pile, drawn next) ===")
+    print(f"{'#':>3}  {'emulator':<28} {'live':<28} ")
+    print("-" * 66)
+
+    for i in range(max(len(emu), len(live))):
+        e = emu[i] if i < len(emu) else None
+        lv = live[i] if i < len(live) else None
+        e_txt = f"{e[0]}{'+' if e[1] else ''}" if e else "—"
+        l_txt = f"{lv[0]}{'+' if lv[1] else ''}" if lv else "—"
+        same = (
+            e is not None
+            and lv is not None
+            and normalize(e[0]) == normalize(lv[0])
+            and e[1] == lv[1]
+        )
+        matched &= same
+        print(f"{i:>3}  {e_txt:<28} {l_txt:<28} {'' if same else '<-- MISMATCH'}")
+
+    if len(emu) != len(live):
+        matched = False
+        print(f"\nLENGTH MISMATCH: emulator {len(emu)} vs live {len(live)}")
+
+    # A multiset check separates "wrong order" from "wrong cards" — the former
+    # points at shuffle/reorder, the latter at deck construction.
+    if not matched:
+        emu_bag = sorted(normalize(n) for n, _ in emu)
+        live_bag = sorted(normalize(n) for n, _ in live)
+        if emu_bag == live_bag:
+            print("\nSame cards, different ORDER -> shuffle or turn-1 reorder divergence.")
+        else:
+            print("\nDifferent CARDS -> deck construction diverges, not just ordering.")
+
+    return matched
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", default="ABCDEF", help="run's string seed")
+    parser.add_argument("--encounter", default="corpse-slugs")
+    parser.add_argument("--character", default="ironclad")
+    parser.add_argument("--base-url", default="http://localhost:15526")
+    parser.add_argument(
+        "--completed-combat-rooms",
+        type=int,
+        default=None,
+        help="defaults to the weak/normal variant implied by --encounter",
+    )
+    parser.add_argument(
+        "--live-json",
+        type=Path,
+        default=None,
+        help="re-diff a saved live state instead of driving the game",
+    )
+    parser.add_argument(
+        "--save-live-json",
+        type=Path,
+        default=None,
+        help="write the captured live state here for offline re-diffing",
+    )
+    parser.add_argument(
+        "--start-run",
+        action="store_true",
+        help="start a seeded run and jump into the encounter before capturing",
+    )
+    parser.add_argument("--piles", default="hand,draw")
+    args = parser.parse_args()
+
+    validate = _load("validate_real_game_trace")
+    completed = args.completed_combat_rooms
+    if completed is None:
+        completed = validate.emulator_completed_combat_rooms(args.encounter)
+
+    if args.live_json is not None:
+        state = json.loads(args.live_json.read_text())
+    else:
+        start_real_game_run = _load("start_real_game_run")
+        if args.start_run:
+            live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(args.encounter)
+            if live_encounter is None:
+                raise SystemExit(f"No live encounter mapped for {args.encounter!r}")
+            print(f"Starting seeded run {args.seed!r} -> {live_encounter} ...")
+            validate.start_debug_encounter(
+                args.base_url, args.seed, args.character, live_encounter
+            )
+        state = start_real_game_run.get_state(args.base_url)
+
+    if args.save_live_json is not None:
+        args.save_live_json.write_text(json.dumps(state, indent=2))
+        print(f"wrote live state -> {args.save_live_json}")
+
+    seed = game_seed(args.seed)
+    print(f"seed {args.seed!r} -> gen seed {seed}, encounter {args.encounter!r} "
+          f"(completed_combat_rooms={completed})")
+
+    all_matched = True
+    for pile in (p.strip() for p in args.piles.split(",") if p.strip()):
+        emu = emulator_pile(seed, args.encounter, completed, pile)
+        live = live_pile(state, pile)
+        all_matched &= render(emu, live, pile)
+
+    print("\n" + ("ALL PILES MATCH" if all_matched else "MISMATCH — see above"))
+    raise SystemExit(0 if all_matched else 1)
+
+
+if __name__ == "__main__":
+    main()

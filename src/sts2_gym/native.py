@@ -11,7 +11,7 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 11
+_REQUIRED_NATIVE_API_VERSION = 12
 _REQUIRED_RUN_NATIVE_API_VERSION = 8
 
 
@@ -212,6 +212,14 @@ _lib.Sts2_ValidActions.argtypes = [
     ctypes.c_int,
 ]
 
+_lib.Sts2_GetPile.restype = ctypes.c_int
+_lib.Sts2_GetPile.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+    ctypes.c_int,
+]
+
 _lib.Sts2_Destroy.restype = None
 _lib.Sts2_Destroy.argtypes = [ctypes.c_int]
 
@@ -401,6 +409,41 @@ def valid_actions(handle: int, max_actions: int) -> ctypes.Array:
     buf = (ctypes.c_int * max_actions)()
     _lib.Sts2_ValidActions(handle, buf, max_actions)
     return buf
+
+
+PILE_DRAW = 0
+PILE_HAND = 1
+PILE_DISCARD = 2
+PILE_EXHAUST = 3
+
+_PILE_NAMES = {
+    "draw": PILE_DRAW,
+    "hand": PILE_HAND,
+    "discard": PILE_DISCARD,
+    "exhaust": PILE_EXHAUST,
+}
+
+
+def get_pile(handle: int, pile: int | str = PILE_DRAW) -> list[tuple[int, bool]]:
+    """Dump a combat pile in true order — index 0 is the top (next card drawn).
+
+    Returns (card_def_id, upgraded) per card. The observation vector only carries
+    pile counts, so this is the way to compare exact card sequences against the
+    live game.
+    """
+    pile_id = _PILE_NAMES[pile] if isinstance(pile, str) else pile
+    if pile_id not in _PILE_NAMES.values():
+        raise ValueError(f"unknown pile {pile!r}; expected one of {sorted(_PILE_NAMES)}")
+
+    capacity = 64
+    while True:
+        buf = (ctypes.c_int * (capacity * 2))()
+        count = _lib.Sts2_GetPile(handle, pile_id, buf, capacity)
+        if count < 0:
+            raise ValueError(f"native rejected pile id {pile_id}")
+        if count <= capacity:
+            return [(buf[i * 2], bool(buf[i * 2 + 1])) for i in range(count)]
+        capacity = count
 
 
 def player_won(handle: int) -> bool:

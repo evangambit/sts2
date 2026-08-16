@@ -171,6 +171,15 @@ class Sts2CombatEnv(gym.Env):
         mask_buf = native.valid_actions(self._handle, MAX_ACTIONS)
         return np.array(mask_buf, dtype=bool)
 
+    def get_pile(self, pile: str = "draw") -> list[tuple[int, bool]]:
+        """Dump a pile in true order — index 0 is the top (next card drawn).
+
+        Returns (card_def_id, upgraded) per card. Introspection for differential
+        testing; the observation vector only carries pile counts.
+        """
+        assert self._handle is not None, "Call reset() before get_pile()"
+        return native.get_pile(self._handle, pile)
+
     def close(self):
         if self._handle is not None:
             native.destroy(self._handle)
