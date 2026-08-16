@@ -54,9 +54,22 @@ trustworthy enough to train on.
     never-visited states is academic.
 - **Mechanism.** Drive the real game over STS2MCP recording `(seed, action, state)`
   per step. Live capture (what `trace_real_game_run.py` does) works but carries UI
-  timing/nondeterminism (cf. the Neow-event race we hit). **`start_replay`
-  (RunReplays fork) re-runs a recorded game deterministically** for clean per-step
-  state — adopt it for the canonical corpus; keep live capture for quick spot-checks.
+  timing/nondeterminism (cf. the Neow-event race we hit). For clean per-step state,
+  **`start_replay` re-runs a recorded trace deterministically** — adopt it for the
+  canonical corpus; keep live capture for quick spot-checks.
+- **`start_replay` is a self-contained mod action, NOT a RunReplays dependency**
+  (investigated 2026-08-15). The game's built-in replay is combat-only (a multiplayer
+  desync checksum, `MegaCrit.Sts2.Core.Multiplayer.Replay`) and unusable for full
+  runs; the RunReplays mod does full-run replay but exposes no programmatic API. So
+  `start_replay` is implemented in our STS2MCP fork like the debug actions: it takes a
+  recorded harness trace `{seed, character, actions[]}`, embarks a fresh seeded run,
+  and replays the action payloads **one per settled/actionable frame** through the
+  existing `ExecuteAction` dispatch, ticked on the mod's `SceneTree.ProcessFrame`
+  hook. Fire-and-forget + poll: `start_replay` / `get_replay_status` / `cancel_replay`.
+  The hard part is the "settled + actionable" gate (mod-side port of the harness's
+  `is_actionable_state` / `IsPlayPhase`) — a wrong gate fires an action before the
+  game is ready. Register the three verbs *before* `ExecuteAction`'s
+  run-in-progress guard, since `start_replay` begins at the main menu.
 - **Store compact.** `(seed, actions[], per-step state-hash[])`. Full state only for a
   small sample and on-demand when a hash diverges (the RNG-hash trick).
 
@@ -107,8 +120,9 @@ trustworthy enough to train on.
 
 ## Build order
 
-1. **Adopt the RunReplays `start_replay` fork** — the missing clean-capture dependency.
-   (Zamiell has a public RunReplays fork; same fork-under-account approach as STS2MCP.)
+1. **Implement `start_replay` (+ `get_replay_status` / `cancel_replay`) as a
+   self-contained STS2MCP mod action** (no RunReplays dependency; see §1 Capture).
+   The deterministic trace-replay driver is the clean-capture mechanism.
 2. **Capture pipeline** → `corpus/<char>/<policy>/` with version-pinned metadata.
 3. **Strict per-step canonical hash** on both sides, extending the boundary comparator.
 4. **Fidelity metric + CI gate** (replay-exact % per character).
