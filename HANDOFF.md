@@ -46,7 +46,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 208 pass)
+# C# unit tests (currently 206 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -99,30 +99,27 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 208 C# + 25 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 206 C# + 25 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
-- ⚠️ **"Bit-exact enemy generation" is NOT established — treat the old headline result as
-  unproven.** A live `"ABCDEF"` run → `debug_start_encounter CorpseSlugsWeak` → enemies
-  `[28,29]` and the emulator also gives `[28,29]`, but **the emulator's RNG is the wrong
-  algorithm** (see below), so that match cannot be causal. CorpseSlug rolls one of 27–29
-  with HP unique per enemy, so two enemies have only 6 possible ordered outcomes —
-  **~17% odds of matching by luck**. One 2-enemy sample is not evidence.
-- 🔴 **ROOT CAUSE FOUND — the emulator uses the wrong random number generator.**
-  The game's `Rng` wraps `MegaRandom` = **Xoshiro256\*\* seeded via Splitmix64**
-  (`decompiled/MegaCrit.Sts2.Core.Random/MegaRandom.cs`). The emulator's
-  `Core/Rng/DotNetRandom.cs` is a port of **.NET's legacy subtractive Random**
-  (`Mseed=161803398`, 56-slot array). Different generator entirely.
-  *Seed derivation is correct* — the game's `Rng(uint seed, string name)` does
-  `seed + GetDeterministicHashCode(name)`, exactly like our `GameRng` — so only the
-  generator core is wrong.
-  **Proof** (`MegaRandomHypothesisTests`): porting MegaRandom and running the game's
-  `UnstableShuffle` over the starter deck reproduces the live opening order
-  `131,131,472,30,472,472,131,472,131,10001,472` **exactly, all 11 cards** — odds of
-  coincidence 1 in 13,860. The current `DotNetRandom` matches only 5/11 positions
-  (chance level). Verified against a real capture at `/tmp/live_abcdef.json`.
-  **This is why the opening hand diverges, and it invalidates any prior RNG-derived
-  "match".** Fixing it means porting MegaRandom and replacing DotNetRandom — a wide
-  change, since ~200 C# tests encode current RNG sequences.
+- ✅ **Opening hand is bit-exact vs the live game** — the current headline result.
+  Live `"ABCDEF"` custom run at A8 → `debug_start_encounter CorpseSlugsWeak`; the
+  emulator reproduces the **entire 11-card shuffled deck in order** (hand + draw pile),
+  verified by `scripts/compare_draw_pile.py` against the capture in
+  `/tmp/live_abcdef.json`. Odds of coincidence 1 in 13,860.
+- ✅ **Enemy generation matches** (`[28,29]`) — and now *causally*, since the RNG is
+  correct. Note this was previously reported as proof while the RNG was still wrong,
+  where it had ~17% odds of being luck; it is corroborating evidence now, but it is
+  still a single 2-enemy sample and deserves more.
+- ✅ **RNG is now the game's actual generator.** `Core/Rng/MegaRandom.cs` is a faithful
+  port of the game's `MegaRandom` — **Xoshiro256\*\* seeded via Splitmix64** — and
+  `GameRng` mirrors the game's `Rng` wrapper method-for-method (its `Counter`, and
+  `NextBool` as `Next(2) == 0` rather than MegaRandom's own sign-bit variant).
+  `CountingRandom` is backed by it too. **The old `DotNetRandom` (a port of .NET's
+  legacy subtractive Random) was deleted** — it was the wrong algorithm and the root
+  cause of every shuffle divergence; do not reintroduce it.
+  Two subtleties worth keeping: the range mapping is `(int)(NextDouble() * max)`, so
+  reproducing the game means reproducing that bias exactly; and `NextGaussianInt` uses
+  plain `Math.Round` (banker's/to-even), not away-from-zero.
 - **Seed derivation matches the game** (test `RunRngSet_DerivesGameSeedForStringSeed`:
   `RunRngSet("ABCDEF").Seed == 3334281563u`).
 - **Enemy HP now rolled faithfully** (was hardcoded `fixedHp`; now uses the game's
@@ -225,7 +222,17 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
      Fisher-Yates), the master deck order matches the save's `deck` array, and the save
      shows every combat stream at CallCount **0** — so the fresh-stream assumption was
      right and there is no offset to find. **The divergence is the RNG algorithm itself**
-     (see "ROOT CAUSE" above). **Next work is therefore: port MegaRandom.**
+     (see above). **The MegaRandom port is DONE and the opening hand now matches
+     exactly.** Item 1 is closed.
+   - ⚠️ **Follow-on from the RNG port — `RunMapGenerator` needs re-verification.**
+     It contains empirically-tuned fudges (a bare `for i < 202: upFront.NextDouble()`,
+     then 57/60 `NextInt` calls) that were tuned to *reproduce CallCounts under the old,
+     wrong RNG*. They are now meaningless as calibration and were never verified against
+     the live game. Map generation also does not use the game's `act_N_map` stream
+     (`RunRngSet.ActMapRng`) — it seeds off the bare run seed. Under the corrected RNG
+     the act for seed `"0"` flipped Overgrowth→Underdocks and the Neow options changed,
+     which is expected, but none of it is validated. **Verify map/act/Neow generation
+     against a live run next.**
 
    **Introspection tooling (built, live half not yet exercised):**
    - Emulator: `Sts2_GetPile` (native API **v12**) → `env.get_pile("draw"|"hand"|
@@ -254,7 +261,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 208 pass
+dotnet test src/Sts2Emulator.Tests/        # 206 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 25 pass
 ```
