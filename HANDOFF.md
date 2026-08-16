@@ -46,7 +46,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 207 pass)
+# C# unit tests (currently 208 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -99,12 +99,30 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 207 C# + 25 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 208 C# + 25 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
-- **Bit-exact enemy generation vs the live game** (the headline result): a live custom
-  run seeded `"ABCDEF"` → `debug_start_encounter CorpseSlugsWeak` → enemies `[28,29]`;
-  emulator `Sts2CombatEnv(seed=3334281563, encounter="corpse-slugs",
-  completed_combat_rooms=0)` → `[28,29]`. Exact match.
+- ⚠️ **"Bit-exact enemy generation" is NOT established — treat the old headline result as
+  unproven.** A live `"ABCDEF"` run → `debug_start_encounter CorpseSlugsWeak` → enemies
+  `[28,29]` and the emulator also gives `[28,29]`, but **the emulator's RNG is the wrong
+  algorithm** (see below), so that match cannot be causal. CorpseSlug rolls one of 27–29
+  with HP unique per enemy, so two enemies have only 6 possible ordered outcomes —
+  **~17% odds of matching by luck**. One 2-enemy sample is not evidence.
+- 🔴 **ROOT CAUSE FOUND — the emulator uses the wrong random number generator.**
+  The game's `Rng` wraps `MegaRandom` = **Xoshiro256\*\* seeded via Splitmix64**
+  (`decompiled/MegaCrit.Sts2.Core.Random/MegaRandom.cs`). The emulator's
+  `Core/Rng/DotNetRandom.cs` is a port of **.NET's legacy subtractive Random**
+  (`Mseed=161803398`, 56-slot array). Different generator entirely.
+  *Seed derivation is correct* — the game's `Rng(uint seed, string name)` does
+  `seed + GetDeterministicHashCode(name)`, exactly like our `GameRng` — so only the
+  generator core is wrong.
+  **Proof** (`MegaRandomHypothesisTests`): porting MegaRandom and running the game's
+  `UnstableShuffle` over the starter deck reproduces the live opening order
+  `131,131,472,30,472,472,131,472,131,10001,472` **exactly, all 11 cards** — odds of
+  coincidence 1 in 13,860. The current `DotNetRandom` matches only 5/11 positions
+  (chance level). Verified against a real capture at `/tmp/live_abcdef.json`.
+  **This is why the opening hand diverges, and it invalidates any prior RNG-derived
+  "match".** Fixing it means porting MegaRandom and replacing DotNetRandom — a wide
+  change, since ~200 C# tests encode current RNG sequences.
 - **Seed derivation matches the game** (test `RunRngSet_DerivesGameSeedForStringSeed`:
   `RunRngSet("ABCDEF").Seed == 3334281563u`).
 - **Enemy HP now rolled faithfully** (was hardcoded `fixedHp`; now uses the game's
@@ -201,9 +219,13 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
      innate cards end up **reversed** (the game inserts each at index 0), and the game's
      `Except` runs on *reference* identity — do not reimplement it with LINQ on
      `CardInstance`, which is a value type and would dedup equal cards.
-   - **Residual shuffle-state factor** — the **full-deck introspection tooling is now
-     BUILT** (see below); what remains is to *run* it against the live game and read the
-     answer. **This is the only remaining lead for opening-hand mismatch** — start here.
+   - ~~Residual shuffle-state factor~~ — **ANSWERED, and it was not shuffle state.**
+     The introspection tooling was built and run against the live game: deck composition
+     matches exactly, the shuffle *algorithm* matches (both are the same descending
+     Fisher-Yates), the master deck order matches the save's `deck` array, and the save
+     shows every combat stream at CallCount **0** — so the fresh-stream assumption was
+     right and there is no offset to find. **The divergence is the RNG algorithm itself**
+     (see "ROOT CAUSE" above). **Next work is therefore: port MegaRandom.**
 
    **Introspection tooling (built, live half not yet exercised):**
    - Emulator: `Sts2_GetPile` (native API **v12**) → `env.get_pile("draw"|"hand"|
@@ -232,7 +254,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 207 pass
+dotnet test src/Sts2Emulator.Tests/        # 208 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 25 pass
 ```

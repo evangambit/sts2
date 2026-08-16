@@ -334,10 +334,35 @@ def main() -> None:
     check_run_config(state, seed, args.encounter, completed)
 
     all_matched = True
+    combined: dict[str, list[tuple[str, bool]]] = {"emu": [], "live": []}
     for pile in (p.strip() for p in args.piles.split(",") if p.strip()):
         emu = emulator_pile(seed, args.encounter, completed, pile)
         live = live_pile(state, pile)
+        combined["emu"] += emu
+        combined["live"] += live
         all_matched &= render(emu, live, pile)
+
+    # Per-pile multisets differ whenever a card merely lands in the other pile, so
+    # judge "wrong order vs wrong cards" across hand+draw together — that union is
+    # the shuffled deck.
+    if not all_matched and {"hand", "draw"} <= set(
+        p.strip() for p in args.piles.split(",")
+    ):
+        emu_bag = sorted(normalize(n) for n, _ in combined["emu"])
+        live_bag = sorted(normalize(n) for n, _ in combined["live"])
+        print("\n=== whole deck (hand + draw) ===")
+        if emu_bag == live_bag:
+            hits = sum(
+                normalize(a[0]) == normalize(b[0])
+                for a, b in zip(combined["emu"], combined["live"])
+            )
+            print(
+                f"Deck composition MATCHES ({len(emu_bag)} cards); "
+                f"{hits}/{len(emu_bag)} positions align.\n"
+                "-> Pure SHUFFLE-ORDER divergence, not deck construction.",
+            )
+        else:
+            print("Deck composition itself differs -> deck construction diverges.")
 
     print("\n" + ("ALL PILES MATCH" if all_matched else "MISMATCH — see above"))
     raise SystemExit(0 if all_matched else 1)
