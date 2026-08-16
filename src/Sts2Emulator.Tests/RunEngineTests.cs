@@ -100,6 +100,15 @@ public class RunEngineTests
     }
 
     [Fact]
+    public void RunRngSet_DerivesGameSeedForStringSeed()
+    {
+        // Captured from a live v0.107.1 custom run: input seed "ABCDEF" -> the game's
+        // per-player rng seed 3334281563 (netId 0, so run seed == player seed). This
+        // pins the string->seed derivation against the real game for a non-trivial seed.
+        Assert.Equal(3334281563u, new RunRngSet("ABCDEF").Seed);
+    }
+
+    [Fact]
     public void RunRngSet_FreshSpecialStreamsMatchPythonPins()
     {
         var rng = new RunRngSet("0");
