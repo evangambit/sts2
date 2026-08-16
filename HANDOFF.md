@@ -305,6 +305,34 @@ survives `PruneAllButLast`.
 6. Then the **AlphaZero layer**: MCTS over the sim (C#) -> value/policy net (Python) ->
    self-play (PLAN.md SS2, SS5).
 
+### Ground-truth fixtures (committed)
+
+Live captures are **destroyed by the next run** — starting a new run overwrites
+`current_run.save`. That already cost us "ABCDEF"'s full map ground truth, which now
+survives only as partial literals in `RunGeneration_MatchesLiveCaptureForAbcdef`.
+So captures are committed:
+
+- `tests/fixtures/run_generation/AAB.json` — distilled from a live save: act,
+  encounter id sequences, boss, and the full `saved_map`. **Profile data is stripped**
+  (no `unlock_state`, play history or account id); a test asserts that stays true.
+- `tests/fixtures/combat/ABCDEF-corpse-slugs.json` — the ordered-pile capture proving
+  the opening hand.
+- `tests/python/test_live_fixtures.py` runs the **real comparison code** against them,
+  so the full structure is checked rather than a hand-transcribed subset. The AAB map
+  residual is pinned as "mismatching rows == {1}" — fixing it will fail the test and
+  ask to be updated, which is the intent.
+
+Capture more with:
+```bash
+python scripts/verify_run_generation.py --save-fixture tests/fixtures/run_generation/<SEED>.json
+python scripts/compare_draw_pile.py --seed <SEED> --encounter <enc> --jump-encounter \
+    --save-live-json tests/fixtures/combat/<SEED>-<enc>.json
+```
+`verify_run_generation.py --fixture <path>` then re-runs offline, with no game needed.
+
+**Wanted next:** a re-capture of "ABCDEF" run generation (its save is gone), and any
+seed that actually rolls **Underdocks** — still entirely unverified.
+
 ### Introspection & verification tooling (built)
 - `scripts/compare_draw_pile.py` — emulator vs live ordered piles. `--live-json`
   re-diffs a saved capture offline; `--jump-encounter` avoids the lobby crash.

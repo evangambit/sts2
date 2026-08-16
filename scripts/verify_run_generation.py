@@ -61,6 +61,37 @@ def load_save(path: Path) -> dict[str, Any]:
     return json.loads(raw[raw.index("{") :])
 
 
+def distill_fixture(save: dict[str, Any]) -> dict[str, Any]:
+    """Reduce a live save to just the ground truth this script compares.
+
+    Deliberately drops everything else — `unlock_state` (play history), timestamps,
+    deck/relic state — so a committed fixture carries no profile data. The shape is
+    kept identical to a real save so `--fixture` and `--save` share one code path.
+    """
+    return {
+        "_comment": (
+            "Ground truth captured from a live StS2 run. Distilled from "
+            "current_run.save by verify_run_generation.py --save-fixture."
+        ),
+        "rng": {"seed": save["rng"]["seed"]},
+        "ascension": save.get("ascension"),
+        "current_act_index": save["current_act_index"],
+        "acts": [
+            {
+                "id": act["id"],
+                "rooms": {
+                    "normal_encounter_ids": act["rooms"]["normal_encounter_ids"],
+                    "elite_encounter_ids": act["rooms"]["elite_encounter_ids"],
+                    "boss_id": act["rooms"]["boss_id"],
+                },
+                "saved_map": act["saved_map"],
+            }
+            for act in save["acts"]
+            if "saved_map" in act
+        ],
+    }
+
+
 def encounter_names() -> dict[int, str]:
     """Emulator encounter id -> name, read from CombatFactory's ActOneEncounter."""
     src = (
@@ -173,11 +204,30 @@ def compare_sequence(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--save", type=Path, default=None)
+    parser.add_argument(
+        "--fixture", type=Path, default=None, help="verify against a stored fixture"
+    )
+    parser.add_argument(
+        "--save-fixture",
+        type=Path,
+        default=None,
+        help="distill the live save into a committable fixture and exit",
+    )
     parser.add_argument("--act-index", type=int, default=None, help="default: current")
     args = parser.parse_args()
 
-    save_path = find_save(args.save)
-    save = load_save(save_path)
+    if args.fixture is not None:
+        save_path = args.fixture
+        save = load_save(save_path)
+    else:
+        save_path = find_save(args.save)
+        save = load_save(save_path)
+
+    if args.save_fixture is not None:
+        args.save_fixture.parent.mkdir(parents=True, exist_ok=True)
+        args.save_fixture.write_text(json.dumps(distill_fixture(save), indent=2) + "\n")
+        print(f"wrote fixture -> {args.save_fixture}")
+        raise SystemExit(0)
     seed = (save.get("rng") or {}).get("seed")
     act_index = args.act_index if args.act_index is not None else save["current_act_index"]
     act = save["acts"][act_index]
