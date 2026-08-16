@@ -205,56 +205,67 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Next work (prioritized, with pointers)
 
-1. **Opening-hand exact match** — one residual left (enemy HP already exact):
-   - ~~Port the game's turn-1 draw-pile reorder~~ — **DONE**, see
-     `CombatFactory.ApplyTurnOneDrawPileReorder` (8 tests). Note the reorder is a no-op
-     for the *starter* deck (no Innate cards, and `ShouldStartAtBottomOfDrawPile` is the
-     **`Imbued` enchantment** — not Ascender's Bane, as previously written here — and
-     enchantments aren't modelled, so `StartsAtBottomOfDrawPile()` is hardcoded false).
-     So this fixed a real divergence for later decks but **cannot** be the cause of any
-     turn-1 starter-deck mismatch. Two ordering subtleties are ported and pinned by test:
-     innate cards end up **reversed** (the game inserts each at index 0), and the game's
-     `Except` runs on *reference* identity — do not reimplement it with LINQ on
-     `CardInstance`, which is a value type and would dedup equal cards.
-   - ~~Residual shuffle-state factor~~ — **ANSWERED, and it was not shuffle state.**
-     The introspection tooling was built and run against the live game: deck composition
-     matches exactly, the shuffle *algorithm* matches (both are the same descending
-     Fisher-Yates), the master deck order matches the save's `deck` array, and the save
-     shows every combat stream at CallCount **0** — so the fresh-stream assumption was
-     right and there is no offset to find. **The divergence is the RNG algorithm itself**
-     (see above). **The MegaRandom port is DONE and the opening hand now matches
-     exactly.** Item 1 is closed.
-   - ⚠️ **Follow-on from the RNG port — `RunMapGenerator` needs re-verification.**
-     It contains empirically-tuned fudges (a bare `for i < 202: upFront.NextDouble()`,
-     then 57/60 `NextInt` calls) that were tuned to *reproduce CallCounts under the old,
-     wrong RNG*. They are now meaningless as calibration and were never verified against
-     the live game. Map generation also does not use the game's `act_N_map` stream
-     (`RunRngSet.ActMapRng`) — it seeds off the bare run seed. Under the corrected RNG
-     the act for seed `"0"` flipped Overgrowth→Underdocks and the Neow options changed,
-     which is expected, but none of it is validated. **Verify map/act/Neow generation
-     against a live run next.**
+**Combat start is bit-exact** (opening hand + enemies, see "what's proven"). The open
+front is now *run generation*: what the engine rolls up front for a seed.
 
-   **Introspection tooling (built, live half not yet exercised):**
-   - Emulator: `Sts2_GetPile` (native API **v12**) → `env.get_pile("draw"|"hand"|
-     "discard"|"exhaust")`, returning `(card_def_id, upgraded)` in true order,
-     index 0 = top. The obs vector only ever carried pile *counts*.
-   - Live: our STS2MCP fork now emits `draw_pile_ordered` / `discard_pile_ordered` /
-     `hand_ordered` under `result["player"]` (raw entry ids, true order). **The existing
-     `draw_pile` field is sorted by rarity/id for in-game display** — that's why an
-     ordered comparison was impossible before; both fields are kept.
-   - `scripts/compare_draw_pile.py` joins them and prints a side-by-side diff, and
-     distinguishes *same cards wrong order* (shuffle/reorder bug) from *different cards*
-     (deck construction bug). `--live-json` re-diffs a saved capture with no game running;
-     `--save-live-json` captures one. Verified both ways against fixtures; **the live
-     capture path has not been run against the real game yet.**
-   - `sts2_gym.game_seed("ABCDEF") -> 3334281563` ports the string→gen-seed hash to
-     Python, so harnesses no longer need `find_matching_seed`'s 500k brute-force search.
-2. **Harden the debug/menu mod actions** with settled-state guards (fix the crash-on-churn).
-3. **Implement `start_replay`** in the STS2MCP fork → clean deterministic full-run capture
-   (design in docs/replay-verification.md §1).
-4. **Full-run replay harness** → the primary fidelity metric (docs/replay-verification.md).
-5. Then the **AlphaZero layer**: MCTS over the sim (C#) → value/policy net (Python) →
-   self-play (PLAN.md §2, §5).
+`scripts/verify_run_generation.py` compares the emulator against a live
+`current_run.save` — which is plain JSON and records exactly what the game generated
+(`acts[i].id`, `rooms.{normal,elite}_encounter_ids`, `boss_id`, `saved_map.points`).
+**No need to drive the game**; just have a run saved. Current result for `"ABCDEF"`:
+
+| section | result |
+|---|---|
+| act | PASS (OVERGROWTH) |
+| normal encounters | **PASS — 15/15 in order** |
+| elite encounters | FAIL — 6/15 |
+| boss | FAIL |
+| map | FAIL — 66 nodes vs 62 |
+
+1. **Elite encounter pool is missing an entry.** The game's Overgrowth pool
+   (decompiled `MegaCrit.Sts2.Core.Models.Acts/Overgrowth.cs`) has **three** elites —
+   `BygoneEffigyElite`, `ByrdonisElite`, `PhrogParasiteElite` — but the emulator only
+   ever emits two (Byrdonis, PhrogParasite), so the sequence desyncs. Note
+   `Overgrowth.cs` also force-places `ByrdonisElite` at index 0 and `PhrogParasiteElite`
+   at index 1 via `RoomSet.SwapToOrCreateAtIndex`, so selection is not a plain roll —
+   port that rule too.
+2. **Boss selection is wrong.** Emulator picks `CeremonialBeast`; live rolled
+   `THE_KIN_BOSS`. The act declares `BossDiscoveryOrder = [VantomBoss,
+   CeremonialBeastBoss, TheKinBoss]` — the emulator does not model that ordering.
+3. **Map generation is unverified and its calibration is stale.** 66 nodes vs the live
+   62 points. `RunMapGenerator` contains fudges (`for i < 202: upFront.NextDouble()`,
+   then 57/60 `NextInt` calls) that were tuned to reproduce CallCounts *under the old,
+   wrong RNG* — they are now meaningless. It also does not use the game's `act_N_map`
+   stream (`RunRngSet.ActMapRng`); it seeds off the bare run seed. The live map is
+   7 wide x 16 high, start `(col 3, row 0)` type `ancient`, 62 points; `saved_map.points`
+   gives the full graph with `children`, so exact structural comparison is possible.
+   **Also note the act model looks wrong**: the emulator flips a coin between
+   Overgrowth and Underdocks, but the live save shows a fixed 3-act sequence
+   `OVERGROWTH -> HIVE -> GLORY`, with no Underdocks at all.
+4. **Harden the debug/menu mod actions.** Partly done — `start_real_game_run.settle()`
+   guards menu transitions, the abandon path is no longer driven, and the embark crash
+   has a documented route around it. Remaining: the crash itself is a *game* bug (see
+   Gotchas); `--jump-encounter` avoids it.
+5. **Implement `start_replay`** in the STS2MCP fork -> clean deterministic full-run
+   capture (design in docs/replay-verification.md SS1).
+6. **Full-run replay harness** -> the primary fidelity metric (docs/replay-verification.md).
+7. Then the **AlphaZero layer**: MCTS over the sim (C#) -> value/policy net (Python) ->
+   self-play (PLAN.md SS2, SS5).
+
+### Introspection & verification tooling (built)
+- `scripts/compare_draw_pile.py` — emulator vs live ordered piles. `--live-json`
+  re-diffs a saved capture offline; `--jump-encounter` avoids the lobby crash.
+- `scripts/verify_run_generation.py` — the table above, straight from a save.
+- Emulator: `Sts2_GetPile` -> `env.get_pile(...)`; run-generation lists 11-14 on
+  `Sts2Run_GetStateList` (normal/elite/event sequences, and `[act, boss, map_nodes]`).
+  Native API **v13**.
+- Live: our STS2MCP fork emits `draw_pile_ordered` / `discard_pile_ordered` /
+  `hand_ordered` under `result["player"]`. The stock `draw_pile` is **sorted for
+  display**, which is why ordered comparison was impossible before.
+- `sts2_gym.game_seed("ABCDEF") -> 3334281563` — no more 500k brute-force seed search.
+- **Encounter names were corrected** against the game's act pool: `ShrinkerAndFuzzy` ->
+  `OvergrowthCrawlers`, `LargeSlimes` -> `SlimesNormal`, `SlimeAndFlyconid` ->
+  `FlyconidNormal`, `JaxfruitAndFlyconid` -> `SnappingJaxfruitNormal`. The emulator had
+  invented those four labels. Old Python encounter strings still resolve as aliases.
 
 ## One-shot smoke test (verify the whole stack works)
 

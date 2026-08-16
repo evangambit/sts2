@@ -27,12 +27,12 @@ ENCOUNTER_NAMES = {
     13: "toadpoles",
     14: "mawler",
     15: "nibbits",
-    16: "large-slimes",
-    17: "slime-and-flyconid",
-    18: "jaxfruit-and-flyconid",
+    16: "slimes-normal",
+    17: "flyconid-normal",
+    18: "snapping-jaxfruit-normal",
     19: "cubex-construct",
     20: "vine-shambler",
-    21: "shrinker-and-fuzzy",
+    21: "overgrowth-crawlers",
     22: "cultist-and-seapunk",
     23: "fossil-stalker",
     24: "punch-construct",
@@ -100,6 +100,19 @@ ENCOUNTER_NAMES = {
     86: "skulking-colony",
 }
 ENCOUNTER_IDS = {name: encounter_id for encounter_id, name in ENCOUNTER_NAMES.items()}
+
+# Names corrected against the game's own act pool (decompiled
+# MegaCrit.Sts2.Core.Models.Acts/Overgrowth.cs) — the emulator had invented labels
+# for four encounters. The old strings still resolve so existing traces and
+# scripts keep working.
+ENCOUNTER_IDS.update(
+    {
+        "large-slimes": ENCOUNTER_IDS["slimes-normal"],
+        "slime-and-flyconid": ENCOUNTER_IDS["flyconid-normal"],
+        "jaxfruit-and-flyconid": ENCOUNTER_IDS["snapping-jaxfruit-normal"],
+        "shrinker-and-fuzzy": ENCOUNTER_IDS["overgrowth-crawlers"],
+    }
+)
 
 
 class Sts2CombatEnv(gym.Env):

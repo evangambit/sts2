@@ -42,12 +42,12 @@ public static class CombatFactory
         Toadpoles,
         Mawler,
         Nibbits,
-        LargeSlimes,
-        SlimeAndFlyconid,
-        JaxfruitAndFlyconid,
+        SlimesNormal,
+        FlyconidNormal,
+        SnappingJaxfruitNormal,
         CubexConstruct,
         VineShambler,
-        ShrinkerAndFuzzy,
+        OvergrowthCrawlers,
         CultistAndSeapunk,
         FossilStalker,
         PunchConstruct,
@@ -521,15 +521,15 @@ public static class CombatFactory
                 CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Buff, 0), moveIndex: 2),
             ],
 
-            ActOneEncounter.LargeSlimes => CreateLargeSlimesEncounter(rng),
+            ActOneEncounter.SlimesNormal => CreateSlimesNormalEncounter(rng),
 
-            ActOneEncounter.SlimeAndFlyconid =>
+            ActOneEncounter.FlyconidNormal =>
             [
                 CreateSlime(rng.Next(2) == 0 ? KE.LeafSlimeM : KE.TwigSlimeM, rng),
                 CreateEnemy(KE.Flyconid, rng, FlyconidInitialIntent(rng), moveIndex: rng.Next(2)),
             ],
 
-            ActOneEncounter.JaxfruitAndFlyconid =>
+            ActOneEncounter.SnappingJaxfruitNormal =>
             [
                 CreateEnemy(KE.SnappingJaxfruit, rng, new Intent(IntentType.Attack, 4)),
                 CreateEnemy(KE.Flyconid, rng, FlyconidInitialIntent(rng), moveIndex: rng.Next(2)),
@@ -542,7 +542,7 @@ public static class CombatFactory
                 CreateEnemy(KE.VineShambler, rng, new Intent(IntentType.Attack, 14)),
             ],
 
-            ActOneEncounter.ShrinkerAndFuzzy =>
+            ActOneEncounter.OvergrowthCrawlers =>
             [
                 CreateEnemy(KE.ShrinkerBeetle, rng, new Intent(IntentType.Debuff, 1)),
                 CreateEnemy(KE.FuzzyWurmCrawler, rng, new Intent(IntentType.Attack, 6)),
@@ -1086,7 +1086,7 @@ public static class CombatFactory
         return enemy;
     }
 
-    private static List<EnemyState> CreateLargeSlimesEncounter(Random rng)
+    private static List<EnemyState> CreateSlimesNormalEncounter(Random rng)
     {
         bool leafSmallFirst = rng.Next(2) == 0;
         int firstSmall = leafSmallFirst ? KE.LeafSlimeS : KE.TwigSlimeS;

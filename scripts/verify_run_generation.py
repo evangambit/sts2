@@ -1,0 +1,181 @@
+"""Verify emulator run generation (act, encounters, boss, map) against a live save.
+
+The live `current_run.save` is plain JSON and records exactly what the game
+generated for a seed: `acts[i].id`, `acts[i].rooms.{normal,elite}_encounter_ids`,
+`boss_id`, and `saved_map.points`. That makes it ground truth for everything the
+run engine rolls up front — no need to drive the game.
+
+    python scripts/verify_run_generation.py                 # auto-detect the save
+    python scripts/verify_run_generation.py --save PATH     # explicit
+
+Exit code 0 when every checked section matches.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from sts2_gym import game_seed, native
+
+SAVE_GLOB = (
+    "Library/Application Support/SlayTheSpire2/steam/*/profile*/saves/current_run.save"
+)
+
+LIST_NORMAL_ENCOUNTERS = 11
+LIST_ELITE_ENCOUNTERS = 12
+LIST_EVENTS = 13
+LIST_GENERATION_SUMMARY = 14  # [act, boss_encounter_id, map_node_count]
+
+ACT_NAMES = {1: "OVERGROWTH", 2: "UNDERDOCKS"}
+
+
+def find_save(explicit: Path | None) -> Path:
+    if explicit is not None:
+        return explicit
+    matches = sorted(Path.home().glob(SAVE_GLOB))
+    if not matches:
+        raise SystemExit(
+            "No current_run.save found. Start a run in game, or pass --save PATH.",
+        )
+    return matches[-1]
+
+
+def load_save(path: Path) -> dict[str, Any]:
+    raw = path.read_text(errors="replace")
+    return json.loads(raw[raw.index("{") :])
+
+
+def encounter_names() -> dict[int, str]:
+    """Emulator encounter id -> name, read from CombatFactory's ActOneEncounter."""
+    src = (
+        Path(__file__).parent.parent / "src/Sts2Emulator/Core/CombatFactory.cs"
+    ).read_text()
+    body = re.search(r"private enum ActOneEncounter\s*\{(.*?)\n    \}", src, re.S)
+    if body is None:
+        raise SystemExit("Could not parse ActOneEncounter from CombatFactory.cs")
+    names = [
+        line.strip().rstrip(",").split("=")[0].strip()
+        for line in body.group(1).split("\n")
+        if line.strip() and not line.strip().startswith("//")
+    ]
+    return dict(enumerate(names))
+
+
+def normalize(name: str) -> str:
+    """Compare on letters only, ignoring variant decoration.
+
+    Strip the variant suffix *after* collapsing to lowercase letters, so it works
+    whether the source writes SLIMES_NORMAL or SlimesNormal. The weak/normal split
+    is a variant of one encounter (the emulator selects it via
+    completed_combat_rooms), so it is not a difference worth failing on here.
+    """
+    n = re.sub(r"[^A-Za-z0-9]", "", name.replace("ENCOUNTER.", "").replace("EVENT.", ""))
+    n = n.lower()
+    for suffix in ("weak", "normal", "elite", "boss"):
+        if n.endswith(suffix) and len(n) > len(suffix):
+            n = n[: -len(suffix)]
+            break
+    return n
+
+
+def emulator_generation(seed: str) -> dict[str, Any]:
+    import ctypes
+
+    handle = native.run_create()
+    try:
+        obs = (ctypes.c_int * native.RUN_OBS_SIZE)()
+        native.run_reset(handle, seed, obs)
+        act, boss, map_nodes = native.run_state_list(handle, LIST_GENERATION_SUMMARY, 3)
+        return {
+            "act": act,
+            "boss": boss,
+            "map_nodes": map_nodes,
+            "normal": list(native.run_state_list(handle, LIST_NORMAL_ENCOUNTERS, 64)),
+            "elite": list(native.run_state_list(handle, LIST_ELITE_ENCOUNTERS, 64)),
+            "events": list(native.run_state_list(handle, LIST_EVENTS, 64)),
+        }
+    finally:
+        native.run_destroy(handle)
+
+
+def compare_sequence(
+    label: str, emu_ids: list[int], live_ids: list[str], names: dict[int, str]
+) -> bool:
+    print(f"\n=== {label} — emulator {len(emu_ids)} vs live {len(live_ids)} ===")
+    hits = 0
+    span = max(len(emu_ids), len(live_ids))
+    for i in range(span):
+        emu = names.get(emu_ids[i], f"<{emu_ids[i]}>") if i < len(emu_ids) else "—"
+        live = live_ids[i] if i < len(live_ids) else "—"
+        ok = i < len(emu_ids) and i < len(live_ids) and normalize(emu) == normalize(live)
+        hits += ok
+        print(f"  {i:2}  {emu:26} {live:36} {'ok' if ok else 'MISMATCH'}")
+    matched = hits == span
+    print(f"  -> {hits}/{span} match")
+    return matched
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--save", type=Path, default=None)
+    parser.add_argument("--act-index", type=int, default=None, help="default: current")
+    args = parser.parse_args()
+
+    save_path = find_save(args.save)
+    save = load_save(save_path)
+    seed = (save.get("rng") or {}).get("seed")
+    act_index = args.act_index if args.act_index is not None else save["current_act_index"]
+    act = save["acts"][act_index]
+    rooms = act["rooms"]
+
+    print(f"save : {save_path}")
+    print(f"seed : {seed!r} -> gen seed {game_seed(str(seed))}")
+    print(f"act  : index {act_index} = {act['id']}  (ascension {save.get('ascension')})")
+
+    emu = emulator_generation(str(seed))
+    names = encounter_names()
+    results: dict[str, bool] = {}
+
+    print("\n=== act ===")
+    emu_act = ACT_NAMES.get(emu["act"], f"<{emu['act']}>")
+    live_act = act["id"].replace("ACT.", "")
+    results["act"] = normalize(emu_act) == normalize(live_act)
+    print(f"  emulator {emu_act} vs live {live_act} "
+          f"{'ok' if results['act'] else 'MISMATCH'}")
+
+    results["normal"] = compare_sequence(
+        "normal encounters", emu["normal"], rooms["normal_encounter_ids"], names
+    )
+    results["elite"] = compare_sequence(
+        "elite encounters", emu["elite"], rooms["elite_encounter_ids"], names
+    )
+
+    print("\n=== boss ===")
+    emu_boss = names.get(emu["boss"], f"<{emu['boss']}>")
+    results["boss"] = normalize(emu_boss) == normalize(rooms["boss_id"])
+    print(f"  emulator {emu_boss} vs live {rooms['boss_id']} "
+          f"{'ok' if results['boss'] else 'MISMATCH'}")
+
+    print("\n=== map ===")
+    live_points = len(act["saved_map"]["points"])
+    results["map"] = emu["map_nodes"] == live_points
+    print(f"  emulator {emu['map_nodes']} nodes vs live {live_points} points "
+          f"{'ok' if results['map'] else 'MISMATCH'}")
+
+    print("\n" + "=" * 60)
+    for key, ok in results.items():
+        print(f"  {key:22} {'PASS' if ok else 'FAIL'}")
+    failed = [k for k, ok in results.items() if not ok]
+    print("ALL SECTIONS MATCH" if not failed else f"FAILING: {', '.join(failed)}")
+    raise SystemExit(0 if not failed else 1)
+
+
+if __name__ == "__main__":
+    main()

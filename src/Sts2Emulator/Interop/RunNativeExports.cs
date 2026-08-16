@@ -158,6 +158,15 @@ public static class RunNativeExports
             8 => WriteIntArray(run.State.ShopCards, output),
             9 => WriteIntArray(run.State.ShopRelics, output),
             10 => WriteIntArray(run.State.ShopPotions, output),
+            // 11-14: run-generation data, for differential testing against a live
+            // save's acts[].rooms (see scripts/verify_run_generation.py).
+            11 => WriteIntArray(run.State.NormalEncounterSequence, output),
+            12 => WriteIntArray(run.State.EliteEncounterSequence, output),
+            13 => WriteIntArray(run.State.EventSequence, output),
+            14 => WriteIntArray(
+                [run.State.Act, run.State.BossEncounterId, run.State.MapNodes.Count],
+                output
+            ),
             _ => -3,
         };
     }
