@@ -286,5 +286,9 @@
     ],
     "potions": [],
     "max_potion_slots": 2
+  },
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1"
   }
 }

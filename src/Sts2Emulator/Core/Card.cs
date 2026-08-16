@@ -7,6 +7,13 @@ public enum CardType
     Power,
     Status,
     Curse,
+
+    /// <summary>
+    /// Quest cards (e.g. SpoilsMap). Appended rather than slotted into the game's
+    /// own ordering: these ordinals are referenced across the engine and the
+    /// observation encoding, so inserting would silently reinterpret existing data.
+    /// </summary>
+    Quest,
 }
 
 public enum CardRarity
@@ -21,6 +28,9 @@ public enum CardRarity
     Ancient,
     Event,
     Token,
+
+    /// <summary>Quest rarity — appended; see CardType.Quest.</summary>
+    Quest,
 }
 
 public readonly record struct CardDef(

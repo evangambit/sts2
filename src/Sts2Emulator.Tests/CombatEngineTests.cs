@@ -540,9 +540,17 @@ public class CombatEngineTests
 
         CombatEngine.Step(state, 0, new Random(0));
 
-        Assert.Equal(2, state.Energy);
+        // Playing it only draws — DrumOfBattle declares no Exhaust keyword, and its
+        // OnPlay just draws. The energy comes from AfterCardExhausted, which fires
+        // when the card itself is exhausted by something else.
+        Assert.Equal(0, state.Energy);
         Assert.Equal([IC.StrikeIronclad, IC.DefendIronclad], state.Hand.Select(card => card.DefId));
-        Assert.Contains(state.ExhaustPile, card => card.DefId == IC.DrumOfBattle);
+        Assert.DoesNotContain(state.ExhaustPile, card => card.DefId == IC.DrumOfBattle);
+        Assert.Contains(state.DiscardPile, card => card.DefId == IC.DrumOfBattle);
+
+        CardEffects.ExhaustCard(state, new CardInstance(IC.DrumOfBattle, false));
+
+        Assert.Equal(2, state.Energy);
     }
 
     [Fact]
@@ -1286,8 +1294,11 @@ public class CombatEngineTests
 
         Assert.Equal(32, state.Enemies[0].Hp);
         Assert.Empty(state.Hand);
-        Assert.Contains(state.ExhaustPile, card => card.DefId == IC.Cinder);
+        // Cinder exhausts a random card from hand, not itself — it declares no
+        // Exhaust keyword, so it discards like any other attack.
         Assert.Contains(state.ExhaustPile, card => card.DefId == IC.DefendIronclad);
+        Assert.DoesNotContain(state.ExhaustPile, card => card.DefId == IC.Cinder);
+        Assert.Contains(state.DiscardPile, card => card.DefId == IC.Cinder);
     }
 
     [Fact]
@@ -1310,7 +1321,7 @@ public class CombatEngineTests
         CombatEngine.Step(state, 0, new Random(0));
 
         Assert.Equal(26, state.Enemies[0].Hp);
-        Assert.Contains(state.ExhaustPile, card => card.DefId == IC.Cinder);
+        Assert.Contains(state.DiscardPile, card => card.DefId == IC.Cinder);
     }
 
     [Fact]
@@ -1480,8 +1491,10 @@ public class CombatEngineTests
         CombatEngine.Step(state, 0, new Random(0));
 
         Assert.Equal(41, state.Enemies[0].Hp);
+        // AshenStrike mentions Exhaust only in a hover tip; it declares no Exhaust
+        // keyword and its OnPlay just deals damage, so it discards.
         Assert.Contains(
-            state.ExhaustPile,
+            state.DiscardPile,
             card => card.DefId == IC.AshenStrike && !card.FreeThisTurn
         );
     }
@@ -1755,8 +1768,10 @@ public class CombatEngineTests
         CombatEngine.Step(state, 0, new Random(0));
 
         Assert.Equal(8, state.PlayerBlock);
-        Assert.Equal(1, state.CardsExhaustedThisTurn);
-        Assert.Contains(state.ExhaustPile, card => card.DefId == IC.EvilEye);
+        // EvilEye reads whether a card was exhausted this turn; it does not exhaust
+        // itself, so playing it alone leaves the count at zero.
+        Assert.Equal(0, state.CardsExhaustedThisTurn);
+        Assert.DoesNotContain(state.ExhaustPile, card => card.DefId == IC.EvilEye);
     }
 
     [Fact]
@@ -1770,7 +1785,8 @@ public class CombatEngineTests
         CombatEngine.Step(state, 0, new Random(0));
 
         Assert.Equal(22, state.PlayerBlock);
-        Assert.Equal(2, state.CardsExhaustedThisTurn);
+        // Only the pre-exhausted Strike counts — EvilEye does not add itself.
+        Assert.Equal(1, state.CardsExhaustedThisTurn);
     }
 
     [Fact]
@@ -4202,7 +4218,7 @@ public class CombatEngineTests
         // Thrash deals 4×2=8 damage
         Assert.Equal(hpBefore - 8, enemy.Hp);
         // The Attack (Strike) should be exhausted, Skill (Defend) should remain
-        Assert.Equal(1, state.ExhaustPile.Count(c => c.DefId == IC.Thrash)); // Thrash itself also exhausts
+        Assert.Equal(0, state.ExhaustPile.Count(c => c.DefId == IC.Thrash)); // Thrash does not exhaust itself
         Assert.DoesNotContain(state.Hand, c => c.DefId == IC.StrikeIronclad);
     }
 

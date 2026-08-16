@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Parse decompiled sts2.dll C# source and emit Generated/*.g.cs files."""
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -51,9 +52,20 @@ _CANONICAL_KEYWORDS_BODY = re.compile(
 _ON_UPGRADE_BODY = re.compile(r"OnUpgrade\(\)\s*\{(.*?)\n\t\}", re.S)
 
 
-def INNATE_CANONICAL(text: str) -> bool:
+def has_canonical_keyword(text: str, keyword: str) -> bool:
+    """True when the card declares this keyword in its own CanonicalKeywords.
+
+    Must not be a substring search over the whole file. Keywords are referenced in
+    plenty of places that do not make the card have them — TrueGrit mentions
+    CardKeyword.Exhaust only in ExtraHoverTips, a tooltip explaining that it
+    exhausts *another* card, and a naive check marked TrueGrit itself Exhaust.
+    """
     m = _CANONICAL_KEYWORDS_BODY.search(text)
-    return bool(m and "CardKeyword.Innate" in m.group(1))
+    return bool(m and f"CardKeyword.{keyword}" in m.group(1))
+
+
+def INNATE_CANONICAL(text: str) -> bool:
+    return has_canonical_keyword(text, "Innate")
 
 
 def INNATE_ON_UPGRADE(text: str) -> bool:
@@ -74,6 +86,54 @@ def decimal_to_int(s: str) -> int:
     return int(float(s))
 
 
+
+# ── stable ids ────────────────────────────────────────────────────────────────
+#
+# Ids used to be a running counter over sorted(glob(...)), which made every id a
+# function of how many entities sort before it: adding or renaming one card
+# renumbered everything after it, silently invalidating hand-written constants
+# (IC.StrikeIronclad = 472), committed fixtures and test literals.
+#
+# data/id_map.json freezes the mapping. Known names keep their id, new names get
+# appended after the current maximum, and ids of removed content stay reserved so
+# they are never recycled onto something else.
+
+ID_MAP_PATH = REPO / "data" / "id_map.json"
+_ID_MAP: dict[str, dict[str, int]] = {}
+_NEW_IDS: dict[str, list[str]] = {}
+
+
+def load_id_map() -> None:
+    global _ID_MAP
+    if not ID_MAP_PATH.exists():
+        raise SystemExit(
+            f"{ID_MAP_PATH} is missing. Seed it with scripts/build_id_map.py."
+        )
+    _ID_MAP = json.loads(ID_MAP_PATH.read_text(encoding="utf-8"))
+
+
+def stable_id(category: str, name: str) -> int:
+    """Id for this entity, appending a fresh one if the patch introduced it."""
+    mapping = _ID_MAP.setdefault(category, {})
+    if name in mapping:
+        return mapping[name]
+    # Skip the 10000+ reserved band when appending.
+    next_id = max((i for i in mapping.values() if i < 10000), default=0) + 1
+    mapping[name] = next_id
+    _NEW_IDS.setdefault(category, []).append(f"{name}={next_id}")
+    return next_id
+
+
+def save_id_map() -> None:
+    ordered = {
+        cat: dict(sorted(names.items(), key=lambda kv: (kv[1], kv[0])))
+        for cat, names in _ID_MAP.items()
+    }
+    ID_MAP_PATH.write_text(json.dumps(ordered, indent=2) + "\n", encoding="utf-8")
+    for category, added in _NEW_IDS.items():
+        print(f"  NEW {category}: {', '.join(added)}")
+
+
 # ── card extraction ───────────────────────────────────────────────────────────
 
 SPECIAL_CARD_IDS = {
@@ -84,9 +144,8 @@ SPECIAL_CARD_IDS = {
 
 def extract_cards() -> str:
     entries: list[str] = []
-    card_id = 1
 
-    for f in sorted(CARDS_DIR.glob("*.cs")):
+    for f in sorted(CARDS_DIR.glob("*.cs"), key=lambda p: p.stem.lower()):
         name = f.stem
         text = f.read_text(encoding="utf-8", errors="replace")
 
@@ -102,7 +161,9 @@ def extract_cards() -> str:
         cost = int(ctor.group(1))
         card_type = ctor.group(2)  # Attack / Skill / Power / Status / Curse
         rarity = ctor.group(3)
-        if cost < 0 and name not in SPECIAL_CARD_IDS:
+        # Negative-cost cards are statuses/curses; keep the ones the id map knows
+        # (they are referenced by the engine) and skip the rest, as before.
+        if cost < 0 and name not in _ID_MAP.get("cards", {}):
             continue
 
         dmg_m = DAMAGE_VAR.search(text)
@@ -115,14 +176,11 @@ def extract_cards() -> str:
         upg_dmg = decimal_to_int(upg_dmg_m.group(1)) if upg_dmg_m else 0
         upg_block = decimal_to_int(upg_blk_m.group(1)) if upg_blk_m else 0
 
-        def_id = SPECIAL_CARD_IDS.get(name, card_id)
+        def_id = stable_id("cards", name)
         flags = []
-        if "CardKeyword.Ethereal" in text:
-            flags.append("Ethereal: true")
-        if "CardKeyword.Exhaust" in text:
-            flags.append("Exhaust: true")
-        if "CardKeyword.Unplayable" in text:
-            flags.append("Unplayable: true")
+        for keyword in ("Ethereal", "Exhaust", "Unplayable"):
+            if has_canonical_keyword(text, keyword):
+                flags.append(f"{keyword}: true")
         # Innate needs precise attribution, unlike the flags above: 9 cards declare
         # it in CanonicalKeywords (always innate) while 15 others only gain it via
         # OnUpgrade.  A substring check would mark the latter permanently innate and
@@ -139,13 +197,10 @@ def extract_cards() -> str:
             f"UpgradeDamage: {upg_dmg}, UpgradeBlock: {upg_block}, "
             f"Type: CardType.{card_type}, Rarity: CardRarity.{rarity}{flags_cs}),",
         )
-        if name not in SPECIAL_CARD_IDS:
-            card_id += 1
-
     if not entries:
         entries = ["        // No cards extracted — check CARDS_DIR path."]
 
-    print(f"  Cards: {card_id - 1} extracted.")
+    print(f"  Cards: {len(entries)} extracted.")
     lines = "\n".join(entries)
     return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
 
@@ -174,9 +229,8 @@ internal static class Cards
 
 def extract_enemies() -> str:
     entries: list[str] = []
-    enemy_id = 1
 
-    for f in sorted(MONSTERS_DIR.glob("*.cs")):
+    for f in sorted(MONSTERS_DIR.glob("*.cs"), key=lambda p: p.stem.lower()):
         name = f.stem
         text = f.read_text(encoding="utf-8", errors="replace")
 
@@ -215,15 +269,14 @@ def extract_enemies() -> str:
             moves_cs = "Array.Empty<int>()"
 
         entries.append(
-            f'        new EnemyDef(Id: {enemy_id}, Name: "{name}", '
+            f'        new EnemyDef(Id: {stable_id("enemies", name)}, Name: "{name}", '
             f"MinHp: {min_hp}, MaxHp: {max_hp}, Moves: {moves_cs}),",
         )
-        enemy_id += 1
 
     if not entries:
         entries = ["        // No enemies extracted — check MONSTERS_DIR path."]
 
-    print(f"  Enemies: {enemy_id - 1} extracted.")
+    print(f"  Enemies: {len(entries)} extracted.")
     lines = "\n".join(entries)
     return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
 
@@ -266,9 +319,8 @@ internal static class Enemies
 
 def extract_powers() -> str:
     entries: list[str] = []
-    power_id = 1
 
-    for f in sorted(POWERS_DIR.glob("*.cs")):
+    for f in sorted(POWERS_DIR.glob("*.cs"), key=lambda p: p.stem.lower()):
         name = f.stem
         text = f.read_text(encoding="utf-8", errors="replace")
 
@@ -282,15 +334,14 @@ def extract_powers() -> str:
         ticks = "TickDownDuration" in text
 
         entries.append(
-            f'        new PowerDef(Id: {power_id}, Name: "{name}", '
+            f'        new PowerDef(Id: {stable_id("powers", name)}, Name: "{name}", '
             f'IsBuff: {str(is_buff).lower()}, StackType: "{stack}", TicksDown: {str(ticks).lower()}),',
         )
-        power_id += 1
 
     if not entries:
         entries = ["        // No powers extracted — check POWERS_DIR path."]
 
-    print(f"  Powers: {power_id - 1} extracted.")
+    print(f"  Powers: {len(entries)} extracted.")
     lines = "\n".join(entries)
     return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
 
@@ -319,9 +370,8 @@ internal static class Powers
 
 def extract_relics() -> str:
     entries: list[str] = []
-    relic_id = 1
 
-    for f in sorted(RELICS_DIR.glob("*.cs")):
+    for f in sorted(RELICS_DIR.glob("*.cs"), key=lambda p: p.stem.lower()):
         name = f.stem
         text = f.read_text(encoding="utf-8", errors="replace")
 
@@ -330,13 +380,12 @@ def extract_relics() -> str:
         if name == "DeprecatedRelic":
             continue
 
-        entries.append(f'        new RelicDef(Id: {relic_id}, Name: "{name}"),')
-        relic_id += 1
+        entries.append(f'        new RelicDef(Id: {stable_id("relics", name)}, Name: "{name}"),')
 
     if not entries:
         entries = ["        // No relics extracted — check RELICS_DIR path."]
 
-    print(f"  Relics: {relic_id - 1} extracted.")
+    print(f"  Relics: {len(entries)} extracted.")
     lines = "\n".join(entries)
     return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
 
@@ -365,9 +414,8 @@ internal static class Relics
 
 def extract_potions() -> str:
     entries: list[str] = []
-    potion_id = 1
 
-    for f in sorted(POTIONS_DIR.glob("*.cs")):
+    for f in sorted(POTIONS_DIR.glob("*.cs"), key=lambda p: p.stem.lower()):
         name = f.stem
         text = f.read_text(encoding="utf-8", errors="replace")
 
@@ -386,13 +434,12 @@ def extract_potions() -> str:
         ):
             continue
 
-        entries.append(f'        new PotionDef(Id: {potion_id}, Name: "{name}"),')
-        potion_id += 1
+        entries.append(f'        new PotionDef(Id: {stable_id("potions", name)}, Name: "{name}"),')
 
     if not entries:
         entries = ["        // No potions extracted — check POTIONS_DIR path."]
 
-    print(f"  Potions: {potion_id - 1} extracted.")
+    print(f"  Potions: {len(entries)} extracted.")
     lines = "\n".join(entries)
     return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
 
@@ -420,6 +467,7 @@ internal static class Potions
 
 
 def main() -> None:
+    load_id_map()
     if not DECOMPILED.exists():
         print("decompiled/ not found. Run scripts/decompile.sh first.", file=sys.stderr)
         sys.exit(1)
@@ -441,6 +489,7 @@ def main() -> None:
         out.write_text(content, encoding="utf-8")
         print(f"  wrote {out.relative_to(REPO)}")
 
+    save_id_map()
     print("extract_data.py complete.")
 
 

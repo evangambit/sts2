@@ -45,6 +45,31 @@ def _quiet(fn, *args, **kwargs):
         return fn(*args, **kwargs)
 
 
+class FixtureStampTest(unittest.TestCase):
+    """Every fixture must say which patch it came from, and they must agree.
+
+    Deliberately does NOT check the installed game — tests must pass on a machine
+    with no copy of StS2. The live comparison in verify_run_generation.py does that
+    check and warns; this only guarantees the stamps exist and are not mixed across
+    patches, which would silently compare captures from two different builds.
+    """
+
+    def test_every_fixture_is_stamped_and_they_agree(self):
+        stamps = {}
+        for path in sorted(FIXTURES.rglob("*.json")):
+            game = json.loads(path.read_text()).get("game")
+            self.assertIsNotNone(game, f"{path.name} has no game version stamp")
+            self.assertTrue(game.get("release"), f"{path.name} has no release string")
+            stamps[path.name] = (game.get("release"), game.get("steam_buildid"))
+
+        self.assertTrue(stamps, "no fixtures found")
+        self.assertEqual(
+            1,
+            len(set(stamps.values())),
+            f"fixtures come from different game builds: {stamps}",
+        )
+
+
 class RunGenerationFixtureTest(unittest.TestCase):
     """Ground truth: a live A8 run on seed "AAB" (Overgrowth)."""
 

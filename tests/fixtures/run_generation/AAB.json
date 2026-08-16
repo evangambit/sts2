@@ -1,5 +1,10 @@
 {
   "_comment": "Ground truth captured from a live StS2 run. Distilled from current_run.save by verify_run_generation.py --save-fixture.",
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1",
+    "save_schema_version": 16
+  },
   "rng": {
     "seed": "AAB"
   },

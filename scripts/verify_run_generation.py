@@ -22,6 +22,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import game_version
+
 from sts2_gym import game_seed, native
 
 SAVE_GLOB = (
@@ -73,6 +75,9 @@ def distill_fixture(save: dict[str, Any]) -> dict[str, Any]:
             "Ground truth captured from a live StS2 run. Distilled from "
             "current_run.save by verify_run_generation.py --save-fixture."
         ),
+        # Which patch this describes. A fixture is only ground truth for its own
+        # build; verification warns loudly when the installed game has moved on.
+        "game": game_version.detect(save),
         "rng": {"seed": save["rng"]["seed"]},
         "ascension": save.get("ascension"),
         "current_act_index": save["current_act_index"],
@@ -235,6 +240,7 @@ def main() -> None:
 
     print(f"save : {save_path}")
     print(f"seed : {seed!r} -> gen seed {game_seed(str(seed))}")
+    game_version.check(save.get("game"))
     ascension = save.get("ascension")
     print(f"act  : index {act_index} = {act['id']}  (ascension {ascension})")
     if ascension != 8:

@@ -27,6 +27,8 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
+import game_version
+
 from sts2_gym import Sts2CombatEnv, game_seed
 from sts2_gym.commands import card_name_by_id
 
@@ -325,6 +327,9 @@ def main() -> None:
         state = start_real_game_run.get_state(args.base_url)
 
     if args.save_live_json is not None:
+        # Stamp the capture with the patch it came from — see scripts/game_version.py.
+        state = {**state, "game": game_version.detect()}
+        args.save_live_json.parent.mkdir(parents=True, exist_ok=True)
         args.save_live_json.write_text(json.dumps(state, indent=2))
         print(f"wrote live state -> {args.save_live_json}")
 

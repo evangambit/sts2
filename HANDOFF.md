@@ -152,18 +152,13 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Gotchas / known issues
 
-- **`scripts/extract_data.py` CANNOT reproduce `src/Sts2Emulator/Generated/*.g.cs` — do
-  not run it blind.** Both came from the single "Initial commit", but re-running the
-  script against the current `decompiled/` **renumbers every card/enemy/power/relic id**
-  and **drops the 10000-range status cards** (Infection, Burn, Disintegration, Wound,
-  Wither, SpoilsMap — the script's `SPECIAL_CARD_IDS` only maps `AscendersBane`/`Dazed`,
-  so its `cost < 0` filter discards them). That renumbering silently broke 6 tests when
-  first tried. The committed id order is *not* any filename sort (case-sensitive or not),
-  so it came from some upstream process this script doesn't replicate. **This means
-  `scripts/patch_update.sh` is effectively broken** — it chains `extract_data.py`.
-  Fixing the extractor to be id-stable is a prerequisite for any future patch bump.
-  (The Innate flags were therefore applied to `Cards.g.cs` surgically by name, ids
-  untouched; `extract_data.py` also has the correct Innate logic for when it's fixed.)
+- ✅ **`scripts/extract_data.py` is fixed and safe to run.** It used to renumber every
+  id (ids were a counter over `sorted(glob(...))`, so one added card shifted everything
+  after it) and drop the 10000-range status cards. **`data/id_map.json` now freezes the
+  mapping**: known names keep their id, new names append, removed names keep theirs
+  reserved so an id is never recycled onto different content. Re-running is now
+  reproducible, and `scripts/patch_update.sh` is no longer destructive.
+  Seed/re-freeze the map with `scripts/build_id_map.py` (deliberate action only).
 - **`Folly` and `Writhe` are missing from `Cards.g.cs`** — both are canonically Innate
   cost-`-1` curses dropped by the same `cost < 0` filter. Harmless today (starter decks
   have neither) but they'd be *unknown cards*, not merely misordered, if ever drawn.
@@ -348,6 +343,33 @@ seed that actually rolls **Underdocks** — still entirely unverified.
   `OvergrowthCrawlers`, `LargeSlimes` -> `SlimesNormal`, `SlimeAndFlyconid` ->
   `FlyconidNormal`, `JaxfruitAndFlyconid` -> `SnappingJaxfruitNormal`. The emulator had
   invented those four labels. Old Python encounter strings still resolve as aliases.
+
+## Patch playbook (when a new StS2 build lands)
+
+Tests are tiered by what they are pinned to; treat a failure differently in each.
+
+1. `bash scripts/decompile.sh "<game dir>"` then `python scripts/extract_data.py`.
+   Ids are now stable (`data/id_map.json`), so this is safe. **Watch for `NEW ...`
+   lines** — those are ids appended for content this patch introduced.
+2. `python scripts/diff_patch.py` to triage what actually changed.
+3. **Tier 1 — mechanism tests** (RNG, seed derivation, shuffle, turn-1 reorder, map
+   pruning). These should stay green through any *content* patch. A failure means an
+   algorithm changed — **investigate, never re-baseline casually.**
+4. **Tier 2 — content tests.** Expect churn when values change. The `...OutputsAreLocked`
+   RNG pins are locks over our own output, not ground truth; re-pin them only once
+   Tier 1 is green.
+   ⚠️ **`IC`/`CL`/`SI`/`AN`/`ST` in CardEffects.cs are hand-maintained card-id
+   constants** (342 references from the tests). The id map stops them going stale on
+   *existing* cards, but they are still not generated — worth doing.
+5. **Tier 3 — live fixtures.** Re-capture them: they are ground truth for one patch
+   only. Fixtures carry a `game` stamp (Steam buildid + release), and
+   `verify_run_generation.py` prints a loud **GAME VERSION MISMATCH** when the stamp
+   does not match the installed game, so stale captures cannot masquerade as bugs.
+6. Rebuild the dylib and re-run everything (`208 C# + 35 Python` at time of writing).
+
+**The failure mode to watch for is a *quiet* one:** data that extracts without error but
+is wrong. That is what happened with the keyword flags below — regenerating surfaced ~30
+cards wrongly marked `Exhaust`, and only a behavioural test caught it.
 
 ## One-shot smoke test (verify the whole stack works)
 
