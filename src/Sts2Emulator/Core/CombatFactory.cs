@@ -366,7 +366,9 @@ public static class CombatFactory
 
         RelicEffects.ApplyBeforeOpeningHand(state, rng);
 
-        for (int i = 0; i < 5 && state.DrawPile.Count > 0; i++)
+        int handDraw = ApplyTurnOneDrawPileReorder(state.DrawPile, 5);
+
+        for (int i = 0; i < handDraw && state.DrawPile.Count > 0; i++)
         {
             state.Hand.Add(state.DrawPile[0]);
             state.DrawPile.RemoveAt(0);
@@ -375,6 +377,52 @@ public static class CombatFactory
         RelicEffects.ApplyCombatStart(state, rng);
         RelicEffects.ApplyStartOfPlayerTurn(state);
         RelicEffects.ApplyAfterPlayerHpChanged(state);
+    }
+
+    /// <summary>The game's <c>CardPile.MaxCardsInHand</c>.</summary>
+    private const int MaxCardsInHand = 10;
+
+    /// <summary>
+    /// Port of the game's turn-1 draw-pile reorder (decompiled
+    /// <c>MegaCrit.Sts2.Core.Combat/CombatManager.cs</c> ~line 658), applied after the
+    /// shuffle and before the opening draw: cards flagged
+    /// <c>ShouldStartAtBottomOfDrawPile</c> go to the bottom, then Innate cards (minus
+    /// those just sent to the bottom) go to the top, and the draw count is raised to
+    /// cover every Innate card, capped at the max hand size.
+    /// </summary>
+    /// <param name="drawPile">Draw pile, index 0 = top. Reordered in place.</param>
+    /// <param name="handDraw">Base number of cards to draw.</param>
+    /// <returns>The possibly-increased number of cards to draw.</returns>
+    public static int ApplyTurnOneDrawPileReorder(List<CardInstance> drawPile, int handDraw)
+    {
+        // The game moves each bottom-sorted card with Remove+Add, so afterwards they
+        // sit in the last slots in their original relative order — a stable partition.
+        var bottom = new List<CardInstance>();
+        var kept = new List<CardInstance>();
+        foreach (var card in drawPile)
+        {
+            (card.StartsAtBottomOfDrawPile() ? bottom : kept).Add(card);
+        }
+
+        // Innate cards are then selected from the post-move pile and Except'd against
+        // the bottom group, so a card that is both stays at the bottom.
+        var innate = new List<CardInstance>();
+        var rest = new List<CardInstance>();
+        foreach (var card in kept)
+        {
+            (card.IsInnate() ? innate : rest).Add(card);
+        }
+
+        // MoveToTopInternal inserts at index 0, so walking the innate cards in pile
+        // order leaves that block reversed relative to where it started.
+        innate.Reverse();
+
+        drawPile.Clear();
+        drawPile.AddRange(innate);
+        drawPile.AddRange(rest);
+        drawPile.AddRange(bottom);
+
+        return Math.Min(Math.Max(handDraw, innate.Count), MaxCardsInHand);
     }
 
     private static int[] StarterDeck() =>

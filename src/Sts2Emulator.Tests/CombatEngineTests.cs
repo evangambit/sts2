@@ -33,6 +33,130 @@ public class CombatEngineTests
         Assert.Equal(1, cards.Count(c => c.DefId == IC.AscendersBane));
     }
 
+    // ── turn-1 draw-pile reorder ──────────────────────────────────────────────
+    // Ports MegaCrit.Sts2.Core.Combat/CombatManager.cs ~line 658.
+
+    private static List<CardInstance> Pile(params int[] defIds) =>
+        defIds.Select(id => new CardInstance(id, false)).ToList();
+
+    [Fact]
+    public void TurnOneReorder_LeavesPileAloneWhenNoCardIsInnate()
+    {
+        var pile = Pile(IC.StrikeIronclad, IC.DefendIronclad, IC.Bash);
+
+        int draw = CombatFactory.ApplyTurnOneDrawPileReorder(pile, 5);
+
+        Assert.Equal(5, draw);
+        Assert.Equal(
+            [IC.StrikeIronclad, IC.DefendIronclad, IC.Bash],
+            pile.Select(c => c.DefId)
+        );
+    }
+
+    [Fact]
+    public void TurnOneReorder_MovesInnateCardToTop()
+    {
+        var pile = Pile(IC.StrikeIronclad, IC.DefendIronclad, CL.MindBlast, IC.Bash);
+
+        int draw = CombatFactory.ApplyTurnOneDrawPileReorder(pile, 5);
+
+        Assert.Equal(5, draw); // one innate card < the base draw of 5
+        Assert.Equal(
+            [CL.MindBlast, IC.StrikeIronclad, IC.DefendIronclad, IC.Bash],
+            pile.Select(c => c.DefId)
+        );
+    }
+
+    [Fact]
+    public void TurnOneReorder_ReversesMultipleInnateCards()
+    {
+        // The game moves each innate card with MoveToTopInternal (Insert at 0), so
+        // walking them in pile order leaves the innate block reversed.
+        var pile = Pile(CL.MindBlast, IC.StrikeIronclad, SI.Backstab, SI.Suppress);
+
+        CombatFactory.ApplyTurnOneDrawPileReorder(pile, 5);
+
+        Assert.Equal(
+            [SI.Suppress, SI.Backstab, CL.MindBlast, IC.StrikeIronclad],
+            pile.Select(c => c.DefId)
+        );
+    }
+
+    [Fact]
+    public void TurnOneReorder_IgnoresUpgradeOnlyInnateWhenNotUpgraded()
+    {
+        // Aggression gains Innate from OnUpgrade, so unupgraded it must not move.
+        var pile = new List<CardInstance>
+        {
+            new(IC.StrikeIronclad, false),
+            new(IC.Aggression, false),
+        };
+
+        CombatFactory.ApplyTurnOneDrawPileReorder(pile, 5);
+
+        Assert.Equal([IC.StrikeIronclad, IC.Aggression], pile.Select(c => c.DefId));
+    }
+
+    [Fact]
+    public void TurnOneReorder_HonorsUpgradeOnlyInnateWhenUpgraded()
+    {
+        var pile = new List<CardInstance>
+        {
+            new(IC.StrikeIronclad, false),
+            new(IC.Aggression, true),
+        };
+
+        CombatFactory.ApplyTurnOneDrawPileReorder(pile, 5);
+
+        Assert.Equal([IC.Aggression, IC.StrikeIronclad], pile.Select(c => c.DefId));
+    }
+
+    [Fact]
+    public void TurnOneReorder_RaisesDrawCountToCoverEveryInnateCard()
+    {
+        // Duplicates deliberately: identical CardInstances are value-equal, so this
+        // also pins that every copy counts (the game's Except/Distinct on reference
+        // types must not become a value-based dedup here).
+        var pile = Pile(
+            CL.MindBlast,
+            CL.MindBlast,
+            SI.Backstab,
+            SI.Backstab,
+            SI.Suppress,
+            CL.DramaticEntrance,
+            IC.StrikeIronclad
+        );
+
+        int draw = CombatFactory.ApplyTurnOneDrawPileReorder(pile, 5);
+
+        Assert.Equal(6, draw); // 6 innate cards > the base draw of 5
+        Assert.Equal(IC.StrikeIronclad, pile[^1].DefId); // sole non-innate sinks last
+    }
+
+    [Fact]
+    public void TurnOneReorder_CapsDrawCountAtMaxHandSize()
+    {
+        // 12 innate cards would otherwise ask for a 12-card opening hand.
+        var pile = Enumerable
+            .Repeat(new CardInstance(CL.MindBlast, false), 12)
+            .ToList();
+
+        int draw = CombatFactory.ApplyTurnOneDrawPileReorder(pile, 5);
+
+        Assert.Equal(10, draw);
+    }
+
+    [Fact]
+    public void NewCombat_DealsOpeningHandFromReorderedPile()
+    {
+        // End-to-end: the starter deck has no innate cards, so the opening hand is
+        // still the top 5 of the shuffled pile.
+        var state = CombatFactory.NewCombat(seed: 0);
+
+        Assert.Equal(5, state.Hand.Count);
+        Assert.DoesNotContain(state.Hand, c => c.IsInnate());
+    }
+
     [Fact]
     public void AscendersBane_IsNotPlayable()
     {

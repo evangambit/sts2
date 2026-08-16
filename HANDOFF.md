@@ -46,7 +46,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 199 pass)
+# C# unit tests (currently 207 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -99,7 +99,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 199 C# + 17 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 207 C# + 17 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - **Bit-exact enemy generation vs the live game** (the headline result): a live custom
   run seeded `"ABCDEF"` → `debug_start_encounter CorpseSlugsWeak` → enemies `[28,29]`;
@@ -137,6 +137,21 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Gotchas / known issues
 
+- **`scripts/extract_data.py` CANNOT reproduce `src/Sts2Emulator/Generated/*.g.cs` — do
+  not run it blind.** Both came from the single "Initial commit", but re-running the
+  script against the current `decompiled/` **renumbers every card/enemy/power/relic id**
+  and **drops the 10000-range status cards** (Infection, Burn, Disintegration, Wound,
+  Wither, SpoilsMap — the script's `SPECIAL_CARD_IDS` only maps `AscendersBane`/`Dazed`,
+  so its `cost < 0` filter discards them). That renumbering silently broke 6 tests when
+  first tried. The committed id order is *not* any filename sort (case-sensitive or not),
+  so it came from some upstream process this script doesn't replicate. **This means
+  `scripts/patch_update.sh` is effectively broken** — it chains `extract_data.py`.
+  Fixing the extractor to be id-stable is a prerequisite for any future patch bump.
+  (The Innate flags were therefore applied to `Cards.g.cs` surgically by name, ids
+  untouched; `extract_data.py` also has the correct Innate logic for when it's fixed.)
+- **`Folly` and `Writhe` are missing from `Cards.g.cs`** — both are canonically Innate
+  cost-`-1` curses dropped by the same `cost < 0` filter. Harmless today (starter decks
+  have neither) but they'd be *unknown cards*, not merely misordered, if ever drawn.
 - **Driving the game hard CRASHES it.** Rapid `abandon → re-embark →
   debug_start_encounter` cycling triggers an error popup (`report_bug`, needs restart).
   A *single* clean sequence with generous `time.sleep` waits is stable. **Follow-on:**
@@ -152,16 +167,21 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Next work (prioritized, with pointers)
 
-1. **Opening-hand exact match** — two residuals (enemy HP already exact):
-   - **Port the game's turn-1 draw-pile reorder** (real emulator bug): after shuffling,
-     game moves `ShouldStartAtBottomOfDrawPile` cards (Ascender's Bane) to the **bottom**
-     and `Innate` cards to the **top**, then draws — see decompiled
-     `MegaCrit.Sts2.Core.Combat/CombatManager.cs` ~line 658. Emulator does neither; add
-     it in `src/Sts2Emulator/Core/CombatFactory.cs` before the opening-hand draw (~line
-     357). Deck order and shuffle algorithm/stream already verified matching.
+1. **Opening-hand exact match** — one residual left (enemy HP already exact):
+   - ~~Port the game's turn-1 draw-pile reorder~~ — **DONE**, see
+     `CombatFactory.ApplyTurnOneDrawPileReorder` (8 tests). Note the reorder is a no-op
+     for the *starter* deck (no Innate cards, and `ShouldStartAtBottomOfDrawPile` is the
+     **`Imbued` enchantment** — not Ascender's Bane, as previously written here — and
+     enchantments aren't modelled, so `StartsAtBottomOfDrawPile()` is hardcoded false).
+     So this fixed a real divergence for later decks but **cannot** be the cause of any
+     turn-1 starter-deck mismatch. Two ordering subtleties are ported and pinned by test:
+     innate cards end up **reversed** (the game inserts each at index 0), and the game's
+     `Except` runs on *reference* identity — do not reimplement it with LINQ on
+     `CardInstance`, which is a value type and would dedup equal cards.
    - **Residual shuffle-state factor** — build a small **full-deck introspection** tool
      (dump the emulator's *ordered* draw pile + a matching live readout) to compare exact
      sequences, since the combat obs summary doesn't expose ordered draw-pile.
+     **This is now the only remaining lead for opening-hand mismatch** — start here.
 2. **Harden the debug/menu mod actions** with settled-state guards (fix the crash-on-churn).
 3. **Implement `start_replay`** in the STS2MCP fork → clean deterministic full-run capture
    (design in docs/replay-verification.md §1).
@@ -174,7 +194,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 199 pass
+dotnet test src/Sts2Emulator.Tests/        # 207 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 17 pass
 ```
