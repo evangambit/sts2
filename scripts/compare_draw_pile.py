@@ -102,6 +102,39 @@ def live_pile(state: dict[str, Any], pile: str) -> list[tuple[str, bool]]:
     return [(str(c.get("id") or ""), bool(c.get("is_upgraded"))) for c in cards]
 
 
+def check_run_config(
+    state: dict[str, Any], seed: int, encounter: str, completed: int
+) -> None:
+    """Warn when the two sides aren't describing the same fight.
+
+    Player HP is the cheapest proxy for ascension: the emulator models A8 (64/80),
+    so a different live ascension yields different HP — and comparing piles across
+    mismatched configs would produce a meaningless diff that looks like a real bug.
+    """
+    player = state.get("player") or (state.get("battle") or {}).get("player") or {}
+    live_hp, live_max = player.get("hp"), player.get("max_hp")
+    if live_hp is None or live_max is None:
+        return
+
+    env = Sts2CombatEnv(
+        seed=seed, encounter=encounter, completed_combat_rooms=completed
+    )
+    try:
+        obs, _ = env.reset()
+        emu_hp, emu_max = int(obs[0]), int(obs[1])
+    finally:
+        env.close()
+
+    if (live_hp, live_max) != (emu_hp, emu_max):
+        print(
+            f"\n!! CONFIG MISMATCH: player HP live {live_hp}/{live_max} vs emulator "
+            f"{emu_hp}/{emu_max}.\n"
+            "   Likely a different ascension level (emulator models A8) or a Neow "
+            "option that altered HP.\n"
+            "   The pile diff below is comparing different fights — fix this first.",
+        )
+
+
 def render(
     emu: list[tuple[str, bool]], live: list[tuple[str, bool]], label: str
 ) -> bool:
@@ -171,6 +204,13 @@ def main() -> None:
         action="store_true",
         help="start a seeded run and jump into the encounter before capturing",
     )
+    parser.add_argument(
+        "--ascension",
+        type=int,
+        default=8,
+        help="live ascension level; the emulator models A8 (player 64/80). "
+        "Only used with --start-run.",
+    )
     parser.add_argument("--piles", default="hand,draw")
     args = parser.parse_args()
 
@@ -187,9 +227,16 @@ def main() -> None:
             live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(args.encounter)
             if live_encounter is None:
                 raise SystemExit(f"No live encounter mapped for {args.encounter!r}")
-            print(f"Starting seeded run {args.seed!r} -> {live_encounter} ...")
+            print(
+                f"Starting seeded run {args.seed!r} -> {live_encounter} "
+                f"(ascension {args.ascension}) ..."
+            )
             validate.start_debug_encounter(
-                args.base_url, args.seed, args.character, live_encounter
+                args.base_url,
+                args.seed,
+                args.character,
+                live_encounter,
+                ascension=args.ascension,
             )
         state = start_real_game_run.get_state(args.base_url)
 
@@ -200,6 +247,7 @@ def main() -> None:
     seed = game_seed(args.seed)
     print(f"seed {args.seed!r} -> gen seed {seed}, encounter {args.encounter!r} "
           f"(completed_combat_rooms={completed})")
+    check_run_config(state, seed, args.encounter, completed)
 
     all_matched = True
     for pile in (p.strip() for p in args.piles.split(",") if p.strip()):

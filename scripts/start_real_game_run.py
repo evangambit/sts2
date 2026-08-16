@@ -179,7 +179,16 @@ def start_seeded_run(
     seed: str,
     character: str,
     abandon_existing: bool,
+    mode: str = "custom",
+    ascension: int | None = None,
 ) -> dict[str, Any]:
+    """Start a run on a chosen seed.
+
+    Defaults to ``custom`` mode because **standard mode rejects a seed outright**
+    ("Seed should not be changed in standard mode!") — only the custom-run screen's
+    Lobby.SetSeed accepts one. Custom mode reports as ``character_select`` with
+    ``custom_run: true``. Pass mode="standard" only for a seedless run.
+    """
     if abandon_existing:
         abandon_existing_run(base_url)
         state = wait_for_menu(base_url, "main")
@@ -196,9 +205,13 @@ def start_seeded_run(
 
     post_menu(base_url, "singleplayer")
     wait_for_menu(base_url, "singleplayer")
-    post_menu(base_url, "standard")
+    post_menu(base_url, mode)
     wait_for_menu(base_url, "character_select")
     post_menu(base_url, character)
+    if ascension is not None:
+        # menu_select has no extra params, so the mod carries the ascension level
+        # in the seed field (see McpMod.CustomRun.cs).
+        post_menu(base_url, "ascension", seed=str(ascension))
     post_menu(base_url, "confirm", seed=seed)
     return wait_for_run(base_url, seed)
 
