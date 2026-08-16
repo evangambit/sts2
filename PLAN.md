@@ -503,15 +503,25 @@ proves the whole chain (seed derivation + Niche stream + HP-roll fix) is bit-exa
 **Opening hand — Shuffle stream now wired (commit `6e53ee2`), exact match still pending.**
 Gave the combat env `ShuffleRng = GameRng(seed,"shuffle")` and shuffle with it
 (`ShufflePile` is the same Fisher-Yates as `GameRng.Shuffle`). The hand now uses the
-Shuffle stream but doesn't match live yet. Two remaining factors identified:
-1. **Starter-deck pre-shuffle order.** The game's `Ironclad.StartingDeck` is a **10-card**
-   array (5 Strike, 4 Defend, Bash) and **inserts Ascender's Bane at ascension**; the
-   emulator hardcodes an 11-card deck with Bane fixed at the end. Fisher-Yates on a
-   different pre-shuffle order yields a different hand.
-2. **Shuffle stream call-count at combat start** — the emulator uses a fresh
-   `GameRng(seed,"shuffle")` (CallCount 0); confirm the game's Shuffle stream is also
-   fresh at the first combat (Niche was, which is why HP matched).
-Resolving these gives full combat exact-match; enemy HP already matches exactly.
+Shuffle stream but doesn't match live yet. Deeper diagnosis (2026-08-15):
+- **Deck order matches — ruled out.** `AscensionManager` adds Ascender's Bane via
+  `Deck.AddInternal(bane, -1)` which *appends* (`CardPile.AddInternal` index -1 → `Add`),
+  so the game's run deck is `[5 Strike, 4 Defend, Bash, Bane]` — identical to the
+  emulator's `StarterDeckIds`. Algorithm matches (both Fisher-Yates); stream derivation
+  matches (Niche proved the mechanism).
+- **Emulator gap found: no turn-1 draw-pile reorder.** The game's turn-1 setup
+  (`CombatManager` ~658): shuffle → move `ShouldStartAtBottomOfDrawPile` cards
+  (Ascender's Bane) to the **bottom** → move `Innate` cards to the **top** → draw. The
+  emulator's `CombatFactory` does **neither reorder** — a real fidelity bug (corrupts
+  the opening hand whenever Bane or an innate card would be in the top 5). **Fix:** port
+  the turn-1 bottom/top reorder before the opening draw.
+- **Residual shuffle-state factor.** Even accounting for the reorder, this hand's
+  composition still differs (emu 3 Defend/1 Strike vs live 2 Defend/2 Strike with Bane in
+  neither top 5), pointing to the Shuffle stream's call-count / a subtle shuffle
+  difference. Needs full-deck introspection on both sides (the combat obs summary doesn't
+  expose ordered draw-pile) to pin down.
+Enemy HP already matches exactly; these two close the opening-hand gap for full combat
+exact-match.
 
 **Robustness note:** rapid abandon→re-embark→`debug_start_encounter` cycling crashes
 the game (error popup); a single clean sequence with generous waits is stable. Harden
