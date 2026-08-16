@@ -102,6 +102,35 @@ def live_pile(state: dict[str, Any], pile: str) -> list[tuple[str, bool]]:
     return [(str(c.get("id") or ""), bool(c.get("is_upgraded"))) for c in cards]
 
 
+def preflight_no_run_in_progress(start_real_game_run: ModuleType, args: Any) -> None:
+    """Refuse to embark while a run exists, unless --abandon is given.
+
+    The in-game abandon deletes current_run.save.backup and *throws* when that
+    file is absent (observed: "Error deleting path ... Failed" inside
+    NMainMenu.AbandonRun). The half-finished teardown then makes the next embark
+    NRE in NRunMusicController, which is the "internal error!" popup. Once the
+    backup is missing this reproduces every time, so failing fast beats retrying.
+    """
+    if args.abandon:
+        return
+    if start_real_game_run.current_run_seed(args.base_url) is None:
+        return
+
+    raise SystemExit(
+        "A run is already in progress.\n"
+        "  Driving the in-game abandon from here is what crashes the game, so this\n"
+        "  stops instead. Pick one:\n"
+        "    * Abandon the run yourself from the main menu, then re-run this; or\n"
+        "    * Quit the game and move the stale save aside:\n"
+        "        mv ~/Library/Application\\ Support/SlayTheSpire2/steam/*/profile1/"
+        "saves/current_run.save /tmp/\n"
+        "    * Or, if the run is ALREADY the one you want, re-run with "
+        "--jump-encounter\n"
+        "      to skip the lobby entirely and just jump it into the encounter.\n"
+        "  --abandon forces the old (crash-prone) behaviour.",
+    )
+
+
 def check_run_config(
     state: dict[str, Any], seed: int, encounter: str, completed: int
 ) -> None:
@@ -205,6 +234,18 @@ def main() -> None:
         help="start a seeded run and jump into the encounter before capturing",
     )
     parser.add_argument(
+        "--jump-encounter",
+        action="store_true",
+        help="use the run already in progress: skip the lobby entirely and just "
+        "debug_start_encounter into it. Pair with a run you embarked by hand.",
+    )
+    parser.add_argument(
+        "--abandon",
+        action="store_true",
+        help="allow driving the in-game abandon before embarking (crash-prone; "
+        "see preflight_no_run_in_progress)",
+    )
+    parser.add_argument(
         "--ascension",
         type=int,
         default=8,
@@ -223,7 +264,17 @@ def main() -> None:
         state = json.loads(args.live_json.read_text())
     else:
         start_real_game_run = _load("start_real_game_run")
-        if args.start_run:
+        if args.jump_encounter:
+            live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(args.encounter)
+            if live_encounter is None:
+                raise SystemExit(f"No live encounter mapped for {args.encounter!r}")
+            print(f"Jumping the *existing* run into {live_encounter} ...")
+            start_real_game_run.post_action(
+                args.base_url,
+                {"action": "debug_start_encounter", "encounter": live_encounter},
+            )
+            start_real_game_run.wait_for_combat_ready(args.base_url, timeout=30.0)
+        elif args.start_run:
             live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(args.encounter)
             if live_encounter is None:
                 raise SystemExit(f"No live encounter mapped for {args.encounter!r}")
@@ -231,12 +282,14 @@ def main() -> None:
                 f"Starting seeded run {args.seed!r} -> {live_encounter} "
                 f"(ascension {args.ascension}) ..."
             )
+            preflight_no_run_in_progress(start_real_game_run, args)
             validate.start_debug_encounter(
                 args.base_url,
                 args.seed,
                 args.character,
                 live_encounter,
                 ascension=args.ascension,
+                abandon_existing=args.abandon,
             )
         state = start_real_game_run.get_state(args.base_url)
 

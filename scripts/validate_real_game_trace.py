@@ -484,12 +484,13 @@ def start_debug_encounter(
     live_encounter: str,
     debug_options: dict[str, str] | None = None,
     ascension: int | None = None,
+    abandon_existing: bool = True,
 ) -> None:
     start_real_game_run.start_seeded_run(
         base_url,
         seed,
         character,
-        abandon_existing=True,
+        abandon_existing=abandon_existing,
         ascension=ascension,
     )
     payload = {"action": "debug_start_encounter", "encounter": live_encounter}
