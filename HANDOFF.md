@@ -240,33 +240,47 @@ front is now *run generation*: what the engine rolls up front for a seed.
      wrong elite draw count silently corrupts the boss. Fixing the elites fixed the boss.
    - ⚠️ Underdocks had both defects too and is fixed by the same rule, but is
      **unverified** — the only live capture so far is an Overgrowth run.
-2. **Map generation — 13/16 rows exact; the bug is isolated to pruning.**
-   `verify_run_generation.py` now compares map *structure* row by row (native list 15
-   exposes the whole grid as `(col,row,type)` triples), not just a node count.
-   **Everything upstream of pruning is already correct** and was checked:
-   - The map uses the right stream (`ActMapRng` -> `act_1_map`) — an earlier note in
-     this file claiming it seeds off the bare run seed was wrong; that applied to the
-     act coin-flip, not the map.
-   - `GetMapPointTypes` draws match exactly and in order: `NextGaussianInt(7,1,6,7)`
-     for rests then `NextGaussianInt(12,1,10,14)` for unknowns.
-   - Counts match the live map: 8 elites (A8 `SwarmingElites` -> `round(5*1.6)`),
-     3 shops, 12 unknowns, 6 assigned rests + 5 forced on the final row.
-   - Path generation matches: 7 paths, the `i==1` distinct-start retry, and
-     `StableShuffle([-1,0,1])` per step with the same clamping and loop bounds.
-   - Forced rows match live exactly: row 1 all monster, row 9 all treasure,
-     row 15 all rest.
-   **What is left:** the emulator ends up with **2 extra nodes** (rows 10 and 11), i.e.
-   pruning removes 2 fewer segments than the game. Rows 1-9 and 13-16 are exact, so the
-   RNG stream is in sync either side of it. The column differences in rows 10-11 are
-   *downstream* of that count gap — `MapPostProcessing.SpreadAdjacentMapPoints` only
-   moves points to maximise gaps, it never removes them, so it re-spaces a row that has
-   the wrong number of nodes in it. **Fix `FindMatchingSegments` / `PrunePaths` in
-   `RunMapGenerator` against `decompiled/MegaCrit.Sts2.Core.Map/MapPathPruning.cs`
-   (~380 lines).** The surrounding `PruneAndRepair` loop and the repair helpers are
-   already faithful.
-   Note the emulator names two node types differently from the save: the start node is
-   `NodeNone` (save: `ancient`) and the treasure row is `NodeRelic` (save: `treasure`).
-   Cosmetic, but it made an earlier diff look worse than it was.
+2. **Map generation — 13/16 rows exact, 2 nodes over. Cause still unknown; the whole
+   pruning port has been audited line-by-line against the game and matches.**
+   `verify_run_generation.py` diffs map structure row by row (native list 15). Rows 0-9
+   and 13-16 are exact; rows 10-12 differ, and the emulator keeps **2 nodes the game
+   prunes** (66 vs 64 incl. start+boss).
+
+   **Ruled out — do not re-audit these, they were compared against the decompiled
+   source and match:**
+   - Stream/seed: uses `ActMapRng` -> `act_1_map`. (An older note here claiming it used
+     the bare run seed was wrong; that was the act coin-flip.)
+   - `GetMapPointTypes`: both draws, in order, right distributions.
+   - Counts: 8 elites (A8 SwarmingElites), 3 shops, 12 unknowns, 6+5 rests.
+   - Path generation: 7 paths, `i==1` distinct-start retry, per-step
+     `StableShuffle([-1,0,1])`, clamping, loop bounds. **RNG accounting confirms it**:
+     207 draws before type assignment = 7 starts + 7 paths x 14 steps x 2 + 4 gaussian,
+     i.e. exactly right with no retries.
+   - Forced rows: row 1 monster, row 9 treasure, row 15 rest — all match live.
+   - Type-assignment structure: 3-pass loop, `StableShuffle` of unassigned points,
+     `GetNextValidPointType` queue rotation, and every validity rule
+     (`IsValidForLower` row<6, `IsValidForUpper` row>=13, parents∪children, children,
+     siblings-via-parents' children). Start/boss are correctly excluded (the game's
+     `GetAllMapPoints` walks only the Grid, and neither is in it).
+   - Pruning: `FindAllPaths`, `AddSegmentsToDictionary`, `GenerateSegmentKey` (incl. the
+     `row == 0` start-node special case), `IsValidSegmentStart/End`, `OverlappingSegment`,
+     `PruneAllButLast`, `PruneSegment`, `BreakAParentChildRelationship...`, `IsInMap`,
+     and the SortedDictionary/Ordinal iteration order. The only textual difference is a
+     missing `&& !IsRemoved(grid, n)` in `PruneSegment`, which is **vacuous** —
+     `RemoveChildPoint` unlinks both directions, so a removed node can never still be in
+     someone's parents list.
+   - Pruning is **not** stopping early: instrumented, it runs to exhaustion
+     (7 duplicate groups -> 0, 71 -> 66 nodes, 6 RNG draws), then repair finds nothing.
+
+   **Where to look next.** Both sides reach a no-duplicates fixed point, just different
+   ones (66 vs 64), so the graphs must already differ *before* pruning even though the
+   draw count is right. Best remaining hypotheses, in order:
+   a. `MapPostProcessing.CenterGrid` / `SpreadAdjacentMapPoints` / `StraightenPaths` —
+      these were never compared against the decompiled source (273 lines) and
+      `StraightenPaths` in particular could merge nodes.
+   b. The pre-prune graph itself: instrument the emulator to dump the raw 71-node graph
+      with edges, and reason backwards from the live `saved_map.points[].children`.
+   c. Node identity/dedup in `GetOrCreate` when two paths cross the same coord.
 3. **Harden the debug/menu mod actions.** Partly done — `start_real_game_run.settle()`
    guards menu transitions, the abandon path is no longer driven, and the embark crash
    has a documented route around it. Remaining: the crash itself is a *game* bug (see
