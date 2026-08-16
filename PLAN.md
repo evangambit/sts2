@@ -3,6 +3,10 @@
 An AlphaZero-style agent for Slay the Spire 2: a fast headless simulator, MCTS
 tree search, and a neural network providing value/policy guidance. Bespoke.
 
+> **New here? Read [HANDOFF.md](HANDOFF.md) first** — it's the current state, exact
+> build/test/run commands, gotchas, and prioritized next steps. This PLAN.md is the
+> full design rationale + chronological history behind those decisions.
+
 ---
 
 ## 1. Core strategic decision: you must reimplement the simulator

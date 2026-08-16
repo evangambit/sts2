@@ -2,7 +2,8 @@
 
 > Forked from [Zamiell/slay-the-spire-2-emulator](https://github.com/Zamiell/slay-the-spire-2-emulator)
 > (MIT). This fork adds macOS support and is the base for an AlphaZero-style agent —
-> see [PLAN.md](PLAN.md) for the design and roadmap. Decompiled game source
+> start with [HANDOFF.md](HANDOFF.md) (current state + how-to + next steps), then
+> [PLAN.md](PLAN.md) for the design and roadmap. Decompiled game source
 > (`decompiled/`) is not redistributed here; regenerate it locally from your own
 > copy of the game with `scripts/decompile.sh`.
 
