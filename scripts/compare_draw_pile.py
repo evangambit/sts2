@@ -102,6 +102,37 @@ def live_pile(state: dict[str, Any], pile: str) -> list[tuple[str, bool]]:
     return [(str(c.get("id") or ""), bool(c.get("is_upgraded"))) for c in cards]
 
 
+def explain_embark_crash(
+    start_real_game_run: ModuleType, args: Any, exc: Exception
+) -> None:
+    """Turn the known embark crash into the recovery recipe.
+
+    Embarking through the lobby NREs in NRunMusicController.UpdateTrack — a game
+    bug we cannot fix from here. But it crashes *after* the run is created and
+    written to current_run.save, and loading that save takes a different code
+    path (isRestoringRoomStackBase) which works cleanly. So the crash is
+    recoverable: restart, Continue, then jump straight to the encounter.
+    """
+    try:
+        state = start_real_game_run.get_state(args.base_url)
+    except Exception:  # noqa: BLE001 - diagnostics only, keep the original error
+        return
+
+    options = start_real_game_run.option_names(state)
+    if "report_bug" not in options:
+        return
+
+    print(
+        f"\n!! The game hit its 'internal error!' popup ({exc}).\n"
+        "   This is the known embark crash (NRunMusicController NRE) — but the run\n"
+        "   WAS created and saved first, so nothing is lost. Recover with:\n\n"
+        '     pkill -9 -if "slay the spire 2"; sleep 3; '
+        'open "steam://rungameid/2868840"\n\n'
+        "   then click CONTINUE (not New Run, and do not abandon), and re-run this\n"
+        "   with --jump-encounter instead of --start-run.",
+    )
+
+
 def preflight_no_run_in_progress(start_real_game_run: ModuleType, args: Any) -> None:
     """Refuse to embark while a run exists, unless --abandon is given.
 
@@ -279,14 +310,18 @@ def main() -> None:
                 f"(ascension {args.ascension}) ..."
             )
             preflight_no_run_in_progress(start_real_game_run, args)
-            validate.start_debug_encounter(
-                args.base_url,
-                args.seed,
-                args.character,
-                live_encounter,
-                ascension=args.ascension,
-                abandon_existing=args.abandon,
-            )
+            try:
+                validate.start_debug_encounter(
+                    args.base_url,
+                    args.seed,
+                    args.character,
+                    live_encounter,
+                    ascension=args.ascension,
+                    abandon_existing=args.abandon,
+                )
+            except RuntimeError as exc:
+                explain_embark_crash(start_real_game_run, args, exc)
+                raise
         state = start_real_game_run.get_state(args.base_url)
 
     if args.save_live_json is not None:

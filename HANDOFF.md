@@ -152,6 +152,29 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 - **`Folly` and `Writhe` are missing from `Cards.g.cs`** — both are canonically Innate
   cost-`-1` curses dropped by the same `cost < 0` filter. Harmless today (starter decks
   have neither) but they'd be *unknown cards*, not merely misordered, if ever drawn.
+- **Embarking a run through the lobby CRASHES the game — loading a save does not.**
+  Every mod-driven embark NREs in `NRunMusicController.UpdateTrack()` (its `_runState`
+  is still `NullRunState`, whose `CurrentRoom` is null) from `RunManager.EnterRoomInternal`,
+  giving the "internal error!" popup. **It is a game bug in a UI path — not fixable from
+  our side, so route around it.** Ruled out by log evidence, so don't re-chase these:
+  menu churn / rapid actions, the abandon flow, window focus/backgrounding, and the
+  10s startup 'Common' preload overlapping the embark. All four correlate with *both*
+  successes and failures.
+  **The crash is recoverable** — it fires *after* the run is created and written to
+  `current_run.save`, and loading that save uses a different path
+  (`isRestoringRoomStackBase`) that works cleanly (verified: `Continuing run with
+  character: CHARACTER.IRONCLAD` → Event Room → zero errors). **The working loop:**
+  1. `compare_draw_pile.py --start-run …` → embark → game crashes (save is written).
+  2. `pkill -9 -if "slay the spire 2"; sleep 3; open "steam://rungameid/2868840"`.
+  3. Click **Continue** — *not* New Run, and do **not** abandon.
+  4. `compare_draw_pile.py --jump-encounter …` → captures without touching the lobby.
+  The script detects the popup and prints this recipe (`explain_embark_crash`).
+- **`AbandonRun` also throws** when `current_run.save.backup` is absent ("Error deleting
+  path … Failed"). Independent of the above; the preflight in `compare_draw_pile.py`
+  refuses to drive the in-game abandon unless `--abandon` is passed.
+- **Seeded runs need CUSTOM mode.** Standard mode rejects a chosen seed outright
+  ("Seed should not be changed in standard mode!"). `start_seeded_run` defaults to
+  `mode="custom"` for this reason.
 - **Driving the game hard CRASHES it.** Rapid `abandon → re-embark →
   debug_start_encounter` cycling triggers an error popup (`report_bug`, needs restart).
   A *single* clean sequence with generous `time.sleep` waits is stable. **Follow-on:**
