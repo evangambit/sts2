@@ -46,7 +46,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 208 pass)
+# C# unit tests (currently 209 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -99,7 +99,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 208 C# + 45 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 209 C# + 45 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Opening hand is bit-exact vs the live game** — the current headline result.
   Live `"ABCDEF"` custom run at A8 → `debug_start_encounter CorpseSlugsWeak`; the
