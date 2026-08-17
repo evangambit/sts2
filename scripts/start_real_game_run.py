@@ -375,6 +375,13 @@ def main() -> None:
         action="store_true",
         help="Abandon an existing run if it blocks starting a new one",
     )
+    parser.add_argument(
+        "--ascension",
+        type=int,
+        default=None,
+        help="ascension level to set on the custom-run screen; the emulator models A8, "
+        "so pass 8 for any capture that will be compared against it",
+    )
     parser.add_argument("--format", choices=["pretty", "compact"], default="pretty")
     args = parser.parse_args()
 
@@ -383,6 +390,7 @@ def main() -> None:
         args.seed,
         args.character,
         args.abandon_existing,
+        ascension=args.ascension,
     )
     if args.enter_first_combat:
         state = enter_first_combat(args.base_url, args.neow_option, args.map_index)

@@ -5,6 +5,10 @@
     "release": "v0.107.1",
     "save_schema_version": 16
   },
+  "profile": {
+    "all_act1_bosses_seen": true,
+    "all_act1_acts_discovered": true
+  },
   "rng": {
     "seed": "AAB"
   },

@@ -70,6 +70,32 @@ class FixtureStampTest(unittest.TestCase):
         )
 
 
+class ProfileAssumptionTest(unittest.TestCase):
+    """Captures must come from the profile the emulator models.
+
+    Act selection and boss discovery read the player's unlock state, not just the
+    seed: an unlocked-but-undiscovered act is force-selected instead of rolled, and
+    the boss is overwritten by the first Act-1 boss the profile has never seen. The
+    emulator models a fully-unlocked, fully-discovered profile, so a capture from a
+    fresher account encodes different rules and is not comparable.
+    """
+
+    def test_run_generation_fixtures_come_from_a_fully_unlocked_profile(self):
+        for path in sorted((FIXTURES / "run_generation").glob("*.json")):
+            profile = json.loads(path.read_text()).get("profile")
+            self.assertIsNotNone(profile, f"{path.name} records no profile facts")
+            self.assertIsNot(
+                profile.get("all_act1_bosses_seen"),
+                False,
+                f"{path.name}: boss roll was overridden by discovery order",
+            )
+            self.assertIsNot(
+                profile.get("all_act1_acts_discovered"),
+                False,
+                f"{path.name}: act was force-selected, not rolled",
+            )
+
+
 class RunGenerationFixtureTest(unittest.TestCase):
     """Ground truth: a live A8 run on seed "AAB" (Overgrowth)."""
 

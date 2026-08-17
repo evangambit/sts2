@@ -63,7 +63,7 @@ def load_save(path: Path) -> dict[str, Any]:
     return json.loads(raw[raw.index("{") :])
 
 
-def distill_fixture(save: dict[str, Any]) -> dict[str, Any]:
+def distill_fixture(save: dict[str, Any], source_path: Path) -> dict[str, Any]:
     """Reduce a live save to just the ground truth this script compares.
 
     Deliberately drops everything else — `unlock_state` (play history), timestamps,
@@ -78,6 +78,8 @@ def distill_fixture(save: dict[str, Any]) -> dict[str, Any]:
         # Which patch this describes. A fixture is only ground truth for its own
         # build; verification warns loudly when the installed game has moved on.
         "game": game_version.detect(save),
+        # Act selection and boss discovery read the profile, not just the seed.
+        "profile": profile_facts(save, source_path),
         "rng": {"seed": save["rng"]["seed"]},
         "ascension": save.get("ascension"),
         "current_act_index": save["current_act_index"],
@@ -95,6 +97,86 @@ def distill_fixture(save: dict[str, Any]) -> dict[str, Any]:
             if "saved_map" in act
         ],
     }
+
+
+
+# ── modelled profile ──────────────────────────────────────────────────────────
+#
+# Two of the game's run-generation decisions are NOT pure functions of the seed —
+# they read the player's profile:
+#
+#   * Act 1 is rolled from the acts that profile has *unlocked*; an unlocked but
+#     never-seen alt act is force-selected instead of rolled.
+#   * The boss is overwritten by the first entry of the act's BossDiscoveryOrder the
+#     profile has never seen (ActModel.ApplyDiscoveryOrderModifications).
+#
+# The emulator models one fixed profile: **everything unlocked, everything already
+# discovered** — so both decisions collapse to plain rolls. That is the steady state
+# of a mature account and the only choice that keeps generation seed-deterministic,
+# which self-play will need. A capture taken on a fresher profile is NOT comparable,
+# so record and check the facts that matter rather than assuming.
+
+ACT_ONE_BOSSES = [
+    "ENCOUNTER.VANTOM_BOSS",
+    "ENCOUNTER.CEREMONIAL_BEAST_BOSS",
+    "ENCOUNTER.THE_KIN_BOSS",
+]
+ACT_ONE_ACTS = ["ACT.OVERGROWTH", "ACT.UNDERDOCKS"]
+PROGRESS_SAVE = "progress.save"
+
+
+def profile_facts(save: dict[str, Any], save_path: Path) -> dict[str, Any]:
+    """The profile preconditions the emulator's generation assumes."""
+    players = save.get("players") or [{}]
+    seen = set((players[0].get("unlock_state") or {}).get("encounters_seen") or [])
+
+    discovered: list[str] = []
+    progress = save_path.parent / PROGRESS_SAVE
+    if progress.exists():
+        m = re.search(
+            r'"discovered_acts"\s*:\s*\[([^\]]*)\]', progress.read_text(errors="replace")
+        )
+        if m:
+            discovered = re.findall(r"ACT\.[A-Z_]+", m.group(1))
+
+    return {
+        "all_act1_bosses_seen": (
+            all(b in seen for b in ACT_ONE_BOSSES) if seen else None
+        ),
+        "all_act1_acts_discovered": (
+            all(a in discovered for a in ACT_ONE_ACTS) if discovered else None
+        ),
+    }
+
+
+def check_profile(facts: dict[str, Any] | None) -> bool:
+    """Warn when a capture came from a profile the emulator does not model."""
+    if not facts:
+        print(
+            "\n!! This capture records no profile facts, so there is no way to tell "
+            "whether it came from a fully-unlocked profile. Re-capture it."
+        )
+        return False
+
+    problems = []
+    if facts.get("all_act1_bosses_seen") is False:
+        problems.append(
+            "not every Act-1 boss has been seen — the game will OVERRIDE the boss roll "
+            "with the first unseen one, so the boss here is not the seed's boss"
+        )
+    if facts.get("all_act1_acts_discovered") is False:
+        problems.append(
+            "not every Act-1 act has been discovered — the game force-selects the "
+            "undiscovered act instead of rolling, so the act here is not the seed's act"
+        )
+    if problems:
+        print(
+            "\n!! PROFILE MISMATCH — this capture is not comparable:\n   - "
+            + "\n   - ".join(problems)
+            + "\n   The emulator models a fully-unlocked, fully-discovered profile.",
+        )
+        return False
+    return True
 
 
 def encounter_names() -> dict[int, str]:
@@ -230,7 +312,7 @@ def main() -> None:
 
     if args.save_fixture is not None:
         args.save_fixture.parent.mkdir(parents=True, exist_ok=True)
-        args.save_fixture.write_text(json.dumps(distill_fixture(save), indent=2) + "\n")
+        args.save_fixture.write_text(json.dumps(distill_fixture(save, save_path), indent=2) + "\n")
         print(f"wrote fixture -> {args.save_fixture}")
         raise SystemExit(0)
     seed = (save.get("rng") or {}).get("seed")
@@ -241,6 +323,7 @@ def main() -> None:
     print(f"save : {save_path}")
     print(f"seed : {seed!r} -> gen seed {game_seed(str(seed))}")
     game_version.check(save.get("game"))
+    check_profile(save.get("profile") or profile_facts(save, save_path))
     ascension = save.get("ascension")
     print(f"act  : index {act_index} = {act['id']}  (ascension {ascension})")
     if ascension != 8:

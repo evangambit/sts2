@@ -298,33 +298,41 @@ seed that actually rolls **Underdocks** — still entirely unverified.
 
 ## Patch playbook (when a new StS2 build lands)
 
-Tests are tiered by what they are pinned to; treat a failure differently in each.
+```bash
+python scripts/patch_refresh.py           # report: what changed, what broke, what is stale
+python scripts/patch_refresh.py --apply   # also decompile + extract + diff
+```
 
-1. `bash scripts/decompile.sh "<game dir>"` then `python scripts/extract_data.py`.
-   Ids are now stable (`data/id_map.json`), so this is safe. **Watch for `NEW ...`
-   lines** — those are ids appended for content this patch introduced.
-2. `python scripts/diff_patch.py` to triage what actually changed.
-3. **Tier 1 — mechanism tests** (RNG, seed derivation, shuffle, turn-1 reorder, map
-   pruning). These should stay green through any *content* patch. A failure means an
-   algorithm changed — **investigate, never re-baseline casually.**
-4. **Tier 2 — content tests.** Expect churn when values change. The `...OutputsAreLocked`
-   RNG pins are locks over our own output, not ground truth; re-pin them only once
-   Tier 1 is green.
-   ✅ **`IC`/`CL`/`SI`/`AN`/`ST` are now generated** into
-   `Generated/CardIds.g.cs` from the freshly extracted card data, so a constant can
-   never disagree with `Cards.g.cs`. Membership stays curated in
-   `data/card_id_classes.json` (the card data carries no character/colour), but if a
-   patch renames or removes a card, extraction **fails with exit 1** naming the dead
-   constants rather than letting one point at whatever else took its id.
-5. **Tier 3 — live fixtures.** Re-capture them: they are ground truth for one patch
-   only. Fixtures carry a `game` stamp (Steam buildid + release), and
-   `verify_run_generation.py` prints a loud **GAME VERSION MISMATCH** when the stamp
-   does not match the installed game, so stale captures cannot masquerade as bugs.
-6. Rebuild the dylib and re-run everything (`208 C# + 35 Python` at time of writing).
+`patch_refresh.py` does everything mechanical and **classifies** the fallout:
 
-**The failure mode to watch for is a *quiet* one:** data that extracts without error but
-is wrong. That is what happened with the keyword flags below — regenerating surfaced ~30
-cards wrongly marked `Exhaust`, and only a behavioural test caught it.
+- Detects the installed Steam buildid against `data/game_version.json`.
+- Re-decompiles and re-extracts (ids are stable, so this is safe now). Extraction
+  **aborts with exit 1** if a card-id constant names a card the patch removed.
+- Splits test failures into **mechanism** (an algorithm changed — investigate, do NOT
+  re-baseline) and **content** (values moved — check each against the decompiled
+  source before updating).
+- Lists stale fixtures by version stamp and prints the exact re-capture commands.
+- Records the new build **only** once tests pass and fixtures are current, so the
+  recorded version always means "verified against this build".
+
+**What it deliberately will not do is rewrite expected values.** Auto-updating an
+assertion to whatever the code now produces turns a regression detector into a rubber
+stamp — the failing DarkEmbrace test is precisely how the Exhaust-flag bug surfaced,
+and a script that "fixed" it would have buried a defect affecting ~30 cards. Ground
+truth also cannot be regenerated from the emulator by definition; it has to come from
+the game.
+
+### The modelled profile (why generation is seed-deterministic)
+
+Two decisions read the **profile**, not the seed: Act 1 is rolled only among *unlocked*
+acts (an unlocked-but-undiscovered one is force-selected instead), and the boss is
+overwritten by the first Act-1 boss the profile has never seen
+(`ActModel.ApplyDiscoveryOrderModifications`). The emulator models **one fixed profile —
+everything unlocked and already discovered** — which collapses both to plain rolls and
+is what self-play will need. Captures record `profile.all_act1_bosses_seen` and
+`all_act1_acts_discovered`; `verify_run_generation.py` prints **PROFILE MISMATCH** and a
+test fails if a fixture came from a fresher account, because such a capture encodes
+different rules and is not comparable.
 
 ## One-shot smoke test (verify the whole stack works)
 
