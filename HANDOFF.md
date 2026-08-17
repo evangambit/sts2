@@ -46,13 +46,13 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 207 pass)
+# C# unit tests (currently 208 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (25 pass) — drives the live dylib via ctypes
+# Python gym tests (35 pass) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -99,13 +99,13 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 207 C# + 25 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 208 C# + 35 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Opening hand is bit-exact vs the live game** — the current headline result.
   Live `"ABCDEF"` custom run at A8 → `debug_start_encounter CorpseSlugsWeak`; the
   emulator reproduces the **entire 11-card shuffled deck in order** (hand + draw pile),
-  verified by `scripts/compare_draw_pile.py` against the capture in
-  `/tmp/live_abcdef.json`. Odds of coincidence 1 in 13,860.
+  verified by `scripts/compare_draw_pile.py` against the committed fixture
+  `tests/fixtures/combat/ABCDEF-corpse-slugs.json`. Odds of coincidence 1 in 13,860.
 - ✅ **Enemy generation matches** (`[28,29]`) — and now *causally*, since the RNG is
   correct. Note this was previously reported as proof while the RNG was still wrong,
   where it had ~17% odds of being luck; it is corroborating evidence now, but it is
@@ -379,7 +379,7 @@ cards wrongly marked `Exhaust`, and only a behavioural test caught it.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 207 pass
+dotnet test src/Sts2Emulator.Tests/        # 208 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 25 pass
+uv run python -m unittest discover -s tests/python   # 35 pass
 ```
