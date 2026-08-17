@@ -337,7 +337,10 @@ def main() -> None:
 
     print(f"save : {save_path}")
     print(f"seed : {seed!r} -> gen seed {game_seed(str(seed))}")
-    game_version.check(save.get("game"))
+    # A live save carries no stamp by design — it *is* the installed build. Only
+    # committed fixtures need checking for staleness.
+    if args.fixture is not None:
+        game_version.check(save.get("game"))
     check_profile(save.get("profile") or profile_facts(save, save_path))
     ascension = save.get("ascension")
     print(f"act  : index {act_index} = {act['id']}  (ascension {ascension})")

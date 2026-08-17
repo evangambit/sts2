@@ -38,6 +38,32 @@ public class RunGenerationCaptureTests
     }
 
     /// <summary>
+    /// Live capture: seed "HEADLESS1" at ascension 8,
+    /// ACT.UNDERDOCKS, game v0.107.1 (build 23811903).
+    /// Source: tests/fixtures/run_generation/HEADLESS1.json
+    /// </summary>
+    [Fact]
+    public void RunGeneration_MatchesCapture_Headless1()
+    {
+        var engine = new RunEngine();
+        engine.Reset("HEADLESS1");
+        var s = engine.State;
+
+        Assert.Equal(RunConstants.ActUnderdocks, s.Act);
+        Assert.Equal(new[] { 12, 10, 13, 0, 23, 6, 25, 7, 30, 9, 12, 26, 24, 6, 24 }, s.NormalEncounterSequence);
+        Assert.Equal(new[] { 67, 72, 86, 67, 72, 86, 67, 72, 86, 72, 86, 67, 72, 86, 67 }, s.EliteEncounterSequence);
+        Assert.Equal(77, s.BossEncounterId);
+        Assert.Equal(65, s.MapNodes.Count);
+        Assert.Equal(
+            new[] { 1, 3, 5, 5, 4, 4, 3, 5, 4, 3, 5, 4, 6, 5, 4, 3, 1 },
+            Enumerable
+                .Range(0, 17)
+                .Select(row => s.MapNodes.Values.Count(n => n.Row == row))
+                .ToArray()
+        );
+    }
+
+    /// <summary>
     /// Live capture: seed "UNS55LCMKP" at ascension 8,
     /// ACT.UNDERDOCKS, game v0.107.1 (build 23811903).
     /// Source: tests/fixtures/run_generation/UNS55LCMKP.json

@@ -364,6 +364,41 @@ only, and the "UNS55LCMKP" run is sitting at Neow, ready to jump into an encount
   `FlyconidNormal`, `JaxfruitAndFlyconid` -> `SnappingJaxfruitNormal`. The emulator had
   invented those four labels. Old Python encounter strings still resolve as aliases.
 
+## Headless capture (the game runs without a window — verified)
+
+**The game boots headless and is fully drivable, and the embark crash does not occur.**
+This removes the one manual step in the whole pipeline.
+
+```bash
+GAMEDIR="$HOME/Library/Application Support/Steam/steamapps/common/Slay the Spire 2"
+MACOS="$GAMEDIR/SlayTheSpire2.app/Contents/MacOS"
+echo -n "2868840" > "$MACOS/steam_appid.txt"     # one-time; see caveat below
+cd "$MACOS" && ./"Slay the Spire 2" --headless &
+# mod HTTP server is up in ~6s on :15526
+```
+
+- The binary is a custom Godot 4.5 build ("MegaDot", mono) and the release export
+  template **keeps `--headless`** (`--display-driver headless --audio-driver Dummy`).
+- Without `steam_appid.txt` it dies at Steamworks init — *"No appID found"* — and then
+  blocks forever on a confirmation popup nobody can click. The appid is **2868840**.
+  ⚠️ That file is a Steamworks *development* convenience; it lets the binary start
+  without being launched by Steam. Harmless when launching through Steam normally, but
+  delete it if that bothers you (headless then stops working).
+- Costs ~148 MB RSS and a few % CPU. Boot to drivable is ~6s.
+- **A scripted seeded embark that crashes in GUI mode completed cleanly headless**,
+  which is further evidence the crash is presentation-layer (`NRunMusicController` is
+  audio, and headless forces the Dummy audio driver).
+- Proven end to end: a fresh seed `"HEADLESS1"` was embarked, captured and verified
+  **ALL SECTIONS MATCH** first try — and it rolled Underdocks, a second independent
+  check of that act.
+
+**Why this does NOT mean running the game as the simulator.** `CiCoreRunner` in the
+game's own DLL is a `Godot.Node`, so the logic is inseparable from the SceneTree:
+`Cmd.Wait` uses `SceneTree.CreateTimer`, actions marshal through `ProcessFrame`,
+combat runs on async `ActionExecutor` queues. Fine for capturing ground truth at
+human speed; hopeless for the millions of rollouts MCTS needs, where the native sim
+resets a combat in microseconds. **Real game for truth, native emulator for speed.**
+
 ## Patch playbook (when a new StS2 build lands)
 
 ```bash
