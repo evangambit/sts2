@@ -271,9 +271,15 @@ against the local `sts2.dll` is expected first-step work, not optional.
 ### RNG (from decompiled source, not observation)
 
 Read the exact RNG implementation from decompiled C# in `sts2.dll` — do not
-reverse-engineer from observation or assume Godot PCG32. The emulator already
-reproduces the game's RNG streams and differential-validates them; confirm seeding
-and the *order* draws are consumed. (Note `Core/CountingRandom.cs` + `Core/Rng/`.)
+reverse-engineer from observation or assume Godot PCG32.
+
+⚠️ **Corrected 2026-08-16.** This section used to claim the emulator "already
+reproduces the game's RNG streams and differential-validates them". That was false.
+The inherited emulator used a port of **.NET's legacy subtractive `Random`**, while
+the game uses **Xoshiro256\*\* seeded via Splitmix64** (`MegaCrit.Sts2.Core.Random.
+MegaRandom`). Every seeded decision downstream was therefore wrong, and the one
+"bit-exact" result on record had ~17% odds of being coincidence. The advice in this
+section was right; it simply had not been followed. See the 2026-08-16 log entry.
 
 ---
 
@@ -668,6 +674,66 @@ Local checkout at `../STS2MCP` has `origin`=fork, `upstream`=Gennadiyev; rebuild
 and copy `out/STS2_MCP/STS2_MCP.dll` + `mod_manifest.json` into the game's
 `mods/STS2_MCP/`.
 
+### 2026-08-16 — Differential testing built out; RNG root cause found
+
+The session that took "one seed looked right" to "run generation and combat start are
+exact against live captures". Recording the decisions, not the diff — the mechanics
+live in HANDOFF.md, which is a living document and gets rewritten.
+
+**The RNG was the wrong algorithm.** Opening hands diverged. Deck composition, deck
+order, shuffle algorithm and stream offsets all checked out, which left the generator
+itself: ours was .NET's legacy `Random`, the game's is Xoshiro256\*\*/Splitmix64.
+Porting `MegaRandom` made the entire 11-card opening deck match in order (1 in 13,860
+by chance). Two details are load-bearing and easy to "fix" wrongly: the range mapping
+is `(int)(NextDouble() * max)` — reproduce the bias, do not substitute modulo — and
+`Rng.NextBool` is `Next(2) == 0`, *not* MegaRandom's own sign-bit `NextBool`.
+
+**Ground truth comes from `current_run.save`, not from driving the game.** It is plain
+JSON recording exactly what the game generated for a seed: act, encounter sequences,
+boss, and the full map graph. This collapsed the differential loop from "drive the GUI
+and scrape state" to "start a run, read a file". Captures are committed as fixtures,
+stamped with the Steam buildid, and the comparison runs offline in ~2s.
+
+**Two generation decisions are not functions of the seed.** Act 1 is rolled only among
+acts the *profile* has unlocked (an unlocked-but-undiscovered one is force-selected),
+and the boss is overwritten by the first Act-1 boss the profile has never seen. We
+model one fixed profile — fully unlocked, fully discovered — because that is the only
+choice that keeps generation seed-deterministic, which self-play requires. Captures
+record the profile facts and are rejected if they violate it.
+
+**Entity ids must not come from sort order.** They were a counter over
+`sorted(glob(...))`, so adding one card renumbered everything after it — silently
+invalidating hand-written constants, fixtures and test literals. `data/id_map.json`
+freezes them; new content appends, removed content keeps its id reserved. This is what
+made `patch_update.sh` safe to run at all.
+
+**Extraction must be scoped, not substring-matched.** Reading keyword flags with a
+whole-file substring search marked ~30 cards `Exhaust` because their *tooltips*
+mentioned exhausting. Flags now come from `CanonicalKeywords` only.
+
+**Architecture decision: real game for truth, native emulator for speed.** The game
+boots headless (`--headless`, plus a `steam_appid.txt` with 2868840) and is fully
+drivable, so ground-truth capture can be automated — a scripted embark that crashes in
+GUI mode completes cleanly headless. But the game is *not* a candidate to replace the
+simulator: `CiCoreRunner` in its own DLL is a `Godot.Node`, so the logic is inseparable
+from the SceneTree (`Cmd.Wait` uses `SceneTree.CreateTimer`, actions marshal through
+`ProcessFrame`, combat runs on async `ActionExecutor` queues). Fine at human speed,
+hopeless for the millions of rollouts MCTS needs. Transpiling the decompiled source was
+also rejected: it is Godot-coupled, and `decompiled/` is gitignored as MegaCrit's
+copyrighted code, so mechanical translation would be a derivative work.
+
+**Methodology lessons worth keeping.**
+- *One sample cannot validate a coin flip.* Act selection "passed" on the first seed by
+  luck while being wrong in both mechanism and stream. It took a second seed to catch,
+  and 88 runs of history to make it a result.
+- *Update expectations from the game, never from the emulator.* The former is
+  re-reading ground truth and is automated (`--save-fixture` →
+  `generate_capture_tests.py`); the latter is a rubber stamp. A failing test is how the
+  ~30-card Exhaust bug surfaced.
+- *Prefer the loud failure.* Version stamps, profile checks, and an extraction step that
+  exits non-zero on a dead card-id constant all exist because the alternative is data
+  that is quietly wrong.
+
 ### Environment quick-reference
 
 ```
@@ -681,10 +747,11 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 
 ### Next up
 
-1. Drive a real run through the STS2MCP API (`start_real_game_run.py`), adapting to
-   v0.107.1's menu shape if needed; then `trace_real_game.py` → `compare_traces.py`
-   against a deterministic emulator trace — the first live differential test.
-2. Re-validate the 6 value-drift tests against fresh v0.107.1 traces, then commit the
-   move to current-patch data (or stay pinned to baseline for now).
-3. Begin the AlphaZero layer: MCTS over the sim (C#), then the value/policy net
-   (Python) + batched inference bridge, then self-play.
+1. **Port combat logic** — the remaining bulk. Run generation and combat start are
+   exact; card effects, relics and powers are where the porting work now is.
+2. **Automate capture over many seeds** using the headless harness, so coverage stops
+   depending on which seeds anyone happened to try.
+3. **Test the `NonInteractiveMode` fix** for the GUI embark crash (mirrors what the
+   game's own `AutoSlayer` does; all 31 call sites are timing/audio, none touch rules).
+4. Then the **AlphaZero layer**: MCTS over the sim (C#), value/policy net (Python) +
+   batched inference bridge, then self-play.
