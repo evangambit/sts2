@@ -116,9 +116,12 @@ public class RunEngineTests
     public void RunGeneration_MatchesLiveCaptureForAbcdef()
     {
         // Ground truth: a live v0.107.1 run seeded "ABCDEF" at A8, read out of its
-        // current_run.save (acts[0].rooms). Unlike the RNG value pins elsewhere in
-        // this file, these are real game outputs — keep them.
-        // Reproduce with: python scripts/verify_run_generation.py
+        // current_run.save (acts[0].rooms). Real game outputs — keep them.
+        //
+        // Hand-transcribed because this capture predates fixtures and its save was
+        // overwritten by a later run, so it cannot be re-distilled. Every other
+        // capture lives in tests/fixtures/run_generation/ and generates its test via
+        // scripts/generate_capture_tests.py; re-capture "ABCDEF" and this can go too.
         var engine = new RunEngine();
         engine.Reset("ABCDEF");
         var s = engine.State;
@@ -170,45 +173,6 @@ public class RunEngineTests
         );
     }
 
-    [Fact]
-    public void RunGeneration_MatchesLiveCaptureForAab()
-    {
-        // Second live capture, seed "AAB" at A8 — a different seed on the same profile.
-        // This one caught three real defects that a single sample could not: act
-        // selection was a coin flip on the wrong stream, NibbitsNormal was wrongly
-        // tagged, and the map stream was keyed on act identity rather than act index.
-        var engine = new RunEngine();
-        engine.Reset("AAB");
-        var s = engine.State;
-
-        Assert.Equal(RunConstants.ActOvergrowth, s.Act);
-
-        // FuzzyWurmCrawlerWeak, SlimesWeak, NibbitsWeak, NibbitsNormal, Fogmog,
-        // SlimesNormal, OvergrowthCrawlers, Mawler, VineShambler, Inklets, Flyconid,
-        // SlitheringStrangler, SnappingJaxfruit, CubexConstruct, RubyRaiders.
-        // Note weak->normal Nibbits back to back: only NibbitsWeak carries the Nibbit
-        // tag in the game, so the no-repeat rule does not block it.
-        Assert.Equal(
-            new[] { 8, 3, 2, 15, 29, 16, 21, 14, 20, 5, 17, 27, 18, 19, 28 },
-            s.NormalEncounterSequence
-        );
-
-        // Boss is CeremonialBeast for this seed, not TheKin as for "ABCDEF".
-        Assert.Equal(74, s.BossEncounterId);
-
-        // Map matches the live saved_map exactly — every row, column and point type
-        // (61 nodes incl. start + boss). The full structural comparison lives in
-        // tests/python/test_live_fixtures.py against the committed capture; this pins
-        // the node count and per-row shape here too.
-        Assert.Equal(61, s.MapNodes.Count);
-        Assert.Equal(
-            new[] { 1, 3, 5, 4, 3, 2, 3, 5, 6, 5, 5, 3, 5, 4, 3, 3, 1 },
-            Enumerable
-                .Range(0, RunConstants.MapBossRow + 1)
-                .Select(row => s.MapNodes.Values.Count(n => n.Row == row))
-                .ToArray()
-        );
-    }
 
     [Fact]
     public void RunReset_StartsAtAncientPhaseWithStarterState()

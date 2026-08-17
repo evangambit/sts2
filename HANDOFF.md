@@ -383,7 +383,13 @@ python scripts/patch_refresh.py --apply   # also decompile + extract + diff
 - Records the new build **only** once tests pass and fixtures are current, so the
   recorded version always means "verified against this build".
 
-**What it deliberately will not do is rewrite expected values.** Auto-updating an
+**Expectations sourced from the game are regenerated for you.** Re-capture a fixture
+with `--save-fixture`, then run `scripts/generate_capture_tests.py` — it rewrites
+`Generated`-style C# capture assertions (`RunGenerationCaptures.g.cs`) straight from
+the fixtures. That is not a rubber stamp: only the *game* side moves, so an emulator
+regression still fails the comparison.
+
+**What it will not do is rewrite expectations from the emulator's own output.** Auto-updating an
 assertion to whatever the code now produces turns a regression detector into a rubber
 stamp — the failing DarkEmbrace test is precisely how the Exhaust-flag bug surfaced,
 and a script that "fixed" it would have buried a defect affecting ~30 cards. Ground

@@ -14,7 +14,7 @@ ENCOUNTER_NAMES = {
     0: "cultists",
     1: "chompers",
     2: "nibbits-weak",
-    3: "slimes",
+    3: "slimes-weak",
     4: "exoskeletons",
     5: "inklets",
     6: "two-tailed-rats",
@@ -113,6 +113,7 @@ ENCOUNTER_IDS.update(
         "shrinker-and-fuzzy": ENCOUNTER_IDS["overgrowth-crawlers"],
         "nibbit": ENCOUNTER_IDS["nibbits-weak"],
         "nibbits": ENCOUNTER_IDS["nibbits-normal"],
+        "slimes": ENCOUNTER_IDS["slimes-weak"],
     }
 )
 

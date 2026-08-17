@@ -13,11 +13,16 @@ What it automates
 
 What it deliberately does NOT automate
 --------------------------------------
-Rewriting expected values. Auto-updating an assertion to whatever the code now
-produces turns a regression detector into a rubber stamp — the failing DarkEmbrace
-test is exactly how we caught the Exhaust-flag bug, and a script that "fixed" it
-would have buried a defect affecting ~30 cards. Ground truth also cannot be
-regenerated from the emulator by definition: it has to come from the game.
+Rewriting expected values *from the emulator*. That turns a regression detector into
+a rubber stamp — the failing DarkEmbrace test is exactly how we caught the
+Exhaust-flag bug, and a script that "fixed" it from our own output would have buried
+a defect affecting ~30 cards.
+
+Updating expectations from the **game** is a different thing and is automated:
+re-capture a fixture (`--save-fixture`) and run
+`scripts/generate_capture_tests.py`, which regenerates the C# capture assertions
+from those fixtures. Only the game side moves, so an emulator regression still
+fails the comparison.
 
     python scripts/patch_refresh.py            # report only
     python scripts/patch_refresh.py --apply    # also decompile + extract
@@ -148,6 +153,10 @@ def main() -> None:
         print(
             "\n  Ground truth must come from the game — it cannot be regenerated here.\n"
             "  Start a run at A8 on the seed named by each fixture, then:\n"
+        )
+        print(
+            "    # then, to propagate the new ground truth into the C# assertions:\n"
+            "    python scripts/generate_capture_tests.py\n"
         )
         for path in stale:
             if path.parent.name == "run_generation":

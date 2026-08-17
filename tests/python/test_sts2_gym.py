@@ -228,7 +228,9 @@ class Sts2GymTests(unittest.TestCase):
         try:
             for seed in range(128):
                 obs, info = env.reset(seed=seed)
-                if info["encounter"] not in {"chompers", "slimes"}:
+                # "slimes-weak" since id 3 is the game's SlimesWeak — it was
+                # mislabelled "slimes", which collided with SlimesNormal.
+                if info["encounter"] not in {"chompers", "slimes-weak"}:
                     continue
                 if not any(int(obs[i]) == 3 for i in ENEMY_INTENT_INDICES):
                     continue

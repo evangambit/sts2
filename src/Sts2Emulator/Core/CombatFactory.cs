@@ -29,7 +29,7 @@ public static class CombatFactory
         Cultists,
         Chompers,
         NibbitsWeak,
-        Slimes,
+        SlimesWeak,
         Exoskeletons,
         Inklets,
         TwoTailedRats,
@@ -118,7 +118,7 @@ public static class CombatFactory
     private static readonly ActOneEncounter[] OvergrowthWeakEncounters =
     [
         ActOneEncounter.NibbitsWeak,
-        ActOneEncounter.Slimes,
+        ActOneEncounter.SlimesWeak,
         ActOneEncounter.ShrinkerBeetle,
         ActOneEncounter.FuzzyWurmCrawler,
     ];
@@ -458,7 +458,7 @@ public static class CombatFactory
                 CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Attack, 13)),
             ],
 
-            ActOneEncounter.Slimes => CreateSlimeEncounter(rng, encounterRngSeed),
+            ActOneEncounter.SlimesWeak => CreateSlimeEncounter(rng, encounterRngSeed),
 
             ActOneEncounter.Exoskeletons =>
             [
