@@ -358,9 +358,12 @@ Tests are tiered by what they are pinned to; treat a failure differently in each
 4. **Tier 2 — content tests.** Expect churn when values change. The `...OutputsAreLocked`
    RNG pins are locks over our own output, not ground truth; re-pin them only once
    Tier 1 is green.
-   ⚠️ **`IC`/`CL`/`SI`/`AN`/`ST` in CardEffects.cs are hand-maintained card-id
-   constants** (342 references from the tests). The id map stops them going stale on
-   *existing* cards, but they are still not generated — worth doing.
+   ✅ **`IC`/`CL`/`SI`/`AN`/`ST` are now generated** into
+   `Generated/CardIds.g.cs` from the freshly extracted card data, so a constant can
+   never disagree with `Cards.g.cs`. Membership stays curated in
+   `data/card_id_classes.json` (the card data carries no character/colour), but if a
+   patch renames or removes a card, extraction **fails with exit 1** naming the dead
+   constants rather than letting one point at whatever else took its id.
 5. **Tier 3 — live fixtures.** Re-capture them: they are ground truth for one patch
    only. Fixtures carry a `game` stamp (Steam buildid + release), and
    `verify_run_generation.py` prints a loud **GAME VERSION MISMATCH** when the stamp

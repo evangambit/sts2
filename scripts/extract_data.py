@@ -134,6 +134,63 @@ def save_id_map() -> None:
         print(f"  NEW {category}: {', '.join(added)}")
 
 
+
+
+# ── card id constant classes ──────────────────────────────────────────────────
+
+CARD_ID_CLASSES_PATH = REPO / "data" / "card_id_classes.json"
+
+CLASS_DOC = {
+    "IC": "Ironclad cards.",
+    "CL": "Colourless and shared cards.",
+    "SI": "Silent cards.",
+    "AN": "Ancient cards.",
+    "ST": "Status and curse cards.",
+}
+
+
+def extract_card_ids(card_ids: dict[str, int]) -> str:
+    """Emit the IC/CL/SI/AN/ST id constants from the generated card data.
+
+    These used to be hand-written. With ids no longer tied to sort order they were
+    stable for *existing* cards, but a rename would have left a constant silently
+    pointing at whatever else landed on that id — with ~340 test references behind
+    it. Generating them means the values cannot drift, and a card that disappears
+    from the data fails this step loudly instead.
+    """
+    spec = json.loads(CARD_ID_CLASSES_PATH.read_text(encoding="utf-8"))
+    blocks: list[str] = []
+    missing: list[str] = []
+
+    for cls, members in spec["classes"].items():
+        lines = [f"/// <summary>{CLASS_DOC.get(cls, 'Card ids.')}</summary>"]
+        lines.append(f"public static class {cls}")
+        lines.append("{")
+        for name in members:
+            if name not in card_ids:
+                missing.append(f"{cls}.{name}")
+                continue
+            lines.append(f"    public const int {name} = {card_ids[name]};")
+        lines.append("}")
+        blocks.append("\n".join(lines))
+
+    if missing:
+        raise SystemExit(
+            "These id constants name cards that no longer exist in Cards.g.cs:\n  "
+            + "\n  ".join(missing)
+            + "\n\nA patch renamed or removed them. Update data/card_id_classes.json "
+            "(and any code using the constant) rather than letting it point elsewhere."
+        )
+
+    print(f"  Card ids: {sum(len(m) for m in spec['classes'].values())} constants.")
+    return (
+        cs_header()
+        + "\nnamespace Sts2Emulator.Core.Effects;\n\n"
+        + "\n\n".join(blocks)
+        + "\n"
+    )
+
+
 # ── card extraction ───────────────────────────────────────────────────────────
 
 SPECIAL_CARD_IDS = {
@@ -478,8 +535,19 @@ def main() -> None:
 
     GENERATED.mkdir(parents=True, exist_ok=True)
 
+    cards_cs = extract_cards()
+    # Card-id constants are derived from the freshly extracted card data, so the two
+    # can never disagree.
+    card_ids = {
+        name: int(raw)
+        for raw, name in re.findall(
+            r'new CardDef\(Id: (\d+), Name: "([^"]+)"', cards_cs
+        )
+    }
+
     for filename, content in [
-        ("Cards.g.cs", extract_cards()),
+        ("Cards.g.cs", cards_cs),
+        ("CardIds.g.cs", extract_card_ids(card_ids)),
         ("Enemies.g.cs", extract_enemies()),
         ("Powers.g.cs", extract_powers()),
         ("Relics.g.cs", extract_relics()),
