@@ -196,10 +196,18 @@ public class RunEngineTests
         // Boss is CeremonialBeast for this seed, not TheKin as for "ABCDEF".
         Assert.Equal(74, s.BossEncounterId);
 
-        // Map node count matches the live saved_map exactly (61 incl. start + boss).
-        // 15 of 16 rows match column-for-column; row 1 still differs by one node's
-        // column — see HANDOFF. Pinned so that residual cannot silently grow.
+        // Map matches the live saved_map exactly — every row, column and point type
+        // (61 nodes incl. start + boss). The full structural comparison lives in
+        // tests/python/test_live_fixtures.py against the committed capture; this pins
+        // the node count and per-row shape here too.
         Assert.Equal(61, s.MapNodes.Count);
+        Assert.Equal(
+            new[] { 1, 3, 5, 4, 3, 2, 3, 5, 6, 5, 5, 3, 5, 4, 3, 3, 1 },
+            Enumerable
+                .Range(0, RunConstants.MapBossRow + 1)
+                .Select(row => s.MapNodes.Values.Count(n => n.Row == row))
+                .ToArray()
+        );
     }
 
     [Fact]

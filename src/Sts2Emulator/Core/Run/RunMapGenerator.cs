@@ -233,7 +233,13 @@ public static class RunMapGenerator
             GeneratePath(state, mapRng, current);
         }
 
-        foreach (var start in starts)
+        // Order matters. The game wires these with ForEachInRow, which walks the grid
+        // columns 0..6 in order, and that insertion order becomes the child-enumeration
+        // order used by FindAllPaths. Segments then land in their duplicate group in
+        // that order, and PrunePaths shuffles the group before keeping one — so a
+        // different initial order prunes a different node. Adding them in path-draw
+        // order (the order the 7 starts were rolled) is not the same thing.
+        foreach (var start in starts.OrderBy(s => s.Col))
         {
             AddEdge(state, state.CurrentMapCoord, start);
         }
@@ -241,6 +247,7 @@ public static class RunMapGenerator
         foreach (
             var node in state
                 .MapNodes.Values.Where(n => n.Row == RunConstants.MapBossRow - 1)
+                .OrderBy(n => n.Col)
                 .ToArray()
         )
         {

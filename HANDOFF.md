@@ -215,7 +215,7 @@ is still a valid capture. Verified on **two seeds**:
 | normal encounters | PASS 15/15 | PASS 15/15 |
 | elite encounters | PASS 15/15 | PASS 15/15 |
 | boss | PASS (TheKin) | PASS (CeremonialBeast) |
-| map | PASS (exact) | 15/16 rows; 61/61 nodes, row 1 one column off |
+| map | PASS (exact) | **PASS (exact)** |
 
 **The second seed earned its keep — it caught three defects one sample could not:**
 - **Act selection was wrong in mechanism and stream.** It was `NextBool()` on the
@@ -236,69 +236,15 @@ is still a valid capture. Verified on **two seeds**:
 - Two more invented names corrected: `Nibbit` -> `NibbitsWeak`, `Nibbits` ->
   `NibbitsNormal` (old Python encounter strings still resolve as aliases).
 
-**Open residual — "AAB" map row 1.** Node counts match exactly (61 vs 61) and 15 of 16
-rows are column-for-column identical. Row 1 is `{0,3,5}` where live is `{1,3,5}`. The
-raw path starts give 5 distinct columns `{0,1,2,3,5}` and pruning cuts row 1 to 3 — the
-game drops `{0,2}`, we drop `{1,2}`. So a single pruning choice differs. Ruled out:
-`StraightenPaths` (that node is not a kink — its parent is at col 3, child at col 0),
-`SpreadAdjacentMapPoints` (`GetAllowedPositions` intersects to empty there, so it cannot
-move), and `CenterGrid` (shifts the whole grid uniformly, so it cannot affect one row).
-Best remaining lead: **path/segment enumeration order**. The game stores
-`MapPoint.parents`/`Children` in a `HashSet<MapPoint>` while we use `List`, so
-`FindAllPaths` may enumerate children in a different order, changing which segment
-survives `PruneAllButLast`.
-
-1. ~~Elite pool / boss selection~~ — **DONE**, both were the same root cause and are
-   now exact (regression test `RunGeneration_MatchesLiveCaptureForAbcdef`). Two defects,
-   worth remembering because the pattern will recur for other acts:
-   - **Pool order must be the act's encounter-*declaration* order** (the game builds
-     `AllEliteEncounters`/`AllBossEncounters` by filtering `AllEncounters`, declared
-     alphabetically in e.g. `Acts/Overgrowth.cs`). It is **not** `BossDiscoveryOrder` —
-     that list only feeds `ActModel.ApplyDiscoveryOrderModifications`, an unlock-
-     progression override that overwrites the boss with the first one the *profile*
-     has never seen. On a profile that has seen them all (this one: 390 runs) it does
-     nothing, so boss selection is a plain roll. **Note this means boss choice is not a
-     pure function of the seed on a fresh profile.**
-   - **Elites go through the same no-repeat draw as normals.** The game calls
-     `AddWithoutRepeatingTags` for elites too, so an elite never immediately repeats;
-     we were doing a plain indexed draw. The first 9 matched by luck and diverged at
-     the 4th bag refill.
-   - The boss is rolled from the **same stream immediately after the 15 elites**, so a
-     wrong elite draw count silently corrupts the boss. Fixing the elites fixed the boss.
-   - ⚠️ Underdocks had both defects too and is fixed by the same rule, but is
-     **unverified** — the only live capture so far is an Overgrowth run.
-2. ~~Map generation~~ — **DONE. `verify_run_generation.py` now reports ALL SECTIONS
-   MATCH** for `"ABCDEF"`: act, 15/15 normals, 15/15 elites, boss, and the map exact on
-   every row, column and point type (64 nodes incl. start + boss). Pinned by
-   `RunGeneration_MatchesLiveCaptureForAbcdef`.
-   Two defects, both in post-prune type repair, and the second only visible once the
-   first was fixed:
-   - **`RepairPrunedPointTypes` repaired elites toward a hardcoded 5 while
-     `AssignPointTypes` placed 8.** So with 7 elites on the map, repair computed
-     `5 - 7 = -2`, decided nothing was missing, returned false — and `PruneAndRepair`
-     broke out of its loop after a single pass. The game computes `8 - 7 = 1`, converts
-     a Monster, returns true, and **prunes again**. That missing second pass was the
-     entire 2-node gap. Both sites now use `RunConstants.MapEliteCount` /
-     `MapShopCount`. **Lesson: the type budget must be one constant** — assignment and
-     repair silently disagreeing is invisible until you diff a real map.
-   - **`CanBeModified` was not modelled.** The game sets it false on the forced rows
-     (row 1, treasure row, final rest row) and repair only considers
-     `PointType == Monster && CanBeModified`. We offered row 1's monsters as repair
-     candidates, which changed both the shuffle length and the chosen node — repair
-     converted (0,8) where the game converted (0,12). `RunMapNode.CanBeModified` now
-     exists and is set in `AssignPointTypes`.
-   Also fixed earlier in the hunt: segment keys embed point types as integers and sort
-   in a SortedDictionary, so they must use the **game's** `MapPointType` values, not our
-   node-type numbering (`GameMapPointType`).
-3. **Harden the debug/menu mod actions.** Partly done — `start_real_game_run.settle()`
-   guards menu transitions, the abandon path is no longer driven, and the embark crash
-   has a documented route around it. Remaining: the crash itself is a *game* bug (see
-   Gotchas); `--jump-encounter` avoids it.
-4. **Implement `start_replay`** in the STS2MCP fork -> clean deterministic full-run
-   capture (design in docs/replay-verification.md SS1).
-5. **Full-run replay harness** -> the primary fidelity metric (docs/replay-verification.md).
-6. Then the **AlphaZero layer**: MCTS over the sim (C#) -> value/policy net (Python) ->
-   self-play (PLAN.md SS2, SS5).
+**Run generation is now exact on both captured seeds.** The last residual — "AAB" row 1
+holding a node at the wrong column — was **edge insertion order**. The game wires the
+start node's children with `ForEachInRow`, which walks grid columns 0..6; we wired them
+in *path-draw* order (the order the 7 starts were rolled). That insertion order becomes
+the child-enumeration order in `FindAllPaths`, which sets the order segments land in
+their duplicate group — and `PrunePaths` shuffles each group before keeping one, so a
+different starting order prunes a different node. Same fix applied to the row-15 → boss
+edges. Worth remembering: **wherever the game uses `ForEachInRow`, order is column
+order, and it is load-bearing, not cosmetic.**
 
 ### Ground-truth fixtures (committed)
 

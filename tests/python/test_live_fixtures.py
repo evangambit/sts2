@@ -133,11 +133,13 @@ class RunGenerationFixtureTest(unittest.TestCase):
         emu_nodes = len(self.emu["map"]) // 3
         self.assertEqual(expected, emu_nodes)
 
-    def test_map_rows_match_except_the_known_residual(self):
-        """Row 1 differs by one node's column — see HANDOFF.
+    def test_map_matches_row_for_row(self):
+        """The whole map — every row, column and point type — matches the capture.
 
-        Pinned rather than skipped: if the residual is fixed, or spreads to another
-        row, this fails and asks to be updated.
+        This previously allowed one known residual (row 1 held a node at the wrong
+        column). That is fixed: start->row-1 edges are now wired in column order, as
+        the game's ForEachInRow does, which is what decides the pre-shuffle order of
+        each duplicate-segment group and therefore which node pruning keeps.
         """
         live_map = self.act["saved_map"]
         live = {
@@ -160,7 +162,7 @@ class RunGenerationFixtureTest(unittest.TestCase):
             if {c: t for (c, r), t in live.items() if r == row}
             != {c: t for (c, r), t in emu.items() if r == row}
         }
-        self.assertEqual({1}, mismatched, "known residual is exactly row 1")
+        self.assertEqual(set(), mismatched, "map diverged from the live capture")
 
 
 class CombatFixtureTest(unittest.TestCase):
