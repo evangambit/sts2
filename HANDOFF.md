@@ -162,23 +162,29 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 - **`Folly` and `Writhe` are missing from `Cards.g.cs`** — both are canonically Innate
   cost-`-1` curses dropped by the same `cost < 0` filter. Harmless today (starter decks
   have neither) but they'd be *unknown cards*, not merely misordered, if ever drawn.
-- **Embarking a run through the lobby CRASHES the game — loading a save does not.**
-  Every mod-driven embark NREs in `NRunMusicController.UpdateTrack()` (its `_runState`
-  is still `NullRunState`, whose `CurrentRoom` is null) from `RunManager.EnterRoomInternal`,
-  giving the "internal error!" popup. **It is a game bug in a UI path — not fixable from
-  our side, so route around it.** Ruled out by log evidence, so don't re-chase these:
-  menu churn / rapid actions, the abandon flow, window focus/backgrounding, and the
-  10s startup 'Common' preload overlapping the embark. All four correlate with *both*
-  successes and failures.
-  **The crash is recoverable** — it fires *after* the run is created and written to
-  `current_run.save`, and loading that save uses a different path
-  (`isRestoringRoomStackBase`) that works cleanly (verified: `Continuing run with
-  character: CHARACTER.IRONCLAD` → Event Room → zero errors). **The working loop:**
-  1. `compare_draw_pile.py --start-run …` → embark → game crashes (save is written).
-  2. `pkill -9 -if "slay the spire 2"; sleep 3; open "steam://rungameid/2868840"`.
-  3. Click **Continue** — *not* New Run, and do **not** abandon.
-  4. `compare_draw_pile.py --jump-encounter …` → captures without touching the lobby.
-  The script detects the popup and prints this recipe (`explain_embark_crash`).
+- ⚠️ **Embark crash — almost certainly OUR mod's doing, not a game bug.** Mod-driven
+  embarks NRE in `NRunMusicController.UpdateTrack()` (its `_runState` is still
+  `NullRunState`, so `CurrentRoom` is null) from `RunManager.EnterRoomInternal`, giving
+  the "internal error!" popup. An earlier version of this file called it an unfixable
+  game bug — **that was wrong.** The owner has hundreds of hours of normal play without
+  it, and a *manual* embark on the same seed and profile worked immediately after a
+  scripted one crashed.
+  **Leading explanation, and it looks strong:** the game ships its own automation
+  (`MegaCrit.Sts2.Core.AutoSlay.AutoSlayer`) which drives the UI with the *same*
+  `NClickableControl.ForceClick` we use — but it also sets
+  `NonInteractiveMode.AutoSlayerCheck = () => IsActive`. And the crashing line is
+  literally guarded: `UpdateTrack()` does `if (!NonInteractiveMode.IsActive) { ...
+  _runState.CurrentRoom.RoomType ... }`. MegaCrit's automation never reaches it; ours
+  does, and loses a race against `NRun._Ready`.
+  **Proposed fix (untested):** have the mod enable non-interactive mode while the
+  harness is driving, mirroring AutoSlayer. All 31 `NonInteractiveMode.IsActive` call
+  sites were checked and every one is timing, pausing or audio (`Cmd.Wait`,
+  `ActionExecutor`, `CombatManager.Pause/Unpause`, `SfxCmd`, `NAudioManager`) — **none
+  touch RNG, card effects or rules**, so it is safe for differential testing and would
+  also skip animation waits, making capture much faster.
+  **Until that is tested**, the workaround still applies: the crash fires *after* the run
+  is created and written to `current_run.save`, and loading that save works cleanly, so
+  restart → **Continue** → `--jump-encounter`.
 - **`AbandonRun` also throws** when `current_run.save.backup` is absent ("Error deleting
   path … Failed"). Independent of the above; the preflight in `compare_draw_pile.py`
   refuses to drive the in-game abandon unless `--abandon` is passed.
