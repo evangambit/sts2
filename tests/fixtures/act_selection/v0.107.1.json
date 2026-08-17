@@ -1,0 +1,362 @@
+{
+  "_comment": "Ground truth for act-1 selection, distilled from the local profile's run history by verify_act_selection.py. Seed and rolled act only \u2014 no account id, timestamps or play history.",
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1"
+  },
+  "build_id": "v0.107.1",
+  "runs": [
+    {
+      "seed": "KG9Q1AP9KU",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "NKJT6KWUBJ",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "UNS55LCMKP",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "0GNUC58MVJ",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "G6ZGNQ44D0",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "EEJ6P3P7J8",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "KLV6WR0KH3",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "DG2V2GRR45",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "H507PGY123",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "TRZC6UG1D0",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "SLXMMZR8UD",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "74FH3ZLKY5",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "UKB3TAFUYF",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "VQ0JBT8TKM",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "A88EHTEG4R",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "BSLJDYK08E",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "6JSPG3ZV05",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "H9MS9P6N8K",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "QW831Y52E7",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "GJ6Q8J96N6",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "0BUUZK71LP",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "ZTWFR1P49H",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "JUAC5FMLHK",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "MRT964YGCU",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "EQKLUC8CYH",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "L9C9K8V2PF",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "MA3265SUCD",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "QGEP3N4BAC",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "RCRFYWSW8Q",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "6FKMUUNQUM",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "M0RSC69AUC",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "RMAL4T2WDU",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "X48UUSVGV8",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "W971YTFRDP",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "ABK1VN2ZUL",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "0RWED90RQ6",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "NM6LCCT0UM",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "T22FMRSE5V",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "WN7GWAX9Y3",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "2GEC5EB8B8",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "KTG7HWJPT8",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "ZLBBVMYUYU",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "CNKB5LZP5D",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "VDCW1BXFFS",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "MFN69499C9",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "DKMTYN9PL1",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "A3Z9ZPZXSZ",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "EMBGW1HV3J",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "M61D27GXD9",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "773S7AJ0TC",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "Y8JKSF8R80",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "8P49XJ5E27",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "W2MM28VRMT",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "T5FPHZVGGD",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "DD4P8A0VAE",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "H4FFD4436V",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "29_07_2026_1P",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "BRR8XZPZ5A",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "BNCRNC0ZH4",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "E6U8C18VAK",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "0P5CRZY95D",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "W5TBAM81T0",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "YVC79EAYB2",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "1A8XHP8UVY",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "40MP4HN4R7",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "2DZ5C82DJZ",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "VHTAZQGT87",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "453VDJKE66",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "CA208LMT2Z",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "47QKSKKSER",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "EVM23W7CKJ",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "QLN1VMKCCU",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "7HBX1362SA",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "0",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "RMWL0N8K94",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "W8D4TNBA4F",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "R4NJ30ZGS8",
+      "act": "UNDERDOCKS"
+    },
+    {
+      "seed": "NVUU5SJD9A",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "1Y3Q4BADBD",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "1YH8WJM676",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "ABCDEF",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "ABCDEF",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "ABCDEF",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "ABCDEF",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "ABCDEF",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "ABCDEF",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "ABCDEF",
+      "act": "OVERGROWTH"
+    },
+    {
+      "seed": "AAB",
+      "act": "OVERGROWTH"
+    }
+  ]
+}

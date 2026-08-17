@@ -116,11 +116,21 @@ def distill_fixture(save: dict[str, Any], source_path: Path) -> dict[str, Any]:
 # which self-play will need. A capture taken on a fresher profile is NOT comparable,
 # so record and check the facts that matter rather than assuming.
 
-ACT_ONE_BOSSES = [
-    "ENCOUNTER.VANTOM_BOSS",
-    "ENCOUNTER.CEREMONIAL_BEAST_BOSS",
-    "ENCOUNTER.THE_KIN_BOSS",
-]
+# The boss override walks *the captured act's own* BossDiscoveryOrder, so which
+# bosses have to have been seen depends on which act rolled — checking Overgrowth's
+# three against an Underdocks capture would pass while the real question went unasked.
+ACT_ONE_BOSSES = {
+    "ACT.OVERGROWTH": [
+        "ENCOUNTER.VANTOM_BOSS",
+        "ENCOUNTER.CEREMONIAL_BEAST_BOSS",
+        "ENCOUNTER.THE_KIN_BOSS",
+    ],
+    "ACT.UNDERDOCKS": [
+        "ENCOUNTER.WATERFALL_GIANT_BOSS",
+        "ENCOUNTER.SOUL_FYSH_BOSS",
+        "ENCOUNTER.LAGAVULIN_MATRIARCH_BOSS",
+    ],
+}
 ACT_ONE_ACTS = ["ACT.OVERGROWTH", "ACT.UNDERDOCKS"]
 PROGRESS_SAVE = "progress.save"
 
@@ -129,6 +139,12 @@ def profile_facts(save: dict[str, Any], save_path: Path) -> dict[str, Any]:
     """The profile preconditions the emulator's generation assumes."""
     players = save.get("players") or [{}]
     seen = set((players[0].get("unlock_state") or {}).get("encounters_seen") or [])
+    acts = save.get("acts") or [{}]
+    act_id = acts[save.get("current_act_index") or 0].get("id")
+    # Unknown act -> demand every act-1 boss, which is the conservative reading.
+    bosses = ACT_ONE_BOSSES.get(act_id) or [
+        boss for pool in ACT_ONE_BOSSES.values() for boss in pool
+    ]
 
     discovered: list[str] = []
     progress = save_path.parent / PROGRESS_SAVE
@@ -140,9 +156,8 @@ def profile_facts(save: dict[str, Any], save_path: Path) -> dict[str, Any]:
             discovered = re.findall(r"ACT\.[A-Z_]+", m.group(1))
 
     return {
-        "all_act1_bosses_seen": (
-            all(b in seen for b in ACT_ONE_BOSSES) if seen else None
-        ),
+        "act": act_id,
+        "all_act1_bosses_seen": (all(b in seen for b in bosses) if seen else None),
         "all_act1_acts_discovered": (
             all(a in discovered for a in ACT_ONE_ACTS) if discovered else None
         ),

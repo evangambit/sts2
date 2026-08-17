@@ -52,7 +52,7 @@ dotnet test src/Sts2Emulator.Tests/
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (35 pass) — drives the live dylib via ctypes
+# Python gym tests (45 pass) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -99,7 +99,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 208 C# + 35 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 208 C# + 45 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Opening hand is bit-exact vs the live game** — the current headline result.
   Live `"ABCDEF"` custom run at A8 → `debug_start_encounter CorpseSlugsWeak`; the
@@ -120,6 +120,14 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   Two subtleties worth keeping: the range mapping is `(int)(NextDouble() * max)`, so
   reproducing the game means reproducing that bias exactly; and `NextGaussianInt` uses
   plain `Math.Round` (banker's/to-even), not away-from-zero.
+- ✅ **Run generation is exact for BOTH act-1 acts.** Act, encounter sequences, boss and
+  the whole map match live captures on two Overgrowth seeds and — new — on an
+  **Underdocks** one (`"UNS55LCMKP"`, A8, exact 64-node map). Underdocks had been
+  modelled entirely from decompiled source and never observed; nothing needed fixing.
+- ✅ **Act-1 selection verified 88/88 on the installed build, 43 of them Underdocks**,
+  by replaying the profile's own run history (`scripts/verify_act_selection.py`). A
+  single capture can never do better than 50/50 on a coin flip; this is the sample that
+  makes the roll a result rather than a guess.
 - **Seed derivation matches the game** (test `RunRngSet_DerivesGameSeedForStringSeed`:
   `RunRngSet("ABCDEF").Seed == 3334281563u`).
 - **Enemy HP now rolled faithfully** (was hardcoded `fixedHp`; now uses the game's
@@ -188,6 +196,20 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 - **`AbandonRun` also throws** when `current_run.save.backup` is absent ("Error deleting
   path … Failed"). Independent of the above; the preflight in `compare_draw_pile.py`
   refuses to drive the in-game abandon unless `--abandon` is passed.
+  **Fix: hand it the file it wants to delete.** `cp current_run.save
+  current_run.save.backup` first, then `menu_select abandon_run` and confirm the popup
+  (`menu_select yes` — the abandon raises a yes/no popup, and the main menu only offers
+  `singleplayer` again once it is answered). Verified working.
+  **And one data point on the embark crash above:** with the previous run abandoned that
+  way, `start_real_game_run.py UNS55LCMKP --ascension 8` embarked **cleanly on the first
+  try** — no popup, no `NRunMusicController` NRE in `godot.log`, run alive at Neow — and
+  that is how the Underdocks capture was taken. n=1, so it does not settle the
+  NonInteractiveMode theory; but it does mean a mod-driven embark is *not* doomed, and it
+  points at the failed-abandon teardown as at least a contributing state. Worth an A/B
+  before investing in the mod change.
+- **Deleting `current_run.save` does nothing — Steam Cloud restores it** on the next
+  launch (history files come back too). Removing a run means abandoning it in game (see
+  above), not moving the file aside.
 - **Seeded runs need CUSTOM mode.** Standard mode rejects a chosen seed outright
   ("Seed should not be changed in standard mode!"). `start_seeded_run` defaults to
   `mode="custom"` for this reason.
@@ -213,15 +235,27 @@ front is now *run generation*: what the engine rolls up front for a seed.
 `current_run.save` — plain JSON recording exactly what the game generated
 (`acts[i].id`, `rooms.{normal,elite}_encounter_ids`, `boss_id`, `saved_map.points`).
 **No need to drive the game**; just have a run saved, and note the crashed-embark save
-is still a valid capture. Verified on **two seeds**:
+is still a valid capture. Verified on **three seeds — now including an Underdocks act 1**:
 
-| section | "ABCDEF" (Overgrowth, A8) | "AAB" (Overgrowth, A8) |
-|---|---|---|
-| act | PASS | PASS |
-| normal encounters | PASS 15/15 | PASS 15/15 |
-| elite encounters | PASS 15/15 | PASS 15/15 |
-| boss | PASS (TheKin) | PASS (CeremonialBeast) |
-| map | PASS (exact) | **PASS (exact)** |
+| section | "ABCDEF" (Overgrowth, A8) | "AAB" (Overgrowth, A8) | "UNS55LCMKP" (**Underdocks**, A8) |
+|---|---|---|---|
+| act | PASS | PASS | PASS |
+| normal encounters | PASS 15/15 | PASS 15/15 | **PASS 15/15** |
+| elite encounters | PASS 15/15 | PASS 15/15 | **PASS 15/15** |
+| boss | PASS (TheKin) | PASS (CeremonialBeast) | **PASS (WaterfallGiant)** |
+| map | PASS (exact) | **PASS (exact)** | **PASS (exact, 64 nodes / 17 rows)** |
+
+**Underdocks needed nothing fixed — every act-specific branch was already right.** Worth
+knowing exactly what that capture cleared, because all of it was modelled from the
+decompiled act and never observed: its four weak / ten normal / three elite / three boss
+pools *and their order* (declaration order, per `Acts/Underdocks.cs`), and — the piece
+most likely to have been wrong — the up-front RNG burn in `RunMapGenerator`, which is
+`202 + (underdocks ? 57 : 60)` calls. That 57 was *derived*, not measured: Underdocks
+declares 3 fewer act events than Overgrowth (10 vs 13; +18 shared either way, matching
+the live save's 31 `event_ids`), and everything else up front was assumed act-independent
+even though Underdocks differs elsewhere (one `BgMusicOptions` entry vs two, its own
+background dir). Off by one call and the entire encounter sequence and map would desync,
+so the exact map match is strong evidence the whole burn is right.
 
 **The second seed earned its keep — it caught three defects one sample could not:**
 - **Act selection was wrong in mechanism and stream.** It was `NextBool()` on the
@@ -262,12 +296,23 @@ So captures are committed:
 - `tests/fixtures/run_generation/AAB.json` — distilled from a live save: act,
   encounter id sequences, boss, and the full `saved_map`. **Profile data is stripped**
   (no `unlock_state`, play history or account id); a test asserts that stays true.
+- `tests/fixtures/run_generation/UNS55LCMKP.json` — the same, for an **Underdocks**
+  act 1. Keep both: act 1 is a coin flip and the two acts run down different branches,
+  so one fixture per act is the minimum that exercises them.
+- `tests/fixtures/act_selection/v0.107.1.json` — 88 (seed -> rolled act) pairs, 43 of
+  them Underdocks, distilled from the profile's own run history (see below). Seeds and
+  acts only, no account id or timestamps.
 - `tests/fixtures/combat/ABCDEF-corpse-slugs.json` — the ordered-pile capture proving
   the opening hand.
 - `tests/python/test_live_fixtures.py` runs the **real comparison code** against them,
-  so the full structure is checked rather than a hand-transcribed subset. The AAB map
-  residual is pinned as "mismatching rows == {1}" — fixing it will fail the test and
-  ask to be updated, which is the intent.
+  so the full structure is checked rather than a hand-transcribed subset. Each run-
+  generation fixture gets the full comparison via the `RunGenerationChecks` mixin — add
+  a capture by naming it in a two-line subclass.
+- Every fixture is checked for two preconditions rather than trusting them: the **game
+  version stamp** (all fixtures must agree, and `verify_run_generation.py` shouts when
+  the installed game has moved on) and the **profile facts** — act selection and boss
+  discovery read the profile, so a capture from a fresher account is not comparable.
+  The boss check reads *the captured act's own* `BossDiscoveryOrder`.
 
 Capture more with:
 ```bash
@@ -277,13 +322,36 @@ python scripts/compare_draw_pile.py --seed <SEED> --encounter <enc> --jump-encou
 ```
 `verify_run_generation.py --fixture <path>` then re-runs offline, with no game needed.
 
-**Wanted next:** a re-capture of "ABCDEF" run generation (its save is gone), and any
-seed that actually rolls **Underdocks** — still entirely unverified.
+### Act selection is verified in bulk, from the profile's run history
+
+`saves/history/*.run` keeps one record per finished run, carrying its `seed` and the
+`acts` it rolled — **hundreds of free (seed -> act) ground-truth pairs**, no game
+driving and no capture needed. `scripts/verify_act_selection.py` replays them through
+the emulator: **88/88 on the installed v0.107.1, 45 Overgrowth / 43 Underdocks.** That
+turns the act-1 coin flip from "one sample, 50% odds of luck" into a real result.
+
+Read the per-build breakdown carefully: older builds sit near 50%, which is expected,
+not a regression. A record is ground truth for *its own* patch, and early runs also hit
+`GetRandomList`'s force-select path (an unlocked-but-undiscovered alt act is taken
+instead of rolled) rather than rolling at all. Only the installed build's rows are a
+statement about the emulator as it stands.
+
+The history records carry no rooms and no map, so this verifies **act selection only** —
+the rest still needs a `current_run.save` capture per act.
+
+**Wanted next:** a re-capture of "ABCDEF" run generation (its save is gone), and an
+Underdocks *combat* capture — `compare_draw_pile.py` ground truth is still Overgrowth-
+only, and the "UNS55LCMKP" run is sitting at Neow, ready to jump into an encounter.
 
 ### Introspection & verification tooling (built)
 - `scripts/compare_draw_pile.py` — emulator vs live ordered piles. `--live-json`
   re-diffs a saved capture offline; `--jump-encounter` avoids the lobby crash.
 - `scripts/verify_run_generation.py` — the table above, straight from a save.
+- `scripts/verify_act_selection.py` — act 1 vs the whole run history; `--fixture` re-runs
+  it offline, `--all-builds` shows older patches for context.
+- `scripts/start_real_game_run.py <SEED> --ascension 8` — embark a seeded custom run.
+  Pass `--ascension 8`: the emulator models A8, and a capture at another level is not
+  comparable (the elite budget differs, so encounters and map both diverge).
 - Emulator: `Sts2_GetPile` -> `env.get_pile(...)`; run-generation lists 11-14 on
   `Sts2Run_GetStateList` (normal/elite/event sequences, and `[act, boss, map_nodes]`).
   Native API **v13**.
@@ -341,5 +409,5 @@ cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 dotnet test src/Sts2Emulator.Tests/        # 208 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 35 pass
+uv run python -m unittest discover -s tests/python   # 45 pass
 ```

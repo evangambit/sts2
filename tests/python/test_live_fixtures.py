@@ -9,6 +9,7 @@ overwriting current_run.save.
 Capture a new one with:
     python scripts/verify_run_generation.py --save-fixture tests/fixtures/run_generation/<SEED>.json
     python scripts/compare_draw_pile.py ... --save-live-json tests/fixtures/combat/<name>.json
+    python scripts/verify_act_selection.py --save-fixture tests/fixtures/act_selection/<build>.json
 """
 
 import contextlib
@@ -18,12 +19,18 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 FIXTURES = ROOT / "tests" / "fixtures"
+
+# A test mixin has to NOT derive from TestCase, or unittest collects and runs it with
+# no fixture named. Type checkers then cannot see that `self` will be a TestCase, so
+# claim the base only while checking.
+_TestCaseIfChecking = unittest.TestCase if TYPE_CHECKING else object
 
 
 def _load_script(name: str):
@@ -36,6 +43,7 @@ def _load_script(name: str):
 
 
 verify_run_generation = _load_script("verify_run_generation")
+verify_act_selection = _load_script("verify_act_selection")
 compare_draw_pile = _load_script("compare_draw_pile")
 
 
@@ -96,13 +104,22 @@ class ProfileAssumptionTest(unittest.TestCase):
             )
 
 
-class RunGenerationFixtureTest(unittest.TestCase):
-    """Ground truth: a live A8 run on seed "AAB" (Overgrowth)."""
+class RunGenerationChecks(_TestCaseIfChecking):
+    """The full run-generation comparison for one committed capture.
+
+    A mixin at runtime, not a TestCase, so unittest does not collect it on its own:
+    each concrete subclass below names a fixture and inherits every check. Act 1 is a
+    coin flip between Overgrowth and Underdocks, and the two branches use different
+    encounter pools, event counts and up-front RNG draws — so one capture per act is
+    the minimum that can tell a correct model from a lucky one.
+    """
+
+    FIXTURE = ""
 
     @classmethod
     def setUpClass(cls):
-        fixture = FIXTURES / "run_generation" / "AAB.json"
-        cls.save = verify_run_generation.load_save(fixture)
+        cls.path = FIXTURES / "run_generation" / cls.FIXTURE
+        cls.save = verify_run_generation.load_save(cls.path)
         cls.act = cls.save["acts"][cls.save["current_act_index"]]
         cls.seed = cls.save["rng"]["seed"]
         cls.emu = verify_run_generation.emulator_generation(cls.seed)
@@ -110,7 +127,7 @@ class RunGenerationFixtureTest(unittest.TestCase):
 
     def test_fixture_carries_no_profile_data(self):
         # The distilled fixture must not leak play history or account identifiers.
-        raw = (FIXTURES / "run_generation" / "AAB.json").read_text()
+        raw = self.path.read_text()
         for leaked in ("unlock_state", "encounters_seen", "number_of_runs", "7656119"):
             self.assertNotIn(leaked, raw)
 
@@ -162,9 +179,9 @@ class RunGenerationFixtureTest(unittest.TestCase):
     def test_map_matches_row_for_row(self):
         """The whole map — every row, column and point type — matches the capture.
 
-        This previously allowed one known residual (row 1 held a node at the wrong
-        column). That is fixed: start->row-1 edges are now wired in column order, as
-        the game's ForEachInRow does, which is what decides the pre-shuffle order of
+        The AAB capture previously allowed one known residual (row 1 held a node at the
+        wrong column). That is fixed: start->row-1 edges are now wired in column order,
+        as the game's ForEachInRow does, which is what decides the pre-shuffle order of
         each duplicate-segment group and therefore which node pruning keeps.
         """
         live_map = self.act["saved_map"]
@@ -189,6 +206,55 @@ class RunGenerationFixtureTest(unittest.TestCase):
             != {c: t for (c, r), t in emu.items() if r == row}
         }
         self.assertEqual(set(), mismatched, "map diverged from the live capture")
+
+
+class OvergrowthRunGenerationTest(RunGenerationChecks, unittest.TestCase):
+    """Ground truth: a live A8 run on seed "AAB" (Overgrowth)."""
+
+    FIXTURE = "AAB.json"
+
+
+class UnderdocksRunGenerationTest(RunGenerationChecks, unittest.TestCase):
+    """Ground truth: a live A8 run on seed "UNS55LCMKP" (Underdocks).
+
+    The first Underdocks capture. Everything act-specific in run generation runs down
+    a separate branch for it — its own weak/normal/elite/boss pools, and three fewer
+    act events, which shifts the up-front RNG burn ahead of the encounter grabs. All
+    of that was modelled from the decompiled act but never checked against the game.
+    """
+
+    FIXTURE = "UNS55LCMKP.json"
+
+
+class ActSelectionFixtureTest(unittest.TestCase):
+    """Ground truth: which act 1 each seed actually rolled, over a whole build's runs.
+
+    Act 1 is one coin flip, so the run-generation captures above can only ever confirm
+    the branch they happen to land on. The profile's run history records the seed and
+    rolled act of every finished run, which turns that flip into a large sample —
+    including many Underdocks rolls. See scripts/verify_act_selection.py.
+    """
+
+    def test_every_recorded_run_rolled_the_predicted_act(self):
+        for path in sorted((FIXTURES / "act_selection").glob("*.json")):
+            runs = verify_act_selection.load_fixture(path)
+            self.assertTrue(runs, f"{path.name} records no runs")
+            verify_act_selection.predict(runs)
+            self.assertEqual(
+                [],
+                [
+                    f"{run['seed']}: live {run['act']} != emulator {run['emulator']}"
+                    for run in runs
+                    if not run["ok"]
+                ],
+                f"{path.name}: act selection diverged",
+            )
+
+    def test_both_act_one_branches_are_covered(self):
+        acts = set()
+        for path in sorted((FIXTURES / "act_selection").glob("*.json")):
+            acts.update(run["act"] for run in verify_act_selection.load_fixture(path))
+        self.assertEqual({"OVERGROWTH", "UNDERDOCKS"}, acts)
 
 
 class CombatFixtureTest(unittest.TestCase):

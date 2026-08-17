@@ -12,6 +12,7 @@ history holds real Underdocks act 1s, which no `current_run.save` capture so far
     python scripts/verify_act_selection.py                # installed build only
     python scripts/verify_act_selection.py --all-builds    # every build, for context
     python scripts/verify_act_selection.py --build v0.110.1
+    python scripts/verify_act_selection.py --fixture tests/fixtures/act_selection/v0.107.1.json
 
 Only the installed build's runs are ground truth for the emulator as it stands. Older
 records are ground truth for *their* patch: the act pool, the stream, and the profile's
@@ -85,6 +86,24 @@ def load_history(root: Path) -> list[dict[str, Any]]:
     return runs
 
 
+def load_fixture(path: Path) -> list[dict[str, Any]]:
+    """Read a committed (seed, act) fixture back into the shape `predict` expects."""
+    fixture = json.loads(path.read_text())
+    return [
+        {
+            "seed": str(run["seed"]),
+            "act": run["act"],
+            "build": fixture.get("build_id"),
+            "mode": None,
+            "ascension": None,
+            "modifiers": [],
+            "start": 0,
+            "file": path.name,
+        }
+        for run in fixture["runs"]
+    ]
+
+
 def predict(runs: list[dict[str, Any]]) -> None:
     """Fill in each run's emulator-predicted act 1, in place."""
     handle = native.run_create()
@@ -155,12 +174,25 @@ def main() -> None:
         help="check every build, not just the installed one",
     )
     parser.add_argument(
+        "--fixture",
+        type=Path,
+        default=None,
+        help="re-check a committed fixture offline, with no profile or game needed",
+    )
+    parser.add_argument(
         "--save-fixture",
         type=Path,
         default=None,
         help="write the checked (seed, act) pairs to a committable fixture and exit",
     )
     args = parser.parse_args()
+
+    if args.fixture is not None:
+        runs = load_fixture(args.fixture)
+        print(f"fixture : {args.fixture} ({len(runs)} runs)")
+        predict(runs)
+        matched = report(f"fixture {args.fixture.name}", runs)
+        raise SystemExit(0 if matched else 1)
 
     runs = load_history(args.root)
     if not runs:
