@@ -35,6 +35,7 @@ LIST_ELITE_ENCOUNTERS = 12
 LIST_EVENTS = 13
 LIST_GENERATION_SUMMARY = 14  # [act, boss_encounter_id, map_node_count]
 LIST_MAP_NODES = 15  # (col, row, node_type) triples
+LIST_MAP_EDGES = 16  # (col, row, child_col, child_row) quadruples
 
 # RunConstants node types -> the save's MapPointType strings.
 # The emulator carries the start node as NodeNone and calls the treasure row
@@ -243,9 +244,46 @@ def emulator_generation(seed: str) -> dict[str, Any]:
             "elite": list(native.run_state_list(handle, LIST_ELITE_ENCOUNTERS, 64)),
             "events": list(native.run_state_list(handle, LIST_EVENTS, 64)),
             "map": list(native.run_state_list(handle, LIST_MAP_NODES, 1024)),
+            "edges": list(native.run_state_list(handle, LIST_MAP_EDGES, 2048)),
         }
     finally:
         native.run_destroy(handle)
+
+
+def compare_edges(emu_quads: list[int], saved_map: dict[str, Any]) -> bool:
+    """Compare map connectivity, which node positions alone do not pin down.
+
+    Two maps can put every dot in the same place and still wire them differently —
+    and connectivity is what the player actually navigates, and what constrains the
+    later post-processing passes (a node's legal columns come from its parents' and
+    children's columns). The save records each point's `children`, including the
+    start node's, so this is free ground truth we were ignoring.
+    """
+    live: set[tuple[int, int, int, int]] = set()
+    for point in [*saved_map["points"], saved_map.get("start"), saved_map.get("boss")]:
+        if not point:
+            continue
+        col, row = point["coord"]["col"], point["coord"]["row"]
+        live.update(
+            (col, row, child["col"], child["row"])
+            for child in point.get("children") or []
+        )
+
+    emu = {
+        (emu_quads[i], emu_quads[i + 1], emu_quads[i + 2], emu_quads[i + 3])
+        for i in range(0, len(emu_quads), 4)
+    }
+
+    print(f"\n=== map edges — emulator {len(emu)} vs live {len(live)} ===")
+    if emu == live:
+        print("  ok")
+        return True
+    fmt = lambda e: f"({e[0]},{e[1]}) -> ({e[2]},{e[3]})"  # noqa: E731
+    for edge in sorted(emu - live):
+        print(f"  only in emulator: {fmt(edge)}")
+    for edge in sorted(live - emu):
+        print(f"  only in live:     {fmt(edge)}")
+    return False
 
 
 def compare_map(emu_triples: list[int], saved_map: dict[str, Any]) -> bool:
@@ -378,6 +416,7 @@ def main() -> None:
           f"{'ok' if results['boss'] else 'MISMATCH'}")
 
     results["map"] = compare_map(emu["map"], act["saved_map"])
+    results["edges"] = compare_edges(emu["edges"], act["saved_map"])
 
     print("\n" + "=" * 60)
     for key, ok in results.items():

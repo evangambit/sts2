@@ -46,13 +46,13 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 210 pass)
+# C# unit tests (currently 213 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (45 pass) — drives the live dylib via ctypes
+# Python gym tests (72 pass) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -99,7 +99,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 210 C# + 45 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 213 C# + 72 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Opening hand is bit-exact vs the live game** — the current headline result.
   Live `"ABCDEF"` custom run at A8 → `debug_start_encounter CorpseSlugsWeak`; the
@@ -120,16 +120,20 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   Two subtleties worth keeping: the range mapping is `(int)(NextDouble() * max)`, so
   reproducing the game means reproducing that bias exactly; and `NextGaussianInt` uses
   plain `Math.Round` (banker's/to-even), not away-from-zero.
-- ✅ **Run generation is exact for BOTH act-1 acts.** Act, encounter sequences, boss and
-  the whole map match live captures on two Overgrowth seeds and — new — on an
-  **Underdocks** one (`"UNS55LCMKP"`, A8, exact 64-node map). Underdocks had been
-  modelled entirely from decompiled source and never observed; nothing needed fixing.
+- ✅ **Run generation is exact for BOTH act-1 acts, across 30 live captures.** Act,
+  encounter sequences, boss, the whole map *and its edges* match on every seed swept so
+  far, Overgrowth and Underdocks alike. Underdocks had been modelled entirely from
+  decompiled source and never observed; it needed nothing fixed. The **map** did — three
+  defects that the three hand-picked fixtures all missed and a batch sweep found in its
+  first 16 seeds (see "Sweeping seeds").
 - ✅ **Act-1 selection verified 88/88 on the installed build, 43 of them Underdocks**,
   by replaying the profile's own run history (`scripts/verify_act_selection.py`). A
   single capture can never do better than 50/50 on a coin flip; this is the sample that
   makes the roll a result rather than a guess.
 - **Seed derivation matches the game** (test `RunRngSet_DerivesGameSeedForStringSeed`:
-  `RunRngSet("ABCDEF").Seed == 3334281563u`).
+  `RunRngSet("ABCDEF").Seed == 3334281563u`) — and seeds are now **canonicalized first**,
+  as `StartRunLobby` does, so lowercase or an `I`/`O` no longer derives a different run
+  than the game would.
 - **Enemy HP now rolled faithfully** (was hardcoded `fixedHp`; now uses the game's
   Niche stream + unique-HP set — commit `123fecf`).
 
@@ -257,6 +261,54 @@ even though Underdocks differs elsewhere (one `BgMusicOptions` entry vs two, its
 background dir). Off by one call and the entire encounter sequence and map would desync,
 so the exact map match is strong evidence the whole burn is right.
 
+### Sweeping seeds, now that a capture is cheap
+
+Headless embarks turned a capture into ~40 unattended seconds, so run generation is now
+verified in **batches** rather than one hand-picked seed at a time:
+
+```bash
+python scripts/capture_sweep.py --count 12            # random seeds, both acts
+python scripts/capture_sweep.py --count 6 --act underdocks --save-fixtures
+```
+
+Per seed it abandons whatever run exists, embarks at A8, reads `current_run.save` and
+compares every section. **This immediately paid for itself: 3 of the first 16 sweep
+captures (19%) failed on the map**, in ways the three hand-picked fixtures had all
+missed. All three are fixed (below); the current build is **30/30 captures matching in
+every section**, and the last two runs were 10/10 and 12/12 with no capture failures.
+
+**Three map defects the sweep found — all of them "the emulator does slightly more than
+the game does":**
+- **Post-processing moved the ancient and boss nodes.** The game's `CenterGrid`,
+  `SpreadAdjacentMapPoints` and `StraightenPaths` all take `Grid`, which is *only* the
+  path rows: `StandardActMap` holds `StartingMapPoint` / `BossMapPoint` separately, in
+  the middle column, and the boss's row is one past the grid's last. So a centered map
+  never drags them along — which is also why the save writes `start` and `boss` outside
+  `points`. The emulator carried them as ordinary nodes, so a map with two empty left
+  columns shifted start and boss to column 2 while the game kept them at 3.
+- **Edge-breaking stopped after the first break.**
+  `MapPathPruning.BreakAParentChildRelationshipInSegment` walks the whole segment and
+  breaks *every* qualifying parent→child link, setting a flag; the emulator returned on
+  the first one. The re-scan that follows then sees a different graph, so the rest may
+  never be broken at all — leaving an edge the game had pruned, which pinned a node to
+  the only column both its children allowed.
+- **The ancient counted as a parent in the prune guard.** `PruneSegment` skips a node
+  when a parent has exactly one child *and is still in the grid*; the ancient is never
+  in the grid, so the game ignores it there and the emulator did not.
+
+**Map *edges* are compared now, not just node positions** (native list 16, run API v9).
+The same dots can be wired differently, the save records each point's `children`, and
+connectivity is what constrains the post-processing passes — it was free ground truth we
+were throwing away. It is what identified the second defect above.
+
+**Seeds are canonicalized like the game does.** `SeedHelper.CanonicalizeSeed` uppercases
+and folds `O`→`0`, `I`→`1` (its alphabet has neither letter), and
+`StartRunLobby.BeginRunLocally` runs every chosen seed through it before hashing. The
+emulator hashed the string as typed, so `"abcdef"` or any seed containing I or O derived
+a different gen seed than the live run it was meant to reproduce — a silent, total
+divergence. Fixed in `RunRngSet` and `sts2_gym.game_seed`; the sweep hit it within
+seconds by generating a seed with an `I` in it.
+
 **The second seed earned its keep — it caught three defects one sample could not:**
 - **Act selection was wrong in mechanism and stream.** It was `NextBool()` on the
   *unnamed* raw-seed stream. The game uses `rng.NextItem` over the unlocked acts for
@@ -296,18 +348,22 @@ So captures are committed:
 - `tests/fixtures/run_generation/AAB.json` — distilled from a live save: act,
   encounter id sequences, boss, and the full `saved_map`. **Profile data is stripped**
   (no `unlock_state`, play history or account id); a test asserts that stays true.
-- `tests/fixtures/run_generation/UNS55LCMKP.json` — the same, for an **Underdocks**
-  act 1. Keep both: act 1 is a coin flip and the two acts run down different branches,
-  so one fixture per act is the minimum that exercises them.
+- `tests/fixtures/run_generation/UNS55LCMKP.json`, `HEADLESS1.json` — the same, for
+  **Underdocks** act 1s. Keep at least one per act: act 1 is a coin flip and the two
+  acts run down different branches. A test asserts the committed set covers both.
+- `tests/fixtures/run_generation/4MW6NTLDWU.json`, `L4CEF9U55L.json` — the two sweep
+  captures that caught the map defects (off-centre start/boss, and an unpruned edge).
+  They exist to keep those fixed; delete them and nothing else in the suite notices.
 - `tests/fixtures/act_selection/v0.107.1.json` — 88 (seed -> rolled act) pairs, 43 of
   them Underdocks, distilled from the profile's own run history (see below). Seeds and
   acts only, no account id or timestamps.
 - `tests/fixtures/combat/ABCDEF-corpse-slugs.json` — the ordered-pile capture proving
   the opening hand.
 - `tests/python/test_live_fixtures.py` runs the **real comparison code** against them,
-  so the full structure is checked rather than a hand-transcribed subset. Each run-
-  generation fixture gets the full comparison via the `RunGenerationChecks` mixin — add
-  a capture by naming it in a two-line subclass.
+  so the full structure is checked rather than a hand-transcribed subset. Every fixture
+  in the directory gets a test class built for it automatically — drop a capture in and
+  it is checked, with no test to remember to write. `scripts/generate_capture_tests.py`
+  does the same for the C# side.
 - Every fixture is checked for two preconditions rather than trusting them: the **game
   version stamp** (all fixtures must agree, and `verify_run_generation.py` shouts when
   the installed game has moved on) and the **profile facts** — act selection and boss
@@ -339,9 +395,12 @@ statement about the emulator as it stands.
 The history records carry no rooms and no map, so this verifies **act selection only** —
 the rest still needs a `current_run.save` capture per act.
 
-**Wanted next:** a re-capture of "ABCDEF" run generation (its save is gone), and an
-Underdocks *combat* capture — `compare_draw_pile.py` ground truth is still Overgrowth-
-only, and the "UNS55LCMKP" run is sitting at Neow, ready to jump into an encounter.
+**Wanted next:** an Underdocks **combat** capture. `compare_draw_pile.py` ground truth is
+still Overgrowth-only, and combat is now the least-swept part of the emulator by far —
+run generation gets 30 captures a session while the opening hand has one. The sweep
+already leaves a run parked at Neow, so `--jump-encounter` into an Underdocks encounter
+(`corpse-slugs`, `seapunk`, `toadpoles`, `sludge-spinner`) is the next capture to
+automate. A re-capture of "ABCDEF" run generation would also close its lost save.
 
 ### Introspection & verification tooling (built)
 - `scripts/compare_draw_pile.py` — emulator vs live ordered piles. `--live-json`
@@ -349,12 +408,18 @@ only, and the "UNS55LCMKP" run is sitting at Neow, ready to jump into an encount
 - `scripts/verify_run_generation.py` — the table above, straight from a save.
 - `scripts/verify_act_selection.py` — act 1 vs the whole run history; `--fixture` re-runs
   it offline, `--all-builds` shows older patches for context.
+- `scripts/capture_sweep.py` — the batch version of all of the above: N seeds, embarked
+  and compared unattended against a headless game. **This is the tool to reach for when
+  touching generation code.** Roughly one seed in five needs its embark retried (the
+  lobby reports ready before it is); the retry is built in, a seed that still fails is
+  skipped, and no comparison is ever affected — every check reads what the game wrote.
 - `scripts/start_real_game_run.py <SEED> --ascension 8` — embark a seeded custom run.
   Pass `--ascension 8`: the emulator models A8, and a capture at another level is not
   comparable (the elite budget differs, so encounters and map both diverge).
 - Emulator: `Sts2_GetPile` -> `env.get_pile(...)`; run-generation lists 11-14 on
-  `Sts2Run_GetStateList` (normal/elite/event sequences, and `[act, boss, map_nodes]`).
-  Native API **v13**.
+  `Sts2Run_GetStateList` (normal/elite/event sequences, `[act, boss, map_nodes]`, the
+  map as (col,row,type) triples, and — new — its **edges** as (col,row,childCol,childRow)
+  quadruples). Native API **v13**, run API **v9**.
 - Live: our STS2MCP fork emits `draw_pile_ordered` / `discard_pile_ordered` /
   `hand_ordered` under `result["player"]`. The stock `draw_pile` is **sorted for
   display**, which is why ordered comparison was impossible before.
@@ -450,5 +515,5 @@ cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 dotnet test src/Sts2Emulator.Tests/        # 208 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 45 pass
+uv run python -m unittest discover -s tests/python   # 72 pass
 ```

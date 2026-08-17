@@ -92,6 +92,27 @@ public class RunEngineTests
     }
 
     [Fact]
+    public void RunRngSet_CanonicalizesSeedLikeTheGame()
+    {
+        // The game canonicalizes every chosen seed before hashing it
+        // (StartRunLobby.BeginRunLocally -> SeedHelper.CanonicalizeSeed): uppercase,
+        // O -> 0, I -> 1, trimmed. Its seed alphabet contains neither O nor I. Hashing
+        // the string as typed would derive a different uint than the live run for any
+        // seed with lowercase or those letters — a silent, total divergence.
+        Assert.Equal("ABCDEF0", SeedHelper.Canonicalize(" abcdefo "));
+        Assert.Equal("1", SeedHelper.Canonicalize("i"));
+        Assert.DoesNotContain('I', SeedHelper.Characters);
+        Assert.DoesNotContain('O', SeedHelper.Characters);
+
+        Assert.Equal(new RunRngSet("ABCDEF").Seed, new RunRngSet("abcdef").Seed);
+        Assert.Equal(new RunRngSet("4WN61S1G").Seed, new RunRngSet("4WN6ISIG").Seed);
+
+        var engine = new RunEngine();
+        engine.Reset("4wn6isig");
+        Assert.Equal("4WN61S1G", engine.State.StringSeed);
+    }
+
+    [Fact]
     public void RunRngSet_FreshSpecialStreamOutputsAreLocked()
     {
         var rng = new RunRngSet("0");

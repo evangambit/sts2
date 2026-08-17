@@ -7,7 +7,7 @@ namespace Sts2Emulator.Interop;
 
 public static class RunNativeExports
 {
-    public const int RUN_NATIVE_API_VERSION = 8;
+    public const int RUN_NATIVE_API_VERSION = 9;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -176,6 +176,23 @@ public static class RunNativeExports
                         .State.MapNodes.Values.OrderBy(n => n.Row)
                         .ThenBy(n => n.Col)
                         .SelectMany(n => new[] { n.Col, n.Row, n.NodeType }),
+                ],
+                output
+            ),
+            // 16: every edge as a (col, row, childCol, childRow) quadruple. Node
+            // positions alone do not pin a map — the same 62 dots can be wired
+            // differently — and the live save records each point's `children`, so the
+            // differential test can check connectivity rather than assume it.
+            16 => WriteIntArray(
+                [
+                    .. run
+                        .State.MapNodes.Values.OrderBy(n => n.Row)
+                        .ThenBy(n => n.Col)
+                        .SelectMany(n =>
+                            n.Children.OrderBy(c => c.Row)
+                                .ThenBy(c => c.Col)
+                                .SelectMany(c => new[] { n.Col, n.Row, c.Col, c.Row })
+                        ),
                 ],
                 output
             ),

@@ -17,9 +17,13 @@ public sealed class RunRngSet
     public GameRng CombatOrbs { get; }
     public GameRng TreasureRoomRelics { get; }
 
+    /// <summary>The seed as the game stores it: canonicalized, not as typed.</summary>
+    public string StringSeed { get; }
+
     public RunRngSet(string stringSeed)
     {
-        Seed = unchecked((uint)DeterministicHash.GetDeterministicHashCode(stringSeed));
+        StringSeed = SeedHelper.Canonicalize(stringSeed);
+        Seed = unchecked((uint)DeterministicHash.GetDeterministicHashCode(StringSeed));
         UpFront = new GameRng(Seed, "up_front");
         Shuffle = new GameRng(Seed, "shuffle");
         UnknownMapPoint = new GameRng(Seed, "unknown_map_point");

@@ -12,6 +12,32 @@ namespace Sts2Emulator.Tests;
 public class RunGenerationCaptureTests
 {
     /// <summary>
+    /// Live capture: seed "4MW6NTLDWU" at ascension 8,
+    /// ACT.OVERGROWTH, game v0.107.1 (build 23811903).
+    /// Source: tests/fixtures/run_generation/4MW6NTLDWU.json
+    /// </summary>
+    [Fact]
+    public void RunGeneration_MatchesCapture_4Mw6Ntldwu()
+    {
+        var engine = new RunEngine();
+        engine.Reset("4MW6NTLDWU");
+        var s = engine.State;
+
+        Assert.Equal(RunConstants.ActOvergrowth, s.Act);
+        Assert.Equal(new[] { 2, 8, 11, 15, 5, 18, 20, 17, 28, 19, 27, 16, 14, 21, 29 }, s.NormalEncounterSequence);
+        Assert.Equal(new[] { 62, 65, 68, 65, 68, 62, 65, 62, 68, 62, 68, 65, 68, 62, 65 }, s.EliteEncounterSequence);
+        Assert.Equal(82, s.BossEncounterId);
+        Assert.Equal(49, s.MapNodes.Count);
+        Assert.Equal(
+            new[] { 1, 2, 3, 3, 3, 3, 4, 5, 4, 3, 3, 2, 3, 2, 4, 3, 1 },
+            Enumerable
+                .Range(0, 17)
+                .Select(row => s.MapNodes.Values.Count(n => n.Row == row))
+                .ToArray()
+        );
+    }
+
+    /// <summary>
     /// Live capture: seed "AAB" at ascension 8,
     /// ACT.OVERGROWTH, game v0.107.1 (build 23811903).
     /// Source: tests/fixtures/run_generation/AAB.json
@@ -56,6 +82,32 @@ public class RunGenerationCaptureTests
         Assert.Equal(65, s.MapNodes.Count);
         Assert.Equal(
             new[] { 1, 3, 5, 5, 4, 4, 3, 5, 4, 3, 5, 4, 6, 5, 4, 3, 1 },
+            Enumerable
+                .Range(0, 17)
+                .Select(row => s.MapNodes.Values.Count(n => n.Row == row))
+                .ToArray()
+        );
+    }
+
+    /// <summary>
+    /// Live capture: seed "L4CEF9U55L" at ascension 8,
+    /// ACT.UNDERDOCKS, game v0.107.1 (build 23811903).
+    /// Source: tests/fixtures/run_generation/L4CEF9U55L.json
+    /// </summary>
+    [Fact]
+    public void RunGeneration_MatchesCapture_L4Cef9U55L()
+    {
+        var engine = new RunEngine();
+        engine.Reset("L4CEF9U55L");
+        var s = engine.State;
+
+        Assert.Equal(RunConstants.ActUnderdocks, s.Act);
+        Assert.Equal(new[] { 9, 12, 13, 7, 0, 30, 6, 12, 24, 9, 23, 26, 25, 0, 24 }, s.NormalEncounterSequence);
+        Assert.Equal(new[] { 67, 86, 72, 86, 72, 67, 86, 67, 72, 86, 72, 67, 86, 72, 67 }, s.EliteEncounterSequence);
+        Assert.Equal(84, s.BossEncounterId);
+        Assert.Equal(62, s.MapNodes.Count);
+        Assert.Equal(
+            new[] { 1, 4, 4, 5, 4, 3, 5, 4, 5, 3, 4, 4, 4, 4, 4, 3, 1 },
             Enumerable
                 .Range(0, 17)
                 .Select(row => s.MapNodes.Values.Count(n => n.Row == row))

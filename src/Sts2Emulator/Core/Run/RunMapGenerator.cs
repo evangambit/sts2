@@ -535,7 +535,12 @@ public static class RunMapGenerator
             if (
                 node.Children.Count > 1
                 || node.Parents.Count > 1
-                || node.Parents.Any(parent => MapNodeAt(state, parent).Children.Count == 1)
+                // `&& !IsRemoved(...)`: the game tests the parent's *grid* cell, and the
+                // ancient is never in the grid, so a row-1 node is never skipped on
+                // account of the start point — even when pruning has left it one child.
+                || node.Parents.Any(parent =>
+                    MapNodeAt(state, parent).Children.Count == 1 && !IsRemovedFromGrid(parent)
+                )
             )
             {
                 continue;
@@ -589,6 +594,13 @@ public static class RunMapGenerator
         IReadOnlyList<RunMapNode> segment
     )
     {
+        // The game walks the WHOLE segment and breaks every qualifying link before
+        // reporting back (MapPathPruning.BreakAParentChildRelationshipInSegment sets a
+        // flag and keeps going). Returning on the first break, as this used to, leaves
+        // later links intact — and the re-scan that follows sees a different graph, so
+        // they may never be broken at all. Seed "L4CEF9U55L" kept one such edge, which
+        // then pinned its row-11 node to the only column both its children allowed.
+        bool broken = false;
         for (int i = 0; i < segment.Count - 1; i++)
         {
             var node = segment[i];
@@ -601,12 +613,16 @@ public static class RunMapGenerator
             if (child.Parents.Count != 1)
             {
                 RemoveEdge(state, (node.Col, node.Row), (child.Col, child.Row));
-                return true;
+                broken = true;
             }
         }
 
-        return false;
+        return broken;
     }
+
+    // The game's grid holds only the path rows, so the ancient and boss points read as
+    // "removed" to any grid lookup — see IsGridRow.
+    private static bool IsRemovedFromGrid((int Col, int Row) coord) => !IsGridRow(coord.Row);
 
     private static bool IsInMap(RunState state, RunMapNode node) =>
         node.NodeType is RunConstants.NodeNone or RunConstants.NodeBoss
@@ -644,6 +660,16 @@ public static class RunMapGenerator
         }
     }
 
+    // The game's post-processing takes `Grid`, which is [7, rooms + 1] — rows 1..15 of
+    // path nodes. The ancient and boss points are NOT in it: StandardActMap holds them
+    // as standalone `StartingMapPoint` / `BossMapPoint` at `GetColumnCount() / 2`, and
+    // the boss's row is `GetRowCount()`, one past the grid's last row. So centering,
+    // spreading and straightening never move them — they stay in the middle column
+    // whatever the body does, which is also why the save writes `start` and `boss`
+    // outside `points`. The emulator carries them as ordinary nodes, so every pass has
+    // to skip them explicitly or a centered map drags them off-centre with it.
+    private static bool IsGridRow(int row) => row > 0 && row < RunConstants.MapBossRow;
+
     private static void CenterGrid(RunState state)
     {
         bool leftEmpty = IsColumnEmpty(state, 0) && IsColumnEmpty(state, 1);
@@ -659,10 +685,11 @@ public static class RunMapGenerator
             return;
         }
 
+        var gridNodes = state.MapNodes.Values.Where(n => IsGridRow(n.Row));
         var nodes =
             delta > 0
-                ? state.MapNodes.Values.OrderByDescending(n => n.Col).ThenBy(n => n.Row).ToList()
-                : state.MapNodes.Values.OrderBy(n => n.Col).ThenBy(n => n.Row).ToList();
+                ? gridNodes.OrderByDescending(n => n.Col).ThenBy(n => n.Row).ToList()
+                : gridNodes.OrderBy(n => n.Col).ThenBy(n => n.Row).ToList();
         foreach (var node in nodes)
         {
             MoveNode(state, node, node.Col + delta);
@@ -670,20 +697,27 @@ public static class RunMapGenerator
     }
 
     private static bool IsColumnEmpty(RunState state, int col) =>
-        !state.MapNodes.Values.Any(node => node.Col == col);
+        !state.MapNodes.Values.Any(node => IsGridRow(node.Row) && node.Col == col);
 
     private static void SpreadAdjacentMapPoints(RunState state)
     {
-        for (int row = 0; row <= RunConstants.MapBossRow; row++)
+        for (int row = 1; row < RunConstants.MapBossRow; row++)
         {
+            // Collect the row ONCE, in column order, and keep that list for every pass
+            // of the loop below — the game walks its grid columns to build the list
+            // before entering its do/while and never rebuilds it. Re-sorting each pass
+            // (what this used to do) visits the nodes in a different order once one has
+            // moved, and the order decides which node claims a free column: seed
+            // "L4CEF9U55L" ended up with row 11's last node at c5 where the game put it
+            // at c6, with the rest of the map identical.
+            var rowNodes = state
+                .MapNodes.Values.Where(node => node.Row == row)
+                .OrderBy(node => node.Col)
+                .ToList();
             bool changed;
             do
             {
                 changed = false;
-                var rowNodes = state
-                    .MapNodes.Values.Where(node => node.Row == row)
-                    .OrderBy(node => node.Col)
-                    .ToList();
                 foreach (var node in rowNodes)
                 {
                     int currentCol = node.Col;
@@ -758,7 +792,7 @@ public static class RunMapGenerator
 
     private static void StraightenPaths(RunState state)
     {
-        for (int row = 0; row <= RunConstants.MapBossRow; row++)
+        for (int row = 1; row < RunConstants.MapBossRow; row++)
         {
             for (int col = 0; col < RunConstants.MapWidth; col++)
             {
@@ -1164,11 +1198,8 @@ public static class RunMapGenerator
             };
             // The game sets CanBeModified = false on exactly the forced rows, which
             // keeps their points out of the repair candidate pool.
-            node.CanBeModified = node.Row is not (
-                1
-                or RunConstants.MapTreasureRow
-                or RunConstants.MapFinalRestRow
-            );
+            node.CanBeModified =
+                node.Row is not (1 or RunConstants.MapTreasureRow or RunConstants.MapFinalRestRow);
         }
 
         var pointTypes = new Queue<int>(

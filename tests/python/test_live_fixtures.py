@@ -207,23 +207,57 @@ class RunGenerationChecks(_TestCaseIfChecking):
         }
         self.assertEqual(set(), mismatched, "map diverged from the live capture")
 
+    def test_map_edges_match(self):
+        """Connectivity, which node positions alone do not pin down.
 
-class OvergrowthRunGenerationTest(RunGenerationChecks, unittest.TestCase):
-    """Ground truth: a live A8 run on seed "AAB" (Overgrowth)."""
+        Two maps can place every dot identically and still wire them differently, and
+        the wiring is what constrains the rest: a node's legal columns come from its
+        parents' and children's columns. Seed "L4CEF9U55L" surfaced exactly that — one
+        extra edge the game had pruned, which then pinned a node to the wrong column.
+        """
+        self.assertTrue(
+            _quiet(
+                verify_run_generation.compare_edges,
+                self.emu["edges"],
+                self.act["saved_map"],
+            ),
+            "map edges diverged from the live capture",
+        )
 
-    FIXTURE = "AAB.json"
+
+# One test class per committed capture, built from the directory rather than written
+# out: a capture is only worth taking if it is checked, and headless embarks made them
+# cheap enough that hand-maintaining a class per seed would be the thing that lapses.
+def _capture_case(fixture: Path) -> type:
+    return type(
+        f"RunGeneration_{fixture.stem}_Test",
+        (RunGenerationChecks, unittest.TestCase),
+        {
+            "__doc__": f"Ground truth: a live A8 capture on seed {fixture.stem!r}.",
+            "FIXTURE": fixture.name,
+        },
+    )
 
 
-class UnderdocksRunGenerationTest(RunGenerationChecks, unittest.TestCase):
-    """Ground truth: a live A8 run on seed "UNS55LCMKP" (Underdocks).
+for _fixture in sorted((FIXTURES / "run_generation").glob("*.json")):
+    globals()[f"RunGeneration_{_fixture.stem}_Test"] = _capture_case(_fixture)
 
-    The first Underdocks capture. Everything act-specific in run generation runs down
-    a separate branch for it — its own weak/normal/elite/boss pools, and three fewer
-    act events, which shifts the up-front RNG burn ahead of the encounter grabs. All
-    of that was modelled from the decompiled act but never checked against the game.
+
+class ActCoverageTest(unittest.TestCase):
+    """Act 1 is a coin flip, and the two acts run down different branches.
+
+    Different encounter pools, three fewer events in Underdocks (which shifts the
+    up-front RNG burn ahead of every encounter grab), and its own boss list. A wall of
+    captures that all landed on one act would leave the other completely unchecked, so
+    assert the committed set covers both.
     """
 
-    FIXTURE = "UNS55LCMKP.json"
+    def test_captures_cover_both_act_one_acts(self):
+        acts = {
+            json.loads(path.read_text())["acts"][0]["id"]
+            for path in (FIXTURES / "run_generation").glob("*.json")
+        }
+        self.assertEqual({"ACT.OVERGROWTH", "ACT.UNDERDOCKS"}, acts)
 
 
 class ActSelectionFixtureTest(unittest.TestCase):

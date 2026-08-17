@@ -9,8 +9,10 @@ public sealed class RunEngine
 
     public void Reset(string seed)
     {
-        State.StringSeed = seed;
+        // Store the canonical seed, not the typed one: the game canonicalizes before it
+        // hashes, so "abcdefo" and "ABCDEF0" are the same run.
         State.Rng = new RunRngSet(seed);
+        State.StringSeed = State.Rng.StringSeed;
         State.PlayerRng = new PlayerRngSet(State.Rng);
         State.PlayerHp = 64;
         State.PlayerMaxHp = 80;

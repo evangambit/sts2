@@ -32,6 +32,17 @@ def deterministic_hash(value: str) -> int:
     return _to_int32(hash1 + _to_int32(hash2 * 1566083941))
 
 
+def canonicalize(string_seed: str) -> str:
+    """Fold a typed seed the way the game does before hashing it.
+
+    Port of ``SeedHelper.CanonicalizeSeed``. The game's seed alphabet has no ``I`` and
+    no ``O``, so both fold into digits; every chosen seed goes through this in
+    ``StartRunLobby.BeginRunLocally``. Hashing the raw string instead makes any seed
+    with lowercase, ``I``, ``O`` or stray whitespace derive the wrong gen seed.
+    """
+    return string_seed.upper().replace("O", "0").replace("I", "1").strip()
+
+
 def game_seed(string_seed: str) -> int:
     """The uint gen seed for a run's string seed, e.g. "ABCDEF" -> 3334281563."""
-    return deterministic_hash(string_seed) & _MASK32
+    return deterministic_hash(canonicalize(string_seed)) & _MASK32
