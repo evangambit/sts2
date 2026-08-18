@@ -50,6 +50,8 @@ validate_real_game_trace = _load_script("validate_real_game_trace")
 trace_real_game = _load_script("trace_real_game")
 combat_sweep = _load_script("combat_sweep")
 
+from sts2_gym import Sts2CombatEnv  # noqa: E402 - after the sys.path setup above
+
 
 def _quiet(fn, *args, **kwargs):
     """Run a comparison helper without its side-by-side report on stdout."""
@@ -392,6 +394,123 @@ class CombatCaptureChecks(_TestCaseIfChecking):
         emu = self.emu["player"]
         self.assertEqual((live["hp"], live["max_hp"]), (emu["hp"], emu["max_hp"]))
         self.assertEqual((64, 80), (emu["hp"], emu["max_hp"]))
+
+
+class FightChecks(_TestCaseIfChecking):
+    """Replay a whole fight offline, turn by turn.
+
+    The opening-state checks above prove an enemy's FIRST move. That is a small
+    fraction of what an enemy is: Corpse Slug has three moves, and which one it opens
+    on is itself a roll — so a capture can pass while the two moves behind it are
+    wrong, which is exactly what happened (multi-hit attacks executed at their A9
+    per-hit damage while announcing the right A8 total).
+
+    Driving turns with no cards played walks the enemy through its table and puts enemy
+    *damage* under test at the same time: the player's HP only stays in sync if every
+    attack lands for the same amount. `test_covers_every_declared_move` is the part
+    that makes this a fight test rather than a longer opening test — it fails if the
+    capture never reached one of the enemy's moves.
+    """
+
+    FIXTURE = ""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.path = FIXTURES / "combat" / cls.FIXTURE
+        cls.state = json.loads(cls.path.read_text())
+        capture = cls.state["capture"]
+        cls.trace = cls.state["turn_trace"]
+        cls.coverage = cls.state["coverage"]
+        cls.env = Sts2CombatEnv(
+            seed=compare_draw_pile.game_seed(capture["seed"]),
+            encounter=capture["encounter"],
+            completed_combat_rooms=capture["completed_combat_rooms"],
+            total_floor=capture["total_floor"],
+        )
+        obs, _info = cls.env.reset()
+        cls.emu_turns = []
+        for row in cls.trace:
+            obs, _reward, terminated, truncated, _info = cls.env.step(row["action"])
+            cls.emu_turns.append(
+                validate_real_game_trace.emulator_trace.summarize_observation(obs),
+            )
+            if terminated or truncated:
+                break
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.env.close()
+
+    def test_covers_every_declared_move(self):
+        for name, counts in self.coverage.items():
+            self.assertIsNotNone(
+                counts["declared"],
+                f"no move table found for {name}; scripts/enemy_moves.py reads them "
+                "from decompiled/, which is gitignored — regenerate it",
+            )
+            self.assertEqual(
+                counts["declared"],
+                counts["seen"],
+                f"{name}: the capture only ever saw {counts['seen']} of its "
+                f"{counts['declared']} moves, so the rest are untested",
+            )
+
+    def test_every_turn_intents_match(self):
+        self.assertEqual(len(self.trace), len(self.emu_turns), "fight ended early")
+        for row, emu in zip(self.trace, self.emu_turns):
+            live_enemies = row["enemies"]
+            emu_enemies = emu.get("enemies") or []
+            self.assertEqual(
+                len(live_enemies),
+                len(emu_enemies),
+                f"turn {row['turn']}: enemy count",
+            )
+            for index, (live_enemy, emu_enemy) in enumerate(
+                zip(live_enemies, emu_enemies),
+            ):
+                live_intent = live_enemy["intent"]
+                if live_intent is None:
+                    continue
+                self.assertTrue(
+                    combat_sweep.intents_agree(
+                        tuple(live_intent),
+                        (
+                            emu_enemy.get("intent_type"),
+                            emu_enemy.get("intent_magnitude"),
+                        ),
+                    ),
+                    f"turn {row['turn']} enemy {index} ({live_enemy['name']}): "
+                    f"emulator {(emu_enemy.get('intent_type'), emu_enemy.get('intent_magnitude'))} "
+                    f"vs live {tuple(live_intent)}",
+                )
+
+    def test_every_turn_player_hp_matches(self):
+        """Enemy damage, indirectly: HP only tracks if every attack lands for the same."""
+        for row, emu in zip(self.trace, self.emu_turns):
+            player = emu["player"]
+            self.assertEqual(
+                (row["player_hp"], row["player_max_hp"]),
+                (player["hp"], player["max_hp"]),
+                f"turn {row['turn']} player HP",
+            )
+
+
+def _fight_case(fixture: Path) -> type:
+    return type(
+        f"Fight_{fixture.stem.replace('-', '_')}_Test",
+        (FightChecks, unittest.TestCase),
+        {
+            "__doc__": f"Ground truth: a live A8 fight, turn by turn, {fixture.stem}.",
+            "FIXTURE": fixture.name,
+        },
+    )
+
+
+for _fight_fixture in sorted((FIXTURES / "combat").glob("*.json")):
+    if json.loads(_fight_fixture.read_text()).get("turn_trace"):
+        globals()[f"Fight_{_fight_fixture.stem.replace('-', '_')}_Test"] = _fight_case(
+            _fight_fixture,
+        )
 
 
 # One class per committed capture, same as the run-generation fixtures: a capture is

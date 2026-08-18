@@ -1,5 +1,5 @@
 {
-  "rooms_entered": 150,
+  "rooms_entered": 180,
   "state_type": "monster",
   "battle": {
     "round": 1,
@@ -262,6 +262,135 @@
     "live_encounter": "ToadpolesWeak",
     "completed_combat_rooms": 0,
     "total_floor": 1,
-    "ascension": 8
+    "ascension": 8,
+    "turns": 6
+  },
+  "turn_trace": [
+    {
+      "turn": 2,
+      "action": 5,
+      "player_hp": 57,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Toadpole",
+          "hp": 26,
+          "intent": [
+            0,
+            9
+          ]
+        },
+        {
+          "name": "Toadpole",
+          "hp": 22,
+          "intent": [
+            2,
+            null
+          ]
+        }
+      ]
+    },
+    {
+      "turn": 3,
+      "action": 5,
+      "player_hp": 48,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Toadpole",
+          "hp": 26,
+          "intent": [
+            0,
+            7
+          ]
+        },
+        {
+          "name": "Toadpole",
+          "hp": 22,
+          "intent": [
+            0,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "turn": 4,
+      "action": 5,
+      "player_hp": 32,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Toadpole",
+          "hp": 26,
+          "intent": [
+            2,
+            null
+          ]
+        },
+        {
+          "name": "Toadpole",
+          "hp": 22,
+          "intent": [
+            0,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "turn": 5,
+      "action": 5,
+      "player_hp": 25,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Toadpole",
+          "hp": 26,
+          "intent": [
+            0,
+            9
+          ]
+        },
+        {
+          "name": "Toadpole",
+          "hp": 22,
+          "intent": [
+            2,
+            null
+          ]
+        }
+      ]
+    },
+    {
+      "turn": 6,
+      "action": 5,
+      "player_hp": 16,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Toadpole",
+          "hp": 26,
+          "intent": [
+            0,
+            7
+          ]
+        },
+        {
+          "name": "Toadpole",
+          "hp": 22,
+          "intent": [
+            0,
+            9
+          ]
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "Toadpole": {
+      "seen": 3,
+      "declared": 3
+    }
   }
 }

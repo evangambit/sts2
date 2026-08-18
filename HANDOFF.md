@@ -52,7 +52,7 @@ dotnet test src/Sts2Emulator.Tests/
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (98 pass) — drives the live dylib via ctypes
+# Python gym tests (104 pass) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -103,7 +103,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 214 C# + 98 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 214 C# + 104 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -488,6 +488,44 @@ history. Measured, not assumed: floors 0 and 2 give the wrong slime roster on se
 **v15**, `Sts2_ResetEncounterAtFloor`); leave it None and encounters that roll their
 composition silently fall back to the combat rng.
 
+### Fights, not just openings (`--turns`)
+
+An opening-state check proves an enemy's *first* move, which for a three-move enemy is a
+third of it — and which move it opens on is itself a roll. `combat_sweep.py --turns N`
+ends N turns with no cards played, comparing intents every turn, and reports **coverage**:
+how many of each enemy's declared moves the fight actually reached.
+
+```bash
+python scripts/combat_sweep.py --seeds <SEED> --encounters corpse-slugs --turns 6
+python scripts/enemy_moves.py CorpseSlug        # the denominator, read from decompiled/
+```
+
+`scripts/enemy_moves.py` parses `new MoveState(...)` out of the decompiled monster
+classes and dedupes by intent expression — two MoveStates can be the same move reached
+from different entry points (FuzzyWurmCrawler's FIRST_ACID_GOOP / ACID_GOOP), so counting
+MoveStates would make 100% coverage unreachable. Coverage counts distinct
+**(type, magnitude)** pairs, not types: WhipSlap and Glomp are both "Attack".
+
+**Three defects turns caught that openings could not:**
+- **Multi-hit attacks executed at their A9 per-hit damage** while announcing the correct
+  A8 total. The per-hit number is written out *separately* from the intent, in
+  `ExecuteIntent`'s attack branch (`for (i < 3) DealAttackDamage(enemy, state, 4)`), so
+  fixing the intent table left the damage wrong. Toadpole announced 9 and dealt 12. Fixed
+  for Toadpole, Byrdonis, PhrogParasite, SkulkingColony.
+- **Strength gains were A9 too** (Nibbit's Hiss gave 3, A8 is 2), which compounds every
+  turn after the buff.
+- **Seapunk's BubbleBurp** block/Strength were both wrong-tier.
+
+**Known-open: the emulator's reported intent magnitude excludes Strength.** The live game
+displays effective damage — a Nibbit at +2 Strength announces 14 for a 12-damage Butt,
+and Seapunk's 2x4 SpinningKick shows 12 at +1 Strength. The emulator reports the base, so
+any enemy that buffs itself diverges *in display* from the turn it buffs, even when the
+damage it deals is right. Fixing it properly means `Intent` carrying a **hit count**
+instead of a pre-multiplied total, so display (`base + strength` per hit) and execution
+(the loop) both derive from one place — which is also what would have prevented the
+multi-hit bug above. Until then, `--turns` fails on Nibbit, Seapunk and SludgeSpinner for
+this reason alone; toadpoles and corpse-slugs are clean through 6 turns with 3/3 coverage.
+
 **Committed and pinned:** six combat captures now run the full comparison offline in
 `tests/python/test_live_fixtures.py` — deck, roster/HP, opening intents and player HP,
 one test class per capture, asserted separately so a failure says which generator moved.
@@ -616,5 +654,5 @@ cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 dotnet test src/Sts2Emulator.Tests/        # 208 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 98 pass
+uv run python -m unittest discover -s tests/python   # 104 pass
 ```

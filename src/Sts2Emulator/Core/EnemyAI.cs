@@ -52,9 +52,15 @@ public static class EnemyAI
                 if (enemy.DefId == KE.Toadpole && enemy.MoveIndex % 3 == 1)
                 {
                     BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, -2);
+                    // SpikeSpitDamage x SpikeSpitRepeat, per hit — the loop is not
+                    // cosmetic, Block and Thorns apply to each hit separately.
                     for (int i = 0; i < 3; i++)
                     {
-                        DealAttackDamage(enemy, state, 4);
+                        DealAttackDamage(
+                            enemy,
+                            state,
+                            Ascension.Value(Ascension.DeadlyEnemies, 4, 3)
+                        );
                     }
 
                     break;
@@ -62,9 +68,14 @@ public static class EnemyAI
 
                 if (enemy.DefId == KE.Byrdonis && enemy.MoveIndex % 2 == 1)
                 {
+                    // PeckDamage x PeckRepeat (repeat is 3 at every ascension).
                     for (int i = 0; i < 3; i++)
                     {
-                        DealAttackDamage(enemy, state, 4);
+                        DealAttackDamage(
+                            enemy,
+                            state,
+                            Ascension.Value(Ascension.DeadlyEnemies, 4, 3)
+                        );
                     }
 
                     break;
@@ -72,9 +83,14 @@ public static class EnemyAI
 
                 if (enemy.DefId == KE.PhrogParasite && enemy.MoveIndex % 2 == 1)
                 {
+                    // LashDamage x 4.
                     for (int i = 0; i < 4; i++)
                     {
-                        DealAttackDamage(enemy, state, 5);
+                        DealAttackDamage(
+                            enemy,
+                            state,
+                            Ascension.Value(Ascension.DeadlyEnemies, 5, 4)
+                        );
                     }
 
                     break;
@@ -82,8 +98,9 @@ public static class EnemyAI
 
                 if (enemy.DefId == KE.SkulkingColony && enemy.MoveIndex % 4 == 3)
                 {
-                    DealAttackDamage(enemy, state, 8);
-                    DealAttackDamage(enemy, state, 8);
+                    // PiercingStabsDamage x PiercingStabsRepeat (2).
+                    DealAttackDamage(enemy, state, Ascension.Value(Ascension.DeadlyEnemies, 8, 7));
+                    DealAttackDamage(enemy, state, Ascension.Value(Ascension.DeadlyEnemies, 8, 7));
                     break;
                 }
 
@@ -1388,8 +1405,12 @@ public static class EnemyAI
                 break;
 
             case KE.Nibbit:
-                // Hiss: gain Strength.
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
+                // Hiss: HissStrengthGain.
+                BuffSystem.Apply(
+                    enemy.Buffs,
+                    BuffId.Strength,
+                    Ascension.Value(Ascension.DeadlyEnemies, 3, 2)
+                );
                 break;
 
             case KE.Exoskeleton:
@@ -1412,8 +1433,17 @@ public static class EnemyAI
                 break;
 
             case KE.Seapunk:
-                enemy.Block += BuffSystem.IncomingBlock(8, enemy.Buffs);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
+                // BubbleBlock is a ToughEnemies value (live at A8); BubbleStr is a
+                // DeadlyEnemies one (not live at A8).
+                enemy.Block += BuffSystem.IncomingBlock(
+                    Ascension.Value(Ascension.ToughEnemies, 8, 7),
+                    enemy.Buffs
+                );
+                BuffSystem.Apply(
+                    enemy.Buffs,
+                    BuffId.Strength,
+                    Ascension.Value(Ascension.DeadlyEnemies, 2, 1)
+                );
                 break;
 
             case KE.SnappingJaxfruit:

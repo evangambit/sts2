@@ -2709,7 +2709,9 @@ public class CombatEngineTests
         EnemyAI.ExecuteIntent(enemy, state, new Random(0));
 
         Assert.Equal(0, BuffSystem.Get(enemy.Buffs, BuffId.Thorns));
-        Assert.Equal(52, state.PlayerHp);
+        // SpikeSpitDamage is 3 at A8 (4 only at DeadlyEnemies) x 3 hits = 9. Confirmed
+        // against a live 4-turn capture, where the emulator dealt 12 to the game's 9.
+        Assert.Equal(55, state.PlayerHp);
     }
 
     [Fact]
@@ -3072,7 +3074,11 @@ public class CombatEngineTests
         EnemyAI.ChooseIntents([colony], 0, new Random(0));
         EnemyAI.ExecuteIntent(colony, state, new Random(0));
 
-        Assert.Equal(999 - 16 - 16 - 11 - 11 - 11, state.PlayerBlock);
+        // Was 934. PiercingStabs is 7 per hit at A8 (8 only at DeadlyEnemies) and the
+        // cycle lands on it once, so two hits cost 1 less each.
+        // NOTE: this enemy's Inertia is still pinned at its A9 value (11; A8 is 9), like
+        // every elite the combat sweep does not reach yet — see HANDOFF.
+        Assert.Equal(936, state.PlayerBlock);
         Assert.Equal(3, BuffSystem.Get(colony.Buffs, BuffId.Strength));
     }
 
@@ -3263,7 +3269,10 @@ public class CombatEngineTests
 
         EnemyAI.ExecuteIntent(byrdonis, state, new Random(0));
 
-        Assert.Equal(56, state.PlayerHp);
+        // PeckDamage is 3 at A8 (4 only at DeadlyEnemies), +1 Strength = 4 per hit,
+        // three hits. 5 block absorbs all of hit one and 1 of hit two, so the player
+        // takes 3 + 4: 66 -> 59.
+        Assert.Equal(59, state.PlayerHp);
     }
 
     [Fact]

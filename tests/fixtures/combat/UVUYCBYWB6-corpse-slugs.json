@@ -1,5 +1,5 @@
 {
-  "rooms_entered": 142,
+  "rooms_entered": 178,
   "state_type": "monster",
   "battle": {
     "round": 1,
@@ -298,6 +298,159 @@
     "live_encounter": "CorpseSlugsWeak",
     "completed_combat_rooms": 0,
     "total_floor": 1,
-    "ascension": 8
+    "ascension": 8,
+    "turns": 6
+  },
+  "turn_trace": [
+    {
+      "turn": 2,
+      "action": 5,
+      "player_hp": 56,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Corpse Slug",
+          "hp": 29,
+          "intent": [
+            3,
+            null
+          ]
+        },
+        {
+          "name": "Corpse Slug",
+          "hp": 27,
+          "intent": [
+            0,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "turn": 3,
+      "action": 5,
+      "player_hp": 50,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Corpse Slug",
+          "hp": 29,
+          "intent": [
+            0,
+            6
+          ]
+        },
+        {
+          "name": "Corpse Slug",
+          "hp": 27,
+          "intent": [
+            0,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "turn": 4,
+      "action": 5,
+      "player_hp": 36,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Corpse Slug",
+          "hp": 29,
+          "intent": [
+            0,
+            8
+          ]
+        },
+        {
+          "name": "Corpse Slug",
+          "hp": 27,
+          "intent": [
+            3,
+            null
+          ]
+        }
+      ]
+    },
+    {
+      "turn": 5,
+      "action": 5,
+      "player_hp": 28,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Corpse Slug",
+          "hp": 29,
+          "intent": [
+            3,
+            null
+          ]
+        },
+        {
+          "name": "Corpse Slug",
+          "hp": 27,
+          "intent": [
+            0,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "turn": 6,
+      "action": 5,
+      "player_hp": 22,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Corpse Slug",
+          "hp": 29,
+          "intent": [
+            0,
+            6
+          ]
+        },
+        {
+          "name": "Corpse Slug",
+          "hp": 27,
+          "intent": [
+            0,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "turn": 7,
+      "action": 5,
+      "player_hp": 8,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Corpse Slug",
+          "hp": 29,
+          "intent": [
+            0,
+            8
+          ]
+        },
+        {
+          "name": "Corpse Slug",
+          "hp": 27,
+          "intent": [
+            3,
+            null
+          ]
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "Corpse Slug": {
+      "seen": 3,
+      "declared": 3
+    }
   }
 }

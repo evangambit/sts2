@@ -42,9 +42,10 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
+
 import game_version
 
-from sts2_gym import game_seed
+from sts2_gym import Sts2CombatEnv, game_seed
 
 
 def _load(name: str) -> ModuleType:
@@ -58,6 +59,7 @@ def _load(name: str) -> ModuleType:
 
 
 capture_sweep = _load("capture_sweep")
+enemy_moves = _load("enemy_moves")
 compare_draw_pile = _load("compare_draw_pile")
 validate = _load("validate_real_game_trace")
 start_real_game_run = _load("start_real_game_run")
@@ -153,11 +155,157 @@ def compare_enemies(
     return hp_ok, intent_ok, "; ".join(notes)
 
 
+def end_turn_action(live_state: dict[str, Any]) -> int:
+    """Give the integer action both sides read as "end turn".
+
+    `trace_real_game.action_payload_from_index` maps hand-size to end_turn, and the
+    emulator's action space is laid out the same way, so one integer drives both.
+    """
+    hand = (live_state.get("player") or {}).get("hand") or []
+    return len(hand)
+
+
+def enemy_intents(summary: dict[str, Any], live: bool) -> list[tuple[Any, Any]]:
+    if live:
+        return [
+            validate.live_enemy_intent(e) or (None, None)
+            for e in summary.get("enemies") or []
+        ]
+    return [
+        (e.get("intent_type"), e.get("intent_magnitude"))
+        for e in summary.get("enemies") or []
+    ]
+
+
+def intents_agree(live: tuple[Any, Any], emu: tuple[Any, Any]) -> bool:
+    """Compare two intents, ignoring a magnitude the live side does not report.
+
+    A bare Debuff has no number live, so only the type is meaningful there.
+    """
+    if live[0] is None:
+        return True
+    if live[0] != emu[0]:
+        return False
+    return live[1] is None or live[1] == emu[1]
+
+
+def drive_turns(
+    base_url: str,
+    env: Any,
+    turns: int,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """End turn on both sides in lockstep, comparing what the enemies announce.
+
+    Ending the turn without playing anything is the cheapest way to walk an enemy
+    through its move table: the intent for turn N+1 is announced as the enemy acts on
+    turn N, so T turns show T+1 intents per enemy. It also puts enemy *damage* under
+    test — the player's HP only stays in sync if every attack lands for the same amount.
+
+    Stops early when the player dies or the emulator says the combat ended; a fight that
+    ends before an enemy has shown every move is reported as missing coverage rather
+    than passed over.
+    """
+    rows: list[dict[str, Any]] = []
+    notes: list[str] = []
+    for turn in range(1, turns + 1):
+        live_state = start_real_game_run.get_state(base_url)
+        if live_state.get("state_type") not in {"monster", "elite", "boss"}:
+            notes.append(f"combat ended live before turn {turn}")
+            break
+
+        action = end_turn_action(live_state)
+        trace_real_game.post_action(base_url, {"action": "end_turn"})
+        try:
+            start_real_game_run.wait_for_combat_ready(base_url, timeout=30.0)
+        except RuntimeError:
+            notes.append(f"live combat did not return to play phase after turn {turn}")
+            break
+
+        _obs, _reward, terminated, truncated, _info = env.step(action)
+        live_summary = trace_real_game.summarize_state(
+            start_real_game_run.get_state(base_url),
+        )
+        emu_summary = validate.emulator_trace.summarize_observation(
+            env.unwrapped._obs(),
+        )
+
+        live_intents = enemy_intents(live_summary, live=True)
+        emu_intents = enemy_intents(emu_summary, live=False)
+        live_player = live_summary.get("player") or {}
+        emu_player = emu_summary.get("player") or {}
+        rows.append(
+            {
+                "turn": turn + 1,
+                "action": action,
+                "live_enemies": [
+                    {
+                        "name": e.get("name"),
+                        "hp": e.get("hp"),
+                        "intent": validate.live_enemy_intent(e),
+                    }
+                    for e in live_summary.get("enemies") or []
+                ],
+                "emu_enemies": [
+                    {
+                        "hp": e.get("hp"),
+                        "intent": (e.get("intent_type"), e.get("intent_magnitude")),
+                    }
+                    for e in emu_summary.get("enemies") or []
+                ],
+                "intents_match": len(live_intents) == len(emu_intents)
+                and all(
+                    map(intents_agree, live_intents, emu_intents),
+                ),
+                "player_match": (live_player.get("hp"), live_player.get("max_hp"))
+                == (emu_player.get("hp"), emu_player.get("max_hp")),
+                "live_player_hp": live_player.get("hp"),
+                "live_player_max_hp": live_player.get("max_hp"),
+                "emu_player_hp": emu_player.get("hp"),
+            },
+        )
+        if terminated or truncated:
+            notes.append(f"emulator ended the combat after turn {turn}")
+            break
+        if not live_player.get("hp"):
+            notes.append(f"player died on turn {turn}")
+            break
+    return rows, notes
+
+
+def coverage_for(rows: list[dict[str, Any]], opening: dict[str, Any]) -> dict[str, Any]:
+    """Distinct intents each enemy actually showed, against what it declares.
+
+    The point of driving turns at all: an opening-only check can pass while every
+    later move in the table is wrong.
+    """
+    # Count distinct (type, magnitude) pairs, not types: WhipSlap and Glomp are both
+    # "Attack", so counting types alone caps a three-move slug at 2/3 forever.
+    seen: dict[str, set[Any]] = {}
+    for enemy in opening.get("enemies") or []:
+        intent = validate.live_enemy_intent(enemy)
+        if intent is not None:
+            seen.setdefault(str(enemy.get("name")), set()).add(intent)
+    for row in rows:
+        for enemy in row["live_enemies"]:
+            if enemy["intent"] is not None:
+                seen.setdefault(str(enemy["name"]), set()).add(tuple(enemy["intent"]))
+
+    report = {}
+    for name, intents in seen.items():
+        declared = enemy_moves.moves_for_live_name(name)
+        report[name] = {
+            "seen": len(intents),
+            "declared": len(declared) if declared is not None else None,
+        }
+    return report
+
+
 def capture_one(
     base_url: str,
     seed: str,
     encounter: str,
     ascension: int,
+    turns: int = 0,
 ) -> dict[str, Any]:
     live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(encounter)
     if live_encounter is None:
@@ -175,7 +323,21 @@ def capture_one(
 
     live_state = start_real_game_run.get_state(base_url)
     live_summary = trace_real_game.summarize_state(live_state)
-    emu_summary = emulator_summary(seed, encounter)
+
+    # One env, kept open: the opening comparison and the turn-by-turn one have to come
+    # from the same combat, or the emulator would silently restart between turns.
+    env = Sts2CombatEnv(
+        seed=game_seed(seed),
+        encounter=encounter,
+        completed_combat_rooms=validate.emulator_completed_combat_rooms(encounter),
+        total_floor=validate.NEOW_JUMP_TOTAL_FLOOR,
+    )
+    try:
+        obs, _info = env.reset()
+        emu_summary = validate.emulator_trace.summarize_observation(obs)
+        turn_rows, turn_notes = drive_turns(base_url, env, turns) if turns else ([], [])
+    finally:
+        env.close()
 
     deck_ok, deck_note = compare_deck(seed, encounter, live_state)
     hp_ok, intent_ok, enemy_note = compare_enemies(live_summary, emu_summary)
@@ -186,17 +348,50 @@ def capture_one(
         emu_player.get("max_hp"),
     )
 
+    sections = {
+        "deck": deck_ok,
+        "enemies": hp_ok,
+        "intent": intent_ok,
+        "player": player_ok,
+    }
+    if turns:
+        sections["turns"] = all(
+            row["intents_match"] and row["player_match"] for row in turn_rows
+        )
+
+    coverage = coverage_for(turn_rows, live_summary) if turns else {}
+    missing = [
+        f"{name} {c['seen']}/{c['declared']}"
+        for name, c in coverage.items()
+        if c["declared"] and c["seen"] < c["declared"]
+    ]
+    if turns:
+        sections["coverage"] = not missing
+
+    notes = [n for n in (deck_note, enemy_note) if n]
+    notes += turn_notes
+    if missing:
+        notes.append("intents never seen: " + ", ".join(missing))
+    for row in turn_rows:
+        if not row["intents_match"]:
+            notes.append(
+                f"turn {row['turn']} intents: emu {[e['intent'] for e in row['emu_enemies']]} "
+                f"vs live {[e['intent'] for e in row['live_enemies']]}",
+            )
+        if not row["player_match"]:
+            notes.append(
+                f"turn {row['turn']} player hp: emu {row['emu_player_hp']} "
+                f"vs live {row['live_player_hp']}",
+            )
+
     return {
         "seed": seed,
         "encounter": encounter,
         "live_encounter": live_encounter,
-        "sections": {
-            "deck": deck_ok,
-            "enemies": hp_ok,
-            "intent": intent_ok,
-            "player": player_ok,
-        },
-        "notes": "; ".join(n for n in (deck_note, enemy_note) if n),
+        "sections": sections,
+        "coverage": coverage,
+        "turns": turn_rows,
+        "notes": "; ".join(notes),
         "live_state": live_state,
     }
 
@@ -220,6 +415,13 @@ def main() -> None:
         help="which encounter pool to sweep (default: both)",
     )
     parser.add_argument("--ascension", type=int, default=8)
+    parser.add_argument(
+        "--turns",
+        type=int,
+        default=0,
+        help="end this many turns per fight and compare intents each turn; enough turns "
+        "walk every enemy through its whole move table (0 = opening state only)",
+    )
     parser.add_argument("--random-seed", type=int, default=0)
     parser.add_argument(
         "--save-fixtures",
@@ -251,7 +453,13 @@ def main() -> None:
     for index, (seed, encounter) in enumerate(jobs, start=1):
         print(f"\n[{index}/{len(jobs)}] {seed} -> {encounter}", flush=True)
         try:
-            result = capture_one(args.base_url, seed, encounter, args.ascension)
+            result = capture_one(
+                args.base_url,
+                seed,
+                encounter,
+                args.ascension,
+                turns=args.turns,
+            )
         except Exception as exc:  # noqa: BLE001 - one bad job must not end the sweep
             print(f"  CAPTURE FAILED: {exc}", flush=True)
             results.append({"seed": seed, "encounter": encounter, "error": str(exc)})
@@ -285,7 +493,23 @@ def main() -> None:
                     ),
                     "total_floor": validate.NEOW_JUMP_TOTAL_FLOOR,
                     "ascension": args.ascension,
+                    "turns": args.turns,
                 },
+                # The turn-by-turn live readout, when turns were driven: enough to
+                # replay the fight offline and check every intent an enemy showed, not
+                # just its first. `coverage` records how much of each enemy's declared
+                # move table those turns actually reached.
+                "turn_trace": [
+                    {
+                        "turn": row["turn"],
+                        "action": row["action"],
+                        "player_hp": row["live_player_hp"],
+                        "player_max_hp": row["live_player_max_hp"],
+                        "enemies": row["live_enemies"],
+                    }
+                    for row in result["turns"]
+                ],
+                "coverage": result["coverage"],
             }
             path.write_text(json.dumps(stamped, indent=2) + "\n")
             print(f"  wrote {path}", flush=True)
