@@ -52,7 +52,7 @@ dotnet test src/Sts2Emulator.Tests/
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (104 pass) — drives the live dylib via ctypes
+# Python gym tests (119 pass) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -103,7 +103,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 214 C# + 104 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 214 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -516,6 +516,33 @@ MoveStates would make 100% coverage unreachable. Coverage counts distinct
   turn after the buff.
 - **Seapunk's BubbleBurp** block/Strength were both wrong-tier.
 
+### Ascension is an input, not a constant (A8 **and** A10)
+
+Enemy data is ascension-dependent — `GetValueIfAscension(level, high, low)` — so the same
+enemy hits for different amounts at different levels, and a suite captured at one level
+only ever exercises one branch of every pair. **`CombatState.AscensionLevel` carries the
+run's level** (native API **v16**, `Sts2CombatEnv(ascension=)`), captures record it, and
+tests read it back, so A8 and A10 fixtures coexist in one process.
+
+```bash
+python scripts/combat_sweep.py --seeds <SEED> --ascension 10 --turns 6 --save-fixtures
+```
+
+What actually differs between A8 and A10, and nothing else does:
+- **`DeadlyEnemies` (9)** flips nearly every monster damage and buff amount to its high
+  value. This is the whole practical difference in combat.
+- **`DoubleBoss` (10)** adds a second boss — but only to the *last* act
+  (`i == Acts.Count - 1` in `RunManager.GenerateRooms`), which act-1 generation never
+  reaches. Verified in passing: an A10 capture's deck, enemy roster and HP all match an
+  A8-modelled emulator, because HP comes from `ToughEnemies` (live at both).
+- Player HP stays 64/80: the HP-affecting levels (TightBelt 4, AscendersBane 5) are both
+  below 8.
+
+Committed A10 captures for corpse-slugs and toadpoles, both with turn traces, both 3/3
+coverage. Mutation-checked the way that matters here: corrupting only the **high** side
+of `Ascension.Value(DeadlyEnemies, 9, 8)` fails the three `_a10_` tests and leaves every
+`_a8_` test green.
+
 **Known-open: the emulator's reported intent magnitude excludes Strength.** The live game
 displays effective damage — a Nibbit at +2 Strength announces 14 for a 12-damage Butt,
 and Seapunk's 2x4 SpinningKick shows 12 at +1 Strength. The emulator reports the base, so
@@ -558,7 +585,7 @@ is a sweep-and-fix loop, not a research problem.
 - Emulator: `Sts2_GetPile` -> `env.get_pile(...)`; run-generation lists 11-14 on
   `Sts2Run_GetStateList` (normal/elite/event sequences, `[act, boss, map_nodes]`, the
   map as (col,row,type) triples, and — new — its **edges** as (col,row,childCol,childRow)
-  quadruples). Native API **v15**, run API **v9**.
+  quadruples). Native API **v16**, run API **v9**.
 - Live: our STS2MCP fork emits `draw_pile_ordered` / `discard_pile_ordered` /
   `hand_ordered` under `result["player"]`. The stock `draw_pile` is **sorted for
   display**, which is why ordered comparison was impossible before.
@@ -654,5 +681,5 @@ cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 dotnet test src/Sts2Emulator.Tests/        # 208 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 104 pass
+uv run python -m unittest discover -s tests/python   # 119 pass
 ```

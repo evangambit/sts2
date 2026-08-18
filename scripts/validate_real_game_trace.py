@@ -214,12 +214,14 @@ def emulator_initial_summary(
     seed: int,
     encounter: str,
     total_floor: int | None = NEOW_JUMP_TOTAL_FLOOR,
+    ascension: int = 8,
 ) -> dict[str, Any]:
     env = Sts2CombatEnv(
         seed=seed,
         encounter=encounter,
         completed_combat_rooms=emulator_completed_combat_rooms(encounter),
         total_floor=total_floor,
+        ascension=ascension,
     )
     try:
         obs, _ = env.reset()

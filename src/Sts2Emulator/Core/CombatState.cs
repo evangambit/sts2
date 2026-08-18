@@ -2,6 +2,15 @@ namespace Sts2Emulator.Core;
 
 public sealed class CombatState
 {
+    /// <summary>
+    /// The run's ascension level, which is an INPUT to enemy data rather than a
+    /// difficulty label: the game picks monster damage with
+    /// <c>GetValueIfAscension(level, high, low)</c>, so A8 and A10 are different
+    /// numbers for the same enemy. Kept on the state so captures at different levels
+    /// can be compared in one process — see Core/Ascension.cs.
+    /// </summary>
+    public int AscensionLevel = Ascension.DefaultLevel;
+
     // Player
     public int PlayerHp;
     public int PlayerMaxHp;

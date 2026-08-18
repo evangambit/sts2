@@ -327,12 +327,14 @@ class CombatCaptureChecks(_TestCaseIfChecking):
         cls.encounter = capture["encounter"]
         cls.completed = capture["completed_combat_rooms"]
         cls.total_floor = capture["total_floor"]
+        cls.ascension = capture["ascension"]
         cls.gen_seed = compare_draw_pile.game_seed(cls.seed)
         cls.live = trace_real_game.summarize_state(cls.state)
         cls.emu = validate_real_game_trace.emulator_initial_summary(
             cls.gen_seed,
             cls.encounter,
             total_floor=cls.total_floor,
+            ascension=cls.ascension,
         )
 
     def test_deck_matches_card_for_card(self):
@@ -343,6 +345,7 @@ class CombatCaptureChecks(_TestCaseIfChecking):
                 self.completed,
                 pile,
                 total_floor=self.total_floor,
+                ascension=self.ascension,
             )
             live = compare_draw_pile.live_pile(self.state, pile)
             self.assertEqual(
@@ -389,10 +392,12 @@ class CombatCaptureChecks(_TestCaseIfChecking):
                     f"enemy {index} ({live_enemy.get('name')}) intent magnitude",
                 )
 
-    def test_player_matches_ascension_eight(self):
+    def test_player_matches_the_captured_run(self):
         live = self.live["player"]
         emu = self.emu["player"]
         self.assertEqual((live["hp"], live["max_hp"]), (emu["hp"], emu["max_hp"]))
+        # 64/80 holds at A8 and A10 alike: the HP-reducing levels (TightBelt,
+        # AscendersBane) are both below 8, so nothing between them changes it.
         self.assertEqual((64, 80), (emu["hp"], emu["max_hp"]))
 
 
@@ -426,6 +431,7 @@ class FightChecks(_TestCaseIfChecking):
             encounter=capture["encounter"],
             completed_combat_rooms=capture["completed_combat_rooms"],
             total_floor=capture["total_floor"],
+            ascension=capture["ascension"],
         )
         obs, _info = cls.env.reset()
         cls.emu_turns = []
@@ -575,6 +581,19 @@ class CombatCoverageTest(unittest.TestCase):
 
     def test_covers_an_encounter_that_rolls_its_composition(self):
         self.assertTrue(self._encounters() & self.ROLLED_COMPOSITION)
+
+    def test_covers_more_than_one_ascension(self):
+        """A8 and A10 disagree on nearly every enemy's damage.
+
+        Every `Ascension.Value(level, high, low)` pair has two branches and A8 only ever
+        reaches one of them, so a suite captured entirely at A8 cannot tell a correct
+        pair from a correct low value next to a wrong high one.
+        """
+        levels = {
+            (json.loads(path.read_text()).get("capture") or {}).get("ascension")
+            for path in (FIXTURES / "combat").glob("*.json")
+        } - {None}
+        self.assertGreater(len(levels), 1, f"only captured at {levels}")
 
 
 class LegacyCombatFixtureTest(unittest.TestCase):

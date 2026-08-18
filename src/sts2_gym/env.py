@@ -128,6 +128,7 @@ class Sts2CombatEnv(gym.Env):
         encounter: int | str | None = None,
         completed_combat_rooms: int = -1,
         total_floor: int | None = None,
+        ascension: int = 8,
     ):
         super().__init__()
         self._seed = seed
@@ -140,6 +141,9 @@ class Sts2CombatEnv(gym.Env):
         # and Corpse Slug starting moves; None leaves those on the combat rng, which
         # does not reproduce the live game. See Core/Run/EncounterRng.cs.
         self._total_floor = total_floor
+        # The run's ascension level. Enemy damage and buff amounts are read from it, so
+        # a capture at A10 is only comparable to an emulator told it is at A10.
+        self._ascension = ascension
         self._elapsed_steps = 0
         self._handle: int | None = None
         self._obs_buf = (ctypes.c_int * native.OBS_SIZE)()
@@ -178,12 +182,18 @@ class Sts2CombatEnv(gym.Env):
                 if options is not None and "total_floor" in options
                 else self._total_floor
             )
+            ascension = (
+                options.get("ascension")
+                if options is not None and "ascension" in options
+                else self._ascension
+            )
             native.reset_encounter(
                 self._handle,
                 encounter_id,
                 self._obs_buf,
                 completed,
                 total_floor,
+                ascension,
             )
         return self._obs(), self._info()
 

@@ -34,7 +34,7 @@ public static class NativeExports
     public const int MAX_ENEMIES = 6;
     public const int MAX_PLAYER_BUFFS = 10;
     public const int MAX_ENEMY_BUFFS = 5;
-    public const int NATIVE_API_VERSION = 15;
+    public const int NATIVE_API_VERSION = 16;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -124,9 +124,11 @@ public static class NativeExports
             ReadOnlySpan<int> deckIds,
             int encounterId,
             int completedCombatRooms,
-            int totalFloor
+            int totalFloor,
+            int ascension
         )
         {
+            State.AscensionLevel = ascension;
             Rng = new CountingRandom(Seed);
             State.NicheHpRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
@@ -269,11 +271,18 @@ public static class NativeExports
         int encounterId,
         int completedCombatRooms,
         int totalFloor,
+        int ascension,
         int* obsBuf
     )
     {
         var combat = _pool[handle]!;
-        combat.ResetAtFloor(StarterDeckIds, encounterId, completedCombatRooms, totalFloor);
+        combat.ResetAtFloor(
+            StarterDeckIds,
+            encounterId,
+            completedCombatRooms,
+            totalFloor,
+            ascension
+        );
         WriteObs(combat.State, obsBuf);
     }
 

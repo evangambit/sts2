@@ -35,16 +35,16 @@ public static class Ascension
     public const int DoubleBoss = 10;
 
     /// <summary>
-    /// The level every emulator value is expressed at. A8 is what the differential
-    /// captures are taken on, so it is the only level we can claim to be exact for.
-    /// Raising this means re-checking every <see cref="Value"/> site against a capture
-    /// at the new level, not just changing this constant.
+    /// The level assumed when a caller does not say. A8 is what most differential
+    /// captures are taken at; A10 is captured too, and the two disagree on nearly every
+    /// enemy's damage, which is why this is a default rather than the answer.
     /// </summary>
-    public const int ModelledLevel = 8;
+    public const int DefaultLevel = 8;
 
-    public static bool Has(int level) => ModelledLevel >= level;
+    /// <summary>Port of <c>AscensionManager.HasLevel</c>: levels are cumulative.</summary>
+    public static bool Has(int ascensionLevel, int level) => ascensionLevel >= level;
 
     /// <summary>Port of <c>AscensionHelper.GetValueIfAscension</c>.</summary>
-    public static int Value(int level, int ascensionValue, int fallbackValue) =>
-        Has(level) ? ascensionValue : fallbackValue;
+    public static int Value(int ascensionLevel, int level, int ascensionValue, int fallbackValue) =>
+        Has(ascensionLevel, level) ? ascensionValue : fallbackValue;
 }

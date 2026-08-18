@@ -630,7 +630,7 @@ public static class CombatEngine
         AutoPlayMayhemCards(state, rng);
 
         // Enemies choose their next intent.
-        EnemyAI.ChooseIntents(state.Enemies, state.Turn, rng, state.AiRng);
+        EnemyAI.ChooseIntents(state.Enemies, state.Turn, rng, state.AiRng, state.AscensionLevel);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         bool playerDead = state.PlayerHp <= 0;

@@ -8,13 +8,14 @@ public static class EnemyAI
         List<EnemyState> enemies,
         int turn,
         Random rng,
-        Random? aiRng = null
+        Random? aiRng = null,
+        int ascension = Ascension.DefaultLevel
     )
     {
         var effectiveAiRng = aiRng ?? rng;
         foreach (var enemy in enemies.Where(e => e.Hp > 0))
         {
-            enemy.CurrentIntent = SelectIntent(enemy, effectiveAiRng);
+            enemy.CurrentIntent = SelectIntent(enemy, effectiveAiRng, ascension);
             enemy.SecondaryIntent = SecondaryIntentFor(enemy);
         }
     }
@@ -29,6 +30,9 @@ public static class EnemyAI
 
     public static void ExecuteIntent(EnemyState enemy, CombatState state, Random rng)
     {
+        // Enemy data is ascension-dependent; read the run's level once here so every
+        // damage and buff below picks the same branch the live game would.
+        int ascension = state.AscensionLevel;
         bool wasBuffMove = enemy.CurrentIntent.Type == IntentType.Buff;
 
         enemy.Block = 0; // block clears at start of enemy turn
@@ -59,7 +63,7 @@ public static class EnemyAI
                         DealAttackDamage(
                             enemy,
                             state,
-                            Ascension.Value(Ascension.DeadlyEnemies, 4, 3)
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
                         );
                     }
 
@@ -74,7 +78,7 @@ public static class EnemyAI
                         DealAttackDamage(
                             enemy,
                             state,
-                            Ascension.Value(Ascension.DeadlyEnemies, 4, 3)
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
                         );
                     }
 
@@ -89,7 +93,7 @@ public static class EnemyAI
                         DealAttackDamage(
                             enemy,
                             state,
-                            Ascension.Value(Ascension.DeadlyEnemies, 5, 4)
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
                         );
                     }
 
@@ -99,8 +103,16 @@ public static class EnemyAI
                 if (enemy.DefId == KE.SkulkingColony && enemy.MoveIndex % 4 == 3)
                 {
                     // PiercingStabsDamage x PiercingStabsRepeat (2).
-                    DealAttackDamage(enemy, state, Ascension.Value(Ascension.DeadlyEnemies, 8, 7));
-                    DealAttackDamage(enemy, state, Ascension.Value(Ascension.DeadlyEnemies, 8, 7));
+                    DealAttackDamage(
+                        enemy,
+                        state,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    );
+                    DealAttackDamage(
+                        enemy,
+                        state,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    );
                     break;
                 }
 
@@ -408,7 +420,11 @@ public static class EnemyAI
 
     // ── Per-enemy intent selection ─────────────────────────────────────────────
 
-    private static Intent SelectIntent(EnemyState enemy, Random rng)
+    private static Intent SelectIntent(
+        EnemyState enemy,
+        Random rng,
+        int ascension = Ascension.DefaultLevel
+    )
     {
         switch (enemy.DefId)
         {
@@ -442,7 +458,10 @@ public static class EnemyAI
                 return (enemy.MoveIndex % 3) == 1
                     ? new Intent(IntentType.Buff, 0)
                     // AcidGoopDamage
-                    : new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 6, 4));
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 4)
+                    );
 
             case KE.Mawler:
                 return (enemy.MoveIndex % 3) switch
@@ -450,13 +469,13 @@ public static class EnemyAI
                     // ClawDamage x 2
                     0 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 5, 4) * 2
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4) * 2
                     ),
                     1 => new Intent(IntentType.Debuff, 3),
                     // RipAndTearDamage
                     _ => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 16, 14)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
                     ),
                 };
 
@@ -946,17 +965,17 @@ public static class EnemyAI
                     // SwipeDamage x 2
                     0 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 7, 6) * 2
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6) * 2
                     ),
                     // GraspingVinesDamage; GRASPING_VINES is attack + card debuff.
                     1 => new Intent(
                         IntentType.Debuff,
-                        Ascension.Value(Ascension.DeadlyEnemies, 9, 8)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                     ),
                     // ChompDamage
                     _ => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 18, 16)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 18, 16)
                     ),
                 };
 
@@ -1027,7 +1046,7 @@ public static class EnemyAI
                     // SeaKickDamage
                     0 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 13, 11)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
                     ),
                     // SpinningKickDamage * SpinningKickRepeat (2 x 4), no ascension term
                     1 => new Intent(IntentType.Attack, 2 * 4),
@@ -1042,12 +1061,12 @@ public static class EnemyAI
                             // ChompDamage
                             ? new Intent(
                                 IntentType.Attack,
-                                Ascension.Value(Ascension.DeadlyEnemies, 8, 7)
+                                Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
                             )
                             // StompDamage
                             : new Intent(
                                 IntentType.Attack,
-                                Ascension.Value(Ascension.DeadlyEnemies, 14, 13)
+                                Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 13)
                             )
                     );
 
@@ -1058,12 +1077,12 @@ public static class EnemyAI
                     // ButtDamage
                     0 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 13, 12)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 12)
                     ),
                     // SliceDamage
                     1 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 7, 6)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
                     ),
                     _ => new Intent(IntentType.Buff, 0),
                 };
@@ -1082,7 +1101,7 @@ public static class EnemyAI
                         enemy.LastMove = 0;
                         return new Intent(
                             IntentType.Attack,
-                            Ascension.Value(Ascension.DeadlyEnemies, 4, 3)
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
                         );
                     }
                     enemy.LastMove = 1;
@@ -1098,7 +1117,7 @@ public static class EnemyAI
                 enemy.LastMove = 0;
                 return new Intent(
                     IntentType.Attack,
-                    Ascension.Value(Ascension.DeadlyEnemies, 4, 3)
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
                 );
             }
 
@@ -1106,13 +1125,16 @@ public static class EnemyAI
                 // TackleDamage
                 return new Intent(
                     IntentType.Attack,
-                    Ascension.Value(Ascension.DeadlyEnemies, 5, 4)
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
                 );
 
             case KE.LeafSlimeM:
                 return enemy.MoveIndex % 2 == 0
                     // ClumpDamage
-                    ? new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 9, 8))
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    )
                     : new Intent(IntentType.Debuff, 2);
 
             case KE.TwigSlimeM:
@@ -1133,7 +1155,7 @@ public static class EnemyAI
                     enemy.LastMove = 0;
                     return new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 12, 11)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 12, 11)
                     );
                 }
                 // LastMove 2: two consecutive attacks (CanRepeatXTimes=2 exhausted) → force Sticky.
@@ -1148,7 +1170,7 @@ public static class EnemyAI
                     enemy.LastMove = 2;
                     return new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 12, 11)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 12, 11)
                     );
                 }
                 enemy.LastMove = 1;
@@ -1176,7 +1198,7 @@ public static class EnemyAI
                     // GlompDamage
                     1 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 9, 8)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                     ),
                     _ => new Intent(IntentType.Debuff, 2),
                 };
@@ -1205,17 +1227,17 @@ public static class EnemyAI
                     // readout reports as a debuff carrying the attack's magnitude.
                     0 => new Intent(
                         IntentType.Debuff,
-                        Ascension.Value(Ascension.DeadlyEnemies, 9, 8)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                     ),
                     // SlamDamage
                     1 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 12, 11)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 12, 11)
                     ),
                     // RageDamage; RAGE is attack + buff.
                     _ => new Intent(
                         IntentType.Buff,
-                        Ascension.Value(Ascension.DeadlyEnemies, 7, 6)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
                     ),
                 };
             }
@@ -1227,12 +1249,12 @@ public static class EnemyAI
                     // SpikeSpitDamage * SpikeSpitRepeat (repeat is 3, no ascension term)
                     1 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 4, 3) * 3
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3) * 3
                     ),
                     // WhirlDamage
                     _ => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 8, 7)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
                     ),
                 };
 
@@ -1242,31 +1264,31 @@ public static class EnemyAI
                     // LatchDamage
                     1 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 14, 12)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
                     ),
                     // LashDamage * LashRepeat (repeat is 2, no ascension term)
                     2 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 4, 3) * 2
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3) * 2
                     ),
                     3 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 14, 12)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
                     ),
                     _ => rng.Next(3) switch
                     {
                         // TackleDamage; TACKLE is attack + debuff.
                         0 => new Intent(
                             IntentType.Debuff,
-                            Ascension.Value(Ascension.DeadlyEnemies, 11, 9)
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 9)
                         ),
                         1 => new Intent(
                             IntentType.Attack,
-                            Ascension.Value(Ascension.DeadlyEnemies, 14, 12)
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
                         ),
                         _ => new Intent(
                             IntentType.Attack,
-                            Ascension.Value(Ascension.DeadlyEnemies, 4, 3) * 2
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3) * 2
                         ),
                     },
                 };
@@ -1285,7 +1307,7 @@ public static class EnemyAI
                     // JetDamage
                     : new Intent(
                         IntentType.Attack,
-                        Ascension.Value(Ascension.DeadlyEnemies, 11, 10)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
                     );
 
             case KE.Guardbot:
@@ -1392,6 +1414,8 @@ public static class EnemyAI
 
     private static void ApplyBuffIntent(EnemyState enemy, CombatState state, Random rng)
     {
+        // Buff amounts are ascension-dependent too (Nibbit's Hiss gives 2 at A8, 3 at A9).
+        int ascension = state.AscensionLevel;
         switch (enemy.DefId)
         {
             case KE.CalcifiedCultist:
@@ -1409,7 +1433,7 @@ public static class EnemyAI
                 BuffSystem.Apply(
                     enemy.Buffs,
                     BuffId.Strength,
-                    Ascension.Value(Ascension.DeadlyEnemies, 3, 2)
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
                 );
                 break;
 
@@ -1436,13 +1460,13 @@ public static class EnemyAI
                 // BubbleBlock is a ToughEnemies value (live at A8); BubbleStr is a
                 // DeadlyEnemies one (not live at A8).
                 enemy.Block += BuffSystem.IncomingBlock(
-                    Ascension.Value(Ascension.ToughEnemies, 8, 7),
+                    Ascension.Value(ascension, Ascension.ToughEnemies, 8, 7),
                     enemy.Buffs
                 );
                 BuffSystem.Apply(
                     enemy.Buffs,
                     BuffId.Strength,
-                    Ascension.Value(Ascension.DeadlyEnemies, 2, 1)
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 2, 1)
                 );
                 break;
 

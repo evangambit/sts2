@@ -354,11 +354,12 @@ public static class CombatFactory
             encounter,
             rng,
             encounterRngSeed,
-            completedCombatRoomsBeforeCurrent
+            completedCombatRoomsBeforeCurrent,
+            state.AscensionLevel
         );
         _currentNicheHpRng = null;
         _usedNicheHps = null;
-        EnemyAI.ChooseIntents(state.Enemies, state.Turn, rng, state.AiRng);
+        EnemyAI.ChooseIntents(state.Enemies, state.Turn, rng, state.AiRng, state.AscensionLevel);
         EnemyAI.UpdateSecondaryIntents(state.Enemies);
 
         // Shuffle draw pile (skip if caller pre-shuffled it) and deal opening hand of 5.
@@ -442,7 +443,8 @@ public static class CombatFactory
         ActOneEncounter encounter,
         Random rng,
         int? encounterRngSeed = null,
-        int completedCombatRoomsBeforeCurrent = -1
+        int completedCombatRoomsBeforeCurrent = -1,
+        int ascension = Ascension.DefaultLevel
     ) =>
         encounter switch
         {
@@ -464,11 +466,14 @@ public static class CombatFactory
                     KE.Nibbit,
                     rng,
                     // Nibbit.ButtDamage
-                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 13, 12))
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 12)
+                    )
                 ),
             ],
 
-            ActOneEncounter.SlimesWeak => CreateSlimeEncounter(rng, encounterRngSeed),
+            ActOneEncounter.SlimesWeak => CreateSlimeEncounter(rng, encounterRngSeed, ascension),
 
             ActOneEncounter.Exoskeletons =>
             [
@@ -495,14 +500,18 @@ public static class CombatFactory
                     KE.FuzzyWurmCrawler,
                     rng,
                     // FuzzyWurmCrawler.AcidGoopDamage
-                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 6, 4))
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 4)
+                    )
                 ),
             ],
 
             ActOneEncounter.CorpseSlugs => CreateCorpseSlugsEncounter(
                 rng,
                 completedCombatRoomsBeforeCurrent is >= 0 and < 3,
-                encounterRngSeed
+                encounterRngSeed,
+                ascension
             ),
 
             ActOneEncounter.SludgeSpinner =>
@@ -511,7 +520,10 @@ public static class CombatFactory
                     KE.SludgeSpinner,
                     rng,
                     // SludgeSpinner.OilSprayDamage (OIL_SPRAY is attack + debuff)
-                    new Intent(IntentType.Debuff, Ascension.Value(Ascension.DeadlyEnemies, 9, 8))
+                    new Intent(
+                        IntentType.Debuff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    )
                 ),
             ],
 
@@ -526,7 +538,10 @@ public static class CombatFactory
                     KE.Seapunk,
                     rng,
                     // Seapunk.SeaKickDamage
-                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 13, 11))
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
+                    )
                 ),
             ],
 
@@ -537,7 +552,10 @@ public static class CombatFactory
                     KE.Toadpole,
                     rng,
                     // Toadpole.WhirlDamage
-                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 8, 7)),
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    ),
                     moveIndex: 2
                 ),
             ],
@@ -553,7 +571,10 @@ public static class CombatFactory
                     KE.Nibbit,
                     rng,
                     // Nibbit.SliceDamage
-                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 7, 6)),
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
+                    ),
                     moveIndex: 1
                 ),
                 CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Buff, 0), moveIndex: 2),
@@ -587,7 +608,10 @@ public static class CombatFactory
                     KE.FuzzyWurmCrawler,
                     rng,
                     // FuzzyWurmCrawler.AcidGoopDamage
-                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 6, 4))
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 4)
+                    )
                 ),
             ],
 
@@ -598,7 +622,10 @@ public static class CombatFactory
                     KE.Seapunk,
                     rng,
                     // Seapunk.SeaKickDamage
-                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 13, 11))
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
+                    )
                 ),
             ],
 
@@ -897,7 +924,11 @@ public static class CombatFactory
     private static bool IsEliteEncounter(ActOneEncounter encounter) =>
         encounter is >= ActOneEncounter.BygoneEffigy and <= ActOneEncounter.WaterfallGiant;
 
-    private static List<EnemyState> CreateSlimeEncounter(Random rng, int? encounterRngSeed = null)
+    private static List<EnemyState> CreateSlimeEncounter(
+        Random rng,
+        int? encounterRngSeed = null,
+        int ascension = Ascension.DefaultLevel
+    )
     {
         // SlimesWeak.GenerateMonsters, call for call. It draws THREE times from the
         // encounter's own Rng, not two:
@@ -939,13 +970,22 @@ public static class CombatFactory
         var firstIntent =
             firstSmall == KE.LeafSlimeS
                 // LeafSlimeS.TackleDamage
-                ? new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 4, 3))
+                ? new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
+                )
                 // TwigSlimeS.TackleDamage
-                : new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 5, 4));
+                : new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
+                );
         var secondIntent =
             secondSmall == KE.LeafSlimeS
                 ? new Intent(IntentType.Debuff, 1)
-                : new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 5, 4));
+                : new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
+                );
         int secondMoveIndex = secondSmall == KE.LeafSlimeS ? 1 : 0;
 
         return
@@ -1286,7 +1326,8 @@ public static class CombatFactory
     private static List<EnemyState> CreateCorpseSlugsEncounter(
         Random rng,
         bool weak = false,
-        int? encounterRngSeed = null
+        int? encounterRngSeed = null,
+        int ascension = Ascension.DefaultLevel
     )
     {
         // CorpseSlug.EnsureCorpseSlugsStartWithDifferentMoves: the encounter rolls ONE
@@ -1305,21 +1346,30 @@ public static class CombatFactory
         var slugs = new List<EnemyState>(count);
         for (int i = 0; i < count; i++)
         {
-            slugs.Add(CreateCorpseSlug(rng, (start + i) % 3));
+            slugs.Add(CreateCorpseSlug(rng, (start + i) % 3, ascension: ascension));
         }
 
         return slugs;
     }
 
-    private static EnemyState CreateCorpseSlug(Random rng, int moveIndex, int? fixedHp = null) =>
-        CreateCorpseSlugEnemy(rng, moveIndex, fixedHp);
+    private static EnemyState CreateCorpseSlug(
+        Random rng,
+        int moveIndex,
+        int? fixedHp = null,
+        int ascension = Ascension.DefaultLevel
+    ) => CreateCorpseSlugEnemy(rng, moveIndex, fixedHp, ascension);
 
-    private static EnemyState CreateCorpseSlugEnemy(Random rng, int moveIndex, int? fixedHp = null)
+    private static EnemyState CreateCorpseSlugEnemy(
+        Random rng,
+        int moveIndex,
+        int? fixedHp = null,
+        int ascension = Ascension.DefaultLevel
+    )
     {
         var enemy = CreateEnemy(
             KE.CorpseSlug,
             rng,
-            CorpseSlugIntent(moveIndex),
+            CorpseSlugIntent(moveIndex, ascension),
             moveIndex,
             fixedHp
         );
@@ -1329,13 +1379,16 @@ public static class CombatFactory
 
     // Move order is the game's MoveState declaration order in CorpseSlug.cs:
     // 0 WHIP_SLAP (MultiAttackIntent 3 x 2), 1 GLOMP (SingleAttackIntent), 2 GOOP (debuff).
-    private static Intent CorpseSlugIntent(int moveIndex) =>
+    private static Intent CorpseSlugIntent(int moveIndex, int ascension = Ascension.DefaultLevel) =>
         (moveIndex % 3) switch
         {
             // WhipSlapDamage * WhipSlapRepeat; the live readout shows "3x2" and the
             // comparison comes down on total damage.
             0 => new Intent(IntentType.Attack, 3 * 2),
-            1 => new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 9, 8)),
+            1 => new Intent(
+                IntentType.Attack,
+                Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+            ),
             _ => new Intent(IntentType.Debuff, 2),
         };
 

@@ -11,7 +11,7 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 15
+_REQUIRED_NATIVE_API_VERSION = 16
 _REQUIRED_RUN_NATIVE_API_VERSION = 9
 
 
@@ -152,6 +152,7 @@ _lib.Sts2_ResetEncounterWeak.argtypes = [
 
 _lib.Sts2_ResetEncounterAtFloor.restype = None
 _lib.Sts2_ResetEncounterAtFloor.argtypes = [
+    ctypes.c_int,
     ctypes.c_int,
     ctypes.c_int,
     ctypes.c_int,
@@ -343,6 +344,7 @@ def reset_encounter(
     obs_buf: ctypes.Array,
     completed_combat_rooms: int = -1,
     total_floor: int | None = None,
+    ascension: int = 8,
 ) -> None:
     """Reset into a chosen encounter.
 
@@ -354,6 +356,11 @@ def reset_encounter(
     id) that Slimes rosters and Corpse Slug starting moves are rolled from. Leave it
     None and those encounters fall back to the combat rng, which does NOT match the
     live game.
+
+    ascension is an input to enemy data, not a difficulty label: the game picks monster
+    damage with GetValueIfAscension(level, high, low), so the same enemy hits for
+    different amounts at A8 and A10. It only reaches the emulator through the
+    floor-aware reset, so a call without total_floor keeps the default.
     """
     if total_floor is not None:
         _lib.Sts2_ResetEncounterAtFloor(
@@ -361,6 +368,7 @@ def reset_encounter(
             encounter_id,
             completed_combat_rooms,
             total_floor,
+            ascension,
             obs_buf,
         )
     elif completed_combat_rooms == -1:

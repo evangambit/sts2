@@ -59,6 +59,7 @@ def emulator_pile(
     completed_combat_rooms: int,
     pile: str,
     total_floor: int | None = 1,
+    ascension: int = 8,
 ) -> list[tuple[str, bool]]:
     names = card_name_by_id()
     env = Sts2CombatEnv(
@@ -69,6 +70,7 @@ def emulator_pile(
         # TotalFloor 1. Only matters for encounters that roll their own composition,
         # but it is free to be right everywhere.
         total_floor=total_floor,
+        ascension=ascension,
     )
     try:
         env.reset()

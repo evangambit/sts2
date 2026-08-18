@@ -94,21 +94,32 @@ DEFAULT_ENCOUNTERS = [
 ]
 
 
-def emulator_summary(seed: str, encounter: str) -> dict[str, Any]:
+def emulator_summary(seed: str, encounter: str, ascension: int) -> dict[str, Any]:
     """Build the emulator's opening state for this fight, from the derived gen seed."""
-    return validate.emulator_initial_summary(game_seed(seed), encounter)
+    return validate.emulator_initial_summary(
+        game_seed(seed),
+        encounter,
+        ascension=ascension,
+    )
 
 
 def compare_deck(
     seed: str,
     encounter: str,
     live_state: dict[str, Any],
+    ascension: int,
 ) -> tuple[bool, str]:
     """Hand and draw pile, in order — the shuffled deck the game dealt."""
     completed = validate.emulator_completed_combat_rooms(encounter)
     gen_seed = game_seed(seed)
     for pile in ("hand", "draw"):
-        emu = compare_draw_pile.emulator_pile(gen_seed, encounter, completed, pile)
+        emu = compare_draw_pile.emulator_pile(
+            gen_seed,
+            encounter,
+            completed,
+            pile,
+            ascension=ascension,
+        )
         live = compare_draw_pile.live_pile(live_state, pile)
         norm = compare_draw_pile.normalize
         if [(norm(n), up) for n, up in emu] != [(norm(n), up) for n, up in live]:
@@ -331,6 +342,7 @@ def capture_one(
         encounter=encounter,
         completed_combat_rooms=validate.emulator_completed_combat_rooms(encounter),
         total_floor=validate.NEOW_JUMP_TOTAL_FLOOR,
+        ascension=ascension,
     )
     try:
         obs, _info = env.reset()
@@ -339,7 +351,7 @@ def capture_one(
     finally:
         env.close()
 
-    deck_ok, deck_note = compare_deck(seed, encounter, live_state)
+    deck_ok, deck_note = compare_deck(seed, encounter, live_state, ascension)
     hp_ok, intent_ok, enemy_note = compare_enemies(live_summary, emu_summary)
     live_player = live_summary.get("player") or {}
     emu_player = emu_summary.get("player") or {}
@@ -475,7 +487,11 @@ def main() -> None:
             print(f"  {result['notes']}", flush=True)
 
         if args.save_fixtures:
-            path = fixtures / f"{seed}-{encounter}.json"
+            # Ascension goes in the name: the same seed and encounter at A8 and A10 are
+            # different fights (every DeadlyEnemies value flips), and both are worth
+            # pinning — A8 is what most captures use, A10 is the only thing that
+            # exercises the other branch of every Ascension.Value pair.
+            path = fixtures / f"{seed}-{encounter}-a{args.ascension}.json"
             path.parent.mkdir(parents=True, exist_ok=True)
             # The live state verbatim (it is already the shape compare_draw_pile and
             # trace_real_game read), plus the inputs needed to rebuild the emulator side
