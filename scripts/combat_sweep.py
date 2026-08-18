@@ -269,7 +269,24 @@ def main() -> None:
         if args.save_fixtures:
             path = fixtures / f"{seed}-{encounter}.json"
             path.parent.mkdir(parents=True, exist_ok=True)
-            stamped = {**result["live_state"], "game": game_version.detect()}
+            # The live state verbatim (it is already the shape compare_draw_pile and
+            # trace_real_game read), plus the inputs needed to rebuild the emulator side
+            # offline. Recording them beats re-deriving from the filename: the floor and
+            # the weak/normal context are what make an encounter reproducible at all.
+            stamped = {
+                **result["live_state"],
+                "game": game_version.detect(),
+                "capture": {
+                    "seed": seed,
+                    "encounter": encounter,
+                    "live_encounter": result["live_encounter"],
+                    "completed_combat_rooms": validate.emulator_completed_combat_rooms(
+                        encounter,
+                    ),
+                    "total_floor": validate.NEOW_JUMP_TOTAL_FLOOR,
+                    "ascension": args.ascension,
+                },
+            }
             path.write_text(json.dumps(stamped, indent=2) + "\n")
             print(f"  wrote {path}", flush=True)
         results.append(result)

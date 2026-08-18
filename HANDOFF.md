@@ -52,7 +52,7 @@ dotnet test src/Sts2Emulator.Tests/
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (72 pass) — drives the live dylib via ctypes
+# Python gym tests (98 pass) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -103,7 +103,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 214 C# + 72 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 214 C# + 98 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -377,8 +377,12 @@ So captures are committed:
 - `tests/fixtures/act_selection/v0.107.1.json` — 88 (seed -> rolled act) pairs, 43 of
   them Underdocks, distilled from the profile's own run history (see below). Seeds and
   acts only, no account id or timestamps.
-- `tests/fixtures/combat/ABCDEF-corpse-slugs.json` — the ordered-pile capture proving
-  the opening hand.
+- `tests/fixtures/combat/*.json` — combat starts. Six captures from `combat_sweep.py
+  --save-fixtures` (both acts, both pools, and the three encounters that roll their own
+  composition), each carrying a `capture` block with the seed, encounter, weak/normal
+  context and TotalFloor needed to rebuild the emulator side offline. Plus the original
+  `ABCDEF-corpse-slugs.json`, which predates that block and is checked the old way —
+  its run's save is long gone, so it cannot be re-captured.
 - `tests/python/test_live_fixtures.py` runs the **real comparison code** against them,
   so the full structure is checked rather than a hand-transcribed subset. Every fixture
   in the directory gets a test class built for it automatically — drop a capture in and
@@ -484,9 +488,15 @@ history. Measured, not assumed: floors 0 and 2 give the wrong slime roster on se
 **v15**, `Sts2_ResetEncounterAtFloor`); leave it None and encounters that roll their
 composition silently fall back to the combat rng.
 
-**Wanted next:** commit combat fixtures (the sweep has `--save-fixtures`, and nothing is
-pinned yet beyond the original ABCDEF pile capture), then work outward from the opening
-state — turn 2+ intents, damage actually dealt, and the remaining ~120 unswept intent
+**Committed and pinned:** six combat captures now run the full comparison offline in
+`tests/python/test_live_fixtures.py` — deck, roster/HP, opening intents and player HP,
+one test class per capture, asserted separately so a failure says which generator moved.
+Two coverage tests keep the set honest (both acts, both pools, and at least one
+encounter whose composition is rolled from the per-encounter RNG). Both defect classes
+were mutation-checked: deleting the `totalFloor` term from the encounter seed fails 5
+tests, and putting one enemy's damage back to its A9 value fails 1, naming the enemy.
+
+**Wanted next:** work outward from the opening state — turn 2+ intents, damage actually dealt, and the remaining ~120 unswept intent
 literals. Every encounter in `LIVE_ENCOUNTER_BY_EMULATOR` is reachable in ~40s, so this
 is a sweep-and-fix loop, not a research problem.
 
@@ -606,5 +616,5 @@ cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 dotnet test src/Sts2Emulator.Tests/        # 208 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 72 pass
+uv run python -m unittest discover -s tests/python   # 98 pass
 ```

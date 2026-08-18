@@ -1,0 +1,250 @@
+{
+  "rooms_entered": 148,
+  "state_type": "monster",
+  "battle": {
+    "round": 1,
+    "turn": "player",
+    "is_play_phase": true,
+    "enemies": [
+      {
+        "entity_id": "NIBBIT_0",
+        "combat_id": 1,
+        "name": "Nibbit",
+        "hp": 48,
+        "max_hp": 48,
+        "block": 0,
+        "status": [],
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "12",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 12 damage."
+          }
+        ]
+      }
+    ]
+  },
+  "run": {
+    "act": 1,
+    "floor": 1,
+    "ascension": 8
+  },
+  "player": {
+    "character": "The Ironclad",
+    "hp": 64,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 0,
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 1,
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 2,
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 3,
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ],
+        "index": 4,
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null
+      }
+    ],
+    "draw_pile_count": 6,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "name": "Defend",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block."
+      },
+      {
+        "name": "Defend",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block."
+      },
+      {
+        "name": "Strike",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage."
+      },
+      {
+        "name": "Strike",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage."
+      },
+      {
+        "name": "Strike",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage."
+      },
+      {
+        "name": "Ascender's Bane",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. Ethereal. Eternal."
+      }
+    ],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "draw_pile_ordered": [
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      }
+    ],
+    "discard_pile_ordered": [],
+    "hand_ordered": [
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "BASH",
+        "is_upgraded": false
+      }
+    ],
+    "gold": 99,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "keywords": []
+      }
+    ],
+    "potions": [],
+    "max_potion_slots": 2
+  },
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1"
+  },
+  "capture": {
+    "seed": "UVUYCBYWB6",
+    "encounter": "nibbit",
+    "live_encounter": "NibbitsWeak",
+    "completed_combat_rooms": 0,
+    "total_floor": 1,
+    "ascension": 8
+  }
+}

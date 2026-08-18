@@ -35,7 +35,8 @@ _TestCaseIfChecking = unittest.TestCase if TYPE_CHECKING else object
 
 def _load_script(name: str):
     spec = importlib.util.spec_from_file_location(
-        f"_fixture_{name}", ROOT / "scripts" / f"{name}.py"
+        f"_fixture_{name}",
+        ROOT / "scripts" / f"{name}.py",
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -45,6 +46,9 @@ def _load_script(name: str):
 verify_run_generation = _load_script("verify_run_generation")
 verify_act_selection = _load_script("verify_act_selection")
 compare_draw_pile = _load_script("compare_draw_pile")
+validate_real_game_trace = _load_script("validate_real_game_trace")
+trace_real_game = _load_script("trace_real_game")
+combat_sweep = _load_script("combat_sweep")
 
 
 def _quiet(fn, *args, **kwargs):
@@ -147,7 +151,7 @@ class RunGenerationChecks(_TestCaseIfChecking):
                 self.emu["normal"],
                 self.act["rooms"]["normal_encounter_ids"],
                 self.names,
-            )
+            ),
         )
 
     def test_elite_encounters_match(self):
@@ -158,7 +162,7 @@ class RunGenerationChecks(_TestCaseIfChecking):
                 self.emu["elite"],
                 self.act["rooms"]["elite_encounter_ids"],
                 self.names,
-            )
+            ),
         )
 
     def test_boss_matches(self):
@@ -186,12 +190,13 @@ class RunGenerationChecks(_TestCaseIfChecking):
         """
         live_map = self.act["saved_map"]
         live = {
-            (p["coord"]["col"], p["coord"]["row"]): p["type"] for p in live_map["points"]
+            (p["coord"]["col"], p["coord"]["row"]): p["type"]
+            for p in live_map["points"]
         }
         for key in ("start", "boss"):
             node = live_map.get(key)
             if node:
-                live[(node["coord"]["col"], node["coord"]["row"])] = node["type"]
+                live[node["coord"]["col"], node["coord"]["row"]] = node["type"]
 
         tri = self.emu["map"]
         emu = {
@@ -291,8 +296,175 @@ class ActSelectionFixtureTest(unittest.TestCase):
         self.assertEqual({"OVERGROWTH", "UNDERDOCKS"}, acts)
 
 
-class CombatFixtureTest(unittest.TestCase):
-    """Ground truth: the live "ABCDEF" A8 run's CorpseSlugsWeak opening."""
+class CombatCaptureChecks(_TestCaseIfChecking):
+    """Everything the live sweep compares at combat start, run offline.
+
+    `scripts/combat_sweep.py` proves a combat against the running game; this pins the
+    same comparison to a committed capture so it keeps being true with no game, no
+    Steam and no 40 seconds per encounter. The four sections are four different
+    generators, so they are asserted separately — a failure should say which one moved:
+
+      deck    the shuffled deck in order (Shuffle stream)
+      enemies roster and HP (encounter Rng for composition, Niche for HP)
+      intent  each enemy's opening move (MonsterAi, plus per-enemy move tables)
+      player  HP/max HP, which is really an "is this the same A8 fight" guard
+
+    A capture records the inputs it needs to be reproduced — seed, encounter, the
+    weak/normal context and the run's TotalFloor — because two of those are invisible
+    in the state itself and getting either wrong yields a plausible wrong answer.
+    """
+
+    FIXTURE = ""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.path = FIXTURES / "combat" / cls.FIXTURE
+        cls.state = json.loads(cls.path.read_text())
+        capture = cls.state.get("capture") or {}
+        cls.seed = capture["seed"]
+        cls.encounter = capture["encounter"]
+        cls.completed = capture["completed_combat_rooms"]
+        cls.total_floor = capture["total_floor"]
+        cls.gen_seed = compare_draw_pile.game_seed(cls.seed)
+        cls.live = trace_real_game.summarize_state(cls.state)
+        cls.emu = validate_real_game_trace.emulator_initial_summary(
+            cls.gen_seed,
+            cls.encounter,
+            total_floor=cls.total_floor,
+        )
+
+    def test_deck_matches_card_for_card(self):
+        for pile in ("hand", "draw"):
+            emu = compare_draw_pile.emulator_pile(
+                self.gen_seed,
+                self.encounter,
+                self.completed,
+                pile,
+                total_floor=self.total_floor,
+            )
+            live = compare_draw_pile.live_pile(self.state, pile)
+            self.assertEqual(
+                [(compare_draw_pile.normalize(n), up) for n, up in live],
+                [(compare_draw_pile.normalize(n), up) for n, up in emu],
+                f"{pile} pile diverged from the live capture",
+            )
+
+    def test_enemy_roster_and_hp_match(self):
+        live = [
+            (e["name"], e["hp"], e["max_hp"]) for e in (self.live.get("enemies") or [])
+        ]
+        emu = [(e["hp"], e["max_hp"]) for e in (self.emu.get("enemies") or [])]
+        self.assertEqual(
+            len(live),
+            len(emu),
+            f"enemy count differs: live {[n for n, _, _ in live]}",
+        )
+        # Names are live-only (the emulator reports ids), so compare on HP — which is
+        # what distinguishes one slime from another anyway.
+        self.assertEqual([(hp, mx) for _, hp, mx in live], emu)
+
+    def test_opening_intents_match(self):
+        for index, (live_enemy, emu_enemy) in enumerate(
+            zip(self.live.get("enemies") or [], self.emu.get("enemies") or []),
+        ):
+            live_intent = validate_real_game_trace.live_enemy_intent(live_enemy)
+            if live_intent is None:
+                continue
+            emu_intent = (
+                emu_enemy.get("intent_type"),
+                emu_enemy.get("intent_magnitude"),
+            )
+            self.assertEqual(
+                live_intent[0],
+                emu_intent[0],
+                f"enemy {index} ({live_enemy.get('name')}) intent type",
+            )
+            if live_intent[1] is not None:
+                # A bare Debuff reports no number live; only compare when it has one.
+                self.assertEqual(
+                    live_intent[1],
+                    emu_intent[1],
+                    f"enemy {index} ({live_enemy.get('name')}) intent magnitude",
+                )
+
+    def test_player_matches_ascension_eight(self):
+        live = self.live["player"]
+        emu = self.emu["player"]
+        self.assertEqual((live["hp"], live["max_hp"]), (emu["hp"], emu["max_hp"]))
+        self.assertEqual((64, 80), (emu["hp"], emu["max_hp"]))
+
+
+# One class per committed capture, same as the run-generation fixtures: a capture is
+# only worth taking if something checks it.
+def _combat_case(fixture: Path) -> type:
+    return type(
+        f"Combat_{fixture.stem.replace('-', '_')}_Test",
+        (CombatCaptureChecks, unittest.TestCase),
+        {
+            "__doc__": f"Ground truth: a live A8 combat capture, {fixture.stem}.",
+            "FIXTURE": fixture.name,
+        },
+    )
+
+
+for _combat_fixture in sorted((FIXTURES / "combat").glob("*.json")):
+    if "capture" in json.loads(_combat_fixture.read_text()):
+        globals()[f"Combat_{_combat_fixture.stem.replace('-', '_')}_Test"] = (
+            _combat_case(_combat_fixture)
+        )
+
+
+class CombatCoverageTest(unittest.TestCase):
+    """The committed captures have to cover what actually varies.
+
+    Both acts, both encounter pools, and at least one encounter whose composition is
+    rolled from the per-encounter RNG (Slimes, Corpse Slugs) — that last one is the
+    only thing that would catch a regression in EncounterRng, and it is exactly the
+    part that was wrong for months.
+    """
+
+    ROLLED_COMPOSITION = {"slimes", "large-slimes", "corpse-slugs"}
+
+    @staticmethod
+    def _encounters() -> set[str]:
+        encounters = set()
+        for path in (FIXTURES / "combat").glob("*.json"):
+            capture = json.loads(path.read_text()).get("capture") or {}
+            name = capture.get("encounter")
+            if isinstance(name, str):
+                encounters.add(name)
+        return encounters
+
+    def test_covers_both_acts_and_pools(self):
+        encounters = self._encounters()
+        self.assertTrue(
+            encounters & set(combat_sweep.WEAK_BY_ACT["overgrowth"]),
+            "no Overgrowth weak-pool capture",
+        )
+        self.assertTrue(
+            encounters & set(combat_sweep.WEAK_BY_ACT["underdocks"]),
+            "no Underdocks weak-pool capture",
+        )
+        self.assertTrue(
+            encounters
+            & (
+                set(combat_sweep.NORMAL_BY_ACT["overgrowth"])
+                | set(combat_sweep.NORMAL_BY_ACT["underdocks"])
+            ),
+            "no normal-pool capture",
+        )
+
+    def test_covers_an_encounter_that_rolls_its_composition(self):
+        self.assertTrue(self._encounters() & self.ROLLED_COMPOSITION)
+
+
+class LegacyCombatFixtureTest(unittest.TestCase):
+    """The original "ABCDEF" CorpseSlugsWeak capture, which predates capture metadata.
+
+    Kept as-is rather than re-captured: its run's save is long gone, and it is the
+    capture the whole opening-hand result was originally built on. New captures come
+    from combat_sweep.py and get the full comparison above.
+    """
 
     def test_opening_piles_match_exactly(self):
         fixture = FIXTURES / "combat" / "ABCDEF-corpse-slugs.json"
