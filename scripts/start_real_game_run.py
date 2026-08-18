@@ -102,11 +102,57 @@ def wait_for_menu(
     raise RuntimeError(f"Timed out waiting for menu screen {menu_screen!r}")
 
 
-def wait_for_run(base_url: str, seed: str, timeout: float = 30.0) -> dict[str, Any]:
+def wait_for_run(
+    base_url: str,
+    seed: str,
+    timeout: float = 30.0,
+    rooms_entered_before: int | None = None,
+) -> dict[str, Any]:
+    """Wait until the run exists AND has finished entering its first room.
+
+    Both halves matter. `NGame.StartNewSingleplayerRun` is async: it generates the run,
+    writes `current_run.save`, and only then awaits `RunManager.EnterAct ->
+    EnterRoomInternal`, which preloads the room's assets. The mod reports a non-menu
+    state as soon as the run state exists — in the middle of that tail.
+
+    Acting on that early report is what produced the "internal error!" popup that was
+    blamed on the game for months. Every crash log shows the same lines in order:
+    `Embarking ... Seed: X`, `Wrote ... current_run.save`, `Preloading 'Event Room'
+    assets...`, `[Startup] Time to main menu`, then the NRE — i.e. the harness
+    saved-and-quit mid-preload and the in-flight task NREd on the state it had just had
+    pulled out from under it. A successful embark logs the preload's `Complete` line
+    *before* the quit.
+
+    So wait for the game's own completion signal: `rooms_entered` counts `RoomEntered`
+    events, which `EnterRoomInternal` fires as its very last statement. Pass the count
+    read before embarking and this returns only once it has advanced. The `room_is_ready`
+    fallback below is a proxy for older mod builds that do not report the counter — it
+    narrows the window but cannot close it, because the event model answers before its
+    assets finish loading.
+
+    The seed comparison is canonical: the game folds a chosen seed with
+    SeedHelper.CanonicalizeSeed before storing it, so asking for "abcdef" or a seed
+    containing I or O and comparing raw strings would never match.
+
+    Raises:
+        RuntimeError: the run never appeared, or never finished entering its room.
+
+    """
+    want = canonical_seed(seed)
     deadline = time.monotonic() + timeout
     state = get_state(base_url)
     while time.monotonic() < deadline:
-        if state.get("state_type") != "menu" and current_run_seed(base_url) == seed:
+        entered = state.get("rooms_entered")
+        room_done = (
+            entered > rooms_entered_before
+            if isinstance(entered, int) and rooms_entered_before is not None
+            else room_is_ready(state)
+        )
+        if (
+            state.get("state_type") != "menu"
+            and room_done
+            and canonical_seed(current_run_seed(base_url) or "") == want
+        ):
             return state
         time.sleep(0.5)
         state = get_state(base_url)
@@ -114,6 +160,28 @@ def wait_for_run(base_url: str, seed: str, timeout: float = 30.0) -> dict[str, A
     raise RuntimeError(
         f"Timed out waiting for seeded run {seed!r}; observed {observed!r}",
     )
+
+
+def canonical_seed(seed: str) -> str:
+    """Fold a seed the way SeedHelper.CanonicalizeSeed does before the game stores it."""
+    return seed.upper().replace("O", "0").replace("I", "1").strip()
+
+
+def room_is_ready(state: dict[str, Any]) -> bool:
+    """Report whether the first room has finished entering and can be acted on.
+
+    An event (the run always opens on the Neow ancient) only lists its options after
+    `room.Enter` completes, which is exactly the await we must not interrupt. Other
+    room types expose their own payload on the same schedule.
+    """
+    state_type = state.get("state_type")
+    if state_type == "event":
+        return bool((state.get("event") or {}).get("options"))
+    if state_type in {"monster", "elite", "boss"}:
+        return bool((state.get("player") or {}).get("hand"))
+    if state_type == "map":
+        return bool(state.get("map"))
+    return state_type not in {None, "menu"}
 
 
 def wait_for_state_type(
@@ -266,8 +334,18 @@ def start_seeded_run(
         # in the seed field (see McpMod.CustomRun.cs).
         post_menu(base_url, "ascension", seed=str(ascension))
         settle(base_url)
+    # Read the completed-room-entry count BEFORE confirming: the embark we are about
+    # to fire is what advances it, and waiting for that is what keeps the next caller
+    # from tearing the run down mid-entry.
+    rooms_entered_before = get_state(base_url).get("rooms_entered")
     post_menu(base_url, "confirm", seed=seed)
-    return wait_for_run(base_url, seed)
+    return wait_for_run(
+        base_url,
+        seed,
+        rooms_entered_before=(
+            rooms_entered_before if isinstance(rooms_entered_before, int) else None
+        ),
+    )
 
 
 def enter_first_combat(

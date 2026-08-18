@@ -92,6 +92,10 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   - `debug_start_encounter {encounter:"CorpseSlugsWeak"}` — jump straight into an encounter.
   - `debug_force_play_phase` — report play-phase readiness.
   - `return_to_main_menu` — save-and-quit to menu (the harness's abandon flow needs it).
+  - **`rooms_entered`** in every state payload — a count of `RunManager.RoomEntered`
+    events, i.e. room entries that have finished. Room entry is async and the state
+    reports a run before it is done entering; waiting for this counter to advance is
+    what stopped the embark crash. **Reinstall the mod** if `rooms_entered` is missing.
   - **Custom-run screen support** — `singleplayer → custom` now reports as
     `character_select` (`custom_run:true`); `menu_select` drives it: select character,
     `confirm` with a `seed` (custom mode accepts `Lobby.SetSeed`), `ascension` (level in
@@ -174,29 +178,48 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 - **`Folly` and `Writhe` are missing from `Cards.g.cs`** — both are canonically Innate
   cost-`-1` curses dropped by the same `cost < 0` filter. Harmless today (starter decks
   have neither) but they'd be *unknown cards*, not merely misordered, if ever drawn.
-- ⚠️ **Embark crash — almost certainly OUR mod's doing, not a game bug.** Mod-driven
-  embarks NRE in `NRunMusicController.UpdateTrack()` (its `_runState` is still
-  `NullRunState`, so `CurrentRoom` is null) from `RunManager.EnterRoomInternal`, giving
-  the "internal error!" popup. An earlier version of this file called it an unfixable
-  game bug — **that was wrong.** The owner has hundreds of hours of normal play without
-  it, and a *manual* embark on the same seed and profile worked immediately after a
-  scripted one crashed.
-  **Leading explanation, and it looks strong:** the game ships its own automation
-  (`MegaCrit.Sts2.Core.AutoSlay.AutoSlayer`) which drives the UI with the *same*
-  `NClickableControl.ForceClick` we use — but it also sets
-  `NonInteractiveMode.AutoSlayerCheck = () => IsActive`. And the crashing line is
-  literally guarded: `UpdateTrack()` does `if (!NonInteractiveMode.IsActive) { ...
-  _runState.CurrentRoom.RoomType ... }`. MegaCrit's automation never reaches it; ours
-  does, and loses a race against `NRun._Ready`.
-  **Proposed fix (untested):** have the mod enable non-interactive mode while the
-  harness is driving, mirroring AutoSlayer. All 31 `NonInteractiveMode.IsActive` call
-  sites were checked and every one is timing, pausing or audio (`Cmd.Wait`,
-  `ActionExecutor`, `CombatManager.Pause/Unpause`, `SfxCmd`, `NAudioManager`) — **none
-  touch RNG, card effects or rules**, so it is safe for differential testing and would
-  also skip animation waits, making capture much faster.
-  **Until that is tested**, the workaround still applies: the crash fires *after* the run
-  is created and written to `current_run.save`, and loading that save works cleanly, so
-  restart → **Continue** → `--jump-encounter`.
+- ✅ **Embark crash — FIXED. It was our harness tearing the run down mid-entry.**
+  Left here in full because two earlier diagnoses in this file were wrong, and the way
+  it was settled is the point: read the log, do not theorise.
+  `NGame.StartNewSingleplayerRun` is **async**. It generates the run, writes
+  `current_run.save`, and only *then* awaits `RunManager.EnterAct -> EnterRoomInternal`,
+  which preloads the room's assets. The mod reports a non-menu state as soon as the run
+  state exists — i.e. in the middle of that tail. The harness took that as "done" and
+  moved on to the next seed, whose first act is `return_to_main_menu`. Every crash log
+  shows the same order:
+
+  ```
+  Embarking on a CUSTOM IRONCLAD run ... Seed: X
+  Wrote 44101 bytes to ... current_run.save
+  Preloading 'Event Room' assets... count=2
+  [Startup] Time to main menu            <-- our save-and-quit lands HERE
+  Preloading 'Event Room' Complete: 389ms
+  [ERROR] Exception starting custom singleplayer run : NullReferenceException
+             at RunManager.EnterRoomInternal
+  ```
+
+  A *successful* embark has `Complete` before the quit. That is the whole bug: the NRE
+  is the in-flight entry touching state we had just deleted.
+  **The fix** is `wait_for_run` in `start_real_game_run.py` waiting for the game's own
+  completion signal. The mod now counts `RunManager.RoomEntered` events — fired as the
+  very last statement of `EnterRoomInternal` — and reports `rooms_entered` in every
+  state payload; callers read it before embarking and wait for it to advance. **34
+  consecutive embarks with retries disabled, zero crashes**, against ~1-in-5 before.
+  ⚠️ **Requires the current STS2MCP build** — reinstall the mod (and restart the game)
+  or the harness silently falls back to a weaker proxy.
+  **Two things this was NOT**, both measured rather than argued:
+  - *Not* `NonInteractiveMode`. The theory was good — the crashing line is guarded by
+    it, and MegaCrit's own AutoSlayer sets the hook we did not — so the mod grew a
+    `set_non_interactive` action and it was A/B'd: **2 crashes in 12 embarks with it on,
+    the same rate as off.** The action was removed again. (The audit stands, if it is
+    ever wanted for speed: all ~30 `IsActive` sites are audio, animation waits or
+    pause/unpause — none touch RNG, card effects or rules.)
+  - *Not* the lobby "reporting ready before it is", which is what the timeout message
+    ("Timed out waiting for menu screen 'main'") made it look like. That message was a
+    downstream symptom: the game was sitting on the un-dismissable `report_bug` popup
+    from a crash one seed earlier.
+  A capture taken before the crash is still valid — the save is written first — so old
+  crashed-embark fixtures remain good ground truth.
 - **`AbandonRun` also throws** when `current_run.save.backup` is absent ("Error deleting
   path … Failed"). Independent of the above; the preflight in `compare_draw_pile.py`
   refuses to drive the in-game abandon unless `--abandon` is passed.
@@ -272,7 +295,8 @@ python scripts/capture_sweep.py --count 6 --act underdocks --save-fixtures
 ```
 
 Per seed it abandons whatever run exists, embarks at A8, reads `current_run.save` and
-compares every section. **This immediately paid for itself: 3 of the first 16 sweep
+compares every section. Unattended means unattended: the embark crash that used to hit
+~1 seed in 5 was our own race and is fixed (see the gotcha above). **This immediately paid for itself: 3 of the first 16 sweep
 captures (19%) failed on the map**, in ways the three hand-picked fixtures had all
 missed. All three are fixed (below); the current build is **30/30 captures matching in
 every section**, and the last two runs were 10/10 and 12/12 with no capture failures.
@@ -410,9 +434,10 @@ automate. A re-capture of "ABCDEF" run generation would also close its lost save
   it offline, `--all-builds` shows older patches for context.
 - `scripts/capture_sweep.py` — the batch version of all of the above: N seeds, embarked
   and compared unattended against a headless game. **This is the tool to reach for when
-  touching generation code.** Roughly one seed in five needs its embark retried (the
-  lobby reports ready before it is); the retry is built in, a seed that still fails is
-  skipped, and no comparison is ever affected — every check reads what the game wrote.
+  touching generation code.** It embarks cleanly now that the embark race is fixed; it
+  keeps a single retry as a backstop, announces it, and counts it in the summary, so a
+  returning flake shows up as a number rather than being absorbed. Seeing a retry there
+  means investigating, not raising the retry count.
 - `scripts/start_real_game_run.py <SEED> --ascension 8` — embark a seeded custom run.
   Pass `--ascension 8`: the emulator models A8, and a capture at another level is not
   comparable (the elite budget differs, so encounters and map both diverge).

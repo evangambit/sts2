@@ -17,8 +17,9 @@ around. Without it, seeds are drawn at random and land wherever they land.
 
 Exit code 0 when every captured seed matched in every section.
 
-Requires the game running with our STS2MCP fork; it starts one headless if the API is
-down. A run in progress is ABANDONED — the sweep needs the lobby.
+Requires the game running with our STS2MCP fork (a recent one: the embark wait needs the
+`rooms_entered` counter it reports); it starts one headless if the API is down. A run in
+progress is ABANDONED — the sweep needs the lobby.
 """
 
 from __future__ import annotations
@@ -297,6 +298,11 @@ def compare(save: dict[str, Any]) -> dict[str, bool]:
     }
 
 
+# Seeds whose embark had to be retried. Empty is the expected state; anything here
+# means the embark race is back and wants investigating, not a bigger retry count.
+_retries: list[str] = []
+
+
 def capture_one(
     base_url: str,
     seed: str,
@@ -304,11 +310,11 @@ def capture_one(
     ascension: int,
     attempts: int = 2,
 ) -> dict[str, Any]:
-    # The embark itself is flaky at roughly one seed in five: `start_seeded_run` times
-    # out waiting for the main menu even though the abandon just left us on one, so the
-    # lobby evidently reports itself ready before it is. Retrying after a fresh recover
-    # clears most of them, and a capture that never happens is only a lost seed — never
-    # a wrong comparison, since every check reads what the game actually wrote.
+    # Embarks used to crash roughly one seed in five; that race is fixed at the source
+    # (see wait_for_run in start_real_game_run.py), and 34 consecutive embarks with
+    # retries disabled confirmed it. This retry is a backstop for something genuinely
+    # one-off, NOT the flake handling — it announces itself and the summary counts it,
+    # so a returning flake shows up as a number instead of being quietly absorbed.
     for attempt in range(attempts):
         try:
             abandon_any_run(base_url)
@@ -320,10 +326,13 @@ def capture_one(
                 ascension=ascension,
             )
             break
-        except Exception:
+        except (
+            Exception
+        ) as exc:
             if attempt == attempts - 1:
                 raise
-            print("  embark failed, retrying ...", flush=True)
+            print(f"  !! embark failed ({exc}); retrying once", flush=True)
+            _retries.append(seed)
             recover_to_menu(base_url)
 
     save_path = find_save()
@@ -445,6 +454,11 @@ def main() -> None:
             f"{'ALL MATCH' if not bad else 'FAIL: ' + ', '.join(bad)}",
         )
     print(f"\n  acts captured: {acts}")
+    if _retries:
+        print(
+            f"  !! {len(_retries)} embark(s) needed a retry: {', '.join(_retries)}\n"
+            "     Expected zero — see wait_for_run in start_real_game_run.py.",
+        )
     print(f"  {len(results) - len(failed)}/{len(results)} seeds match in every section")
     raise SystemExit(1 if failed else 0)
 
