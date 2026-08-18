@@ -36,18 +36,104 @@
 - Native card powers that modify a played card's destination pile should make that decision in `CombatEngine` after effects resolve but before adding the card to discard.
 - Native card powers with extra dynamic variables can be represented with companion `BuffId` entries when `BuffState` needs to track both the visible counter and hidden per-power state.
 
+## Card Tests
+
+- Every card gets its own file: `src\Sts2Emulator.Tests\Cards\<Class>\<CardName>Tests.cs` holding
+  `public class <CardName>Tests`, where `<Class>` is the card's id class in `CardIds.g.cs`
+  (`IC` -> `Ironclad`, `SI` -> `Silent`, `CL` -> `Colorless`, `AN` -> `Ancient`, `ST` -> `StatusCurse`).
+  Test methods omit the card name, because the class already carries it: `UpgradedHitsTwice`, not
+  `Cleave_UpgradedHitsTwice`.
+- Build the combat with `Fight` (`Tests\Support\Fight.cs`) rather than hand-rolling setup:
+  `Fight.Hand(Card(IC.MoltenFist)).Energy(1).Enemy(hp: 100)`. Anything the builder does not cover is
+  set directly on `Fight.State` — do not add a builder method that one card would call.
+  `MoltenFistTests` is the worked example.
+- Each card needs at least three tests: the unupgraded effect, the upgrade delta, and one interaction
+  with whatever hook it touches (exhaust hooks, the 10-card hand cap, target death, its scaling
+  counter). Cards with a conditional or scaling term also need the case where the condition is unmet;
+  `SpiteTests` is the model.
+- Expected values come from `decompiled\` or a live capture, never from running the emulator, and the
+  decompiled class goes in a comment above the test. Deriving expectations from our own output is a
+  rubber stamp — the same rule `scripts\generate_capture_tests.py` documents.
+- After adding a `case` to `CardEffects.Apply`, run `python scripts/generate_card_coverage.py` and
+  either write the tests or add the card to `CardCoverageTests.Pending`. The build fails otherwise.
+  `Pending` is a burn-down list: shrink it, and expect to justify any growth.
+- `python scripts/generate_card_coverage.py --print-untested` lists what is still unverified.
+
+### Ground truth from the running game
+
+- `decompiled\` is the shipped logic but not the game executing it, so it is weakest
+  exactly where cards are hardest: effect ordering, rounding, splash and overkill, what a
+  power sees when a target dies mid-effect. For those, capture the real thing:
+
+  ```
+  python scripts/capture_card.py --card MoltenFist            # game running, any OS
+  python scripts/generate_card_capture_tests.py               # -> Cards/CardCaptures.g.cs
+  ```
+
+- `capture_card.py` stages the card with `debug_add_card`, guarantees it is affordable
+  with `debug_set_energy`, plays it, and commits the before/after under
+  `tests\fixtures\cards`. The fixture is self-contained — it records the state the card
+  was played into, so the generated test rebuilds that exact situation instead of
+  reproducing a whole run.
+- The capture refuses to write a fixture when the card was unplayable or the state did
+  not move, and generation refuses fixtures it cannot rebuild faithfully (an unmapped
+  power, a relic in play, a card missing from `data\id_map.json`). Both failures are
+  loud on purpose: a capture that silently drops the interesting half is worse than none.
+- A capture rebuilds the _situation_, not the game's RNG state, so it cannot pin an
+  effect that picks a random target (Juggernaut's hit, Volley, Sword Boomerang, a random
+  exhaust). Capture those only to read what the game did — asserting per-enemy results
+  from one sample produces a test that is wrong half the time. Pinning them needs the
+  emulator to model the relevant `Rng` stream (`CombatTargets` for target choice) and the
+  fixture to carry its state.
+- Never hand-edit `Cards\CardCaptures.g.cs`, and never copy emulator output into a
+  fixture. Re-capturing re-reads ground truth; deriving it from our own output is the
+  rubber stamp `scripts\generate_capture_tests.py` warns about.
+
 ## STS2MCP
 
-- This project uses a fork of STS2MCP that is located here: `D:\Repositories\STS2MCP`
+- This project uses a fork of STS2MCP, checked out beside this repo as `..\STS2MCP`
+  (`D:\Repositories\STS2MCP` on the original Windows box,
+  `~/Projects/STSS/STS2MCP` on the macOS one).
 - Sometimes, we might need to update the mod in order to add/fix API functionality. If we make updates to the mod, we need to:
-  - Recompile the mod.
+  - Recompile the mod. It builds anywhere `dotnet` does — the csproj resolves the game
+    assemblies per-platform (`data_sts2_windows_x86_64`, `data_sts2_macos_arm64`,
+    `data_sts2_linuxbsd_x86_64`), so pass the install directory and let it pick:
+    `dotnet build STS2_MCP.csproj -c Release -p:STS2GameDir="<install dir>"`.
+    `build.ps1` is a PowerShell convenience wrapper around exactly that, not a requirement.
   - Close the running Slay the Spire 2 instance, if it is running.
-  - Copy over the DLL files to this directory: `C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\mods`-
+  - Copy the DLL into the game's mods directory, which differs by platform:
+    - Windows: `C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\mods`
+    - macOS: `~/Library/Application Support/Steam/steamapps/common/Slay the Spire 2/SlayTheSpire2.app/Contents/MacOS/mods`
 - If you need to make a trace from an in-game replay, you can use the `start_replay` API that we added to STS2MCP.
 - The root STS2MCP URL (`http://localhost:15526/`) is only a health check. Use `http://localhost:15526/api/v1/singleplayer` for singleplayer state and actions, including replay control commands such as `start_replay`, `get_replay_status`, and `cancel_replay`.
+- Debug actions the differential harnesses rely on: `debug_start_encounter`,
+  `debug_force_play_phase`, `debug_add_card`, `debug_set_energy`, `return_to_main_menu`.
+  `debug_add_card` takes the card's entry id or its C# class name (`MOLTEN_FIST` or
+  `MoltenFist`), so callers do not need the id map.
+
+## Platforms
+
+- **Nothing in this repo is Windows-only.** The C# suite, the native library, the mod,
+  the live differential harness and the game itself all run on macOS and Windows; the
+  scripts talk to the mod over HTTP and take `--base-url`, so the game does not even have
+  to be on the same machine. Do not tell the user a task needs the Windows box —
+  check first.
+- `lint-and-test.sh` carries Windows/WSL fallback paths for `uv` and `dotnet`; those are
+  fallbacks for one contributor's setup, not a statement about what is supported.
+- On the macOS box `dotnet` is installed at `~/.dotnet/dotnet` and is missing from a
+  non-interactive `PATH`, so `which dotnet` finds nothing while the toolchain works fine.
+  Use the absolute path: `~/.dotnet/dotnet test src/Sts2Emulator.Tests/Sts2Emulator.Tests.csproj`.
+- `lint-and-test.sh` publishes the native library with `-r win-x64`; on macOS build it
+  with `scripts/build.sh`, which produces `out/Sts2Emulator.dylib` (the loader in
+  `src/sts2_gym/native.py` picks `.dll`/`.so`/`.dylib` per platform).
 
 ## Slay the Spire 2 Launch Instructions
 
-- **Always launch Slay the Spire 2 through Steam**, not by starting `SlayTheSpire2.exe` directly. Otherwise, the game will fail to initialize with the following error: Steam failed to initialize. Make sure you run the game from Steam.
-- Correct CLI launch command on Windows: `Start-Process "steam://rungameid/2868840"`
-- After launching through Steam, verify STS2MCP with: `Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:15526/"`
+- **Always launch Slay the Spire 2 through Steam**, not by starting the executable
+  directly. Otherwise, the game will fail to initialize with the following error: Steam
+  failed to initialize. Make sure you run the game from Steam.
+- Launch: `Start-Process "steam://rungameid/2868840"` (Windows) or
+  `open "steam://rungameid/2868840"` (macOS).
+- After launching through Steam, verify STS2MCP with
+  `Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:15526/"` (Windows) or
+  `curl -s http://localhost:15526/` (macOS). The root URL is only a health check.
