@@ -41,6 +41,7 @@ internal sealed class Fight
         // here too means a card test exercises the same target-picking path they do,
         // rather than the bare fallback.
         state.TargetRng = new CountingRandom(0);
+        state.CardSelectionRng = new CountingRandom(0);
         return new Fight(state);
     }
 
@@ -52,6 +53,7 @@ internal sealed class Fight
     {
         _rng = new Random(seed);
         State.TargetRng = new CountingRandom(seed);
+        State.CardSelectionRng = new CountingRandom(seed);
         return this;
     }
 

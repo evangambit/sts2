@@ -77,6 +77,11 @@ public static class NativeExports
             State.TargetRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
             );
+            // Picking WHICH card to exhaust or transform comes off
+            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
+            State.CardSelectionRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng);
         }
@@ -104,6 +109,11 @@ public static class NativeExports
             State.TargetRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
             );
+            // Picking WHICH card to exhaust or transform comes off
+            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
+            State.CardSelectionRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds);
         }
@@ -130,6 +140,11 @@ public static class NativeExports
             // above: unset, it silently drew from the combat rng.
             State.TargetRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
+            );
+            // Picking WHICH card to exhaust or transform comes off
+            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
+            State.CardSelectionRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
             );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId);
@@ -169,6 +184,11 @@ public static class NativeExports
             // above: unset, it silently drew from the combat rng.
             State.TargetRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
+            );
+            // Picking WHICH card to exhaust or transform comes off
+            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
+            State.CardSelectionRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
             );
             LastPlayerWon = false;
             int? encounterRngSeed = Sts2Emulator.Core.Run.EncounterRng.SeedFor(
@@ -210,6 +230,11 @@ public static class NativeExports
             State.TargetRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
             );
+            // Picking WHICH card to exhaust or transform comes off
+            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
+            State.CardSelectionRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, completedCombatRooms);
         }
@@ -236,6 +261,11 @@ public static class NativeExports
             // above: unset, it silently drew from the combat rng.
             State.TargetRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
+            );
+            // Picking WHICH card to exhaust or transform comes off
+            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
+            State.CardSelectionRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
             );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, relicIds);

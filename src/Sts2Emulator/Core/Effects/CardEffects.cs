@@ -585,15 +585,13 @@ public static class CardEffects
                             CardSelectionKind.ExhaustFromHand,
                             state.Hand.Count,
                             def.Id,
-                            autoPick: rng.Next(state.Hand.Count)
+                            autoPick: CardSelectionRng(state, rng).Next(state.Hand.Count)
                         );
                     }
                     else
                     {
                         // Unupgraded stays random: Rng.CombatCardSelection.NextItem(hand).
-                        // The emulator has no card-selection stream yet, so this draws
-                        // from the combat rng.
-                        int index = rng.Next(state.Hand.Count);
+                        int index = CardSelectionRng(state, rng).Next(state.Hand.Count);
                         var c = state.Hand[index];
                         state.Hand.RemoveAt(index);
                         ExhaustCard(state, c, rng: rng);
@@ -1724,8 +1722,9 @@ public static class CardEffects
             return;
         }
 
-        int idx = rng.Next(state.Hand.Count);
-        int defId = _ironcladPool[rng.Next(_ironcladPool.Length)];
+        var selectionRng = CardSelectionRng(state, rng);
+        int idx = selectionRng.Next(state.Hand.Count);
+        int defId = _ironcladPool[selectionRng.Next(_ironcladPool.Length)];
         state.Hand[idx] = new CardInstance(defId, false);
     }
 
@@ -1992,6 +1991,16 @@ public static class CardEffects
             }
         }
     }
+
+    /// <summary>
+    /// The stream an effect draws from when it picks WHICH existing card to act on.
+    ///
+    /// The game reads Rng.CombatCardSelection for these (Cinder, Thrash, True Grit,
+    /// EntropyPower); drawing from the combat rng instead desynchronises the stream for
+    /// everything after it, exactly as target choice did before TargetRng.
+    /// </summary>
+    private static Random CardSelectionRng(CombatState state, Random rng) =>
+        state.CardSelectionRng ?? rng;
 
     /// <summary>
     /// Picks the enemy an effect hits at random, off the run's combat_targets stream.
@@ -4001,7 +4010,7 @@ public static class CardEffects
             return;
         }
 
-        int index = rng.Next(state.Hand.Count);
+        int index = CardSelectionRng(state, rng).Next(state.Hand.Count);
         var card = state.Hand[index];
         state.Hand.RemoveAt(index);
         ExhaustCard(state, card, rng: rng);
@@ -4022,7 +4031,7 @@ public static class CardEffects
             return;
         }
 
-        var chosen = candidates[rng.Next(candidates.Count)];
+        var chosen = candidates[CardSelectionRng(state, rng).Next(candidates.Count)];
         state.Hand.RemoveAt(chosen.idx);
         ExhaustCard(state, chosen.card, rng: rng);
     }

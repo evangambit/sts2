@@ -1045,7 +1045,10 @@ public static class CombatEngine
                 return;
             }
 
-            int handIndex = attackIndexes[rng.Next(attackIndexes.Count)];
+            // StampedePower picks with Rng.Shuffle.NextItem(items) — not the
+            // card-selection stream, despite also choosing a card from hand.
+            var stampedeRng = state.ShuffleRng ?? rng;
+            int handIndex = attackIndexes[stampedeRng.Next(attackIndexes.Count)];
             AutoPlayCardFromHand(state, handIndex, rng);
         }
     }

@@ -11,9 +11,8 @@ namespace Sts2Emulator.Tests;
 // Unupgraded exhausts a RANDOM card and upgraded lets the player CHOOSE, so only the
 // upgraded play raises a selection screen.
 //
-// One divergence remains: the game's random pick comes off Rng.CombatCardSelection
-// while the emulator uses the combat rng — the same stream mistake Juggernaut's target
-// had, for card selection rather than targeting.
+// The unupgraded random pick draws from Rng.CombatCardSelection, like Cinder's and
+// Thrash's, rather than from the combat rng.
 public class TrueGritTests
 {
     [Fact]
@@ -72,6 +71,21 @@ public class TrueGritTests
         Assert.Equal([IC.StrikeIronclad], Fight.Ids(fight.State.ExhaustPile));
         Assert.Equal([IC.Bash], Fight.Ids(fight.State.Hand));
         Assert.Null(fight.Pending);
+    }
+
+    [Fact]
+    public void UnupgradedDrawsItsPickFromTheCardSelectionStream()
+    {
+        var fight = Fight
+            .Hand(Card(IC.TrueGrit), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .Energy(1)
+            .Enemy(hp: 40);
+        var selectionRng = new CountingRandom(11);
+        fight.State.CardSelectionRng = selectionRng;
+
+        fight.Play();
+
+        Assert.Equal(1, selectionRng.CallCount);
     }
 
     [Fact]

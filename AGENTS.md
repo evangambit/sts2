@@ -110,6 +110,13 @@
   result from one sample gives a test that is wrong half the time. Capture such cards for
   everything else they prove — amounts, powers, piles — and assert the target choice with
   a property test instead (`JuggernautTests.TargetVariesWithTheTargetStream`).
+- Randomness is per-stream and the streams are not interchangeable. Picking WHICH enemy
+  to hit is `combat_targets` (`CombatState.TargetRng`, via `CardEffects.RandomLivingEnemy`);
+  picking WHICH existing card to exhaust or transform is `combat_card_selection`
+  (`CombatState.CardSelectionRng`, via `CardEffects.CardSelectionRng`); rolling up a NEW
+  card is `combat_card_generation`; and Stampede's pick is `shuffle`, despite also choosing
+  a card from hand. Check the decompiled effect for which `Rng.*` it reads rather than
+  assuming from what the effect looks like.
 - Random target choice belongs to `CardEffects.RandomLivingEnemy`, which reads
   `CombatState.TargetRng`. Adding a new random-target effect means calling that rather
   than indexing with the combat RNG: the game draws every target from
