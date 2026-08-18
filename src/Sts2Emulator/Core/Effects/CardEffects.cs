@@ -191,13 +191,18 @@ public static class CardEffects
                 ApplyEnemyDebuff(state, BuffId.Strength, 1, rng);
                 break;
 
-            case IC.Headbutt: // 1-cost, 9/12 dmg + put top of discard on top of draw
+            case IC.Headbutt: // 1-cost, 9/12 dmg + put a chosen discarded card on top of draw
                 DealDamage(state, Dmg(def, upgraded));
                 if (state.DiscardPile.Count > 0)
                 {
-                    var discardCard = state.DiscardPile[^1];
-                    state.DiscardPile.RemoveAt(state.DiscardPile.Count - 1);
-                    state.DrawPile.Insert(0, discardCard);
+                    // CardSelectCmd.FromCombatPile(Discard) — the player picks.
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.DiscardToDrawPileTop,
+                        state.DiscardPile.Count,
+                        def.Id,
+                        autoPick: state.DiscardPile.Count - 1
+                    );
                 }
                 break;
 
@@ -491,7 +496,7 @@ public static class CardEffects
                     var top = state.DrawPile[0];
                     state.DrawPile.RemoveAt(0);
                     var topDef = GeneratedData.Cards.Get(top.DefId);
-                    Apply(topDef, top.Upgraded, state, rng);
+                    PlayNestedCard(topDef, top.Upgraded, state, rng);
                     ExhaustCard(state, top, rng: rng);
                 }
                 break;
@@ -567,15 +572,32 @@ public static class CardEffects
             case IC.Tremble: // 1-cost, Vulnerable 3/4 to enemy
                 ApplyEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 4 : 3, rng);
                 break;
-            case IC.TrueGrit: // 1-cost, gain 7/9 block; exhaust a random card
+            case IC.TrueGrit: // 1-cost, gain 7/9 block; exhaust a card (chosen when upgraded)
             {
                 GainBlock(state, Blk(def, upgraded), rng);
                 if (state.Hand.Count > 0)
                 {
-                    int index = rng.Next(state.Hand.Count);
-                    var c = state.Hand[index];
-                    state.Hand.RemoveAt(index);
-                    ExhaustCard(state, c, rng: rng);
+                    if (upgraded)
+                    {
+                        // CardSelectCmd.FromHand — upgraded lets the player pick.
+                        OpenCardSelection(
+                            state,
+                            CardSelectionKind.ExhaustFromHand,
+                            state.Hand.Count,
+                            def.Id,
+                            autoPick: rng.Next(state.Hand.Count)
+                        );
+                    }
+                    else
+                    {
+                        // Unupgraded stays random: Rng.CombatCardSelection.NextItem(hand).
+                        // The emulator has no card-selection stream yet, so this draws
+                        // from the combat rng.
+                        int index = rng.Next(state.Hand.Count);
+                        var c = state.Hand[index];
+                        state.Hand.RemoveAt(index);
+                        ExhaustCard(state, c, rng: rng);
+                    }
                 }
                 break;
             }
@@ -1884,6 +1906,89 @@ public static class CardEffects
             foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToList())
             {
                 DealDamageToEnemy(state, enemy, amount);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Plays a card from inside another card's effect (Havoc, Mayhem). There is no way to
+    /// hand a selection screen back to the caller from here, so any choice the nested card
+    /// raises resolves itself. Saves and restores rather than clearing, so a nested play
+    /// inside an auto-play does not hand agency back to the outer one.
+    /// </summary>
+    private static void PlayNestedCard(
+        CardDef def,
+        bool upgraded,
+        CombatState state,
+        Random rng,
+        CardInstance card = default
+    )
+    {
+        bool wasAutoPlaying = state.AutoPlaying;
+        state.AutoPlaying = true;
+        try
+        {
+            Apply(def, upgraded, state, rng, card);
+        }
+        finally
+        {
+            state.AutoPlaying = wasAutoPlaying;
+        }
+    }
+
+    /// <summary>
+    /// Raises a card-selection screen, or resolves it immediately when the caller cannot
+    /// answer one.
+    ///
+    /// An auto-played card (Havoc, Hellraiser, Stampede, Mayhem) resolves inside a queue
+    /// the engine is already draining, with no way to hand control back mid-drain, so it
+    /// falls back to <paramref name="autoPick" /> — the behaviour every one of these
+    /// choices had before selection existed.
+    /// </summary>
+    private static void OpenCardSelection(
+        CombatState state,
+        CardSelectionKind kind,
+        int candidateCount,
+        int sourceCardDefId,
+        int autoPick
+    )
+    {
+        if (state.AutoPlaying)
+        {
+            ResolveSelectionImmediately(state, kind, autoPick);
+            return;
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = kind,
+            Candidates = [.. Enumerable.Range(0, candidateCount)],
+            SourceCardDefId = sourceCardDefId,
+        };
+    }
+
+    private static void ResolveSelectionImmediately(
+        CombatState state,
+        CardSelectionKind kind,
+        int index
+    )
+    {
+        switch (kind)
+        {
+            case CardSelectionKind.DiscardToDrawPileTop when index < state.DiscardPile.Count:
+            {
+                var card = state.DiscardPile[index];
+                state.DiscardPile.RemoveAt(index);
+                state.DrawPile.Insert(0, card);
+                break;
+            }
+
+            case CardSelectionKind.ExhaustFromHand when index < state.Hand.Count:
+            {
+                var card = state.Hand[index];
+                state.Hand.RemoveAt(index);
+                ExhaustCard(state, card);
+                break;
             }
         }
     }
@@ -4089,7 +4194,7 @@ public static class CardEffects
         var card = state.DrawPile[index];
         state.DrawPile.RemoveAt(index);
         var def = GeneratedData.Cards.Get(card.DefId);
-        Apply(def, card.Upgraded, state, rng, card);
+        PlayNestedCard(def, card.Upgraded, state, rng, card);
         if (def.Exhaust)
         {
             ExhaustCard(state, card, rng: rng);

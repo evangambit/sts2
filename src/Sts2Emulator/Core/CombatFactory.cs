@@ -313,6 +313,8 @@ public static class CombatFactory
         state.Energy = StartingEnergy;
         state.MaxEnergy = StartingEnergy;
         state.PlayerBlock = 0;
+        state.PendingSelection = null;
+        state.AutoPlaying = false;
         state.PlayerBuffs = [];
         state.Hand = [];
         state.DiscardPile = [];

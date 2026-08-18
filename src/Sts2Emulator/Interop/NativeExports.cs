@@ -29,12 +29,14 @@ namespace Sts2Emulator.Interop;
 
 public static class NativeExports
 {
-    public const int OBS_SIZE = 164;
+    public const int OBS_SIZE = CombatObservation.ObsSize;
     public const int MAX_HAND = 10;
     public const int MAX_ENEMIES = 6;
     public const int MAX_PLAYER_BUFFS = 10;
     public const int MAX_ENEMY_BUFFS = 5;
-    public const int NATIVE_API_VERSION = 16;
+
+    // v17: observation carries an open card selection (kind, count, candidates).
+    public const int NATIVE_API_VERSION = 17;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 

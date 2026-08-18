@@ -7,7 +7,8 @@ namespace Sts2Emulator.Interop;
 
 public static class RunNativeExports
 {
-    public const int RUN_NATIVE_API_VERSION = 9;
+    // v10: the embedded combat observation carries an open card selection.
+    public const int RUN_NATIVE_API_VERSION = 10;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;

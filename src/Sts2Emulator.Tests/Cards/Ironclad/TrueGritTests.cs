@@ -8,12 +8,12 @@ namespace Sts2Emulator.Tests;
 // 1-cost Skill. MegaCrit.Sts2.Core.Models.Cards/TrueGrit.cs: BlockVar(7m), OnUpgrade
 // raises it by 2, then exhausts one card from hand.
 //
-// Two known divergences, so these tests pin what the emulator models rather than the
-// full rule. The game exhausts a RANDOM card unupgraded and a CHOSEN one upgraded; the
-// emulator has no selection screen and always picks at random. And the game's random
-// pick comes off Rng.CombatCardSelection while the emulator uses the combat rng — the
-// same stream mistake that Juggernaut's target had, for card selection rather than
-// targeting.
+// Unupgraded exhausts a RANDOM card and upgraded lets the player CHOOSE, so only the
+// upgraded play raises a selection screen.
+//
+// One divergence remains: the game's random pick comes off Rng.CombatCardSelection
+// while the emulator uses the combat rng — the same stream mistake Juggernaut's target
+// had, for card selection rather than targeting.
 public class TrueGritTests
 {
     [Fact]
@@ -42,6 +42,50 @@ public class TrueGritTests
         fight.Play();
 
         Assert.Equal(9, fight.State.PlayerBlock);
+    }
+
+    [Fact]
+    public void UpgradedAsksWhichCardToExhaust()
+    {
+        var fight = Fight
+            .Hand(Card(IC.TrueGrit, upgraded: true), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .Energy(1)
+            .Enemy(hp: 40);
+
+        fight.Play();
+
+        Assert.Equal(CardSelectionKind.ExhaustFromHand, fight.Pending?.Kind);
+        Assert.Equal(2, fight.Pending?.Candidates.Count);
+    }
+
+    [Fact]
+    public void UpgradedExhaustsTheCardTheCallerChose()
+    {
+        var fight = Fight
+            .Hand(Card(IC.TrueGrit, upgraded: true), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .Energy(1)
+            .Enemy(hp: 40);
+        fight.Play();
+
+        fight.Choose(1);
+
+        Assert.Equal([IC.StrikeIronclad], Fight.Ids(fight.State.ExhaustPile));
+        Assert.Equal([IC.Bash], Fight.Ids(fight.State.Hand));
+        Assert.Null(fight.Pending);
+    }
+
+    [Fact]
+    public void UnupgradedExhaustsAtRandomWithoutAsking()
+    {
+        var fight = Fight
+            .Hand(Card(IC.TrueGrit), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .Energy(1)
+            .Enemy(hp: 40);
+
+        fight.Play();
+
+        Assert.Null(fight.Pending);
+        Assert.Single(fight.State.ExhaustPile);
     }
 
     [Fact]

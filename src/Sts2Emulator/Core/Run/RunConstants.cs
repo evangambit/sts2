@@ -4,7 +4,10 @@ namespace Sts2Emulator.Core.Run;
 
 public static class RunConstants
 {
-    public const int CombatObsSize = 164;
+    // Mirrors the combat observation rather than restating its size: the two drifted
+    // apart the moment the combat block grew, and the run observation silently
+    // reserved the old width for it.
+    public const int CombatObsSize = CombatObservation.ObsSize;
     public const int RunExtraObsSize = 35;
     public const int RunObsSize = CombatObsSize + RunExtraObsSize;
     public const int RunInfoSize = 11;

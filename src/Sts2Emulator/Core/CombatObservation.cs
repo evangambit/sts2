@@ -2,11 +2,14 @@ namespace Sts2Emulator.Core;
 
 public static class CombatObservation
 {
-    public const int ObsSize = 164;
+    public const int ObsSize = 179;
     public const int MaxHand = 10;
     public const int MaxEnemies = 6;
     public const int MaxPlayerBuffs = 10;
     public const int MaxEnemyBuffs = 5;
+
+    /// <summary>Candidates an open card selection can expose; a hand or pile is capped anyway.</summary>
+    public const int MaxSelectionCandidates = 10;
 
     public static void Write(CombatState s, Span<int> obs)
     {
@@ -92,5 +95,24 @@ public static class CombatObservation
         }
 
         obs[156] = s.PlayerGold;
+
+        // An open card selection replaces the action space, so a policy is blind without
+        // knowing both that one is open and what it is choosing between.
+        if (s.PendingSelection is { } selection)
+        {
+            obs[157] = (int)selection.Kind;
+            obs[158] = selection.Candidates.Count;
+
+            var pile = selection.Kind == CardSelectionKind.ExhaustFromHand ? s.Hand : s.DiscardPile;
+            for (int i = 0; i < MaxSelectionCandidates && i < selection.Candidates.Count; i++)
+            {
+                int index = selection.Candidates[i];
+                if (index < pile.Count)
+                {
+                    obs[159 + i * 2] = pile[index].DefId;
+                    obs[159 + i * 2 + 1] = pile[index].Upgraded ? 1 : 0;
+                }
+            }
+        }
     }
 }

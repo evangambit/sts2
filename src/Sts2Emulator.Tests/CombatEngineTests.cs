@@ -34,6 +34,96 @@ public class CombatEngineTests
         Assert.Equal(1, cards.Count(c => c.DefId == IC.AscendersBane));
     }
 
+    // ── card selection ────────────────────────────────────────────────────────
+    // A pending selection owns the action space until it is answered.
+
+    [Fact]
+    public void CardSelection_OffersOnlyItsCandidatesAsValidActions()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.Hand = [new CardInstance(IC.Headbutt, false)];
+        state.DiscardPile =
+        [
+            new CardInstance(IC.Bash, false),
+            new CardInstance(IC.StrikeIronclad, false),
+        ];
+        state.Energy = 3;
+        state.PotionSlots[0] = 1;
+
+        CombatEngine.Step(state, 0, new Random(0));
+
+        // Not end turn, not the potion, not a card: just the two candidates.
+        Assert.Equal(new[] { 0, 1 }, CombatEngine.ValidActions(state).ToList());
+    }
+
+    [Fact]
+    public void CardSelection_RejectsAnOutOfRangeAnswer()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.Hand = [new CardInstance(IC.Headbutt, false)];
+        state.DiscardPile = [new CardInstance(IC.Bash, false)];
+        state.Energy = 3;
+        CombatEngine.Step(state, 0, new Random(0));
+
+        var result = CombatEngine.Step(state, 5, new Random(0));
+
+        Assert.False(result.Terminal);
+        Assert.NotNull(state.PendingSelection);
+    }
+
+    [Fact]
+    public void CardSelection_BlocksEndingTheTurnUntilItIsAnswered()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.Hand = [new CardInstance(IC.Headbutt, false)];
+        state.DiscardPile = [new CardInstance(IC.Bash, false)];
+        state.Energy = 3;
+        CombatEngine.Step(state, 0, new Random(0));
+        int turnBefore = state.Turn;
+
+        // The end-turn action for an empty hand is 0, which is also candidate 0 — so the
+        // selection answers instead, which is exactly the point.
+        CombatEngine.Step(state, state.Hand.Count, new Random(0));
+
+        Assert.Equal(turnBefore, state.Turn);
+        Assert.Null(state.PendingSelection);
+    }
+
+    [Fact]
+    public void CardSelection_IsNotRaisedByAnAutoPlayedCard()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.Hand = [new CardInstance(IC.Havoc, false)];
+        state.DrawPile = [new CardInstance(IC.Headbutt, false)];
+        state.DiscardPile =
+        [
+            new CardInstance(IC.Bash, false),
+            new CardInstance(IC.StrikeIronclad, false),
+        ];
+        state.Energy = 3;
+
+        CombatEngine.Step(state, 0, new Random(0));
+
+        // Havoc drains its play inline, so the choice resolves itself rather than
+        // stranding the queue: the most recent discard goes on top of the draw pile.
+        Assert.Null(state.PendingSelection);
+        Assert.Equal(IC.StrikeIronclad, state.DrawPile[0].DefId);
+    }
+
+    [Fact]
+    public void CardSelection_IsClearedByAReset()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.Hand = [new CardInstance(IC.Headbutt, false)];
+        state.DiscardPile = [new CardInstance(IC.Bash, false)];
+        state.Energy = 3;
+        CombatEngine.Step(state, 0, new Random(0));
+
+        CombatFactory.Reset(state, seed: 0);
+
+        Assert.Null(state.PendingSelection);
+    }
+
     // ── turn-1 draw-pile reorder ──────────────────────────────────────────────
     // Ports MegaCrit.Sts2.Core.Combat/CombatManager.cs ~line 658.
 

@@ -4,6 +4,9 @@ namespace Sts2Emulator.Core;
 //   0..hand.Count-1  → play card at that hand index (targeting first enemy, or TargetEnemyIndex)
 //   hand.Count       → end turn
 //   hand.Count+1..   → use potion at slot (index - hand.Count - 1)
+//
+// While state.PendingSelection is open the encoding is replaced entirely:
+//   0..Candidates.Count-1 → answer the card-selection screen with that candidate
 
 public static class CombatEngine
 {
@@ -15,6 +18,14 @@ public static class CombatEngine
     )
     {
         state.TargetEnemyIndex = targetEnemyIndex;
+
+        // A pending card selection owns the action space until it is answered: the game
+        // will not let you play, end the turn or quaff while its selection screen is up.
+        if (state.PendingSelection is not null)
+        {
+            return ResolveCardSelection(state, action, rng);
+        }
+
         int endTurnAction = state.Hand.Count;
         StepResult result;
 
@@ -797,6 +808,16 @@ public static class CombatEngine
     {
         var actions = new List<int>();
 
+        if (state.PendingSelection is { } selection)
+        {
+            for (int i = 0; i < selection.Candidates.Count; i++)
+            {
+                actions.Add(i);
+            }
+
+            return [.. actions];
+        }
+
         for (int i = 0; i < state.Hand.Count; i++)
         {
             var def = GeneratedData.Cards.Get(state.Hand[i].DefId);
@@ -824,6 +845,47 @@ public static class CombatEngine
         }
 
         return [.. actions];
+    }
+
+    /// <summary>
+    /// Answers the open card-selection screen and closes it. Moving a card cannot end
+    /// the combat, so this is never terminal.
+    /// </summary>
+    private static StepResult ResolveCardSelection(CombatState state, int action, Random rng)
+    {
+        var selection = state.PendingSelection!;
+        if (action < 0 || action >= selection.Candidates.Count)
+        {
+            return StepResult.Invalid;
+        }
+
+        int index = selection.Candidates[action];
+        state.PendingSelection = null;
+
+        switch (selection.Kind)
+        {
+            case CardSelectionKind.DiscardToDrawPileTop:
+                if (index < state.DiscardPile.Count)
+                {
+                    var card = state.DiscardPile[index];
+                    state.DiscardPile.RemoveAt(index);
+                    state.DrawPile.Insert(0, card);
+                }
+
+                break;
+
+            case CardSelectionKind.ExhaustFromHand:
+                if (index < state.Hand.Count)
+                {
+                    var card = state.Hand[index];
+                    state.Hand.RemoveAt(index);
+                    Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+                }
+
+                break;
+        }
+
+        return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
     }
 
     private static void HandleEnemyDeaths(
@@ -1023,6 +1085,20 @@ public static class CombatEngine
     }
 
     private static void AutoPlayCardFromHand(CombatState state, int handIndex, Random rng)
+    {
+        bool wasAutoPlaying = state.AutoPlaying;
+        state.AutoPlaying = true;
+        try
+        {
+            AutoPlayCardFromHandCore(state, handIndex, rng);
+        }
+        finally
+        {
+            state.AutoPlaying = wasAutoPlaying;
+        }
+    }
+
+    private static void AutoPlayCardFromHandCore(CombatState state, int handIndex, Random rng)
     {
         var card = state.Hand[handIndex];
         var def = GeneratedData.Cards.Get(card.DefId);
@@ -1230,7 +1306,26 @@ public static class CombatEngine
                 && (def.Type == CardType.Attack || def.Type == CardType.Skill);
     }
 
+    /// <summary>
+    /// Plays a queued card. The engine is mid-drain here and cannot hand a selection
+    /// screen back to the caller, so anything that would raise one resolves itself —
+    /// see CardEffects.OpenCardSelection.
+    /// </summary>
     private static void AutoPlay(CombatState state, CardInstance card, Random rng)
+    {
+        bool wasAutoPlaying = state.AutoPlaying;
+        state.AutoPlaying = true;
+        try
+        {
+            AutoPlayCore(state, card, rng);
+        }
+        finally
+        {
+            state.AutoPlaying = wasAutoPlaying;
+        }
+    }
+
+    private static void AutoPlayCore(CombatState state, CardInstance card, Random rng)
     {
         var def = GeneratedData.Cards.Get(card.DefId);
 

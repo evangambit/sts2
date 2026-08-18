@@ -128,6 +128,15 @@ internal sealed class Fight
     public StepResult Play(int index = 0, int target = -1) =>
         CombatEngine.Step(State, index, _rng, target);
 
+    /// <summary>
+    /// Answers an open card-selection screen with the candidate at
+    /// <paramref name="candidate" />. A test makes this choice explicitly — that is the
+    /// point of modelling it — so there is no "pick something sensible" helper.
+    /// </summary>
+    public StepResult Choose(int candidate) => CombatEngine.Step(State, candidate, _rng);
+
+    public PendingCardSelection? Pending => State.PendingSelection;
+
     public StepResult EndTurn() => CombatEngine.Step(State, State.Hand.Count, _rng);
 
     public StepResult Potion(int slot) =>

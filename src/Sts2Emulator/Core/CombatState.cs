@@ -72,6 +72,16 @@ public sealed class CombatState
     // CountingRandom.CallCount tracks how many HP values were drawn (= enemy count).
     public CountingRandom? NicheHpRng;
 
+    // A card-selection screen the play is waiting on. Non-null blocks every other
+    // action until it is answered — see PendingCardSelection.
+    public PendingCardSelection? PendingSelection;
+
+    // True while the engine is playing a card the player did not choose to play
+    // (Havoc, Hellraiser, Stampede, Mayhem). The game still prompts for choices there,
+    // but the emulator has no way to hand an auto-play back to the caller mid-queue, so
+    // those resolve with the old automatic pick.
+    public bool AutoPlaying;
+
     // Turn tracking
     public int Turn;
     public bool PlayerTurn = true;

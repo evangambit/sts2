@@ -36,6 +36,30 @@
 - Native card powers that modify a played card's destination pile should make that decision in `CombatEngine` after effects resolve but before adding the card to discard.
 - Native card powers with extra dynamic variables can be represented with companion `BuffId` entries when `BuffState` needs to track both the visible counter and hidden per-power state.
 
+## Card Selection
+
+- Cards whose effect asks the player to pick a card (Headbutt's discard retrieval, upgraded
+  True Grit's exhaust) pause mid-play by setting `CombatState.PendingSelection`. While it
+  is open, `CombatEngine.ValidActions` offers **only** the candidate indices and
+  `CombatEngine.Step` interprets an action as the answer, so an agent resolves it as an
+  ordinary step and cannot play, end the turn or use a potion first.
+- The observation carries the open selection (kind, candidate count and up to
+  `MaxSelectionCandidates` card ids), because a policy that cannot see what it is choosing
+  between cannot learn the choice. That is what took the native API to v17 and the run API
+  to v10.
+- Do not restate `CombatObservation.ObsSize` anywhere. `RunConstants.CombatObsSize` used to
+  carry its own copy of the number, and the run observation silently reserved the old width
+  for the combat block the moment it grew.
+- A card played from inside another card (Havoc) or from the auto-play queue (Hellraiser,
+  Stampede, Mayhem) cannot hand a selection back to the caller mid-drain, so those resolve
+  automatically — `CardEffects.PlayNestedCard` and the `AutoPlay` wrappers set
+  `CombatState.AutoPlaying` for exactly that, saving and restoring it rather than clearing.
+  Adding another "play a card from within an effect" path means routing it through
+  `PlayNestedCard`, or the engine will strand a selection inside a queue nobody can answer.
+- Tests make the choice explicitly with `Fight.Choose(candidate)`; there is deliberately no
+  "pick something sensible" helper, since the emulator picking on the player's behalf is
+  the behaviour this replaced.
+
 ## Card Tests
 
 - Every card gets its own file: `src\Sts2Emulator.Tests\Cards\<Class>\<CardName>Tests.cs` holding
