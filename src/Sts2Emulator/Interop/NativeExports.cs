@@ -34,7 +34,7 @@ public static class NativeExports
     public const int MAX_ENEMIES = 6;
     public const int MAX_PLAYER_BUFFS = 10;
     public const int MAX_ENEMY_BUFFS = 5;
-    public const int NATIVE_API_VERSION = 14;
+    public const int NATIVE_API_VERSION = 15;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -56,9 +56,19 @@ public static class NativeExports
         {
             Rng = new CountingRandom(Seed);
             State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
+            );
             State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
+            );
+            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
+            // unset silently fell back to the combat rng, so every enemy whose opening
+            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
+            // from the wrong generator — invisible for the many enemies whose opening
+            // move is deterministic, wrong for the ones that roll.
+            State.AiRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng);
         }
@@ -67,9 +77,19 @@ public static class NativeExports
         {
             Rng = new CountingRandom(Seed);
             State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
+            );
             State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
+            );
+            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
+            // unset silently fell back to the combat rng, so every enemy whose opening
+            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
+            // from the wrong generator — invisible for the many enemies whose opening
+            // move is deterministic, wrong for the ones that roll.
+            State.AiRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds);
         }
@@ -78,20 +98,84 @@ public static class NativeExports
         {
             Rng = new CountingRandom(Seed);
             State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
+            );
             State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
+            );
+            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
+            // unset silently fell back to the combat rng, so every enemy whose opening
+            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
+            // from the wrong generator — invisible for the many enemies whose opening
+            // move is deterministic, wrong for the ones that roll.
+            State.AiRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId);
+        }
+
+        // Same as above plus the run's TotalFloor, which is the missing term in the
+        // per-encounter RNG seed (run seed + floor + hash of the encounter id). Slime
+        // rosters and Corpse Slug starting moves are rolled from that stream, so
+        // without a floor the direct combat env cannot reproduce them — see
+        // Core/Run/EncounterRng.cs.
+        public void ResetAtFloor(
+            ReadOnlySpan<int> deckIds,
+            int encounterId,
+            int completedCombatRooms,
+            int totalFloor
+        )
+        {
+            Rng = new CountingRandom(Seed);
+            State.NicheHpRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
+            );
+            State.ShuffleRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
+            );
+            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
+            // unset silently fell back to the combat rng, so every enemy whose opening
+            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
+            // from the wrong generator — invisible for the many enemies whose opening
+            // move is deterministic, wrong for the ones that roll.
+            State.AiRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
+            );
+            LastPlayerWon = false;
+            int? encounterRngSeed = Sts2Emulator.Core.Run.EncounterRng.SeedFor(
+                Seed,
+                totalFloor,
+                encounterId,
+                completedCombatRooms is >= 0 and < 3
+            );
+            CombatFactory.Reset(
+                State,
+                Rng,
+                deckIds,
+                encounterId,
+                completedCombatRooms,
+                encounterRngSeed
+            );
         }
 
         public void Reset(ReadOnlySpan<int> deckIds, int encounterId, int completedCombatRooms)
         {
             Rng = new CountingRandom(Seed);
             State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
+            );
             State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
+            );
+            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
+            // unset silently fell back to the combat rng, so every enemy whose opening
+            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
+            // from the wrong generator — invisible for the many enemies whose opening
+            // move is deterministic, wrong for the ones that roll.
+            State.AiRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, completedCombatRooms);
         }
@@ -100,9 +184,19 @@ public static class NativeExports
         {
             Rng = new CountingRandom(Seed);
             State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
+            );
             State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed);
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
+            );
+            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
+            // unset silently fell back to the combat rng, so every enemy whose opening
+            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
+            // from the wrong generator — invisible for the many enemies whose opening
+            // move is deterministic, wrong for the ones that roll.
+            State.AiRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, relicIds);
         }
@@ -155,10 +249,31 @@ public static class NativeExports
     // enemies on early floors); -1 keeps the normal variant.
     [UnmanagedCallersOnly(EntryPoint = "Sts2_ResetEncounterWeak")]
     public static unsafe void Sts2_ResetEncounterWeak(
-        int handle, int encounterId, int completedCombatRooms, int* obsBuf)
+        int handle,
+        int encounterId,
+        int completedCombatRooms,
+        int* obsBuf
+    )
     {
         var combat = _pool[handle]!;
         combat.Reset(StarterDeckIds, encounterId, completedCombatRooms);
+        WriteObs(combat.State, obsBuf);
+    }
+
+    // Like Sts2_ResetEncounterWeak but also passing the run's TotalFloor, which is what
+    // seeds the per-encounter RNG (EncounterModel.Rng). Required for any encounter that
+    // rolls its own composition — Slimes rosters, Corpse Slug starting moves.
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ResetEncounterAtFloor")]
+    public static unsafe void Sts2_ResetEncounterAtFloor(
+        int handle,
+        int encounterId,
+        int completedCombatRooms,
+        int totalFloor,
+        int* obsBuf
+    )
+    {
+        var combat = _pool[handle]!;
+        combat.ResetAtFloor(StarterDeckIds, encounterId, completedCombatRooms, totalFloor);
         WriteObs(combat.State, obsBuf);
     }
 

@@ -11,7 +11,7 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 14
+_REQUIRED_NATIVE_API_VERSION = 15
 _REQUIRED_RUN_NATIVE_API_VERSION = 9
 
 
@@ -144,6 +144,15 @@ _lib.Sts2_ResetEncounter.argtypes = [
 
 _lib.Sts2_ResetEncounterWeak.restype = None
 _lib.Sts2_ResetEncounterWeak.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
+
+_lib.Sts2_ResetEncounterAtFloor.restype = None
+_lib.Sts2_ResetEncounterAtFloor.argtypes = [
+    ctypes.c_int,
     ctypes.c_int,
     ctypes.c_int,
     ctypes.c_int,
@@ -333,14 +342,35 @@ def reset_encounter(
     encounter_id: int,
     obs_buf: ctypes.Array,
     completed_combat_rooms: int = -1,
+    total_floor: int | None = None,
 ) -> None:
-    # completed_combat_rooms in [0,3) selects weak encounter variants (fewer/weaker
-    # enemies on early floors); -1 keeps the normal variant (unchanged default).
-    if completed_combat_rooms == -1:
+    """Reset into a chosen encounter.
+
+    completed_combat_rooms in [0,3) selects weak encounter variants (fewer/weaker
+    enemies on early floors); -1 keeps the normal variant (unchanged default).
+
+    total_floor is the run's TotalFloor, and it is not optional decoration: it is the
+    missing term in the per-encounter RNG seed (run seed + floor + hash of the encounter
+    id) that Slimes rosters and Corpse Slug starting moves are rolled from. Leave it
+    None and those encounters fall back to the combat rng, which does NOT match the
+    live game.
+    """
+    if total_floor is not None:
+        _lib.Sts2_ResetEncounterAtFloor(
+            handle,
+            encounter_id,
+            completed_combat_rooms,
+            total_floor,
+            obs_buf,
+        )
+    elif completed_combat_rooms == -1:
         _lib.Sts2_ResetEncounter(handle, encounter_id, obs_buf)
     else:
         _lib.Sts2_ResetEncounterWeak(
-            handle, encounter_id, completed_combat_rooms, obs_buf
+            handle,
+            encounter_id,
+            completed_combat_rooms,
+            obs_buf,
         )
 
 
@@ -433,7 +463,9 @@ def get_pile(handle: int, pile: int | str = PILE_DRAW) -> list[tuple[int, bool]]
     """
     pile_id = _PILE_NAMES[pile] if isinstance(pile, str) else pile
     if pile_id not in _PILE_NAMES.values():
-        raise ValueError(f"unknown pile {pile!r}; expected one of {sorted(_PILE_NAMES)}")
+        raise ValueError(
+            f"unknown pile {pile!r}; expected one of {sorted(_PILE_NAMES)}",
+        )
 
     capacity = 64
     while True:

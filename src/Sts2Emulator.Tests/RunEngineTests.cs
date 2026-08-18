@@ -18,8 +18,6 @@ public class RunEngineTests
         Assert.Equal(1703902611, DeterministicHash.GetDeterministicHashCode("monster_ai"));
     }
 
-
-
     [Fact]
     public void GameRng_HelperOutputsAreLocked()
     {
@@ -113,6 +111,63 @@ public class RunEngineTests
     }
 
     [Fact]
+    public void EncounterRng_SeedMirrorsTheGamesFormula()
+    {
+        // EncounterModel builds its own stream as
+        //   new Rng((uint)((int)runState.Rng.Seed + runState.TotalFloor
+        //                  + GetDeterministicHashCode(Id.Entry)))
+        // and rolls Slimes rosters / Corpse Slug starting moves from it. This pins the
+        // three inputs, because getting any of them wrong is silent: the roster is
+        // still plausible, just not the one the live game generated.
+        uint runSeed = new RunRngSet("UVUYCBYWB6").Seed;
+
+        int? slimes = EncounterRng.SeedFor(
+            (int)runSeed,
+            totalFloor: 1,
+            RunConstants.SlimesWeakEncounterId,
+            weakVariant: true
+        );
+        Assert.Equal(
+            unchecked(
+                (int)(
+                    runSeed + 1u + (uint)DeterministicHash.GetDeterministicHashCode("SLIMES_WEAK")
+                )
+            ),
+            slimes
+        );
+
+        // The floor term is real: a different floor is a different roster.
+        Assert.NotEqual(
+            slimes,
+            EncounterRng.SeedFor(
+                (int)runSeed,
+                totalFloor: 2,
+                RunConstants.SlimesWeakEncounterId,
+                weakVariant: true
+            )
+        );
+
+        // Slug variants share an emulator encounter id but not an entry id.
+        Assert.NotEqual(
+            EncounterRng.SeedFor(
+                (int)runSeed,
+                1,
+                RunConstants.CorpseSlugsEncounterId,
+                weakVariant: true
+            ),
+            EncounterRng.SeedFor(
+                (int)runSeed,
+                1,
+                RunConstants.CorpseSlugsEncounterId,
+                weakVariant: false
+            )
+        );
+
+        // Encounters that do not roll their composition get no stream at all.
+        Assert.Null(EncounterRng.SeedFor((int)runSeed, 1, encounterId: 0, weakVariant: true));
+    }
+
+    [Fact]
     public void RunRngSet_FreshSpecialStreamOutputsAreLocked()
     {
         var rng = new RunRngSet("0");
@@ -193,7 +248,6 @@ public class RunEngineTests
             s.MapNodes.Values.Count(n => n.NodeType == RunConstants.NodeShop)
         );
     }
-
 
     [Fact]
     public void RunReset_StartsAtAncientPhaseWithStarterState()

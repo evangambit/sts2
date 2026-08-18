@@ -54,13 +54,21 @@ def normalize(name: str) -> str:
 
 
 def emulator_pile(
-    seed: int, encounter: str, completed_combat_rooms: int, pile: str
+    seed: int,
+    encounter: str,
+    completed_combat_rooms: int,
+    pile: str,
+    total_floor: int | None = 1,
 ) -> list[tuple[str, bool]]:
     names = card_name_by_id()
     env = Sts2CombatEnv(
         seed=seed,
         encounter=encounter,
         completed_combat_rooms=completed_combat_rooms,
+        # Captures are taken by jumping a fresh run into its first combat, which is
+        # TotalFloor 1. Only matters for encounters that roll their own composition,
+        # but it is free to be right everywhere.
+        total_floor=total_floor,
     )
     try:
         env.reset()
@@ -91,7 +99,11 @@ def live_pile(state: dict[str, Any], pile: str) -> list[tuple[str, bool]]:
     # The mod nests combat piles under result["player"]; accept a bare player dict
     # or a battle-wrapped payload too, so saved captures of either shape re-diff.
     cards = None
-    for scope in (state.get("player"), (state.get("battle") or {}).get("player"), state):
+    for scope in (
+        state.get("player"),
+        (state.get("battle") or {}).get("player"),
+        state,
+    ):
         if isinstance(scope, dict) and scope.get(key) is not None:
             cards = scope[key]
             break
@@ -105,7 +117,9 @@ def live_pile(state: dict[str, Any], pile: str) -> list[tuple[str, bool]]:
 
 
 def explain_embark_crash(
-    start_real_game_run: ModuleType, args: Any, exc: Exception
+    start_real_game_run: ModuleType,
+    args: Any,
+    exc: Exception,
 ) -> None:
     """Turn the known embark crash into the recovery recipe.
 
@@ -165,7 +179,10 @@ def preflight_no_run_in_progress(start_real_game_run: ModuleType, args: Any) -> 
 
 
 def check_run_config(
-    state: dict[str, Any], seed: int, encounter: str, completed: int
+    state: dict[str, Any],
+    seed: int,
+    encounter: str,
+    completed: int,
 ) -> None:
     """Warn when the two sides aren't describing the same fight.
 
@@ -179,7 +196,9 @@ def check_run_config(
         return
 
     env = Sts2CombatEnv(
-        seed=seed, encounter=encounter, completed_combat_rooms=completed
+        seed=seed,
+        encounter=encounter,
+        completed_combat_rooms=completed,
     )
     try:
         obs, _ = env.reset()
@@ -198,7 +217,9 @@ def check_run_config(
 
 
 def render(
-    emu: list[tuple[str, bool]], live: list[tuple[str, bool]], label: str
+    emu: list[tuple[str, bool]],
+    live: list[tuple[str, bool]],
+    label: str,
 ) -> bool:
     """Print a side-by-side comparison. Returns True when the piles match."""
     matched = True
@@ -230,7 +251,9 @@ def render(
         emu_bag = sorted(normalize(n) for n, _ in emu)
         live_bag = sorted(normalize(n) for n, _ in live)
         if emu_bag == live_bag:
-            print("\nSame cards, different ORDER -> shuffle or turn-1 reorder divergence.")
+            print(
+                "\nSame cards, different ORDER -> shuffle or turn-1 reorder divergence.",
+            )
         else:
             print("\nDifferent CARDS -> deck construction diverges, not just ordering.")
 
@@ -309,7 +332,7 @@ def main() -> None:
                 raise SystemExit(f"No live encounter mapped for {args.encounter!r}")
             print(
                 f"Starting seeded run {args.seed!r} -> {live_encounter} "
-                f"(ascension {args.ascension}) ..."
+                f"(ascension {args.ascension}) ...",
             )
             preflight_no_run_in_progress(start_real_game_run, args)
             try:
@@ -334,8 +357,10 @@ def main() -> None:
         print(f"wrote live state -> {args.save_live_json}")
 
     seed = game_seed(args.seed)
-    print(f"seed {args.seed!r} -> gen seed {seed}, encounter {args.encounter!r} "
-          f"(completed_combat_rooms={completed})")
+    print(
+        f"seed {args.seed!r} -> gen seed {seed}, encounter {args.encounter!r} "
+        f"(completed_combat_rooms={completed})",
+    )
     check_run_config(state, seed, args.encounter, completed)
 
     all_matched = True

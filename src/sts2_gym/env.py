@@ -114,7 +114,7 @@ ENCOUNTER_IDS.update(
         "nibbit": ENCOUNTER_IDS["nibbits-weak"],
         "nibbits": ENCOUNTER_IDS["nibbits-normal"],
         "slimes": ENCOUNTER_IDS["slimes-weak"],
-    }
+    },
 )
 
 
@@ -127,6 +127,7 @@ class Sts2CombatEnv(gym.Env):
         max_episode_steps: int = MAX_EPISODE_STEPS,
         encounter: int | str | None = None,
         completed_combat_rooms: int = -1,
+        total_floor: int | None = None,
     ):
         super().__init__()
         self._seed = seed
@@ -135,6 +136,10 @@ class Sts2CombatEnv(gym.Env):
         # completed_combat_rooms in [0,3) selects weak encounter variants (early-floor
         # combats, e.g. CorpseSlugsWeak); -1 keeps the normal variant.
         self._completed_combat_rooms = completed_combat_rooms
+        # The run's TotalFloor. Seeds the per-encounter RNG that rolls Slimes rosters
+        # and Corpse Slug starting moves; None leaves those on the combat rng, which
+        # does not reproduce the live game. See Core/Run/EncounterRng.cs.
+        self._total_floor = total_floor
         self._elapsed_steps = 0
         self._handle: int | None = None
         self._obs_buf = (ctypes.c_int * native.OBS_SIZE)()
@@ -168,8 +173,17 @@ class Sts2CombatEnv(gym.Env):
         if encounter_id is None:
             native.reset(self._handle, self._obs_buf)
         else:
+            total_floor = (
+                options.get("total_floor")
+                if options is not None and "total_floor" in options
+                else self._total_floor
+            )
             native.reset_encounter(
-                self._handle, encounter_id, self._obs_buf, completed
+                self._handle,
+                encounter_id,
+                self._obs_buf,
+                completed,
+                total_floor,
             )
         return self._obs(), self._info()
 

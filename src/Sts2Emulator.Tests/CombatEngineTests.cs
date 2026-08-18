@@ -47,10 +47,7 @@ public class CombatEngineTests
         int draw = CombatFactory.ApplyTurnOneDrawPileReorder(pile, 5);
 
         Assert.Equal(5, draw);
-        Assert.Equal(
-            [IC.StrikeIronclad, IC.DefendIronclad, IC.Bash],
-            pile.Select(c => c.DefId)
-        );
+        Assert.Equal([IC.StrikeIronclad, IC.DefendIronclad, IC.Bash], pile.Select(c => c.DefId));
     }
 
     [Fact]
@@ -137,9 +134,7 @@ public class CombatEngineTests
     public void TurnOneReorder_CapsDrawCountAtMaxHandSize()
     {
         // 12 innate cards would otherwise ask for a 12-card opening hand.
-        var pile = Enumerable
-            .Repeat(new CardInstance(CL.MindBlast, false), 12)
-            .ToList();
+        var pile = Enumerable.Repeat(new CardInstance(CL.MindBlast, false), 12).ToList();
 
         int draw = CombatFactory.ApplyTurnOneDrawPileReorder(pile, 5);
 

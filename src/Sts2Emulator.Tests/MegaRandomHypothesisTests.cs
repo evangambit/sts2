@@ -23,7 +23,10 @@ public class MegaRandomHypothesisTests
     /// <summary>Port of the game's MegaRandom (Xoshiro256**).</summary>
     private sealed class MegaRandom
     {
-        private ulong _s0, _s1, _s2, _s3;
+        private ulong _s0,
+            _s1,
+            _s2,
+            _s3;
 
         public MegaRandom(ulong seed)
         {
@@ -43,7 +46,10 @@ public class MegaRandomHypothesisTests
 
         private ulong NextULongInner()
         {
-            ulong s = _s0, s2 = _s1, s3 = _s2, s4 = _s3;
+            ulong s = _s0,
+                s2 = _s1,
+                s3 = _s2,
+                s4 = _s3;
             ulong result = BitOperations.RotateLeft(s2 * 5, 7) * 9;
             ulong num = s2 << 17;
             s3 ^= s;
@@ -65,14 +71,22 @@ public class MegaRandomHypothesisTests
     }
 
     // Pre-shuffle deck order, confirmed against the live save's "deck" array.
-    private static int[] StarterDeck() =>
-        [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
+    private static int[] StarterDeck() => [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
     // Live capture: hand (5) then draw pile (6), top-first.
     private static readonly int[] LiveOrder =
     [
-        131, 131, 472, 30, 472,
-        472, 131, 472, 131, 10001, 472,
+        131,
+        131,
+        472,
+        30,
+        472,
+        472,
+        131,
+        472,
+        131,
+        10001,
+        472,
     ];
 
     /// <summary>The game's ListExtensions.UnstableShuffle.</summary>

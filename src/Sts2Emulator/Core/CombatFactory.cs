@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Sts2Emulator.Core.Effects;
+using Sts2Emulator.Core.Run;
 
 namespace Sts2Emulator.Core;
 
@@ -183,7 +184,8 @@ public static class CombatFactory
         Random rng,
         ReadOnlySpan<int> deckIds,
         int? encounterId,
-        int completedCombatRoomsBeforeCurrent
+        int completedCombatRoomsBeforeCurrent,
+        int? encounterRngSeed = null
     )
     {
         Reset(
@@ -196,6 +198,7 @@ public static class CombatFactory
             StartingPlayerMaxHp,
             [],
             playerGold: 0,
+            encounterRngSeed: encounterRngSeed,
             completedCombatRoomsBeforeCurrent: completedCombatRoomsBeforeCurrent
         );
     }
@@ -332,7 +335,9 @@ public static class CombatFactory
         // wires GameRng(seed,"shuffle") there); only override when a shuffleRng arg
         // is explicitly passed (the run engine).
         state.ShuffleRng = shuffleRng ?? state.ShuffleRng;
-        state.AiRng = aiRng;
+        // Preserve an AiRng the caller set (the direct combat env wires
+        // GameRng(seed,"monster_ai") there); only override when one is passed in.
+        state.AiRng = aiRng ?? state.AiRng;
 
         state.DrawPile = deck.ToArray().ToList();
 
@@ -496,7 +501,8 @@ public static class CombatFactory
 
             ActOneEncounter.CorpseSlugs => CreateCorpseSlugsEncounter(
                 rng,
-                completedCombatRoomsBeforeCurrent is >= 0 and < 3
+                completedCombatRoomsBeforeCurrent is >= 0 and < 3,
+                encounterRngSeed
             ),
 
             ActOneEncounter.SludgeSpinner =>
@@ -553,7 +559,7 @@ public static class CombatFactory
                 CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Buff, 0), moveIndex: 2),
             ],
 
-            ActOneEncounter.SlimesNormal => CreateSlimesNormalEncounter(rng),
+            ActOneEncounter.SlimesNormal => CreateSlimesNormalEncounter(rng, encounterRngSeed),
 
             ActOneEncounter.FlyconidNormal =>
             [
@@ -893,12 +899,40 @@ public static class CombatFactory
 
     private static List<EnemyState> CreateSlimeEncounter(Random rng, int? encounterRngSeed = null)
     {
-        // Type selection uses the encounter-specific RNG (seeded from run_seed + floor + hash("slimes_weak")),
-        // matching SlimesWeak.GenerateMonsters() which uses base.Rng separate from the niche RNG.
-        var typeRng = encounterRngSeed.HasValue ? new Random(encounterRngSeed.Value) : rng;
-        int firstSmall = typeRng.Next(2) == 0 ? KE.LeafSlimeS : KE.TwigSlimeS;
-        int middle = typeRng.Next(2) == 0 ? KE.LeafSlimeM : KE.TwigSlimeM;
-        int secondSmall = firstSmall == KE.LeafSlimeS ? KE.TwigSlimeS : KE.LeafSlimeS;
+        // SlimesWeak.GenerateMonsters, call for call. It draws THREE times from the
+        // encounter's own Rng, not two:
+        //
+        //     m1 = Rng.NextItem(smalls);  smalls.Remove(m1);
+        //     m2 = Rng.NextItem(smalls);            // one item left — still a draw
+        //     add m1; add Rng.NextItem(mediums); add m2;
+        //
+        // The second draw is forced (one candidate) but it advances the stream, so
+        // inferring the second small "for free" — what this used to do — read the
+        // MEDIUM slime off the wrong draw and produced the wrong roster.
+        //
+        // Without a seed there is no encounter stream to speak of; fall back to the
+        // combat rng so the direct env still produces something playable, and note that
+        // such a roster is NOT comparable to the live game.
+        int[] smalls = [KE.LeafSlimeS, KE.TwigSlimeS];
+        int[] mediums = [KE.LeafSlimeM, KE.TwigSlimeM];
+        int firstSmall;
+        int secondSmall;
+        int middle;
+        if (encounterRngSeed.HasValue)
+        {
+            var typeRng = EncounterRng.Stream(encounterRngSeed.Value);
+            var remaining = smalls.ToList();
+            firstSmall = remaining[typeRng.NextInt(0, remaining.Count)];
+            remaining.Remove(firstSmall);
+            secondSmall = remaining[typeRng.NextInt(0, remaining.Count)];
+            middle = mediums[typeRng.NextInt(0, mediums.Length)];
+        }
+        else
+        {
+            firstSmall = rng.Next(2) == 0 ? KE.LeafSlimeS : KE.TwigSlimeS;
+            middle = rng.Next(2) == 0 ? KE.LeafSlimeM : KE.TwigSlimeM;
+            secondSmall = firstSmall == KE.LeafSlimeS ? KE.TwigSlimeS : KE.LeafSlimeS;
+        }
 
         // LeafSlimeS starting intent depends on slot: firstSmall=Attack(0), secondSmall=Debuff(1).
         // TwigSlimeS always starts with Attack(5). These are slot-deterministic, not niche-RNG-based.
@@ -1130,9 +1164,17 @@ public static class CombatFactory
         return enemy;
     }
 
-    private static List<EnemyState> CreateSlimesNormalEncounter(Random rng)
+    private static List<EnemyState> CreateSlimesNormalEncounter(
+        Random rng,
+        int? encounterRngSeed = null
+    )
     {
-        bool leafSmallFirst = rng.Next(2) == 0;
+        // SlimesNormal.GenerateMonsters: ONE NextBool on the encounter's own stream
+        // decides which small slime leads; the two mediums are fixed. Rolling this on
+        // the combat rng instead — what this used to do — gets it right half the time.
+        bool leafSmallFirst = encounterRngSeed.HasValue
+            ? EncounterRng.Stream(encounterRngSeed.Value).NextBool()
+            : rng.Next(2) == 0;
         int firstSmall = leafSmallFirst ? KE.LeafSlimeS : KE.TwigSlimeS;
         int secondSmall = leafSmallFirst ? KE.TwigSlimeS : KE.LeafSlimeS;
 
@@ -1241,14 +1283,32 @@ public static class CombatFactory
             _ => new Intent(IntentType.Attack, 12),
         };
 
-    private static List<EnemyState> CreateCorpseSlugsEncounter(Random rng, bool weak = false)
+    private static List<EnemyState> CreateCorpseSlugsEncounter(
+        Random rng,
+        bool weak = false,
+        int? encounterRngSeed = null
+    )
     {
-        if (weak)
+        // CorpseSlug.EnsureCorpseSlugsStartWithDifferentMoves: the encounter rolls ONE
+        // number and then deals consecutive starting moves to the slugs.
+        //
+        //     int num = rng.NextInt(3);
+        //     foreach (slug) { slug.StarterMoveIdx = num % 3; num++; }
+        //
+        // The hardcoded (2, 0) this used to return is that sequence for a roll of 2 —
+        // right one time in three, which is exactly how often the sweep saw it pass.
+        int count = weak ? 2 : 3;
+        int start = encounterRngSeed.HasValue
+            ? EncounterRng.Stream(encounterRngSeed.Value).NextInt(3)
+            : 2;
+
+        var slugs = new List<EnemyState>(count);
+        for (int i = 0; i < count; i++)
         {
-            return [CreateCorpseSlug(rng, 2), CreateCorpseSlug(rng, 0)];
+            slugs.Add(CreateCorpseSlug(rng, (start + i) % 3));
         }
 
-        return [CreateCorpseSlug(rng, 2), CreateCorpseSlug(rng, 0), CreateCorpseSlug(rng, 1)];
+        return slugs;
     }
 
     private static EnemyState CreateCorpseSlug(Random rng, int moveIndex, int? fixedHp = null) =>

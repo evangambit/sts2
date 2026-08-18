@@ -204,11 +204,22 @@ def emulator_completed_combat_rooms(encounter: str) -> int:
     return 0 if live.endswith("Weak") else -1
 
 
-def emulator_initial_summary(seed: int, encounter: str) -> dict[str, Any]:
+# A run jumped straight into its first combat is at TotalFloor 1: the ancient (Neow) is
+# the one map point in its history. Measured, not assumed — floors 0 and 2 give the wrong
+# slime roster for seeds where floor 1 reproduces the live one exactly.
+NEOW_JUMP_TOTAL_FLOOR = 1
+
+
+def emulator_initial_summary(
+    seed: int,
+    encounter: str,
+    total_floor: int | None = NEOW_JUMP_TOTAL_FLOOR,
+) -> dict[str, Any]:
     env = Sts2CombatEnv(
         seed=seed,
         encounter=encounter,
         completed_combat_rooms=emulator_completed_combat_rooms(encounter),
+        total_floor=total_floor,
     )
     try:
         obs, _ = env.reset()

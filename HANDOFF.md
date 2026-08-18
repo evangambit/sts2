@@ -46,7 +46,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 213 pass)
+# C# unit tests (currently 214 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -103,17 +103,13 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 213 C# + 72 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 214 C# + 72 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
-- ✅ **Opening hand is bit-exact vs the live game** — the current headline result.
-  Live `"ABCDEF"` custom run at A8 → `debug_start_encounter CorpseSlugsWeak`; the
-  emulator reproduces the **entire 11-card shuffled deck in order** (hand + draw pile),
-  verified by `scripts/compare_draw_pile.py` against the committed fixture
-  `tests/fixtures/combat/ABCDEF-corpse-slugs.json`. Odds of coincidence 1 in 13,860.
-- ✅ **Enemy generation matches** (`[28,29]`) — and now *causally*, since the RNG is
-  correct. Note this was previously reported as proof while the RNG was still wrong,
-  where it had ~17% odds of being luck; it is corroborating evidence now, but it is
-  still a single 2-enemy sample and deserves more.
+- ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
+  both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
+  HP, opening intents, and player HP. This supersedes the old headline (one "ABCDEF"
+  CorpseSlugsWeak capture) and the "single 2-enemy sample" caveat on enemy generation.
+  See "Combat" below for the four defects that got it there.
 - ✅ **RNG is now the game's actual generator.** `Core/Rng/MegaRandom.cs` is a faithful
   port of the game's `MegaRandom` — **Xoshiro256\*\* seeded via Splitmix64** — and
   `GameRng` mirrors the game's `Rng` wrapper method-for-method (its `Counter`, and
@@ -442,47 +438,57 @@ The real constraint is **stream freshness** — the direct combat env assumes ev
 RNG stream is at CallCount 0, which is true of a run's *first* combat whichever variant
 it is. So: never answer Neow, never enter a room, one fresh run per capture.
 
-**First run: 3/16. Now 13/16.** What it found:
+**First run: 3/16. Now 32/32** across both pools and both acts. What it found:
 
-- ✅ **The deck is exact — 16/16 captures, both acts.** The shuffled deck in order was
-  previously one committed capture; it is now the best-attested thing in combat.
-- ✅ **Enemy HP is exact** wherever the roster is right (see below).
-- ⚠️ **Every enemy damage value was one ascension too high.** The game bakes ascension
-  into monster data via `AscensionHelper.GetValueIfAscension(level, high, low)`, and the
-  enum's ordinal IS the level: `ToughEnemies = 8`, `DeadlyEnemies = 9`. **At A8 the Tough
-  branch is live and the Deadly branch is not** — but every intent in the emulator was
+- ✅ **The deck is exact** — the whole shuffled deck in order, every capture. Previously
+  one committed sample; now the best-attested thing in combat.
+- ✅ **Enemy HP, opening intents and rosters are exact** on every encounter swept so far
+  (8 weak + 8 normal, both acts).
+- ⚠️ **Every enemy damage value had been one ascension too high.** The game bakes
+  ascension into monster data via `AscensionHelper.GetValueIfAscension(level, high, low)`,
+  and the enum's ordinal IS the level: `ToughEnemies = 8`, `DeadlyEnemies = 9`. **At A8
+  the Tough branch is live and the Deadly branch is not** — but every intent was
   transcribed as a bare literal taking the Deadly (A9) value. HP matched (Tough) while
-  attacks were 1-2 points high (Deadly), on 13 of 16 captures.
-  `Core/Ascension.cs` now models this: `Ascension.Value(Ascension.DeadlyEnemies, 9, 8)`
-  reads like the property it came from, so it can be diffed against the decompiled
-  source by eye, and `ModelledLevel` is the single place that says we are an A8 emulator.
+  attacks were 1-2 points high (Deadly), on 13 of the first 16 captures.
+  `Core/Ascension.cs` models the rule; sites read
+  `Ascension.Value(Ascension.DeadlyEnemies, 9, 8)`, which diffs by eye against the
+  property it came from, and `ModelledLevel` is the one place that says A8.
   **Fixed for the swept enemies only** — CorpseSlug, Nibbit, Seapunk, Toadpole,
-  SludgeSpinner, ShrinkerBeetle, FuzzyWurmCrawler, the four slimes, and (from the normal
-  pool) SewerClam, FossilStalker, Mawler and VineShambler. There are ~134
-  intent literals in total and 96 monster classes carry a DeadlyEnemies value, so **most
-  of the rest are presumed wrong**; sweeping an encounter is what proves one.
+  SludgeSpinner, ShrinkerBeetle, FuzzyWurmCrawler, the four slimes, SewerClam,
+  FossilStalker, Mawler, VineShambler. ~134 intent literals and 96 monster classes carry
+  a DeadlyEnemies value, so **the unswept ones are presumed wrong**; sweeping an
+  encounter is what proves one.
   ⚠️ **Intents live in `EnemyAI.SelectIntent`, not `CombatFactory`.** The starting intent
-  passed to `CreateEnemy` is overwritten by `ChooseIntents` immediately after the
-  encounter is built. Fixing the literal in CombatFactory alone changes nothing — that
-  cost an hour, so check the AI table first.
+  passed to `CreateEnemy` is overwritten by `ChooseIntents` right after the encounter is
+  built, so fixing the CombatFactory literal alone changes nothing. That cost an hour.
+- ⚠️ **The per-encounter RNG was missing, and so was the AI stream.** Encounter models
+  roll their own composition from `EncounterModel.Rng`, seeded
+  `(uint)((int)runState.Rng.Seed + runState.TotalFloor + GetDeterministicHashCode(Id.Entry))`.
+  Three things ride on it, all now modelled in `Core/Run/EncounterRng.cs`:
+  - `SlimesWeak.GenerateMonsters` draws **three** times (small, the forced second small,
+    then the medium). The emulator drew twice and inferred the second small "for free",
+    which read the medium off the wrong draw and produced the wrong roster.
+  - `SlimesNormal.GenerateMonsters` is a single `NextBool` for which small slime leads.
+  - `CorpseSlug.EnsureCorpseSlugsStartWithDifferentMoves` rolls `NextInt(3)` once and
+    deals consecutive starting moves. The old hardcoded `(2, 0)` is that sequence for a
+    roll of 2 — right one time in three.
+  And separately: `state.AiRng` was never wired in the direct combat env, so intent rolls
+  fell back to the combat RNG. Invisible for the many enemies whose opening move is
+  deterministic; wrong for every enemy that opens on a random branch (LeafSlimeS,
+  SludgeSpinner, Exoskeleton). It is now `GameRng(seed, "monster_ai")`, and
+  `CombatFactory` no longer stomps a caller-provided one.
 
-**What is left (3/16), and it is one root cause:** the **per-encounter RNG**. Encounter
-models roll from `base.Rng`, seeded
-`(uint)((int)runState.Rng.Seed + runState.TotalFloor + GetDeterministicHashCode(Id.Entry))`
-(`EncounterModel`, ~line 269). Two things ride on it:
-- `SlimesWeak.GenerateMonsters` rolls **which** slimes spawn (`Rng.NextItem` over the
-  small pool twice + the medium pool), so a wrong roll means the wrong roster entirely —
-  that is the `enemies` failure, not an HP bug.
-- `CorpseSlug.EnsureCorpseSlugsStartWithDifferentMoves` rolls `NextInt(3)` and deals
-  consecutive starting moves to the slugs, so the emulator's hardcoded `(2, 0)` is right
-  only by luck.
-`RunEngine.EncounterRngSeed` already models this **for SlimesWeak in the run-engine
-path** — but it keys on `CompletedCombatRoomsBeforeCurrent` where the game uses
-`TotalFloor`, and the **direct combat env never passes it at all**, which is what the
-sweep compares against. Wiring an encounter-RNG seed through `Sts2CombatEnv` (native API
-bump) and confirming the floor term against a capture is the next piece of work.
+**`TotalFloor` at a Neow jump is 1** — the ancient is the single map point in the run's
+history. Measured, not assumed: floors 0 and 2 give the wrong slime roster on seeds where
+1 reproduces the live one exactly. `Sts2CombatEnv(total_floor=)` passes it (native API
+**v15**, `Sts2_ResetEncounterAtFloor`); leave it None and encounters that roll their
+composition silently fall back to the combat rng.
 
-**Wanted next after that:** an Underdocks **combat** capture committed as a fixture.
+**Wanted next:** commit combat fixtures (the sweep has `--save-fixtures`, and nothing is
+pinned yet beyond the original ABCDEF pile capture), then work outward from the opening
+state — turn 2+ intents, damage actually dealt, and the remaining ~120 unswept intent
+literals. Every encounter in `LIVE_ENCOUNTER_BY_EMULATOR` is reachable in ~40s, so this
+is a sweep-and-fix loop, not a research problem.
 
 ### Introspection & verification tooling (built)
 - `scripts/compare_draw_pile.py` — emulator vs live ordered piles. `--live-json`
@@ -504,7 +510,7 @@ bump) and confirming the floor term against a capture is the next piece of work.
 - Emulator: `Sts2_GetPile` -> `env.get_pile(...)`; run-generation lists 11-14 on
   `Sts2Run_GetStateList` (normal/elite/event sequences, `[act, boss, map_nodes]`, the
   map as (col,row,type) triples, and — new — its **edges** as (col,row,childCol,childRow)
-  quadruples). Native API **v13**, run API **v9**.
+  quadruples). Native API **v15**, run API **v9**.
 - Live: our STS2MCP fork emits `draw_pile_ordered` / `discard_pile_ordered` /
   `hand_ordered` under `result["player"]`. The stock `draw_pile` is **sorted for
   display**, which is why ordered comparison was impossible before.
