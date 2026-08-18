@@ -430,9 +430,17 @@ public static class EnemyAI
             case KE.Mawler:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 10),
+                    // ClawDamage x 2
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 5, 4) * 2
+                    ),
                     1 => new Intent(IntentType.Debuff, 3),
-                    _ => new Intent(IntentType.Attack, 16),
+                    // RipAndTearDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 16, 14)
+                    ),
                 };
 
             case KE.GremlinMerc:
@@ -918,9 +926,21 @@ public static class EnemyAI
             case KE.VineShambler:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 14),
-                    1 => new Intent(IntentType.Debuff, 9),
-                    _ => new Intent(IntentType.Attack, 18),
+                    // SwipeDamage x 2
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 7, 6) * 2
+                    ),
+                    // GraspingVinesDamage; GRASPING_VINES is attack + card debuff.
+                    1 => new Intent(
+                        IntentType.Debuff,
+                        Ascension.Value(Ascension.DeadlyEnemies, 9, 8)
+                    ),
+                    // ChompDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 18, 16)
+                    ),
                 };
 
             case KE.SlitheringStrangler:
@@ -1202,14 +1222,35 @@ public static class EnemyAI
             case KE.FossilStalker:
                 return enemy.MoveIndex switch
                 {
-                    1 => new Intent(IntentType.Attack, 14),
-                    2 => new Intent(IntentType.Attack, 8),
-                    3 => new Intent(IntentType.Attack, 14),
+                    // LatchDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 14, 12)
+                    ),
+                    // LashDamage * LashRepeat (repeat is 2, no ascension term)
+                    2 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 4, 3) * 2
+                    ),
+                    3 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 14, 12)
+                    ),
                     _ => rng.Next(3) switch
                     {
-                        0 => new Intent(IntentType.Debuff, 11),
-                        1 => new Intent(IntentType.Attack, 14),
-                        _ => new Intent(IntentType.Attack, 8),
+                        // TackleDamage; TACKLE is attack + debuff.
+                        0 => new Intent(
+                            IntentType.Debuff,
+                            Ascension.Value(Ascension.DeadlyEnemies, 11, 9)
+                        ),
+                        1 => new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(Ascension.DeadlyEnemies, 14, 12)
+                        ),
+                        _ => new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(Ascension.DeadlyEnemies, 4, 3) * 2
+                        ),
                     },
                 };
 
@@ -1224,7 +1265,11 @@ public static class EnemyAI
             case KE.SewerClam:
                 return enemy.MoveIndex % 2 == 0
                     ? new Intent(IntentType.Buff, 0)
-                    : new Intent(IntentType.Attack, 11);
+                    // JetDamage
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 11, 10)
+                    );
 
             case KE.Guardbot:
                 return new Intent(IntentType.Defend, 15);

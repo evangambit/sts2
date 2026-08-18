@@ -424,15 +424,23 @@ the rest still needs a `current_run.save` capture per act.
 Same headless loop as the run-generation sweep, pointed at the other half of the
 emulator. Per (seed, encounter) it embarks a fresh A8 run, jumps straight in with
 `debug_start_encounter`, and compares four things: the **deck** (hand + draw pile in
-order), **enemies** (count/HP), **intent** (each enemy's opening move) and **player**
-HP. Weak variants only — the direct combat env assumes fresh per-stream RNG, which
-holds only for a run's first combat, so the sweep never answers Neow and embarks a new
-run per encounter.
+order), **enemies** (count/HP), **intent** (each enemy's opening move) and **player** HP.
 
 ```bash
-python scripts/combat_sweep.py --count 2               # 2 seeds x 8 weak encounters
+python scripts/combat_sweep.py --count 2                    # both pools, both acts
+python scripts/combat_sweep.py --pool normal --count 2
 python scripts/combat_sweep.py --act underdocks --count 4
 ```
+
+**Normal-pool encounters do NOT need three easy fights behind them.** The
+`completed_combat_rooms in [0,3)` rule only decides which variant the *map* hands you;
+`debug_start_encounter` looks the encounter up by class name and enters a `CombatRoom`
+for it directly, so `NibbitsNormal` works on floor 1 of a fresh run. The emulator matches
+with `completed_combat_rooms = -1`. Verified: `nibbits`, `punch-construct`, `sewer-clam`,
+`fossil-stalker`, `mawler`, `vine-shambler` and `haunted-ship` all captured that way.
+The real constraint is **stream freshness** — the direct combat env assumes every named
+RNG stream is at CallCount 0, which is true of a run's *first* combat whichever variant
+it is. So: never answer Neow, never enter a room, one fresh run per capture.
 
 **First run: 3/16. Now 13/16.** What it found:
 
@@ -449,7 +457,8 @@ python scripts/combat_sweep.py --act underdocks --count 4
   reads like the property it came from, so it can be diffed against the decompiled
   source by eye, and `ModelledLevel` is the single place that says we are an A8 emulator.
   **Fixed for the swept enemies only** — CorpseSlug, Nibbit, Seapunk, Toadpole,
-  SludgeSpinner, ShrinkerBeetle, FuzzyWurmCrawler and the four slimes. There are ~134
+  SludgeSpinner, ShrinkerBeetle, FuzzyWurmCrawler, the four slimes, and (from the normal
+  pool) SewerClam, FossilStalker, Mawler and VineShambler. There are ~134
   intent literals in total and 96 monster classes carry a DeadlyEnemies value, so **most
   of the rest are presumed wrong**; sweeping an encounter is what proves one.
   ⚠️ **Intents live in `EnemyAI.SelectIntent`, not `CombatFactory`.** The starting intent

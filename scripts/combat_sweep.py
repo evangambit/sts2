@@ -21,7 +21,9 @@ Per (seed, encounter) it embarks a fresh A8 run, jumps straight into the encount
 **Jump immediately and touch nothing on the way.** The direct combat env assumes fresh
 per-stream RNG (CallCount 0), which only holds for a run's first combat — so the sweep
 never answers Neow, never enters a room, and embarks a new run per encounter rather than
-reusing one.
+reusing one. That is the only real constraint: **normal-pool encounters do NOT need
+three easy fights behind them**, because the debug jump names the encounter model
+directly, so `--pool normal` works on a fresh run.
 
 Exit code 0 when every section of every capture matches.
 """
@@ -61,13 +63,28 @@ validate = _load("validate_real_game_trace")
 start_real_game_run = _load("start_real_game_run")
 trace_real_game = _load("trace_real_game")
 
-# Weak variants only: a run's FIRST combat is always a weak encounter
-# (completed_combat_rooms in [0,3)), and first combat is the only one where the direct
-# combat env's fresh-stream assumption holds. Normal variants need a capture taken
-# deeper into a run, which is a different harness.
-ENCOUNTERS_BY_ACT = {
+# BOTH pools are reachable here, which is worth understanding before adding encounters.
+#
+# `completed_combat_rooms in [0,3)` picks the weak variant, but that rule only governs
+# what the MAP hands you: `debug_start_encounter` looks the encounter up by class name
+# (ModelDb.AllEncounters) and enters a CombatRoom for it directly, so naming
+# "NibbitsNormal" gets the normal pool on floor 1 with no combats behind it. The
+# emulator matches by passing completed_combat_rooms = -1 for those, which
+# validate_real_game_trace.emulator_completed_combat_rooms derives from the name.
+#
+# What DOES have to hold is stream freshness: the direct combat env assumes every named
+# RNG stream is at CallCount 0, which is true of a run's FIRST combat whichever variant
+# it is. So: embark, jump straight in, never answer Neow, one run per capture.
+WEAK_BY_ACT = {
     "overgrowth": ["nibbit", "slimes", "shrinker-beetle", "fuzzy-wurm-crawler"],
     "underdocks": ["corpse-slugs", "seapunk", "sludge-spinner", "toadpoles"],
+}
+NORMAL_BY_ACT = {
+    "overgrowth": ["nibbits", "large-slimes", "mawler", "vine-shambler"],
+    "underdocks": ["sewer-clam", "punch-construct", "fossil-stalker", "haunted-ship"],
+}
+ENCOUNTERS_BY_ACT = {
+    act: [*WEAK_BY_ACT[act], *NORMAL_BY_ACT[act]] for act in WEAK_BY_ACT
 }
 DEFAULT_ENCOUNTERS = [
     *ENCOUNTERS_BY_ACT["overgrowth"],
@@ -196,6 +213,12 @@ def main() -> None:
         help=f"default: {' '.join(DEFAULT_ENCOUNTERS)}",
     )
     parser.add_argument("--act", choices=sorted(ENCOUNTERS_BY_ACT), default=None)
+    parser.add_argument(
+        "--pool",
+        choices=["weak", "normal", "both"],
+        default="both",
+        help="which encounter pool to sweep (default: both)",
+    )
     parser.add_argument("--ascension", type=int, default=8)
     parser.add_argument("--random-seed", type=int, default=0)
     parser.add_argument(
@@ -205,8 +228,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    by_act = {"weak": WEAK_BY_ACT, "normal": NORMAL_BY_ACT, "both": ENCOUNTERS_BY_ACT}[
+        args.pool
+    ]
     encounters = args.encounters or (
-        ENCOUNTERS_BY_ACT[args.act] if args.act else DEFAULT_ENCOUNTERS
+        by_act[args.act] if args.act else [e for acts in by_act.values() for e in acts]
     )
     seeds = args.seeds or capture_sweep.pick_seeds(
         args.count,
