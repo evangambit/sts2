@@ -45,7 +45,7 @@ def release_string() -> str | None:
 
 
 def detect(save: dict[str, Any] | None = None) -> dict[str, Any]:
-    """The stamp to embed in a fixture, or compare one against."""
+    """Build the stamp to embed in a fixture, or compare one against."""
     stamp: dict[str, Any] = {
         "steam_buildid": steam_buildid(),
         "release": release_string(),
@@ -68,7 +68,7 @@ def check(fixture_stamp: dict[str, Any] | None) -> bool:
     if not fixture_stamp:
         print(
             "\n!! This fixture carries no game version stamp, so there is no way to "
-            "tell which patch it describes. Re-capture it."
+            "tell which patch it describes. Re-capture it.",
         )
         return False
 

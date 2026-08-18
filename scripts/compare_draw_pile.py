@@ -159,6 +159,10 @@ def preflight_no_run_in_progress(start_real_game_run: ModuleType, args: Any) -> 
     NMainMenu.AbandonRun). The half-finished teardown then makes the next embark
     NRE in NRunMusicController, which is the "internal error!" popup. Once the
     backup is missing this reproduces every time, so failing fast beats retrying.
+
+    Raises:
+        SystemExit: if a run is already in progress and --abandon was not passed.
+
     """
     if args.abandon:
         return
@@ -377,9 +381,9 @@ def main() -> None:
     # Per-pile multisets differ whenever a card merely lands in the other pile, so
     # judge "wrong order vs wrong cards" across hand+draw together — that union is
     # the shuffled deck.
-    if not all_matched and {"hand", "draw"} <= set(
+    if not all_matched and {"hand", "draw"} <= {
         p.strip() for p in args.piles.split(",")
-    ):
+    }:
         emu_bag = sorted(normalize(n) for n, _ in combined["emu"])
         live_bag = sorted(normalize(n) for n, _ in combined["live"])
         print("\n=== whole deck (hand + draw) ===")

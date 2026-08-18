@@ -22,14 +22,23 @@ import importlib.util
 import json
 import re
 from pathlib import Path
+from types import ModuleType
 
 REPO = Path(__file__).resolve().parent.parent
 FIXTURES = REPO / "tests" / "fixtures" / "run_generation"
 OUT = REPO / "src" / "Sts2Emulator.Tests" / "RunGenerationCaptures.g.cs"
 
 
-def _load(name: str):
+def _load(name: str) -> ModuleType:
+    """Import a sibling script by path.
+
+    Raises:
+        RuntimeError: if the script is missing or cannot be loaded.
+
+    """
     spec = importlib.util.spec_from_file_location(name, REPO / "scripts" / f"{name}.py")
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load {name}.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -52,6 +61,10 @@ def resolve(live_name: str, names: dict[int, str]) -> int:
     entries. Only then fall back to the variant-stripped form, which is how names
     like SHRINKER_BEETLE_WEAK reach the emulator's `ShrinkerBeetle`. Ambiguity is an
     error rather than a guess.
+
+    Raises:
+        SystemExit: if the live name matches no emulator id, or more than one.
+
     """
     exact = [i for i, n in names.items() if squash(n) == squash(live_name)]
     if len(exact) == 1:
@@ -63,7 +76,7 @@ def resolve(live_name: str, names: dict[int, str]) -> int:
         return loose[0]
     raise SystemExit(
         f"cannot resolve {live_name!r} to a single emulator encounter "
-        f"(exact={[names[i] for i in exact]}, loose={[names[i] for i in loose]})"
+        f"(exact={[names[i] for i in exact]}, loose={[names[i] for i in loose]})",
     )
 
 
@@ -99,7 +112,7 @@ def main() -> None:
         per_row = [rows.get(r, 0) for r in range(max(rows) + 1)]
         stamp = save.get("game") or {}
 
-        blocks.append(f'''    /// <summary>
+        blocks.append(f"""    /// <summary>
     /// Live capture: seed "{seed}" at ascension {save.get("ascension")},
     /// {act["id"]}, game {stamp.get("release", "?")} (build {stamp.get("steam_buildid", "?")}).
     /// Source: tests/fixtures/run_generation/{path.name}
@@ -123,7 +136,7 @@ def main() -> None:
                 .Select(row => s.MapNodes.Values.Count(n => n.Row == row))
                 .ToArray()
         );
-    }}''')
+    }}""")
 
     OUT.write_text(
         "// AUTO-GENERATED — do not edit. Re-run scripts/generate_capture_tests.py.\n"
@@ -135,9 +148,7 @@ def main() -> None:
         "using Sts2Emulator.Core.Run;\n"
         "using Xunit;\n\n"
         "namespace Sts2Emulator.Tests;\n\n"
-        "public class RunGenerationCaptureTests\n{\n"
-        + "\n\n".join(blocks)
-        + "\n}\n",
+        "public class RunGenerationCaptureTests\n{\n" + "\n\n".join(blocks) + "\n}\n",
         encoding="utf-8",
     )
     print(f"wrote {OUT.relative_to(REPO)} ({len(blocks)} captures)")

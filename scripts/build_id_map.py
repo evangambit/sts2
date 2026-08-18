@@ -19,6 +19,7 @@ Run once to seed the map (already done); re-run only to re-freeze deliberately.
 from __future__ import annotations
 
 import json
+import operator
 import re
 from pathlib import Path
 
@@ -29,10 +30,16 @@ ID_MAP = REPO / "data" / "id_map.json"
 # file -> (regex capturing id and name, key in the map)
 SOURCES = {
     "Cards.g.cs": (re.compile(r'new CardDef\(Id: (\d+), Name: "([^"]+)"'), "cards"),
-    "Enemies.g.cs": (re.compile(r'new EnemyDef\(Id: (\d+), Name: "([^"]+)"'), "enemies"),
+    "Enemies.g.cs": (
+        re.compile(r'new EnemyDef\(Id: (\d+), Name: "([^"]+)"'),
+        "enemies",
+    ),
     "Powers.g.cs": (re.compile(r'new PowerDef\(Id: (\d+), Name: "([^"]+)"'), "powers"),
     "Relics.g.cs": (re.compile(r'new RelicDef\(Id: (\d+), Name: "([^"]+)"'), "relics"),
-    "Potions.g.cs": (re.compile(r'new PotionDef\(Id: (\d+), Name: "([^"]+)"'), "potions"),
+    "Potions.g.cs": (
+        re.compile(r'new PotionDef\(Id: (\d+), Name: "([^"]+)"'),
+        "potions",
+    ),
 }
 
 
@@ -51,7 +58,7 @@ def main() -> None:
                     f"{mapping[name]} and {raw_id}",
                 )
             mapping[name] = int(raw_id)
-        id_map[key] = dict(sorted(mapping.items(), key=lambda kv: (kv[1], kv[0])))
+        id_map[key] = dict(sorted(mapping.items(), key=operator.itemgetter(1, 0)))
         print(f"  {key}: {len(mapping)} ids (max {max(mapping.values())})")
 
     ID_MAP.parent.mkdir(parents=True, exist_ok=True)

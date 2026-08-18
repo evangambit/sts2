@@ -468,6 +468,10 @@ def get_pile(handle: int, pile: int | str = PILE_DRAW) -> list[tuple[int, bool]]
     Returns (card_def_id, upgraded) per card. The observation vector only carries
     pile counts, so this is the way to compare exact card sequences against the
     live game.
+
+    Raises:
+        ValueError: if the pile name is not one of the known combat piles.
+
     """
     pile_id = _PILE_NAMES[pile] if isinstance(pile, str) else pile
     if pile_id not in _PILE_NAMES.values():

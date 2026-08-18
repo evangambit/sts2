@@ -38,6 +38,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+from typing import Any
+
 import game_version
 
 REPO = Path(__file__).resolve().parent.parent
@@ -57,7 +59,7 @@ MECHANISM_TESTS = [
 ]
 
 
-def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
+def run(cmd: list[str], **kw: Any) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, **kw)
 
 
@@ -70,7 +72,9 @@ def recorded_version() -> dict | None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--apply", action="store_true", help="run decompile + extract, not just report"
+        "--apply",
+        action="store_true",
+        help="run decompile + extract, not just report",
     )
     parser.add_argument("--game-dir", default=None)
     args = parser.parse_args()
@@ -82,7 +86,7 @@ def main() -> None:
     print(f"installed : {game_version.describe(installed)}")
     print(f"recorded  : {game_version.describe(recorded) if recorded else '(none)'}")
     changed = recorded is None or recorded.get("steam_buildid") != installed.get(
-        "steam_buildid"
+        "steam_buildid",
     )
     print(f"changed   : {'YES' if changed else 'no'}")
     print("=" * 68)
@@ -93,7 +97,9 @@ def main() -> None:
 
     if args.apply:
         print("\n--- decompile ---")
-        cmd = ["bash", "scripts/decompile.sh"] + ([args.game_dir] if args.game_dir else [])
+        cmd = ["bash", "scripts/decompile.sh"] + (
+            [args.game_dir] if args.game_dir else []
+        )
         res = run(cmd)
         print(res.stdout[-1500:] or res.stderr[-1500:])
         if res.returncode != 0:
@@ -105,7 +111,7 @@ def main() -> None:
         if res.returncode != 0:
             raise SystemExit(
                 "extraction failed — most likely a card-id constant now names a card "
-                "that no longer exists. Fix data/card_id_classes.json before continuing."
+                "that no longer exists. Fix data/card_id_classes.json before continuing.",
             )
 
         print("\n--- data drift ---")
@@ -124,12 +130,14 @@ def main() -> None:
                 line.split("Failed ")[1].split(" ")[0].split("(")[0]
                 for line in cs.stdout.splitlines()
                 if "  Failed " in line
-            }
+            },
         )
         mechanism = [f for f in failed if any(m in f for m in MECHANISM_TESTS)]
         content = [f for f in failed if f not in mechanism]
         if mechanism:
-            print("\n  !! MECHANISM tests failed — an algorithm changed, not just data.")
+            print(
+                "\n  !! MECHANISM tests failed — an algorithm changed, not just data.",
+            )
             print("     Do NOT re-baseline these. Investigate:")
             for f in mechanism:
                 print(f"       {f}")
@@ -145,29 +153,31 @@ def main() -> None:
         stamp = json.loads(path.read_text()).get("game") or {}
         if stamp.get("steam_buildid") != installed.get("steam_buildid"):
             stale.append(path)
-            print(f"  STALE  {path.relative_to(REPO)}  ({game_version.describe(stamp)})")
+            print(
+                f"  STALE  {path.relative_to(REPO)}  ({game_version.describe(stamp)})",
+            )
         else:
             print(f"  ok     {path.relative_to(REPO)}")
 
     if stale:
         print(
             "\n  Ground truth must come from the game — it cannot be regenerated here.\n"
-            "  Start a run at A8 on the seed named by each fixture, then:\n"
+            "  Start a run at A8 on the seed named by each fixture, then:\n",
         )
         print(
             "    # then, to propagate the new ground truth into the C# assertions:\n"
-            "    python scripts/generate_capture_tests.py\n"
+            "    python scripts/generate_capture_tests.py\n",
         )
         for path in stale:
             if path.parent.name == "run_generation":
                 print(
-                    f"    python scripts/verify_run_generation.py --save-fixture {path.relative_to(REPO)}"
+                    f"    python scripts/verify_run_generation.py --save-fixture {path.relative_to(REPO)}",
                 )
             else:
                 seed = path.stem.split("-")[0]
                 print(
                     f"    python scripts/compare_draw_pile.py --seed {seed} "
-                    f"--jump-encounter --save-live-json {path.relative_to(REPO)}"
+                    f"--jump-encounter --save-live-json {path.relative_to(REPO)}",
                 )
 
     # Record only when everything is verified at this build — the recorded
@@ -179,7 +189,7 @@ def main() -> None:
     elif changed:
         print(
             "\nNot recording the new build yet — do that once tests pass and fixtures "
-            "are re-captured, so the recorded version always means 'fully verified'."
+            "are re-captured, so the recorded version always means 'fully verified'.",
         )
 
 

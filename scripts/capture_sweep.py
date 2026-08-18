@@ -326,9 +326,7 @@ def capture_one(
                 ascension=ascension,
             )
             break
-        except (
-            Exception
-        ) as exc:
+        except Exception as exc:
             if attempt == attempts - 1:
                 raise
             print(f"  !! embark failed ({exc}); retrying once", flush=True)

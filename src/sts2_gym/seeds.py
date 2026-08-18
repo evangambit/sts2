@@ -44,5 +44,5 @@ def canonicalize(string_seed: str) -> str:
 
 
 def game_seed(string_seed: str) -> int:
-    """The uint gen seed for a run's string seed, e.g. "ABCDEF" -> 3334281563."""
+    """Convert a run's string seed to its uint gen seed, e.g. "ABCDEF" -> 3334281563."""
     return deterministic_hash(canonicalize(string_seed)) & _MASK32

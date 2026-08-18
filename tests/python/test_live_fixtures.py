@@ -19,7 +19,8 @@ import json
 import sys
 import unittest
 from pathlib import Path
-from typing import TYPE_CHECKING
+from types import ModuleType
+from typing import TYPE_CHECKING, Any
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
@@ -33,11 +34,19 @@ FIXTURES = ROOT / "tests" / "fixtures"
 _TestCaseIfChecking = unittest.TestCase if TYPE_CHECKING else object
 
 
-def _load_script(name: str):
+def _load_script(name: str) -> ModuleType:
+    """Import a repo script by path.
+
+    Raises:
+        RuntimeError: if the script is missing or cannot be loaded.
+
+    """
     spec = importlib.util.spec_from_file_location(
         f"_fixture_{name}",
         ROOT / "scripts" / f"{name}.py",
     )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load {name}.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -53,7 +62,7 @@ combat_sweep = _load_script("combat_sweep")
 from sts2_gym import Sts2CombatEnv  # noqa: E402 - after the sys.path setup above
 
 
-def _quiet(fn, *args, **kwargs):
+def _quiet(fn, *args: Any, **kwargs: Any):
     """Run a comparison helper without its side-by-side report on stdout."""
     with contextlib.redirect_stdout(io.StringIO()):
         return fn(*args, **kwargs)
@@ -123,7 +132,7 @@ class RunGenerationChecks(_TestCaseIfChecking):
     FIXTURE = ""
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.path = FIXTURES / "run_generation" / cls.FIXTURE
         cls.save = verify_run_generation.load_save(cls.path)
         cls.act = cls.save["acts"][cls.save["current_act_index"]]
@@ -319,7 +328,7 @@ class CombatCaptureChecks(_TestCaseIfChecking):
     FIXTURE = ""
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.path = FIXTURES / "combat" / cls.FIXTURE
         cls.state = json.loads(cls.path.read_text())
         capture = cls.state.get("capture") or {}
@@ -420,7 +429,7 @@ class FightChecks(_TestCaseIfChecking):
     FIXTURE = ""
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.path = FIXTURES / "combat" / cls.FIXTURE
         cls.state = json.loads(cls.path.read_text())
         capture = cls.state["capture"]
@@ -444,7 +453,7 @@ class FightChecks(_TestCaseIfChecking):
                 break
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         cls.env.close()
 
     def test_covers_every_declared_move(self):

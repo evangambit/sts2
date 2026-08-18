@@ -2,6 +2,7 @@
 """Parse decompiled sts2.dll C# source and emit Generated/*.g.cs files."""
 
 import json
+import operator
 import re
 import sys
 from pathlib import Path
@@ -47,13 +48,13 @@ POWER_STACK = re.compile(r"PowerStackType\.(\w+)")
 # Innate attribution — the CanonicalKeywords property body vs the OnUpgrade body.
 _CANONICAL_KEYWORDS_BODY = re.compile(
     r"CanonicalKeywords\s*=>(.*?)(?=\n\tprotected|\n\tpublic|\n\tprivate|\Z)",
-    re.S,
+    re.DOTALL,
 )
-_ON_UPGRADE_BODY = re.compile(r"OnUpgrade\(\)\s*\{(.*?)\n\t\}", re.S)
+_ON_UPGRADE_BODY = re.compile(r"OnUpgrade\(\)\s*\{(.*?)\n\t\}", re.DOTALL)
 
 
 def has_canonical_keyword(text: str, keyword: str) -> bool:
-    """True when the card declares this keyword in its own CanonicalKeywords.
+    """Report whether the card declares this keyword in its own CanonicalKeywords.
 
     Must not be a substring search over the whole file. Keywords are referenced in
     plenty of places that do not make the card have them — TrueGrit mentions
@@ -64,13 +65,14 @@ def has_canonical_keyword(text: str, keyword: str) -> bool:
     return bool(m and f"CardKeyword.{keyword}" in m.group(1))
 
 
-def INNATE_CANONICAL(text: str) -> bool:
+def innate_canonical(text: str) -> bool:
     return has_canonical_keyword(text, "Innate")
 
 
-def INNATE_ON_UPGRADE(text: str) -> bool:
+def innate_on_upgrade(text: str) -> bool:
     m = _ON_UPGRADE_BODY.search(text)
     return bool(m and "CardKeyword.Innate" in m.group(1))
+
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -84,7 +86,6 @@ def cs_header() -> str:
 
 def decimal_to_int(s: str) -> int:
     return int(float(s))
-
 
 
 # ── stable ids ────────────────────────────────────────────────────────────────
@@ -107,7 +108,7 @@ def load_id_map() -> None:
     global _ID_MAP
     if not ID_MAP_PATH.exists():
         raise SystemExit(
-            f"{ID_MAP_PATH} is missing. Seed it with scripts/build_id_map.py."
+            f"{ID_MAP_PATH} is missing. Seed it with scripts/build_id_map.py.",
         )
     _ID_MAP = json.loads(ID_MAP_PATH.read_text(encoding="utf-8"))
 
@@ -126,14 +127,12 @@ def stable_id(category: str, name: str) -> int:
 
 def save_id_map() -> None:
     ordered = {
-        cat: dict(sorted(names.items(), key=lambda kv: (kv[1], kv[0])))
+        cat: dict(sorted(names.items(), key=operator.itemgetter(1, 0)))
         for cat, names in _ID_MAP.items()
     }
     ID_MAP_PATH.write_text(json.dumps(ordered, indent=2) + "\n", encoding="utf-8")
     for category, added in _NEW_IDS.items():
         print(f"  NEW {category}: {', '.join(added)}")
-
-
 
 
 # ── card id constant classes ──────────────────────────────────────────────────
@@ -157,6 +156,10 @@ def extract_card_ids(card_ids: dict[str, int]) -> str:
     pointing at whatever else landed on that id — with ~340 test references behind
     it. Generating them means the values cannot drift, and a card that disappears
     from the data fails this step loudly instead.
+
+    Raises:
+        SystemExit: if a name in card_id_classes.json no longer exists as a card.
+
     """
     spec = json.loads(CARD_ID_CLASSES_PATH.read_text(encoding="utf-8"))
     blocks: list[str] = []
@@ -164,8 +167,7 @@ def extract_card_ids(card_ids: dict[str, int]) -> str:
 
     for cls, members in spec["classes"].items():
         lines = [f"/// <summary>{CLASS_DOC.get(cls, 'Card ids.')}</summary>"]
-        lines.append(f"public static class {cls}")
-        lines.append("{")
+        lines.extend((f"public static class {cls}", "{"))
         for name in members:
             if name not in card_ids:
                 missing.append(f"{cls}.{name}")
@@ -179,7 +181,7 @@ def extract_card_ids(card_ids: dict[str, int]) -> str:
             "These id constants name cards that no longer exist in Cards.g.cs:\n  "
             + "\n  ".join(missing)
             + "\n\nA patch renamed or removed them. Update data/card_id_classes.json "
-            "(and any code using the constant) rather than letting it point elsewhere."
+            "(and any code using the constant) rather than letting it point elsewhere.",
         )
 
     print(f"  Card ids: {sum(len(m) for m in spec['classes'].values())} constants.")
@@ -234,17 +236,18 @@ def extract_cards() -> str:
         upg_block = decimal_to_int(upg_blk_m.group(1)) if upg_blk_m else 0
 
         def_id = stable_id("cards", name)
-        flags = []
-        for keyword in ("Ethereal", "Exhaust", "Unplayable"):
-            if has_canonical_keyword(text, keyword):
-                flags.append(f"{keyword}: true")
+        flags = [
+            f"{keyword}: true"
+            for keyword in ("Ethereal", "Exhaust", "Unplayable")
+            if has_canonical_keyword(text, keyword)
+        ]
         # Innate needs precise attribution, unlike the flags above: 9 cards declare
         # it in CanonicalKeywords (always innate) while 15 others only gain it via
         # OnUpgrade.  A substring check would mark the latter permanently innate and
         # silently corrupt the turn-1 draw-pile reorder.
-        if INNATE_CANONICAL(text):
+        if innate_canonical(text):
             flags.append("Innate: true")
-        if INNATE_ON_UPGRADE(text):
+        if innate_on_upgrade(text):
             flags.append("InnateWhenUpgraded: true")
         flags_cs = f", {', '.join(flags)}" if flags else ""
 
@@ -437,7 +440,9 @@ def extract_relics() -> str:
         if name == "DeprecatedRelic":
             continue
 
-        entries.append(f'        new RelicDef(Id: {stable_id("relics", name)}, Name: "{name}"),')
+        entries.append(
+            f'        new RelicDef(Id: {stable_id("relics", name)}, Name: "{name}"),',
+        )
 
     if not entries:
         entries = ["        // No relics extracted — check RELICS_DIR path."]
@@ -491,7 +496,9 @@ def extract_potions() -> str:
         ):
             continue
 
-        entries.append(f'        new PotionDef(Id: {stable_id("potions", name)}, Name: "{name}"),')
+        entries.append(
+            f'        new PotionDef(Id: {stable_id("potions", name)}, Name: "{name}"),',
+        )
 
     if not entries:
         entries = ["        // No potions extracted — check POTIONS_DIR path."]
@@ -541,7 +548,8 @@ def main() -> None:
     card_ids = {
         name: int(raw)
         for raw, name in re.findall(
-            r'new CardDef\(Id: (\d+), Name: "([^"]+)"', cards_cs
+            r'new CardDef\(Id: (\d+), Name: "([^"]+)"',
+            cards_cs,
         )
     }
 

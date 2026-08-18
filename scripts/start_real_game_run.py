@@ -257,6 +257,10 @@ def back_out_to_main_menu(base_url: str, max_hops: int = 6) -> None:
     Distinct from return_to_main_menu, which is a save-and-quit for a run in
     progress and errors with "No run in progress" when we're merely sitting on a
     submenu (e.g. a character_select screen left behind by an aborted attempt).
+
+    Raises:
+        RuntimeError: if the main menu is not reached within max_hops.
+
     """
     for _ in range(max_hops):
         state = get_state(base_url)
@@ -305,6 +309,11 @@ def start_seeded_run(
     ("Seed should not be changed in standard mode!") — only the custom-run screen's
     Lobby.SetSeed accepts one. Custom mode reports as ``character_select`` with
     ``custom_run: true``. Pass mode="standard" only for a seedless run.
+
+    Raises:
+        RuntimeError: if a run already exists and abandon_existing is false, or the
+            lobby never reaches the expected screen.
+
     """
     if abandon_existing:
         abandon_existing_run(base_url)

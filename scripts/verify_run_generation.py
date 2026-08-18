@@ -14,6 +14,7 @@ Exit code 0 when every checked section matches.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import re
 import sys
@@ -41,8 +42,14 @@ LIST_MAP_EDGES = 16  # (col, row, child_col, child_row) quadruples
 # The emulator carries the start node as NodeNone and calls the treasure row
 # NodeRelic; the save names them "ancient" and "treasure".
 NODE_TYPE_NAMES = {
-    0: "ancient", 1: "monster", 2: "elite", 3: "rest_site",
-    4: "shop", 5: "treasure", 6: "boss", 7: "unknown",
+    0: "ancient",
+    1: "monster",
+    2: "elite",
+    3: "rest_site",
+    4: "shop",
+    5: "treasure",
+    6: "boss",
+    7: "unknown",
 }
 
 ACT_NAMES = {1: "OVERGROWTH", 2: "UNDERDOCKS"}
@@ -100,7 +107,6 @@ def distill_fixture(save: dict[str, Any], source_path: Path) -> dict[str, Any]:
     }
 
 
-
 # ── modelled profile ──────────────────────────────────────────────────────────
 #
 # Two of the game's run-generation decisions are NOT pure functions of the seed —
@@ -137,11 +143,11 @@ PROGRESS_SAVE = "progress.save"
 
 
 def profile_facts(save: dict[str, Any], save_path: Path) -> dict[str, Any]:
-    """The profile preconditions the emulator's generation assumes."""
+    """Describe the profile preconditions the emulator's generation assumes."""
     players = save.get("players") or [{}]
     seen = set((players[0].get("unlock_state") or {}).get("encounters_seen") or [])
     acts = save.get("acts") or [{}]
-    act_id = acts[save.get("current_act_index") or 0].get("id")
+    act_id = str(acts[save.get("current_act_index") or 0].get("id") or "")
     # Unknown act -> demand every act-1 boss, which is the conservative reading.
     bosses = ACT_ONE_BOSSES.get(act_id) or [
         boss for pool in ACT_ONE_BOSSES.values() for boss in pool
@@ -151,7 +157,8 @@ def profile_facts(save: dict[str, Any], save_path: Path) -> dict[str, Any]:
     progress = save_path.parent / PROGRESS_SAVE
     if progress.exists():
         m = re.search(
-            r'"discovered_acts"\s*:\s*\[([^\]]*)\]', progress.read_text(errors="replace")
+            r'"discovered_acts"\s*:\s*\[([^\]]*)\]',
+            progress.read_text(errors="replace"),
         )
         if m:
             discovered = re.findall(r"ACT\.[A-Z_]+", m.group(1))
@@ -170,7 +177,7 @@ def check_profile(facts: dict[str, Any] | None) -> bool:
     if not facts:
         print(
             "\n!! This capture records no profile facts, so there is no way to tell "
-            "whether it came from a fully-unlocked profile. Re-capture it."
+            "whether it came from a fully-unlocked profile. Re-capture it.",
         )
         return False
 
@@ -178,12 +185,12 @@ def check_profile(facts: dict[str, Any] | None) -> bool:
     if facts.get("all_act1_bosses_seen") is False:
         problems.append(
             "not every Act-1 boss has been seen — the game will OVERRIDE the boss roll "
-            "with the first unseen one, so the boss here is not the seed's boss"
+            "with the first unseen one, so the boss here is not the seed's boss",
         )
     if facts.get("all_act1_acts_discovered") is False:
         problems.append(
             "not every Act-1 act has been discovered — the game force-selects the "
-            "undiscovered act instead of rolling, so the act here is not the seed's act"
+            "undiscovered act instead of rolling, so the act here is not the seed's act",
         )
     if problems:
         print(
@@ -196,11 +203,16 @@ def check_profile(facts: dict[str, Any] | None) -> bool:
 
 
 def encounter_names() -> dict[int, str]:
-    """Emulator encounter id -> name, read from CombatFactory's ActOneEncounter."""
+    """Emulator encounter id -> name, read from CombatFactory's ActOneEncounter.
+
+    Raises:
+        SystemExit: if ActOneEncounter cannot be parsed out of CombatFactory.cs.
+
+    """
     src = (
         Path(__file__).parent.parent / "src/Sts2Emulator/Core/CombatFactory.cs"
     ).read_text()
-    body = re.search(r"private enum ActOneEncounter\s*\{(.*?)\n    \}", src, re.S)
+    body = re.search(r"private enum ActOneEncounter\s*\{(.*?)\n    \}", src, re.DOTALL)
     if body is None:
         raise SystemExit("Could not parse ActOneEncounter from CombatFactory.cs")
     names = [
@@ -219,7 +231,11 @@ def normalize(name: str) -> str:
     is a variant of one encounter (the emulator selects it via
     completed_combat_rooms), so it is not a difference worth failing on here.
     """
-    n = re.sub(r"[^A-Za-z0-9]", "", name.replace("ENCOUNTER.", "").replace("EVENT.", ""))
+    n = re.sub(
+        r"[^A-Za-z0-9]",
+        "",
+        name.replace("ENCOUNTER.", "").replace("EVENT.", ""),
+    )
     n = n.lower()
     for suffix in ("weak", "normal", "elite", "boss"):
         if n.endswith(suffix) and len(n) > len(suffix):
@@ -229,8 +245,6 @@ def normalize(name: str) -> str:
 
 
 def emulator_generation(seed: str) -> dict[str, Any]:
-    import ctypes
-
     handle = native.run_create()
     try:
         obs = (ctypes.c_int * native.RUN_OBS_SIZE)()
@@ -294,19 +308,21 @@ def compare_map(emu_triples: list[int], saved_map: dict[str, Any]) -> bool:
     """
     live: dict[tuple[int, int], str] = {}
     for pt in saved_map["points"]:
-        live[(pt["coord"]["col"], pt["coord"]["row"])] = pt["type"]
+        live[pt["coord"]["col"], pt["coord"]["row"]] = pt["type"]
     for key in ("start", "boss"):
         node = saved_map.get(key)
         if node:
-            live[(node["coord"]["col"], node["coord"]["row"])] = node["type"]
+            live[node["coord"]["col"], node["coord"]["row"]] = node["type"]
 
     emu: dict[tuple[int, int], str] = {}
     for i in range(0, len(emu_triples), 3):
         col, row, node_type = emu_triples[i : i + 3]
-        emu[(col, row)] = NODE_TYPE_NAMES.get(node_type, f"<{node_type}>")
+        emu[col, row] = NODE_TYPE_NAMES.get(node_type, f"<{node_type}>")
 
-    print(f"\n=== map — emulator {len(emu)} nodes vs live {len(live)} "
-          f"(points + start + boss) ===")
+    print(
+        f"\n=== map — emulator {len(emu)} nodes vs live {len(live)} "
+        f"(points + start + boss) ===",
+    )
     rows = sorted({r for _, r in live} | {r for _, r in emu})
     matched = True
     for row in rows:
@@ -317,7 +333,10 @@ def compare_map(emu_triples: list[int], saved_map: dict[str, Any]) -> bool:
         if same:
             print(f"  row {row:2}: ok  ({len(live_row)} nodes)")
         else:
-            fmt = lambda d: " ".join(f"c{c}:{d[c]}" for c in sorted(d)) or "-"
+
+            def fmt(d: dict[int, Any]) -> str:
+                return " ".join(f"c{c}:{d[c]}" for c in sorted(d)) or "-"
+
             print(f"  row {row:2}: MISMATCH")
             print(f"           emu  {fmt(emu_row)}")
             print(f"           live {fmt(live_row)}")
@@ -325,7 +344,10 @@ def compare_map(emu_triples: list[int], saved_map: dict[str, Any]) -> bool:
 
 
 def compare_sequence(
-    label: str, emu_ids: list[int], live_ids: list[str], names: dict[int, str]
+    label: str,
+    emu_ids: list[int],
+    live_ids: list[str],
+    names: dict[int, str],
 ) -> bool:
     print(f"\n=== {label} — emulator {len(emu_ids)} vs live {len(live_ids)} ===")
     hits = 0
@@ -333,7 +355,9 @@ def compare_sequence(
     for i in range(span):
         emu = names.get(emu_ids[i], f"<{emu_ids[i]}>") if i < len(emu_ids) else "—"
         live = live_ids[i] if i < len(live_ids) else "—"
-        ok = i < len(emu_ids) and i < len(live_ids) and normalize(emu) == normalize(live)
+        ok = (
+            i < len(emu_ids) and i < len(live_ids) and normalize(emu) == normalize(live)
+        )
         hits += ok
         print(f"  {i:2}  {emu:26} {live:36} {'ok' if ok else 'MISMATCH'}")
     matched = hits == span
@@ -345,7 +369,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--save", type=Path, default=None)
     parser.add_argument(
-        "--fixture", type=Path, default=None, help="verify against a stored fixture"
+        "--fixture",
+        type=Path,
+        default=None,
+        help="verify against a stored fixture",
     )
     parser.add_argument(
         "--save-fixture",
@@ -365,11 +392,15 @@ def main() -> None:
 
     if args.save_fixture is not None:
         args.save_fixture.parent.mkdir(parents=True, exist_ok=True)
-        args.save_fixture.write_text(json.dumps(distill_fixture(save, save_path), indent=2) + "\n")
+        args.save_fixture.write_text(
+            json.dumps(distill_fixture(save, save_path), indent=2) + "\n",
+        )
         print(f"wrote fixture -> {args.save_fixture}")
         raise SystemExit(0)
     seed = (save.get("rng") or {}).get("seed")
-    act_index = args.act_index if args.act_index is not None else save["current_act_index"]
+    act_index = (
+        args.act_index if args.act_index is not None else save["current_act_index"]
+    )
     act = save["acts"][act_index]
     rooms = act["rooms"]
 
@@ -399,21 +430,31 @@ def main() -> None:
     emu_act = ACT_NAMES.get(emu["act"], f"<{emu['act']}>")
     live_act = act["id"].replace("ACT.", "")
     results["act"] = normalize(emu_act) == normalize(live_act)
-    print(f"  emulator {emu_act} vs live {live_act} "
-          f"{'ok' if results['act'] else 'MISMATCH'}")
+    print(
+        f"  emulator {emu_act} vs live {live_act} "
+        f"{'ok' if results['act'] else 'MISMATCH'}",
+    )
 
     results["normal"] = compare_sequence(
-        "normal encounters", emu["normal"], rooms["normal_encounter_ids"], names
+        "normal encounters",
+        emu["normal"],
+        rooms["normal_encounter_ids"],
+        names,
     )
     results["elite"] = compare_sequence(
-        "elite encounters", emu["elite"], rooms["elite_encounter_ids"], names
+        "elite encounters",
+        emu["elite"],
+        rooms["elite_encounter_ids"],
+        names,
     )
 
     print("\n=== boss ===")
     emu_boss = names.get(emu["boss"], f"<{emu['boss']}>")
     results["boss"] = normalize(emu_boss) == normalize(rooms["boss_id"])
-    print(f"  emulator {emu_boss} vs live {rooms['boss_id']} "
-          f"{'ok' if results['boss'] else 'MISMATCH'}")
+    print(
+        f"  emulator {emu_boss} vs live {rooms['boss_id']} "
+        f"{'ok' if results['boss'] else 'MISMATCH'}",
+    )
 
     results["map"] = compare_map(emu["map"], act["saved_map"])
     results["edges"] = compare_edges(emu["edges"], act["saved_map"])
