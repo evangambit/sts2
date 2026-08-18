@@ -1,0 +1,392 @@
+#!/usr/bin/env python3
+r"""Capture what the *game* does when one card is played, as a committed fixture.
+
+Card expectations in the C# suite are read off `decompiled\\`, which is the game's real
+shipped logic but not the game running it. That is a decent source for "10 damage, +4
+upgraded" and a poor one for the things cards actually get wrong: effect ordering,
+rounding, splash and overkill, what a power sees when a target dies mid-effect. This
+script closes that gap by staging one card in a live combat, playing it, and committing
+the before/after the game reported.
+
+    python scripts/capture_card.py --card MoltenFist
+    python scripts/capture_card.py --card MoltenFist --upgraded --encounter Chompers
+    python scripts/capture_card.py --card Cleave --energy 3 --target 1
+
+The fixture is self-contained: it records the state the card was played into as well as
+the state it produced, so `scripts/generate_card_capture_tests.py` can rebuild that exact
+situation in the emulator rather than having to reproduce a whole run. Expectations
+therefore come from the game and survive a re-capture, the same property
+`scripts/generate_capture_tests.py` documents for run generation.
+
+Needs the game running with STS2MCP (any OS -- see AGENTS.md), and a mod new enough to
+have `debug_add_card` / `debug_set_energy`.
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import sys
+import time
+from pathlib import Path
+from types import ModuleType
+from typing import Any
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "scripts"))
+
+import start_real_game_run  # noqa: E402
+import trace_real_game  # noqa: E402
+
+FIXTURES = REPO / "tests" / "fixtures" / "cards"
+DEFAULT_ENCOUNTER = "CorpseSlugsWeak"
+DEFAULT_SEED = "ABCDEF"
+
+
+def _load(name: str) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(name, REPO / "scripts" / f"{name}.py")
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load {name}.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+capture_sweep = _load("capture_sweep")
+validate = _load("validate_real_game_trace")
+
+
+def game_version() -> dict[str, Any]:
+    path = REPO / "data" / "game_version.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def find_in_hand(state: dict[str, Any], card: str, upgraded: bool) -> int | None:
+    """Hand index of the staged card, matching the mod's id or its display name."""
+    wanted = card.replace("_", "").casefold()
+    for entry in (state.get("player") or {}).get("hand") or []:
+        ids = (str(entry.get("id") or ""), str(entry.get("name") or ""))
+        matches = any(
+            i.replace("_", "").replace(" ", "").casefold() == wanted for i in ids
+        )
+        if matches and bool(entry.get("is_upgraded")) == upgraded:
+            return int(entry["index"])
+    return None
+
+
+def stage_card(
+    base_url: str,
+    card: str,
+    upgraded: bool,
+    energy: int,
+    timeout: float = 15.0,
+) -> tuple[dict[str, Any], int]:
+    """Put the card in hand with enough energy to play it, and return (state, index).
+
+    Both actions are fire-and-forget on the mod side -- the game resolves them on its
+    own loop -- so this polls for the card rather than trusting the acknowledgement.
+
+    Raises:
+        RuntimeError: if the mod rejects either action, or the card never appears
+            (most often an STS2MCP build predating ``debug_add_card``).
+
+    """
+    result = trace_real_game.post_action(
+        base_url,
+        {
+            "action": "debug_add_card",
+            "card": card,
+            "upgraded": upgraded,
+            "pile": "hand",
+        },
+    )
+    if result.get("status") != "ok":
+        raise RuntimeError(f"debug_add_card failed: {result}")
+
+    result = trace_real_game.post_action(
+        base_url,
+        {"action": "debug_set_energy", "amount": energy},
+    )
+    if result.get("status") != "ok":
+        raise RuntimeError(f"debug_set_energy failed: {result}")
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = start_real_game_run.get_state(base_url)
+        index = find_in_hand(state, card, upgraded)
+        if index is not None and (state.get("player") or {}).get("energy") == energy:
+            return state, index
+        time.sleep(0.25)
+
+    raise RuntimeError(
+        f"{card} (upgraded={upgraded}) never reached hand with {energy} energy. "
+        "An older STS2MCP build has no debug_add_card; rebuild and redeploy the mod.",
+    )
+
+
+def wait_for_menu_options(base_url: str, timeout: float = 30.0) -> None:
+    """Wait until a menu actually advertises its options.
+
+    Straight after the game launches the main menu reports an empty option list for a
+    beat. ``abandon_any_run`` reads that list once and returns early when it lacks
+    ``abandon_run``, so embarking then fails with "no singleplayer option" — the run it
+    meant to clear is still there.
+
+    Raises:
+        RuntimeError: if the menu never populates.
+
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = start_real_game_run.get_state(base_url)
+        if state.get("state_type") != "menu" or state.get("options"):
+            return
+        time.sleep(0.5)
+
+    raise RuntimeError(f"Menu never advertised any options within {timeout:.0f}s")
+
+
+def apply_powers(
+    base_url: str,
+    powers: list[str],
+    state: dict[str, Any],
+) -> None:
+    """Stage ``POWER=AMOUNT[@target]`` entries before the card is played.
+
+    Target defaults to the first living enemy; ``@player`` targets the player and
+    ``@1`` the second living enemy. This is what makes the conditional half of a card
+    reachable -- Molten Fist only reapplies Vulnerable to an already-Vulnerable target.
+
+    Raises:
+        RuntimeError: on a malformed spec or a rejected application.
+
+    """
+    enemies = [
+        e
+        for e in (state.get("battle") or {}).get("enemies") or []
+        if (e.get("hp") or 0) > 0
+    ]
+    for spec in powers:
+        name, _, amount_and_target = spec.partition("=")
+        amount_text, _, target_text = amount_and_target.partition("@")
+        if not name or not amount_text.strip().lstrip("-").isdigit():
+            raise RuntimeError(
+                f"Malformed --power {spec!r}; expected POWER=AMOUNT[@target]",
+            )
+
+        target = target_text or "0"
+        if target.isdigit():
+            if int(target) >= len(enemies):
+                raise RuntimeError(
+                    f"--power {spec!r} targets enemy {target} but only {len(enemies)} are alive",
+                )
+            target = str(enemies[int(target)].get("entity_id"))
+
+        result = trace_real_game.post_action(
+            base_url,
+            {
+                "action": "debug_add_power",
+                "power": name,
+                "amount": int(amount_text),
+                "target": target,
+            },
+        )
+        if result.get("status") != "ok":
+            raise RuntimeError(f"debug_add_power failed for {spec!r}: {result}")
+
+
+def assert_playable(state: dict[str, Any], index: int, card: str) -> None:
+    """Refuse to capture a card the game will not let us play.
+
+    A rejected play still returns a state, and its before/after would be identical --
+    a fixture that asserts the card does nothing, which is worse than no fixture.
+
+    Raises:
+        RuntimeError: if the card left hand, or the game reports it as unplayable.
+
+    """
+    hand = (state.get("player") or {}).get("hand") or []
+    entry = next((c for c in hand if c.get("index") == index), None)
+    if entry is None:
+        raise RuntimeError(f"{card} vanished from hand before it could be played")
+    if entry.get("can_play") is False:
+        raise RuntimeError(
+            f"Game says {card} is unplayable here: {entry.get('unplayable_reason')}",
+        )
+
+
+def play_card(
+    base_url: str,
+    index: int,
+    target_index: int,
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"action": "play_card", "card_index": index}
+    enemies = (state.get("battle") or {}).get("enemies") or []
+    living = [e for e in enemies if (e.get("hp") or 0) > 0]
+    if living:
+        target = living[min(target_index, len(living) - 1)]
+        payload["target"] = target.get("entity_id")
+
+    result = trace_real_game.post_action(base_url, payload)
+    if result.get("status") != "ok":
+        raise RuntimeError(f"play_card failed: {result}")
+
+    return trace_real_game.wait_for_state(base_url, 0.5)
+
+
+def capture(
+    base_url: str,
+    card: str,
+    upgraded: bool,
+    encounter: str,
+    seed: str,
+    ascension: int,
+    energy: int,
+    target_index: int,
+    reuse_run: bool,
+    powers: list[str],
+) -> dict[str, Any]:
+    if not reuse_run:
+        wait_for_menu_options(base_url)
+        capture_sweep.abandon_any_run(base_url)
+        start_real_game_run.start_seeded_run(
+            base_url,
+            seed,
+            "IRONCLAD",
+            abandon_existing=False,
+            ascension=ascension,
+        )
+    validate.jump_to_encounter(base_url, encounter)
+
+    if powers:
+        apply_powers(base_url, powers, start_real_game_run.get_state(base_url))
+        trace_real_game.wait_for_state(base_url, 0.5)
+
+    before_state, index = stage_card(base_url, card, upgraded, energy)
+    assert_playable(before_state, index, card)
+    after_state = play_card(base_url, index, target_index, before_state)
+
+    before = trace_real_game.summarize_state(before_state)
+    after = trace_real_game.summarize_state(after_state)
+    if before == after:
+        raise RuntimeError(
+            f"Playing {card} changed nothing the state exposes; refusing to commit a "
+            "fixture that would assert the card is a no-op.",
+        )
+
+    return {
+        "_comment": (
+            "Captured from the live game by scripts/capture_card.py. Expected values "
+            "here are the GAME's, never the emulator's; re-capturing re-reads ground "
+            "truth and cannot rubber-stamp an emulator regression."
+        ),
+        "card": card,
+        "upgraded": upgraded,
+        "encounter": encounter,
+        "seed": seed,
+        "ascension": ascension,
+        "target_index": target_index,
+        # The mod adds to the top of the pile, but recording the index the card was
+        # actually played from keeps the generated test correct if that ever changes.
+        "hand_index": index,
+        "energy": energy,
+        "powers": powers,
+        "game": game_version(),
+        "before": before,
+        "after": after,
+        # Ordered piles are not in the summary and some cards (draw, retain, put-on-top)
+        # are only checkable against them.
+        "before_piles": ordered_piles(before_state),
+        "after_piles": ordered_piles(after_state),
+    }
+
+
+def ordered_piles(state: dict[str, Any]) -> dict[str, Any]:
+    player = state.get("player") or {}
+    return {
+        name: player.get(name)
+        for name in (
+            "hand_ordered",
+            "draw_pile_ordered",
+            "discard_pile_ordered",
+            "exhaust_pile_ordered",
+        )
+        if player.get(name) is not None
+    }
+
+
+def default_out(card: str, upgraded: bool, encounter: str, powers: list[str]) -> Path:
+    suffix = "-upgraded" if upgraded else ""
+    # Staged powers change what the capture proves, so they belong in the filename --
+    # otherwise a Vulnerable capture silently overwrites the plain one.
+    staged = (
+        "-" + "-".join(p.split("=")[0].removesuffix("_POWER").lower() for p in powers)
+        if powers
+        else ""
+    )
+    return FIXTURES / f"{card}{suffix}{staged}-{encounter}.json"
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--card",
+        required=True,
+        help="card entry id or class name, e.g. MoltenFist",
+    )
+    parser.add_argument("--upgraded", action="store_true")
+    parser.add_argument("--encounter", default=DEFAULT_ENCOUNTER)
+    parser.add_argument("--seed", default=DEFAULT_SEED)
+    parser.add_argument("--ascension", type=int, default=8)
+    parser.add_argument(
+        "--energy",
+        type=int,
+        default=9,
+        help="energy to set before playing, so cost never decides the capture",
+    )
+    parser.add_argument(
+        "--target",
+        type=int,
+        default=0,
+        help="index among living enemies",
+    )
+    parser.add_argument(
+        "--reuse-run",
+        action="store_true",
+        help="skip embarking and use the run already in progress",
+    )
+    parser.add_argument(
+        "--power",
+        action="append",
+        default=[],
+        metavar="POWER=AMOUNT[@target]",
+        help="stage a power first, e.g. VULNERABLE_POWER=2 or STRENGTH_POWER=3@player",
+    )
+    parser.add_argument("--out", type=Path)
+    parser.add_argument("--base-url", default=trace_real_game.DEFAULT_BASE_URL)
+    args = parser.parse_args()
+
+    fixture = capture(
+        args.base_url,
+        args.card,
+        args.upgraded,
+        args.encounter,
+        args.seed,
+        args.ascension,
+        args.energy,
+        args.target,
+        args.reuse_run,
+        args.power,
+    )
+
+    out = args.out or default_out(args.card, args.upgraded, args.encounter, args.power)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8")
+    print(f"Wrote {out.relative_to(REPO)}")
+    print("Now run: python scripts/generate_card_capture_tests.py")
+
+
+if __name__ == "__main__":
+    main()
