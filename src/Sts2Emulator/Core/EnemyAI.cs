@@ -424,7 +424,8 @@ public static class EnemyAI
             case KE.FuzzyWurmCrawler:
                 return (enemy.MoveIndex % 3) == 1
                     ? new Intent(IntentType.Buff, 0)
-                    : new Intent(IntentType.Attack, 6);
+                    // AcidGoopDamage
+                    : new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 6, 4));
 
             case KE.Mawler:
                 return (enemy.MoveIndex % 3) switch
@@ -986,8 +987,13 @@ public static class EnemyAI
             case KE.Seapunk:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 13),
-                    1 => new Intent(IntentType.Attack, 8),
+                    // SeaKickDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 13, 11)
+                    ),
+                    // SpinningKickDamage * SpinningKickRepeat (2 x 4), no ascension term
+                    1 => new Intent(IntentType.Attack, 2 * 4),
                     _ => new Intent(IntentType.Buff, 0),
                 };
 
@@ -996,21 +1002,38 @@ public static class EnemyAI
                     ? new Intent(IntentType.Debuff, 1)
                     : (
                         enemy.MoveIndex % 2 == 1
-                            ? new Intent(IntentType.Attack, 8)
-                            : new Intent(IntentType.Attack, 14)
+                            // ChompDamage
+                            ? new Intent(
+                                IntentType.Attack,
+                                Ascension.Value(Ascension.DeadlyEnemies, 8, 7)
+                            )
+                            // StompDamage
+                            : new Intent(
+                                IntentType.Attack,
+                                Ascension.Value(Ascension.DeadlyEnemies, 14, 13)
+                            )
                     );
 
             case KE.Nibbit:
                 // Alone Nibbit: Butt, Slice+block, Hiss loop.
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 13),
-                    1 => new Intent(IntentType.Attack, 7),
+                    // ButtDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 13, 12)
+                    ),
+                    // SliceDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 7, 6)
+                    ),
                     _ => new Intent(IntentType.Buff, 0),
                 };
 
             case KE.LeafSlimeS:
             {
+                // Attacks are LeafSlimeS.TackleDamage.
                 // Both branches CannotRepeat → strictly alternating, but RandomBranchState
                 // always consumes 1 RNG call (even on initialization and forced transitions).
                 double pick = rng.NextDouble();
@@ -1020,7 +1043,10 @@ public static class EnemyAI
                     if (pick < 0.5)
                     {
                         enemy.LastMove = 0;
-                        return new Intent(IntentType.Attack, 4);
+                        return new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(Ascension.DeadlyEnemies, 4, 3)
+                        );
                     }
                     enemy.LastMove = 1;
                     return new Intent(IntentType.Debuff, 1);
@@ -1033,15 +1059,23 @@ public static class EnemyAI
                 }
                 // Last was Debuff (CannotRepeat) → forced Attack.
                 enemy.LastMove = 0;
-                return new Intent(IntentType.Attack, 4);
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(Ascension.DeadlyEnemies, 4, 3)
+                );
             }
 
             case KE.TwigSlimeS:
-                return new Intent(IntentType.Attack, 5);
+                // TackleDamage
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(Ascension.DeadlyEnemies, 5, 4)
+                );
 
             case KE.LeafSlimeM:
                 return enemy.MoveIndex % 2 == 0
-                    ? new Intent(IntentType.Attack, 9)
+                    // ClumpDamage
+                    ? new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 9, 8))
                     : new Intent(IntentType.Debuff, 2);
 
             case KE.TwigSlimeM:
@@ -1060,7 +1094,10 @@ public static class EnemyAI
                 if (enemy.LastMove is -1 or 1)
                 {
                     enemy.LastMove = 0;
-                    return new Intent(IntentType.Attack, 12);
+                    return new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 12, 11)
+                    );
                 }
                 // LastMove 2: two consecutive attacks (CanRepeatXTimes=2 exhausted) → force Sticky.
                 if (enemy.LastMove == 2)
@@ -1072,7 +1109,10 @@ public static class EnemyAI
                 if (pick < 0.5)
                 {
                     enemy.LastMove = 2;
-                    return new Intent(IntentType.Attack, 12);
+                    return new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 12, 11)
+                    );
                 }
                 enemy.LastMove = 1;
                 return new Intent(IntentType.Debuff, 1);
@@ -1094,8 +1134,13 @@ public static class EnemyAI
             case KE.CorpseSlug:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 6),
-                    1 => new Intent(IntentType.Attack, 9),
+                    // WhipSlapDamage * WhipSlapRepeat (3 x 2), no ascension term
+                    0 => new Intent(IntentType.Attack, 3 * 2),
+                    // GlompDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 9, 8)
+                    ),
                     _ => new Intent(IntentType.Debuff, 2),
                 };
 
@@ -1119,9 +1164,22 @@ public static class EnemyAI
                 enemy.LastMove = move;
                 return move switch
                 {
-                    0 => new Intent(IntentType.Debuff, 9),
-                    1 => new Intent(IntentType.Attack, 12),
-                    _ => new Intent(IntentType.Buff, 7),
+                    // OilSprayDamage; OIL_SPRAY is attack + debuff, which the live
+                    // readout reports as a debuff carrying the attack's magnitude.
+                    0 => new Intent(
+                        IntentType.Debuff,
+                        Ascension.Value(Ascension.DeadlyEnemies, 9, 8)
+                    ),
+                    // SlamDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 12, 11)
+                    ),
+                    // RageDamage; RAGE is attack + buff.
+                    _ => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(Ascension.DeadlyEnemies, 7, 6)
+                    ),
                 };
             }
 
@@ -1129,8 +1187,16 @@ public static class EnemyAI
                 return (enemy.MoveIndex % 3) switch
                 {
                     0 => new Intent(IntentType.Buff, 0),
-                    1 => new Intent(IntentType.Attack, 12),
-                    _ => new Intent(IntentType.Attack, 8),
+                    // SpikeSpitDamage * SpikeSpitRepeat (repeat is 3, no ascension term)
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 4, 3) * 3
+                    ),
+                    // WhirlDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(Ascension.DeadlyEnemies, 8, 7)
+                    ),
                 };
 
             case KE.FossilStalker:

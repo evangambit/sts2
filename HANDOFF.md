@@ -419,12 +419,61 @@ statement about the emulator as it stands.
 The history records carry no rooms and no map, so this verifies **act selection only** —
 the rest still needs a `current_run.save` capture per act.
 
-**Wanted next:** an Underdocks **combat** capture. `compare_draw_pile.py` ground truth is
-still Overgrowth-only, and combat is now the least-swept part of the emulator by far —
-run generation gets 30 captures a session while the opening hand has one. The sweep
-already leaves a run parked at Neow, so `--jump-encounter` into an Underdocks encounter
-(`corpse-slugs`, `seapunk`, `toadpoles`, `sludge-spinner`) is the next capture to
-automate. A re-capture of "ABCDEF" run generation would also close its lost save.
+## Combat (started — `scripts/combat_sweep.py`)
+
+Same headless loop as the run-generation sweep, pointed at the other half of the
+emulator. Per (seed, encounter) it embarks a fresh A8 run, jumps straight in with
+`debug_start_encounter`, and compares four things: the **deck** (hand + draw pile in
+order), **enemies** (count/HP), **intent** (each enemy's opening move) and **player**
+HP. Weak variants only — the direct combat env assumes fresh per-stream RNG, which
+holds only for a run's first combat, so the sweep never answers Neow and embarks a new
+run per encounter.
+
+```bash
+python scripts/combat_sweep.py --count 2               # 2 seeds x 8 weak encounters
+python scripts/combat_sweep.py --act underdocks --count 4
+```
+
+**First run: 3/16. Now 13/16.** What it found:
+
+- ✅ **The deck is exact — 16/16 captures, both acts.** The shuffled deck in order was
+  previously one committed capture; it is now the best-attested thing in combat.
+- ✅ **Enemy HP is exact** wherever the roster is right (see below).
+- ⚠️ **Every enemy damage value was one ascension too high.** The game bakes ascension
+  into monster data via `AscensionHelper.GetValueIfAscension(level, high, low)`, and the
+  enum's ordinal IS the level: `ToughEnemies = 8`, `DeadlyEnemies = 9`. **At A8 the Tough
+  branch is live and the Deadly branch is not** — but every intent in the emulator was
+  transcribed as a bare literal taking the Deadly (A9) value. HP matched (Tough) while
+  attacks were 1-2 points high (Deadly), on 13 of 16 captures.
+  `Core/Ascension.cs` now models this: `Ascension.Value(Ascension.DeadlyEnemies, 9, 8)`
+  reads like the property it came from, so it can be diffed against the decompiled
+  source by eye, and `ModelledLevel` is the single place that says we are an A8 emulator.
+  **Fixed for the swept enemies only** — CorpseSlug, Nibbit, Seapunk, Toadpole,
+  SludgeSpinner, ShrinkerBeetle, FuzzyWurmCrawler and the four slimes. There are ~134
+  intent literals in total and 96 monster classes carry a DeadlyEnemies value, so **most
+  of the rest are presumed wrong**; sweeping an encounter is what proves one.
+  ⚠️ **Intents live in `EnemyAI.SelectIntent`, not `CombatFactory`.** The starting intent
+  passed to `CreateEnemy` is overwritten by `ChooseIntents` immediately after the
+  encounter is built. Fixing the literal in CombatFactory alone changes nothing — that
+  cost an hour, so check the AI table first.
+
+**What is left (3/16), and it is one root cause:** the **per-encounter RNG**. Encounter
+models roll from `base.Rng`, seeded
+`(uint)((int)runState.Rng.Seed + runState.TotalFloor + GetDeterministicHashCode(Id.Entry))`
+(`EncounterModel`, ~line 269). Two things ride on it:
+- `SlimesWeak.GenerateMonsters` rolls **which** slimes spawn (`Rng.NextItem` over the
+  small pool twice + the medium pool), so a wrong roll means the wrong roster entirely —
+  that is the `enemies` failure, not an HP bug.
+- `CorpseSlug.EnsureCorpseSlugsStartWithDifferentMoves` rolls `NextInt(3)` and deals
+  consecutive starting moves to the slugs, so the emulator's hardcoded `(2, 0)` is right
+  only by luck.
+`RunEngine.EncounterRngSeed` already models this **for SlimesWeak in the run-engine
+path** — but it keys on `CompletedCombatRoomsBeforeCurrent` where the game uses
+`TotalFloor`, and the **direct combat env never passes it at all**, which is what the
+sweep compares against. Wiring an encounter-RNG seed through `Sts2CombatEnv` (native API
+bump) and confirming the floor term against a capture is the next piece of work.
+
+**Wanted next after that:** an Underdocks **combat** capture committed as a fixture.
 
 ### Introspection & verification tooling (built)
 - `scripts/compare_draw_pile.py` — emulator vs live ordered piles. `--live-json`
@@ -432,6 +481,8 @@ automate. A re-capture of "ABCDEF" run generation would also close its lost save
 - `scripts/verify_run_generation.py` — the table above, straight from a save.
 - `scripts/verify_act_selection.py` — act 1 vs the whole run history; `--fixture` re-runs
   it offline, `--all-builds` shows older patches for context.
+- `scripts/combat_sweep.py` — the same idea for combat starts: deck, enemies, intents
+  and player HP per (seed, encounter). See "Combat" above.
 - `scripts/capture_sweep.py` — the batch version of all of the above: N seeds, embarked
   and compared unattended against a headless game. **This is the tool to reach for when
   touching generation code.** It embarks cleanly now that the embark race is fixed; it

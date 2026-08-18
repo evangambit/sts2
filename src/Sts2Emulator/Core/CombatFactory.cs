@@ -455,7 +455,12 @@ public static class CombatFactory
 
             ActOneEncounter.NibbitsWeak =>
             [
-                CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Attack, 13)),
+                CreateEnemy(
+                    KE.Nibbit,
+                    rng,
+                    // Nibbit.ButtDamage
+                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 13, 12))
+                ),
             ],
 
             ActOneEncounter.SlimesWeak => CreateSlimeEncounter(rng, encounterRngSeed),
@@ -481,7 +486,12 @@ public static class CombatFactory
 
             ActOneEncounter.FuzzyWurmCrawler =>
             [
-                CreateEnemy(KE.FuzzyWurmCrawler, rng, new Intent(IntentType.Attack, 6)),
+                CreateEnemy(
+                    KE.FuzzyWurmCrawler,
+                    rng,
+                    // FuzzyWurmCrawler.AcidGoopDamage
+                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 6, 4))
+                ),
             ],
 
             ActOneEncounter.CorpseSlugs => CreateCorpseSlugsEncounter(
@@ -491,7 +501,12 @@ public static class CombatFactory
 
             ActOneEncounter.SludgeSpinner =>
             [
-                CreateEnemy(KE.SludgeSpinner, rng, new Intent(IntentType.Debuff, 9)),
+                CreateEnemy(
+                    KE.SludgeSpinner,
+                    rng,
+                    // SludgeSpinner.OilSprayDamage (OIL_SPRAY is attack + debuff)
+                    new Intent(IntentType.Debuff, Ascension.Value(Ascension.DeadlyEnemies, 9, 8))
+                ),
             ],
 
             ActOneEncounter.ShrinkerBeetle =>
@@ -501,13 +516,24 @@ public static class CombatFactory
 
             ActOneEncounter.Seapunk =>
             [
-                CreateEnemy(KE.Seapunk, rng, new Intent(IntentType.Attack, 13)),
+                CreateEnemy(
+                    KE.Seapunk,
+                    rng,
+                    // Seapunk.SeaKickDamage
+                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 13, 11))
+                ),
             ],
 
             ActOneEncounter.Toadpoles =>
             [
                 CreateEnemy(KE.Toadpole, rng, new Intent(IntentType.Buff, 0)),
-                CreateEnemy(KE.Toadpole, rng, new Intent(IntentType.Attack, 8), moveIndex: 2),
+                CreateEnemy(
+                    KE.Toadpole,
+                    rng,
+                    // Toadpole.WhirlDamage
+                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 8, 7)),
+                    moveIndex: 2
+                ),
             ],
 
             ActOneEncounter.Mawler =>
@@ -517,7 +543,13 @@ public static class CombatFactory
 
             ActOneEncounter.NibbitsNormal =>
             [
-                CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Attack, 7), moveIndex: 1),
+                CreateEnemy(
+                    KE.Nibbit,
+                    rng,
+                    // Nibbit.SliceDamage
+                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 7, 6)),
+                    moveIndex: 1
+                ),
                 CreateEnemy(KE.Nibbit, rng, new Intent(IntentType.Buff, 0), moveIndex: 2),
             ],
 
@@ -545,13 +577,23 @@ public static class CombatFactory
             ActOneEncounter.OvergrowthCrawlers =>
             [
                 CreateEnemy(KE.ShrinkerBeetle, rng, new Intent(IntentType.Debuff, 1)),
-                CreateEnemy(KE.FuzzyWurmCrawler, rng, new Intent(IntentType.Attack, 6)),
+                CreateEnemy(
+                    KE.FuzzyWurmCrawler,
+                    rng,
+                    // FuzzyWurmCrawler.AcidGoopDamage
+                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 6, 4))
+                ),
             ],
 
             ActOneEncounter.CultistAndSeapunk =>
             [
                 CreateEnemy(KE.CalcifiedCultist, rng, new Intent(IntentType.Buff, 0)),
-                CreateEnemy(KE.Seapunk, rng, new Intent(IntentType.Attack, 13)),
+                CreateEnemy(
+                    KE.Seapunk,
+                    rng,
+                    // Seapunk.SeaKickDamage
+                    new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 13, 11))
+                ),
             ],
 
             ActOneEncounter.FossilStalker => [CreateFossilStalker(rng)],
@@ -862,12 +904,14 @@ public static class CombatFactory
         // TwigSlimeS always starts with Attack(5). These are slot-deterministic, not niche-RNG-based.
         var firstIntent =
             firstSmall == KE.LeafSlimeS
-                ? new Intent(IntentType.Attack, 4)
-                : new Intent(IntentType.Attack, 5);
+                // LeafSlimeS.TackleDamage
+                ? new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 4, 3))
+                // TwigSlimeS.TackleDamage
+                : new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 5, 4));
         var secondIntent =
             secondSmall == KE.LeafSlimeS
                 ? new Intent(IntentType.Debuff, 1)
-                : new Intent(IntentType.Attack, 5);
+                : new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 5, 4));
         int secondMoveIndex = secondSmall == KE.LeafSlimeS ? 1 : 0;
 
         return
@@ -1204,12 +1248,7 @@ public static class CombatFactory
             return [CreateCorpseSlug(rng, 2), CreateCorpseSlug(rng, 0)];
         }
 
-        return
-        [
-            CreateCorpseSlug(rng, 2),
-            CreateCorpseSlug(rng, 0),
-            CreateCorpseSlug(rng, 1),
-        ];
+        return [CreateCorpseSlug(rng, 2), CreateCorpseSlug(rng, 0), CreateCorpseSlug(rng, 1)];
     }
 
     private static EnemyState CreateCorpseSlug(Random rng, int moveIndex, int? fixedHp = null) =>
@@ -1228,11 +1267,15 @@ public static class CombatFactory
         return enemy;
     }
 
+    // Move order is the game's MoveState declaration order in CorpseSlug.cs:
+    // 0 WHIP_SLAP (MultiAttackIntent 3 x 2), 1 GLOMP (SingleAttackIntent), 2 GOOP (debuff).
     private static Intent CorpseSlugIntent(int moveIndex) =>
         (moveIndex % 3) switch
         {
-            0 => new Intent(IntentType.Attack, 6),
-            1 => new Intent(IntentType.Attack, 9),
+            // WhipSlapDamage * WhipSlapRepeat; the live readout shows "3x2" and the
+            // comparison comes down on total damage.
+            0 => new Intent(IntentType.Attack, 3 * 2),
+            1 => new Intent(IntentType.Attack, Ascension.Value(Ascension.DeadlyEnemies, 9, 8)),
             _ => new Intent(IntentType.Debuff, 2),
         };
 
