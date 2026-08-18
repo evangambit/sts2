@@ -332,7 +332,10 @@ public static class CardEffects
             }
 
             case IC.SwordBoomerang: // 1-cost, 3 dmg × 3/4 hits to random enemies
-                DealDamageMultiHit(state, 3, upgraded ? 4 : 3, rng);
+                // TargetingRandomOpponents, and AttackCommand re-rolls the target inside
+                // its per-hit loop — so each hit picks again, rather than the card picking
+                // one enemy and hitting it N times.
+                DealDamageToRandomEnemiesMultiHit(state, 3, upgraded ? 4 : 3, rng);
                 break;
 
             case IC.Tank: // 1/0-cost, apply TankPower (multiplayer only)
@@ -3610,7 +3613,11 @@ public static class CardEffects
                 break;
             case "GeneticAlgorithm":
             case "Stack":
-                GainBlock(state, upgraded ? state.DiscardPile.Count + 3 : state.DiscardPile.Count, rng);
+                GainBlock(
+                    state,
+                    upgraded ? state.DiscardPile.Count + 3 : state.DiscardPile.Count,
+                    rng
+                );
                 break;
             case "Ignition":
             case "Invoke":
@@ -4305,11 +4312,7 @@ public static class CardEffects
         target.Hp = Math.Max(0, target.Hp - hpLoss);
     }
 
-    private static void DealUnpoweredDamageToRandomEnemy(
-        CombatState state,
-        int amount,
-        Random? rng
-    )
+    private static void DealUnpoweredDamageToRandomEnemy(CombatState state, int amount, Random? rng)
     {
         var target = RandomLivingEnemy(state, rng);
         if (target != null)
