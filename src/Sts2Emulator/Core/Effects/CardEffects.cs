@@ -687,8 +687,12 @@ public static class CardEffects
 
             // ── Colorless ────────────────────────────────────────────────────────
 
-            case CL.GangUp: // 1-cost, 5/7 plus multiplayer ally-hit scaling
-                DealDamage(state, upgraded ? 7 : 5);
+            case CL.GangUp: // 1-cost, 5 + 5/7 per hit an ALLY landed on the target this turn
+                // CalculationBaseVar(5m) with ExtraDamageVar(5m) per qualifying ally hit;
+                // OnUpgrade raises the PER-HIT damage, not the base. The card is
+                // MultiplayerOnly and singleplayer has no allies, so the multiplier is
+                // always zero and an upgraded Gang Up still hits for 5.
+                DealDamage(state, 5);
                 break;
 
             case CL.GoldAxe: // 1-cost, damage equals cards played this combat
@@ -731,8 +735,10 @@ public static class CardEffects
                 DrawCards(state, 1, rng);
                 break;
 
-            case CL.FlashOfSteel: // 0-cost, 3/6 dmg + draw 1
-                DealDamage(state, upgraded ? 6 : 3);
+            case CL.FlashOfSteel: // 0-cost, 5/8 dmg + draw 1
+                // DamageVar(5m) with OnUpgrade UpgradeValueBy(3m). This case used to
+                // hardcode 3/6, ignoring the extracted card data that had it right.
+                DealDamage(state, Dmg(def, upgraded));
                 DrawCards(state, 1, rng);
                 break;
 
@@ -1068,12 +1074,9 @@ public static class CardEffects
                 break;
 
             case SI.Finisher: // 1-cost, 6/8 damage once per Attack played this turn
-                DealDamageMultiHit(
-                    state,
-                    Dmg(def, upgraded),
-                    Math.Max(1, state.AttackCardsPlayedThisTurn),
-                    rng
-                );
+                // CalculationBase 0 + 1 per finished Attack play, and AttackCommand's hit
+                // loop simply does not run at zero — no minimum hit.
+                DealDamageMultiHit(state, Dmg(def, upgraded), state.AttackCardsPlayedThisTurn, rng);
                 break;
 
             case SI.Flanking: // 2/1-cost, next turn energy approximation
@@ -1081,10 +1084,11 @@ public static class CardEffects
                 break;
 
             case SI.Flechettes: // 1-cost, 5/7 damage once per Skill in hand
+                // Same shape as Finisher: no Skills in hand means no hits at all.
                 DealDamageMultiHit(
                     state,
                     Dmg(def, upgraded),
-                    Math.Max(1, CountCardsOfTypeInHand(state, CardType.Skill)),
+                    CountCardsOfTypeInHand(state, CardType.Skill),
                     rng
                 );
                 break;
@@ -1149,8 +1153,12 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, upgraded ? 2 : 1);
                 break;
 
-            case SI.MementoMori: // 1-cost, 8/12 damage approximation
-                DealDamage(state, upgraded ? 12 : 8);
+            case SI.MementoMori: // 1-cost, 9 damage + 4/5 per card discarded this turn
+                // CalculationBaseVar(9m) with ExtraDamageVar(4m) per card discarded this
+                // turn; OnUpgrade raises the PER-DISCARD damage, not the base. The
+                // discard counter is not modelled, so this is the zero-discard case —
+                // the old 8/12 was wrong even there.
+                DealDamage(state, 9);
                 break;
 
             case SI.Mirage: // 1-cost, 10/14 block
@@ -1216,12 +1224,17 @@ public static class CardEffects
             }
 
             case SI.Pounce: // 2-cost, 14/20 damage and next Skill free
+                // PowerCmd.Apply<FreeSkillPower>(1) — the next Skill costs 0. This used to
+                // grant NextTurnEnergy, which is a different effect on a different turn.
                 DealDamage(state, Dmg(def, upgraded));
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, 1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.FreeSkillPower, 1);
                 break;
 
-            case SI.PreciseCut: // 0-cost, damage scales with Attacks played
-                DealDamage(state, 2 + state.AttackCardsPlayedThisTurn * (upgraded ? 4 : 3));
+            case SI.PreciseCut: // 0-cost, 13/16 damage LESS 2 per other card in hand
+                // CalculationBaseVar(13m) with ExtraDamageVar(2m) times -(hand count,
+                // excluding this card). The old formula scaled up with Attacks played,
+                // which is neither the right direction nor the right input.
+                DealDamage(state, Math.Max(0, (upgraded ? 16 : 13) - 2 * state.Hand.Count));
                 break;
 
             case SI.Predator: // 2-cost, 15/20 damage and draw 2 more next turn
@@ -1290,9 +1303,13 @@ public static class CardEffects
                 break;
             }
 
-            case SI.Strangle: // 1-cost, 8/10 damage and StranglePower approximation via Vulnerable
+            case SI.Strangle: // 1-cost, 8/10 damage and StranglePower 2
+                // PowerVar<StranglePower>(2m), which OnUpgrade leaves alone — only the
+                // damage upgrades. StranglePower itself is not modelled; Vulnerable 2
+                // stands in for it, so the stand-in must not scale with the upgrade
+                // either.
                 DealDamage(state, Dmg(def, upgraded));
-                ApplyEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 3 : 2, rng);
+                ApplyEnemyDebuff(state, BuffId.Vulnerable, 2, rng);
                 break;
 
             case SI.StrikeSilent: // 1-cost, 6/9 damage

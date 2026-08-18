@@ -125,6 +125,7 @@ public enum BuffId
     SteamEruption,
     Disintegration,
     FreeAttackPower, // player: next N Attacks cost 0; decrements on each Attack played
+    FreeSkillPower, // player: next N Skills cost 0; decrements on each Skill played
     Doom,
 }
 
