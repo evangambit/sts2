@@ -140,6 +140,16 @@ public sealed class RunEngine
 
         combat.NicheHpRng = nicheHpRng;
 
+        // Target choice draws from the run's "combat_targets" stream, so combat picks up
+        // where the run left off and hands the call count back when it ends.
+        var targetRng = new CountingRandom(State.Rng.CombatTargets.RawSeed);
+        for (int i = 0; i < State.Rng.CombatTargets.CallCount; i++)
+        {
+            targetRng.Next();
+        }
+
+        combat.TargetRng = targetRng;
+
         CombatFactory.Reset(
             combat,
             combatRng,
@@ -1484,6 +1494,11 @@ public sealed class RunEngine
         if (State.ActiveCombat.ShuffleRng is not null)
         {
             State.Rng.Shuffle.AdvanceToCallCount(State.ActiveCombat.ShuffleRng.CallCount);
+        }
+
+        if (State.ActiveCombat.TargetRng is not null)
+        {
+            State.Rng.CombatTargets.AdvanceToCallCount(State.ActiveCombat.TargetRng.CallCount);
         }
 
         SyncNicheRngFromCombat();

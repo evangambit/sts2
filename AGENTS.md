@@ -79,12 +79,18 @@
   not move, and generation refuses fixtures it cannot rebuild faithfully (an unmapped
   power, a relic in play, a card missing from `data\id_map.json`). Both failures are
   loud on purpose: a capture that silently drops the interesting half is worse than none.
-- A capture rebuilds the _situation_, not the game's RNG state, so it cannot pin an
-  effect that picks a random target (Juggernaut's hit, Volley, Sword Boomerang, a random
-  exhaust). Capture those only to read what the game did — asserting per-enemy results
-  from one sample produces a test that is wrong half the time. Pinning them needs the
-  emulator to model the relevant `Rng` stream (`CombatTargets` for target choice) and the
-  fixture to carry its state.
+- A capture rebuilds the _situation_, not the game's RNG state, so it still cannot pin
+  _which_ enemy a random-target effect hit (Juggernaut, Volley, Sword Boomerang, an
+  auto-played Attack). The emulator now models the `CombatTargets` stream those draw
+  from, but a fixture does not carry that stream's call count, so asserting a per-enemy
+  result from one sample gives a test that is wrong half the time. Capture such cards for
+  everything else they prove — amounts, powers, piles — and assert the target choice with
+  a property test instead (`JuggernautTests.TargetVariesWithTheTargetStream`).
+- Random target choice belongs to `CardEffects.RandomLivingEnemy`, which reads
+  `CombatState.TargetRng`. Adding a new random-target effect means calling that rather
+  than indexing with the combat RNG: the game draws every target from
+  `Rng.CombatTargets`, so a stray `rng.Next` desynchronises the stream for everything
+  after it — the failure `AiRng` was introduced to fix.
 - Never hand-edit `Cards\CardCaptures.g.cs`, and never copy emulator output into a
   fixture. Re-capturing re-reads ground truth; deriving it from our own output is the
   rubber stamp `scripts\generate_capture_tests.py` warns about.

@@ -109,7 +109,6 @@ public class CardCoverageTests
         "Infection",
         "InfiniteBlades",
         "JackOfAllTrades",
-        "Juggernaut",
         "KnifeTrap",
         "LeadingStrike",
         "LegSweep",

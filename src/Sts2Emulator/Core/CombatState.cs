@@ -58,6 +58,11 @@ public sealed class CombatState
     // CountingRandom tracks total Next() calls so RunEngine can sync its shuffle RNG.
     public CountingRandom? ShuffleRng;
 
+    // Target RNG (RunRngSet.combat_targets subsystem) — used whenever an effect picks
+    // which enemy to hit (Juggernaut, Volley, Sword Boomerang). Null falls back to the
+    // combat RNG (only valid in single-combat tests).
+    public CountingRandom? TargetRng;
+
     // AI RNG (RunRngSet.monster_ai subsystem) — used for enemy intent selection.
     // Null falls back to the combat RNG (used in single-combat tests).
     public Random? AiRng;

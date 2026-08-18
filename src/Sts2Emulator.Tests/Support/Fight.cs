@@ -37,6 +37,10 @@ internal sealed class Fight
     {
         var state = CombatFactory.NewCombat(seed: 0);
         state.Hand = [.. hand];
+        // Real entry points set this from the run's combat_targets stream. Setting it
+        // here too means a card test exercises the same target-picking path they do,
+        // rather than the bare fallback.
+        state.TargetRng = new CountingRandom(0);
         return new Fight(state);
     }
 
@@ -47,6 +51,7 @@ internal sealed class Fight
     public Fight Seed(int seed)
     {
         _rng = new Random(seed);
+        State.TargetRng = new CountingRandom(seed);
         return this;
     }
 

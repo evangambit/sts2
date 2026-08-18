@@ -69,6 +69,12 @@ public static class NativeExports
             State.AiRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
             );
+            // Which enemy a random-target effect hits comes off "combat_targets"
+            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
+            // above: unset, it silently drew from the combat rng.
+            State.TargetRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng);
         }
@@ -90,6 +96,12 @@ public static class NativeExports
             State.AiRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
             );
+            // Which enemy a random-target effect hits comes off "combat_targets"
+            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
+            // above: unset, it silently drew from the combat rng.
+            State.TargetRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds);
         }
@@ -110,6 +122,12 @@ public static class NativeExports
             // move is deterministic, wrong for the ones that roll.
             State.AiRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
+            );
+            // Which enemy a random-target effect hits comes off "combat_targets"
+            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
+            // above: unset, it silently drew from the combat rng.
+            State.TargetRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
             );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId);
@@ -143,6 +161,12 @@ public static class NativeExports
             // move is deterministic, wrong for the ones that roll.
             State.AiRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
+            );
+            // Which enemy a random-target effect hits comes off "combat_targets"
+            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
+            // above: unset, it silently drew from the combat rng.
+            State.TargetRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
             );
             LastPlayerWon = false;
             int? encounterRngSeed = Sts2Emulator.Core.Run.EncounterRng.SeedFor(
@@ -178,6 +202,12 @@ public static class NativeExports
             State.AiRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
             );
+            // Which enemy a random-target effect hits comes off "combat_targets"
+            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
+            // above: unset, it silently drew from the combat rng.
+            State.TargetRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, completedCombatRooms);
         }
@@ -198,6 +228,12 @@ public static class NativeExports
             // move is deterministic, wrong for the ones that roll.
             State.AiRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
+            );
+            // Which enemy a random-target effect hits comes off "combat_targets"
+            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
+            // above: unset, it silently drew from the combat rng.
+            State.TargetRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
             );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, relicIds);

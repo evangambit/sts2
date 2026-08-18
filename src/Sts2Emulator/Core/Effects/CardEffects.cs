@@ -97,7 +97,7 @@ public static class CardEffects
                 break;
 
             case IC.IronWave: // 1-cost, gain 5/7 block, then deal 5/7 damage
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 DealDamage(state, Dmg(def, upgraded));
                 break;
 
@@ -389,7 +389,7 @@ public static class CardEffects
             // ── Ironclad Skills ──────────────────────────────────────────────────
 
             case IC.Armaments: // 1-cost, gain 5 block + upgrade 1 card/all cards if upgraded
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 if (upgraded)
                 {
                     UpgradeAllCardsInHand(state);
@@ -413,7 +413,7 @@ public static class CardEffects
 
             case IC.BloodWall: // 2-cost, lose 2 HP + gain 16/20 block
                 LoseHp(state, 2);
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 break;
 
             case IC.Bloodletting: // 0-cost, lose 3 HP + gain 2/3 energy
@@ -426,7 +426,7 @@ public static class CardEffects
                 break;
 
             case IC.Colossus: // 1-cost, gain 5/8 block; Vulnerable enemies deal half attack damage this turn
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Colossus, 1);
                 break;
 
@@ -451,10 +451,10 @@ public static class CardEffects
                 break;
 
             case IC.EvilEye: // 1-cost, gain block twice if a card exhausted this turn
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 if (state.CardsExhaustedThisTurn > 0)
                 {
-                    GainBlock(state, Blk(def, upgraded));
+                    GainBlock(state, Blk(def, upgraded), rng);
                 }
 
                 break;
@@ -469,7 +469,7 @@ public static class CardEffects
             }
 
             case IC.FlameBarrier: // 2-cost, 12/16 block + FlameBarrier 4/6
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.FlameBarrier, upgraded ? 6 : 4);
                 break;
 
@@ -522,7 +522,7 @@ public static class CardEffects
                 {
                     state.Hand.Remove(c);
                     ExhaustCard(state, c, rng: rng);
-                    GainBlock(state, blockEach);
+                    GainBlock(state, blockEach, rng);
                 }
                 break;
             }
@@ -536,16 +536,16 @@ public static class CardEffects
                 break;
 
             case IC.ShrugItOff: // 1-cost, 8/11 block + draw 1
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 DrawCards(state, 1, rng);
                 break;
 
             case IC.UltimateDefend: // 1-cost, 11/15 block
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 break;
 
             case IC.Impervious: // 2-cost, 30/40 block + exhaust (Exhaust handled by CardDef)
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 break;
 
             case IC.Splash: // 1-cost, approximate generated off-character attack with a free Strike
@@ -557,7 +557,7 @@ public static class CardEffects
                 break;
 
             case IC.Taunt: // 1-cost, 7/8 block + Vulnerable 1 to enemy
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 ApplyEnemyDebuff(state, BuffId.Vulnerable, 1, rng);
                 break;
 
@@ -566,7 +566,7 @@ public static class CardEffects
                 break;
             case IC.TrueGrit: // 1-cost, gain 7/9 block; exhaust a random card
             {
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 if (state.Hand.Count > 0)
                 {
                     int index = rng.Next(state.Hand.Count);
@@ -610,7 +610,7 @@ public static class CardEffects
 
             case IC.DemonicShield: // 0-cost, lose 1 HP, double target ally's block (self in SP)
                 LoseHp(state, 1);
-                GainBlock(state, state.PlayerBlock);
+                GainBlock(state, state.PlayerBlock, rng);
                 break;
 
             case IC.DemonForm: // 3-cost, gain 2/3 Strength each player turn start
@@ -634,8 +634,8 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.InfernoSelfDamage, 1);
                 break;
 
-            case IC.Juggernaut: // 2-cost, deal 5/7 dmg when gaining block
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Juggernaut, upgraded ? 7 : 5);
+            case IC.Juggernaut: // 2-cost, deal 6/8 dmg when gaining block
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Juggernaut, upgraded ? 8 : 6);
                 break;
 
             case IC.Juggling: // 1-cost, copy the third Attack played each turn into hand
@@ -704,7 +704,7 @@ public static class CardEffects
             }
 
             case CL.Finesse: // 0-cost, 2/4 block + draw 1
-                GainBlock(state, upgraded ? 4 : 2);
+                GainBlock(state, upgraded ? 4 : 2, rng);
                 DrawCards(state, 1, rng);
                 break;
 
@@ -757,11 +757,11 @@ public static class CardEffects
                 break;
 
             case CL.Mimic: // 1-cost, gain block equal to target ally's block; self in SP
-                GainBlock(state, state.PlayerBlock);
+                GainBlock(state, state.PlayerBlock, rng);
                 break;
 
             case CL.PanicButton: // 0-cost, 30/40 block, then no card block for 2 turns
-                GainBlock(state, upgraded ? 40 : 30);
+                GainBlock(state, upgraded ? 40 : 30, rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 2);
                 break;
 
@@ -899,7 +899,7 @@ public static class CardEffects
             }
 
             case SI.Backflip: // 1-cost, 5/8 block and draw 2
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 DrawCards(state, 2, rng);
                 break;
 
@@ -916,7 +916,7 @@ public static class CardEffects
                 break;
 
             case SI.Blur: // 1-cost, 5/8 block and retain block next turn
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Barricade, 1);
                 break;
 
@@ -955,7 +955,7 @@ public static class CardEffects
             }
 
             case SI.CloakAndDagger: // 1-cost, 6 block and add 1/2 Shivs
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 AddGeneratedCardsToHand(state, SI.Shiv, upgraded ? 2 : 1);
                 break;
 
@@ -975,7 +975,7 @@ public static class CardEffects
                 break;
 
             case SI.Dash: // 2-cost, 10/13 block and 10/13 damage
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 DealDamage(state, Dmg(def, upgraded));
                 break;
 
@@ -985,13 +985,13 @@ public static class CardEffects
 
             case SI.DefendSilent: // 1-cost, 5/8 block
             case SI.Deflect: // 0-cost, 4/7 block
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 break;
 
             case SI.DodgeAndRoll: // 1-cost, 4/6 block and same block next turn
             {
                 int amount = Blk(def, upgraded);
-                GainBlock(state, amount);
+                GainBlock(state, amount, rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.BlockNextTurn, amount);
                 break;
             }
@@ -1012,7 +1012,7 @@ public static class CardEffects
                 DrawCards(state, 1, rng);
                 if (drewSkill)
                 {
-                    GainBlock(state, Blk(def, upgraded));
+                    GainBlock(state, Blk(def, upgraded), rng);
                 }
                 break;
             }
@@ -1087,7 +1087,7 @@ public static class CardEffects
                 break;
 
             case SI.HandTrick: // 1-cost, 7/10 block and mark a Skill Sly
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 break;
 
             case SI.HiddenDaggers: // 1-cost, 2/3 Shiv-like damage and add 2/3 Shivs
@@ -1109,7 +1109,7 @@ public static class CardEffects
                 break;
 
             case SI.LegSweep: // 2-cost, 11/14 block and Weak 3/4
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 ApplyEnemyDebuff(state, BuffId.Weak, upgraded ? 4 : 3, rng);
                 break;
 
@@ -1131,7 +1131,7 @@ public static class CardEffects
                 break;
 
             case SI.Mirage: // 1-cost, 10/14 block
-                GainBlock(state, upgraded ? 14 : 10);
+                GainBlock(state, upgraded ? 14 : 10, rng);
                 break;
 
             case SI.Murder: // 2-cost, high damage approximation
@@ -1290,7 +1290,7 @@ public static class CardEffects
             }
 
             case SI.Survivor: // 1-cost, 8/11 block and discard 1
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 DiscardFirstCardsFromHand(state, 1);
                 break;
 
@@ -1311,7 +1311,7 @@ public static class CardEffects
                 break;
 
             case SI.Untouchable: // 2-cost, gain block equal to remaining draw pile plus 6/9
-                GainBlock(state, Blk(def, upgraded) + state.DrawPile.Count);
+                GainBlock(state, Blk(def, upgraded) + state.DrawPile.Count, rng);
                 break;
 
             case SI.UpMySleeve: // 2-cost, add 2 Shivs; cost drops in combat in real game
@@ -1885,6 +1885,30 @@ public static class CardEffects
         }
     }
 
+    /// <summary>
+    /// Picks the enemy an effect hits at random, off the run's combat_targets stream.
+    ///
+    /// The game draws every target choice from <c>Rng.CombatTargets</c>
+    /// (JuggernautPower: <c>Rng.CombatTargets.NextItem(HittableEnemies)</c>), so drawing
+    /// from the combat RNG desynchronises the stream for everything that follows, the
+    /// same way enemy intents did before AiRng existed.
+    /// </summary>
+    internal static EnemyState? RandomLivingEnemy(CombatState state, Random? rng)
+    {
+        var living = state.Enemies.Where(e => e.Hp > 0).ToList();
+        if (living.Count == 0)
+        {
+            return null;
+        }
+
+        // TargetRng is the run's stream and is set by every real entry point; rng is the
+        // combat RNG, which single-combat tests pass. Only a caller with neither lands on
+        // the first enemy, and that is the shape of the bug this replaced — so prefer
+        // threading an rng over relying on it.
+        var targetRng = state.TargetRng ?? rng;
+        return targetRng == null ? living[0] : living[targetRng.Next(living.Count)];
+    }
+
     private static void DealDamageToRandomEnemiesMultiHit(
         CombatState state,
         int amount,
@@ -1894,13 +1918,13 @@ public static class CardEffects
     {
         for (int i = 0; i < hits; i++)
         {
-            var livingEnemies = state.Enemies.Where(e => e.Hp > 0).ToList();
-            if (livingEnemies.Count == 0)
+            var target = RandomLivingEnemy(state, rng);
+            if (target == null)
             {
                 return;
             }
 
-            DealDamageToEnemy(state, livingEnemies[rng.Next(livingEnemies.Count)], amount);
+            DealDamageToEnemy(state, target, amount);
         }
     }
 
@@ -1977,15 +2001,16 @@ public static class CardEffects
         }
     }
 
-    public static void GainBlock(CombatState state, int amount) =>
-        GainBlock(state, amount, powered: true);
+    public static void GainBlock(CombatState state, int amount, Random? rng = null) =>
+        GainBlock(state, amount, rng, powered: true);
 
-    public static void GainUnpoweredBlock(CombatState state, int amount) =>
-        GainBlock(state, amount, powered: false);
+    public static void GainUnpoweredBlock(CombatState state, int amount, Random? rng = null) =>
+        GainBlock(state, amount, rng, powered: false);
 
     private static void GainBlock(
         CombatState state,
         int amount,
+        Random? rng = null,
         bool powered = true,
         bool isDefend = false
     )
@@ -2007,16 +2032,15 @@ public static class CardEffects
 
         state.PlayerBlock += effective;
 
-        // Juggernaut: deal unpowered damage to a random enemy when block is gained.
+        // Juggernaut: JuggernautPower.AfterBlockGained deals base.Amount to
+        // Rng.CombatTargets.NextItem(HittableEnemies) as ValueProp.Unpowered.
         int jug = BuffSystem.Get(state.PlayerBuffs, BuffId.Juggernaut);
         if (jug > 0)
         {
-            var target = FirstEnemy(state);
+            var target = RandomLivingEnemy(state, rng);
             if (target != null)
             {
-                int abs = Math.Min(target.Block, jug);
-                target.Block -= abs;
-                target.Hp = Math.Max(0, target.Hp - (jug - abs));
+                DealUnpoweredDamageToEnemy(state, target, jug);
             }
         }
     }
@@ -2052,7 +2076,7 @@ public static class CardEffects
         TriggerInfernoAfterPlayerSelfDamage(state, hpBefore - state.PlayerHp);
     }
 
-    public static void ChannelOrb(CombatState state, OrbType type)
+    public static void ChannelOrb(CombatState state, OrbType type, Random? rng = null)
     {
         if (state.OrbCapacity <= 0)
         {
@@ -2061,7 +2085,7 @@ public static class CardEffects
 
         if (state.Orbs.Count >= state.OrbCapacity)
         {
-            EvokeNextOrb(state, dequeue: true);
+            EvokeNextOrb(state, rng, dequeue: true);
         }
 
         if (state.Orbs.Count < state.OrbCapacity)
@@ -2076,7 +2100,7 @@ public static class CardEffects
         }
     }
 
-    public static void EvokeNextOrb(CombatState state, bool dequeue = true)
+    public static void EvokeNextOrb(CombatState state, Random? rng, bool dequeue = true)
     {
         if (state.Orbs.Count == 0)
         {
@@ -2084,14 +2108,14 @@ public static class CardEffects
         }
 
         var orb = state.Orbs[0];
-        EvokeOrb(state, orb);
+        EvokeOrb(state, orb, rng);
         if (dequeue)
         {
             state.Orbs.RemoveAt(0);
         }
     }
 
-    public static void EvokeLastOrb(CombatState state)
+    public static void EvokeLastOrb(CombatState state, Random? rng)
     {
         if (state.Orbs.Count == 0)
         {
@@ -2099,7 +2123,7 @@ public static class CardEffects
         }
 
         var orb = state.Orbs[^1];
-        EvokeOrb(state, orb);
+        EvokeOrb(state, orb, rng);
         state.Orbs.RemoveAt(state.Orbs.Count - 1);
     }
 
@@ -2120,7 +2144,7 @@ public static class CardEffects
                 DealUnpoweredDamageToRandomEnemy(state, LightningPassiveValue(state), rng);
                 break;
             case OrbType.Frost:
-                GainUnpoweredBlock(state, FrostPassiveValue(state));
+                GainUnpoweredBlock(state, FrostPassiveValue(state), rng);
                 break;
             case OrbType.Dark:
                 state.Orbs[index] = orb with
@@ -2227,7 +2251,7 @@ public static class CardEffects
             case "ShadowShield":
             case "ChargeBattery":
             case "LightningRod":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 if (def.Name == "BoostAway")
                 {
                     AddGeneratedStatusToDiscard(state, ST.Dazed, rng);
@@ -2319,8 +2343,8 @@ public static class CardEffects
                 ChannelOrb(state, OrbType.Lightning);
                 return true;
             case "Dualcast":
-                EvokeNextOrb(state, dequeue: false);
-                EvokeNextOrb(state);
+                EvokeNextOrb(state, rng, dequeue: false);
+                EvokeNextOrb(state, rng);
                 return true;
             case "Capacitor":
                 state.OrbCapacity = Math.Min(10, state.OrbCapacity + (upgraded ? 3 : 2));
@@ -2422,7 +2446,7 @@ public static class CardEffects
                 state.Energy = 0;
                 for (int i = 0; i < x; i++)
                 {
-                    EvokeNextOrb(state, dequeue: i == x - 1);
+                    EvokeNextOrb(state, rng, dequeue: i == x - 1);
                 }
 
                 return true;
@@ -2430,7 +2454,7 @@ public static class CardEffects
             case "Quadcast":
                 for (int i = 0; i < 4; i++)
                 {
-                    EvokeNextOrb(state, dequeue: i == 3);
+                    EvokeNextOrb(state, rng, dequeue: i == 3);
                 }
 
                 return true;
@@ -2440,8 +2464,8 @@ public static class CardEffects
                 int orbCount = state.Orbs.Count;
                 for (int i = 0; i < orbCount; i++)
                 {
-                    EvokeNextOrb(state, dequeue: false);
-                    EvokeNextOrb(state);
+                    EvokeNextOrb(state, rng, dequeue: false);
+                    EvokeNextOrb(state, rng);
                 }
 
                 return true;
@@ -2486,7 +2510,7 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, upgraded ? 3 : 2);
                 return true;
             case "Compact":
-                GainBlock(state, upgraded ? 7 : 6);
+                GainBlock(state, upgraded ? 7 : 6, rng);
                 TransformStatusesInHandToFuel(state, upgraded);
                 return true;
             case "ConsumingShadow":
@@ -2518,7 +2542,7 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryFocus, upgraded ? 2 : 1);
                 return true;
             case "GeneticAlgorithm":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 return true;
             case "Hailstorm":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Hailstorm, upgraded ? 8 : 6);
@@ -2527,7 +2551,7 @@ public static class CardEffects
                 DealDamageMultiHit(state, Dmg(def, upgraded), state.Energy, rng);
                 return true;
             case "Hologram":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 MoveDiscardCardsToHand(state, 1);
                 return true;
             case "Hotfix":
@@ -2689,7 +2713,7 @@ public static class CardEffects
                 return true;
             case "DefendNecrobinder":
             case "Undeath":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 if (def.Name == "Undeath")
                 {
                     state.DiscardPile.Add(new CardInstance(446, false));
@@ -2716,7 +2740,7 @@ public static class CardEffects
                 return true;
             case "PullAggro":
                 SummonOsty(state, upgraded ? 5 : 4);
-                GainBlock(state, upgraded ? 9 : 7);
+                GainBlock(state, upgraded ? 9 : 7, rng);
                 return true;
             case "Reanimate":
                 SummonOsty(state, upgraded ? 25 : 20);
@@ -2736,7 +2760,7 @@ public static class CardEffects
                     KillOsty(state);
                 }
 
-                GainBlock(state, upgraded ? 12 : 9);
+                GainBlock(state, upgraded ? 12 : 9, rng);
                 return true;
             case "Fetch":
                 DealOstyDamage(state, upgraded ? 6 : 3);
@@ -2763,7 +2787,7 @@ public static class CardEffects
                 {
                     int block = state.OstyMaxHp * 2;
                     KillOsty(state);
-                    GainBlock(state, block);
+                    GainBlock(state, block, rng);
                 }
 
                 return true;
@@ -2795,7 +2819,7 @@ public static class CardEffects
                 KillDoomedEnemies(state);
                 return true;
             case "NegativePulse":
-                GainBlock(state, upgraded ? 6 : 5);
+                GainBlock(state, upgraded ? 6 : 5, rng);
                 ApplyAllEnemyDebuff(state, BuffId.Doom, upgraded ? 11 : 7, rng);
                 return true;
             case "Oblivion":
@@ -2806,11 +2830,11 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 2 : 1, rng);
                 return true;
             case "Defy":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 ApplyEnemyDebuff(state, BuffId.Weak, 1, rng);
                 return true;
             case "Delay":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 2 : 1);
                 return true;
             case "DeathsDoor":
@@ -2818,7 +2842,7 @@ public static class CardEffects
                 int gains = state.PlayerHp <= state.PlayerMaxHp / 2 ? (upgraded ? 4 : 3) : 1;
                 for (int i = 0; i < gains; i++)
                 {
-                    GainBlock(state, upgraded ? 7 : 6);
+                    GainBlock(state, upgraded ? 7 : 6, rng);
                 }
 
                 return true;
@@ -2867,7 +2891,7 @@ public static class CardEffects
                 MoveDiscardCardsToHand(state, 3);
                 return true;
             case "GraveWarden":
-                GainBlock(state, upgraded ? 11 : 8);
+                GainBlock(state, upgraded ? 11 : 8, rng);
                 AddSoulsToDrawPile(state, 1, upgraded: false);
                 return true;
             case "Graveblast":
@@ -3005,7 +3029,7 @@ public static class CardEffects
             case "Haunt":
             case "LegionOfBone":
             case "ReanimatePower":
-                ApplyBaseDamageAndBlock(def, upgraded, state, card);
+                ApplyBaseDamageAndBlock(def, upgraded, state, card, rng);
                 return true;
         }
 
@@ -3036,7 +3060,7 @@ public static class CardEffects
             case "IAmInvincible":
             case "ParticleWall":
             case "Reflect":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 if (def.Name == "CosmicIndifference")
                 {
                     MoveFirstHandCardToTopOfDrawPile(state);
@@ -3099,11 +3123,11 @@ public static class CardEffects
                 ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 5 : 3);
                 return true;
             case "GatherLight":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 state.Stars += 1;
                 return true;
             case "Glitterstream":
-                GainBlock(state, upgraded ? 13 : 11);
+                GainBlock(state, upgraded ? 13 : 11, rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.BlockNextTurn, upgraded ? 7 : 5);
                 return true;
             case "GuidingStar":
@@ -3155,11 +3179,11 @@ public static class CardEffects
                 DealDamage(state, Dmg(def, upgraded));
                 return true;
             case "ManifestAuthority":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 AddRandomRegentCardsToHand(state, 1, rng);
                 return true;
             case "Patter":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Vigor, upgraded ? 3 : 2);
                 return true;
             case "PhotonCut":
@@ -3249,10 +3273,10 @@ public static class CardEffects
                 return true;
             case "Fisticuffs":
                 DealDamage(state, Dmg(def, upgraded));
-                GainBlock(state, Dmg(def, upgraded));
+                GainBlock(state, Dmg(def, upgraded), rng);
                 return true;
             case "Intercept":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
                 return true;
             case "Lift":
@@ -3260,7 +3284,7 @@ public static class CardEffects
             case "TheGambit":
             case "ToricToughness":
             case "MinionSacrifice":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 if (def.Name == "TheGambit")
                 {
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
@@ -3283,13 +3307,13 @@ public static class CardEffects
                 DiscardFirstCardsFromHand(state, upgraded ? 3 : 2);
                 return true;
             case "Relax":
-                GainBlock(state, Blk(def, upgraded));
+                GainBlock(state, Blk(def, upgraded), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, upgraded ? 3 : 2);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 3 : 2);
                 return true;
             case "MadScience":
                 DealDamage(state, upgraded ? 14 : 12);
-                GainBlock(state, upgraded ? 10 : 8);
+                GainBlock(state, upgraded ? 10 : 8, rng);
                 ApplyEnemyDebuff(state, BuffId.Weak, 2, rng);
                 ApplyEnemyDebuff(state, BuffId.Vulnerable, 2, rng);
                 state.Energy += 2;
@@ -3309,7 +3333,7 @@ public static class CardEffects
                 DealDamageMultiHit(state, Dmg(def, upgraded), 1, rng);
                 if (state.PlayerBlock > 0)
                 {
-                    GainBlock(state, state.PlayerBlock);
+                    GainBlock(state, state.PlayerBlock, rng);
                 }
 
                 return true;
@@ -3354,7 +3378,7 @@ public static class CardEffects
             return;
         }
 
-        ApplyBaseDamageAndBlock(def, upgraded, state, card);
+        ApplyBaseDamageAndBlock(def, upgraded, state, card, rng);
 
         switch (def.Name)
         {
@@ -3429,7 +3453,7 @@ public static class CardEffects
                 AddGeneratedCardsToHand(state, 430, upgraded ? 4 : 3);
                 break;
             case "Bodyguard":
-                GainBlock(state, upgraded ? 12 : 8);
+                GainBlock(state, upgraded ? 12 : 8, rng);
                 break;
             case "Blur":
             case "Equilibrium":
@@ -3438,7 +3462,7 @@ public static class CardEffects
             case "BootSequence":
             case "Mirage":
             case "Sacrifice":
-                GainBlock(state, upgraded ? 14 : 10);
+                GainBlock(state, upgraded ? 14 : 10, rng);
                 break;
             case "BladeOfInk":
             case "ForegoneConclusion":
@@ -3492,7 +3516,7 @@ public static class CardEffects
             case "Coolant":
             case "Fusion":
             case "Zap":
-                ApplyOrbLikeValue(state, def.Name, upgraded);
+                ApplyOrbLikeValue(state, def.Name, upgraded, rng);
                 break;
             case "Cleanse":
                 BuffSystem.Remove(state.PlayerBuffs, BuffId.Vulnerable);
@@ -3548,8 +3572,8 @@ public static class CardEffects
                 DuplicateFirstCardInHand(state, upgraded ? 3 : 2);
                 break;
             case "Dualcast":
-                ApplyOrbLikeValue(state, "Zap", upgraded);
-                ApplyOrbLikeValue(state, "Zap", upgraded);
+                ApplyOrbLikeValue(state, "Zap", upgraded, rng);
+                ApplyOrbLikeValue(state, "Zap", upgraded, rng);
                 break;
             case "Dredge":
                 MoveDiscardCardsToHand(state, upgraded ? 2 : 1);
@@ -3566,7 +3590,7 @@ public static class CardEffects
                 ApplyEnemyDebuff(state, BuffId.Weak, upgraded ? 3 : 2, rng);
                 break;
             case "Entrench":
-                GainBlock(state, state.PlayerBlock);
+                GainBlock(state, state.PlayerBlock, rng);
                 break;
             case "Envenom":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Envenom, 1);
@@ -3586,15 +3610,15 @@ public static class CardEffects
                 break;
             case "GeneticAlgorithm":
             case "Stack":
-                GainBlock(state, upgraded ? state.DiscardPile.Count + 3 : state.DiscardPile.Count);
+                GainBlock(state, upgraded ? state.DiscardPile.Count + 3 : state.DiscardPile.Count, rng);
                 break;
             case "Ignition":
             case "Invoke":
             case "MultiCast":
             case "Quadcast":
             case "Rainbow":
-                ApplyOrbLikeValue(state, "Zap", upgraded);
-                ApplyOrbLikeValue(state, "ColdSnap", upgraded);
+                ApplyOrbLikeValue(state, "Zap", upgraded, rng);
+                ApplyOrbLikeValue(state, "ColdSnap", upgraded, rng);
                 break;
             case "KnifeTrap":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Thorns, upgraded ? 6 : 4);
@@ -3814,7 +3838,8 @@ public static class CardEffects
         CardDef def,
         bool upgraded,
         CombatState state,
-        CardInstance card
+        CardInstance card,
+        Random? rng
     )
     {
         int dmg = (upgraded ? def.BaseDamage + def.UpgradeDamage : def.BaseDamage) + card.Sharp;
@@ -3836,7 +3861,7 @@ public static class CardEffects
 
         if (blk > 0)
         {
-            GainBlock(state, blk, isDefend: def.Name.Contains("Defend"));
+            GainBlock(state, blk, rng, isDefend: def.Name.Contains("Defend"));
         }
     }
 
@@ -4280,18 +4305,20 @@ public static class CardEffects
         target.Hp = Math.Max(0, target.Hp - hpLoss);
     }
 
-    private static void DealUnpoweredDamageToRandomEnemy(CombatState state, int amount, Random rng)
+    private static void DealUnpoweredDamageToRandomEnemy(
+        CombatState state,
+        int amount,
+        Random? rng
+    )
     {
-        var livingEnemies = state.Enemies.Where(e => e.Hp > 0).ToList();
-        if (livingEnemies.Count == 0)
+        var target = RandomLivingEnemy(state, rng);
+        if (target != null)
         {
-            return;
+            DealUnpoweredDamageToEnemy(state, target, amount);
         }
-
-        DealUnpoweredDamageToEnemy(state, livingEnemies[rng.Next(livingEnemies.Count)], amount);
     }
 
-    private static void EvokeOrb(CombatState state, OrbState orb)
+    private static void EvokeOrb(CombatState state, OrbState orb, Random? rng)
     {
         switch (orb.Type)
         {
@@ -4313,7 +4340,7 @@ public static class CardEffects
                 break;
             }
             case OrbType.Frost:
-                GainUnpoweredBlock(state, FrostEvokeValue(state));
+                GainUnpoweredBlock(state, FrostEvokeValue(state), rng);
                 break;
             case OrbType.Dark:
             {
@@ -4633,7 +4660,12 @@ public static class CardEffects
         }
     }
 
-    private static void ApplyOrbLikeValue(CombatState state, string cardName, bool upgraded)
+    private static void ApplyOrbLikeValue(
+        CombatState state,
+        string cardName,
+        bool upgraded,
+        Random? rng
+    )
     {
         int focus = BuffSystem.Get(state.PlayerBuffs, BuffId.Focus);
         switch (cardName)
@@ -4655,7 +4687,7 @@ public static class CardEffects
             case "Glacier":
             case "Chill":
             case "Coolant":
-                GainUnpoweredBlock(state, Math.Max(0, (upgraded ? 7 : 5) + focus));
+                GainUnpoweredBlock(state, Math.Max(0, (upgraded ? 7 : 5) + focus), rng);
                 break;
             case "Darkness":
                 DealUnpoweredDamageToAll(state, Math.Max(0, (upgraded ? 9 : 6) + focus));

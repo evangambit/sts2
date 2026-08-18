@@ -254,6 +254,13 @@ def render_test(
         count_assert(after_player["exhaust_pile_count"], "fight.State.ExhaustPile"),
     ]
 
+    lines.extend(
+        f"        Assert.Equal({int(status['amount'])}, "
+        f"fight.PlayerBuffAmount({buff_constant(str(status['id']), buffs)}));"
+        for status in after_player.get("status") or []
+        if status.get("amount") is not None
+    )
+
     for index, enemy in enumerate(after["enemies"]):
         lines.append(
             f"        Assert.Equal({enemy['hp']}, fight.State.Enemies[{index}].Hp);",

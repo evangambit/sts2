@@ -52,7 +52,7 @@ public static class RelicEffects
 
         if (HasRelic(state, Anchor))
         {
-            CardEffects.GainBlock(state, 10);
+            CardEffects.GainBlock(state, 10, rng);
         }
 
         if (HasRelic(state, Vajra))
@@ -82,7 +82,7 @@ public static class RelicEffects
         }
     }
 
-    public static void ApplyStartOfPlayerTurn(CombatState state)
+    public static void ApplyStartOfPlayerTurn(CombatState state, Random? rng = null)
     {
         int turnNumber = state.Turn + 1;
 
@@ -109,12 +109,12 @@ public static class RelicEffects
 
         if (turnNumber == 2 && HasRelic(state, HornCleat))
         {
-            CardEffects.GainBlock(state, 14);
+            CardEffects.GainBlock(state, 14, rng);
         }
 
         if (turnNumber == 3 && HasRelic(state, CaptainsWheel))
         {
-            CardEffects.GainBlock(state, 18);
+            CardEffects.GainBlock(state, 18, rng);
         }
 
         int index = state.Relics.FindIndex(relic => relic.DefId == HappyFlower);
@@ -151,11 +151,11 @@ public static class RelicEffects
         state.Relics[index] = state.Relics[index] with { Counter = shouldBeActive ? 1 : 0 };
     }
 
-    public static void ApplyEndOfPlayerTurn(CombatState state)
+    public static void ApplyEndOfPlayerTurn(CombatState state, Random? rng = null)
     {
         if (HasRelic(state, Orichalcum) && state.PlayerBlock == 0)
         {
-            CardEffects.GainBlock(state, 6);
+            CardEffects.GainBlock(state, 6, rng);
         }
     }
 

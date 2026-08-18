@@ -29,7 +29,7 @@ public static class CombatEngine
         else
         {
             int potionSlot = action - endTurnAction - 1;
-            result = UsePotion(state, potionSlot);
+            result = UsePotion(state, potionSlot, rng);
         }
 
         // Auto-plays use first-living enemy, not the explicit target.
@@ -158,7 +158,7 @@ public static class CombatEngine
             int rage = BuffSystem.Get(state.PlayerBuffs, BuffId.Rage);
             if (rage > 0)
             {
-                Effects.CardEffects.GainBlock(state, rage);
+                Effects.CardEffects.GainBlock(state, rage, rng);
             }
 
             int calamity = BuffSystem.Get(state.PlayerBuffs, BuffId.CalamityPower);
@@ -194,7 +194,7 @@ public static class CombatEngine
         }
 
         IncrementPlayedCardTypeCounters(state, def);
-        ApplyAfterCardPlayedPowers(state, def);
+        ApplyAfterCardPlayedPowers(state, def, rng);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         bool playerDead = state.PlayerHp <= 0;
@@ -224,13 +224,13 @@ public static class CombatEngine
         int metallicize = BuffSystem.Get(state.PlayerBuffs, BuffId.Metallicize);
         if (metallicize > 0)
         {
-            Effects.CardEffects.GainBlock(state, metallicize);
+            Effects.CardEffects.GainBlock(state, metallicize, rng);
         }
         // Plating (Stone Armor): gain block at end of player turn.
         int plating = BuffSystem.Get(state.PlayerBuffs, BuffId.Plating);
         if (plating > 0)
         {
-            Effects.CardEffects.GainBlock(state, plating);
+            Effects.CardEffects.GainBlock(state, plating, rng);
         }
 
         int hailstorm = BuffSystem.Get(state.PlayerBuffs, BuffId.Hailstorm);
@@ -244,12 +244,12 @@ public static class CombatEngine
         int consumingShadow = BuffSystem.Get(state.PlayerBuffs, BuffId.ConsumingShadow);
         for (int i = 0; i < consumingShadow; i++)
         {
-            Effects.CardEffects.EvokeLastOrb(state);
+            Effects.CardEffects.EvokeLastOrb(state, rng);
         }
 
         AutoPlayStampedeAttacks(state, rng);
 
-        Effects.RelicEffects.ApplyEndOfPlayerTurn(state);
+        Effects.RelicEffects.ApplyEndOfPlayerTurn(state, rng);
         bool allDeadAfterEndTurnPowers = state.Enemies.All(e => e.Hp <= 0);
         if (allDeadAfterEndTurnPowers)
         {
@@ -459,7 +459,7 @@ public static class CombatEngine
             state.PlayerBlock = 0;
         }
 
-        ApplyBlockNextTurn(state);
+        ApplyBlockNextTurn(state, rng);
 
         int coolant = BuffSystem.Get(state.PlayerBuffs, BuffId.Coolant);
         if (coolant > 0)
@@ -498,7 +498,7 @@ public static class CombatEngine
             }
         }
 
-        Effects.RelicEffects.ApplyStartOfPlayerTurn(state);
+        Effects.RelicEffects.ApplyStartOfPlayerTurn(state, rng);
 
         int loop = BuffSystem.Get(state.PlayerBuffs, BuffId.Loop);
         for (int i = 0; i < loop; i++)
@@ -535,7 +535,7 @@ public static class CombatEngine
         int crimsonBlock = BuffSystem.Get(state.PlayerBuffs, BuffId.CrimsonMantleBlock);
         if (crimsonBlock > 0)
         {
-            Effects.CardEffects.GainUnpoweredBlock(state, crimsonBlock);
+            Effects.CardEffects.GainUnpoweredBlock(state, crimsonBlock, rng);
         }
 
         // DemonForm: gain Strength at start of player turn.
@@ -643,14 +643,14 @@ public static class CombatEngine
         );
     }
 
-    private static StepResult UsePotion(CombatState state, int slot)
+    private static StepResult UsePotion(CombatState state, int slot, Random? rng)
     {
         if (slot < 0 || slot >= state.PotionSlots.Length || state.PotionSlots[slot] == 0)
         {
             return StepResult.Invalid;
         }
 
-        Effects.PotionEffects.Apply(state.PotionSlots[slot], state);
+        Effects.PotionEffects.Apply(state.PotionSlots[slot], state, rng);
         state.PotionSlots[slot] = 0;
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
@@ -1070,7 +1070,7 @@ public static class CombatEngine
             int rage = BuffSystem.Get(state.PlayerBuffs, BuffId.Rage);
             if (rage > 0)
             {
-                Effects.CardEffects.GainBlock(state, rage);
+                Effects.CardEffects.GainBlock(state, rage, rng);
             }
 
             int calamity = BuffSystem.Get(state.PlayerBuffs, BuffId.CalamityPower);
@@ -1098,7 +1098,7 @@ public static class CombatEngine
         }
 
         IncrementPlayedCardTypeCounters(state, def);
-        ApplyAfterCardPlayedPowers(state, def);
+        ApplyAfterCardPlayedPowers(state, def, rng);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
     }
 
@@ -1110,7 +1110,7 @@ public static class CombatEngine
         }
     }
 
-    private static void ApplyAfterCardPlayedPowers(CombatState state, CardDef def)
+    private static void ApplyAfterCardPlayedPowers(CombatState state, CardDef def, Random? rng)
     {
         if (def.Type == CardType.Skill)
         {
@@ -1163,7 +1163,7 @@ public static class CombatEngine
         int afterimage = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
         if (afterimage > 0)
         {
-            Effects.CardEffects.GainBlock(state, afterimage);
+            Effects.CardEffects.GainBlock(state, afterimage, rng);
         }
 
         foreach (var enemy in state.Enemies.Where(e => e.Hp > 0))
@@ -1234,14 +1234,15 @@ public static class CombatEngine
     {
         var def = GeneratedData.Cards.Get(card.DefId);
 
-        // Auto-play uses random targeting for attacks.
+        // Auto-play picks its target the way CardCmd does when a played card has no
+        // explicit one: Rng.CombatTargets.NextItem(HittableEnemies).
         int targetIndex = -1;
         if (def.Type == CardType.Attack)
         {
-            var living = state.Enemies.Where(e => e.Hp > 0).ToList();
-            if (living.Count > 0)
+            var target = Effects.CardEffects.RandomLivingEnemy(state, rng);
+            if (target != null)
             {
-                targetIndex = state.Enemies.IndexOf(living[rng.Next(living.Count)]);
+                targetIndex = state.Enemies.IndexOf(target);
             }
         }
 
@@ -1273,7 +1274,7 @@ public static class CombatEngine
         }
 
         IncrementPlayedCardTypeCounters(state, def);
-        ApplyAfterCardPlayedPowers(state, def);
+        ApplyAfterCardPlayedPowers(state, def, rng);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
     }
 
@@ -1287,7 +1288,7 @@ public static class CombatEngine
         }
     }
 
-    private static void ApplyBlockNextTurn(CombatState state)
+    private static void ApplyBlockNextTurn(CombatState state, Random? rng)
     {
         int blockNextTurn = BuffSystem.Get(state.PlayerBuffs, BuffId.BlockNextTurn);
         if (blockNextTurn <= 0)
@@ -1295,7 +1296,7 @@ public static class CombatEngine
             return;
         }
 
-        Effects.CardEffects.GainUnpoweredBlock(state, blockNextTurn);
+        Effects.CardEffects.GainUnpoweredBlock(state, blockNextTurn, rng);
         BuffSystem.Remove(state.PlayerBuffs, BuffId.BlockNextTurn);
     }
 
