@@ -18,11 +18,13 @@ emulator.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 CARD_EFFECTS = REPO / "src" / "Sts2Emulator" / "Core" / "Effects" / "CardEffects.cs"
+ID_MAP = REPO / "data" / "id_map.json"
 TESTS = REPO / "src" / "Sts2Emulator.Tests"
 OUT = TESTS / "Cards" / "ImplementedCards.g.cs"
 
@@ -35,13 +37,29 @@ FOLDERS = {
     "ST": "StatusCurse",
 }
 
-CASE_RE = re.compile(rf"case ({'|'.join(FOLDERS)})\.(\w+)\s*:")
+# Two shapes implement a card, and only counting the first is how three whole
+# characters stayed invisible: `Apply` switches on id constants for Ironclad, Silent,
+# Colourless and friends, while Defect, Necrobinder and Regent are handled by
+# ApplyDefectCard and its siblings, which switch on def.Name.
+CONST_CASE_RE = re.compile(rf"case ({'|'.join(FOLDERS)})\.(\w+)\s*:")
+NAME_CASE_RE = re.compile(r'case "(\w+)"\s*:')
 
 
 def implemented_cards() -> dict[str, str]:
-    """Map card name -> id class, for every card with a case label."""
+    """Map card name -> id class (or "" for name-cased cards), for every implemented card.
+
+    A name-cased label only counts when it names a real card: the same switch shape is
+    used for powers, so `case "ReanimatePower"` would otherwise be reported as a card
+    nobody had tested.
+    """
     source = CARD_EFFECTS.read_text(encoding="utf-8")
-    return {name: cls for cls, name in CASE_RE.findall(source)}
+    cards = {name: cls for cls, name in CONST_CASE_RE.findall(source)}
+
+    known = set(json.loads(ID_MAP.read_text(encoding="utf-8"))["cards"])
+    for name in NAME_CASE_RE.findall(source):
+        if name in known and name not in cards:
+            cards[name] = ""
+    return cards
 
 
 def test_suites() -> set[str]:

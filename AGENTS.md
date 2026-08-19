@@ -92,13 +92,19 @@
   either write the tests or add the card to `CardCoverageTests.Pending`. The build fails otherwise.
   `Pending` is a burn-down list: shrink it, and expect to justify any growth.
 - `python scripts/generate_card_coverage.py --print-untested` lists what is still unverified.
-- The guard counts a card as implemented when it has a `case` in `CardEffects.Apply`, so
-  cards that reach the engine through the generic damage-and-block path are invisible to
-  it — Strike, Defend and Giant Rock have no case and were never listed. An empty
-  `Pending` therefore means "every card with its own effect code is tested", not "every
-  card is tested". Widening the rule to "has damage or block in the data" is wrong: it
-  matches 146 cards, most of which do more than the data describes and are only partly
-  modelled.
+- A card counts as implemented when it has dedicated logic, which comes in **two** shapes:
+  a constant case in `CardEffects.Apply` (`case IC.MoltenFist:`) or a name case in one of
+  the per-character routines (`ApplyDefectCard`, `ApplyNecrobinderCard`, `ApplyRegentCard`,
+  `ApplyMiscGeneratedCard`, all switching on `def.Name`). Counting only the first shape is
+  how Defect, Necrobinder and Regent — 263 implemented cards — stayed invisible to the
+  guard, which reported 235 implemented when the real number is 552. Name cases are
+  filtered against `data/id_map.json` so that `case "ReanimatePower"` is not mistaken for
+  an untested card.
+- Cards that reach the engine through the generic damage-and-block path are still
+  invisible: Strike, Defend and Giant Rock have no case of either shape. An empty
+  `Pending` means "every card with dedicated effect code is tested", not "every card is
+  tested". Widening the rule to "has damage or block in the data" is wrong — it matches
+  146 cards, most of which do more than the data describes.
 
 ### Ground truth from the running game
 

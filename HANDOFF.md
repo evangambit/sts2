@@ -151,7 +151,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   source cited per file, never against emulator output. `CardCoverageTests` is the guard:
   `scripts/generate_card_coverage.py` scrapes the `case` labels out of `CardEffects.Apply`
   into `ImplementedCards.g.cs`, and implementing a card now fails the build until it is
-  tested or explicitly deferred in `Pending` (**123 left**, all Silent and Colourless).
+  tested or explicitly deferred in `Pending` (**439 left**).
   Caveat worth knowing: the guard only sees cards with their own `case`. Strike, Defend
   and Giant Rock run on the generic damage-and-block path and were invisible to it — they
   have tests now, but an empty `Pending` still means "every card with effect code", not
@@ -299,10 +299,31 @@ debug_start_encounter` cycling triggers an error popup (`report_bug`, needs rest
 ## Next work (prioritized, with pointers)
 
 **Combat start and run generation are both bit-exact** (see "what's proven"). The open
-front is now _per-card correctness_: 123 implemented cards still have no tests, all of
-them Silent and Colourless, and every batch of them written so far has turned up real
-defects — thirteen across the Ironclad set alone. The cheapest next move is to keep
-going class by class, because the work is mechanical and the yield has not dropped off.
+front is now _per-card correctness_, and it is far larger than the guard used to report.
+The game has **five** characters; the emulator has id-constant classes for three of them,
+and Defect, Necrobinder and Regent are implemented by name in `ApplyDefectCard` and its
+siblings. The guard only scraped the constant cases, so it claimed 235 implemented cards
+when the real number is 552.
+
+| pool        | cards | implemented | tested |
+| ----------- | ----: | ----------: | -----: |
+| Ironclad    |    87 |          85 |     86 |
+| Silent      |    88 |          88 |     10 |
+| Defect      |    88 |          87 |      0 |
+| Necrobinder |    88 |          88 |      0 |
+| Regent      |    88 |          88 |      0 |
+| Colourless  |    64 |          64 |     14 |
+| Event       |    27 |          27 |      1 |
+| Token       |    14 |          11 |      1 |
+| Curse       |    18 |           3 |      1 |
+| Status      |    12 |          10 |      2 |
+
+(Ironclad's counts differ by pool vs id class — the pool excludes a few cards the class
+carries, and vice versa; it is tested end to end either way.)
+
+Three whole characters have never had a card verified. Every batch written so far turned
+up real defects — thirteen across Ironclad alone — and the per-character routines have had
+far less scrutiny than `Apply` did, so expect the yield to be higher there, not lower.
 
 Four mechanics are knowingly unmodelled and pinned as approximations rather than
 pretended-correct; each is a self-contained piece of work:
