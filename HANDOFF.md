@@ -151,7 +151,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   source cited per file, never against emulator output. `CardCoverageTests` is the guard:
   `scripts/generate_card_coverage.py` scrapes the `case` labels out of `CardEffects.Apply`
   into `ImplementedCards.g.cs`, and implementing a card now fails the build until it is
-  tested or explicitly deferred in `Pending` (**439 left**).
+  tested or explicitly deferred in `Pending` (**389 left**).
   Caveat worth knowing: the guard only sees cards with their own `case`. Strike, Defend
   and Giant Rock run on the generic damage-and-block path and were invisible to it — they
   have tests now, but an empty `Pending` still means "every card with effect code", not
@@ -308,11 +308,11 @@ when the real number is 552.
 | pool        | cards | implemented | tested |
 | ----------- | ----: | ----------: | -----: |
 | Ironclad    |    87 |          85 |     86 |
+| Colourless  |    64 |          64 |     64 |
 | Silent      |    88 |          88 |     10 |
 | Defect      |    88 |          87 |      0 |
 | Necrobinder |    88 |          88 |      0 |
 | Regent      |    88 |          88 |      0 |
-| Colourless  |    64 |          64 |     14 |
 | Event       |    27 |          27 |      1 |
 | Token       |    14 |          11 |      1 |
 | Curse       |    18 |           3 |      1 |
@@ -325,15 +325,30 @@ Three whole characters have never had a card verified. Every batch written so fa
 up real defects — thirteen across Ironclad alone — and the per-character routines have had
 far less scrutiny than `Apply` did, so expect the yield to be higher there, not lower.
 
-Four mechanics are knowingly unmodelled and pinned as approximations rather than
-pretended-correct; each is a self-contained piece of work:
+Ironclad and Colourless are both fully covered, and **Ironclad has no approximations
+left** — Rampage's per-copy growth, Battle Trance's NoDrawPower and Howl From Beyond's
+replay out of the exhaust pile are modelled, and Primal Force's IsTransformable filter
+turned out to exclude nothing in combat.
 
-| mechanic      | what is missing                                                     |
-| ------------- | ------------------------------------------------------------------- |
-| Rampage       | damage grows by 5 (9 upgraded) per play and persists for the combat |
-| Memento Mori  | scales with cards discarded this turn; there is no discard counter  |
-| StranglePower | Vulnerable 2 stands in for it                                       |
-| NoDrawPower   | Battle Trance's "draw no more cards this turn"                      |
+Every card that made a choice for the player now raises a real one (see Card Selection).
+What remains are missing mechanics, all Colourless or Silent, and each is self-contained:
+
+| card                | what is missing                                                     |
+| ------------------- | ------------------------------------------------------------------- |
+| Intercept           | CoveredPower; **Intangible stands in, which caps damage at 1**      |
+| Strangle            | StranglePower; Vulnerable 2 stands in                               |
+| Knockdown, Tag Team | their multiplayer powers                                            |
+| Hidden Gem          | replay counts on a draw-pile card                                   |
+| Beat Down           | auto-plays Attacks from the discard pile                            |
+| Catastrophe         | auto-plays cards off the draw pile                                  |
+| Fisticuffs          | block should equal damage **dealt**, not printed damage             |
+| Memento Mori        | scales per card discarded this turn; no discard counter exists      |
+| Discovery, Jackpot  | roll from the emulator's own pool, not the character's unlocked one |
+
+Intercept is the one to fix first on risk: it hands the player near-immunity for a card
+that should guard an ally. Eleven Silent cards also carry an `approximation` comment in
+`CardEffects` with no tests at all — those are unverified rather than merely
+approximate, and The Gambit is the warning about what hides there.
 
 Also open: the powers and relics that read `combat_card_selection` in the game
 (Aggression, Improvement, Mummified Hand, Bookmark, Jewelled Mask, Stone Cracker, Power

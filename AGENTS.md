@@ -35,6 +35,13 @@
 - Native cards that apply temporary enemy Strength loss should consume Artifact before applying paired `Strength` and `TemporaryStrength` buffs, then restore the enemy Strength in `EnemyAI.ExecuteIntent` at that enemy's turn end.
 - Native card powers that modify a played card's destination pile should make that decision in `CombatEngine` after effects resolve but before adding the card to discard.
 - Native card powers with extra dynamic variables can be represented with companion `BuffId` entries when `BuffState` needs to track both the visible counter and hidden per-power state.
+- State that belongs to one COPY of a card rides on `CardInstance`, not on the player.
+  Rampage's damage growth is per-copy, so two Rampages in a deck grow separately —
+  `CardInstance.BonusDamage` carries it. `CardEffects.Apply` takes the instance by value
+  and cannot hand a mutation back, so a card that changes the copy being played sets
+  `CombatState.PlayedCardBonusDamage` and `CombatEngine.PlayCard` folds it in wherever the
+  card lands. Adding another per-copy property means extending that channel, not reaching
+  into the pile afterwards.
 - Never hand-maintain a list of which cards do a thing. `EffectiveCost` carried three id
   lists of "cards that get cheaper when upgraded" covering 18 of the 56 cards that
   actually do, so Corruption, Tank, Barricade and the rest silently kept their unupgraded
