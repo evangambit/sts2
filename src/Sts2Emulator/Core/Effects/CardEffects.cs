@@ -1771,7 +1771,9 @@ public static class CardEffects
         {
             if (state.PotionSlots[i] == 0)
             {
-                state.PotionSlots[i] = rng.Next(1, 64); // 1 to 63
+                // PotionFactory.CreateRandomPotionInCombat reads
+                // Rng.CombatPotionGeneration, not the combat rng.
+                state.PotionSlots[i] = (state.PotionGenerationRng ?? rng).Next(1, 64);
                 break;
             }
         }
@@ -3734,11 +3736,18 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
                 break;
             case "Convergence":
-            case "Coordinate":
             case "Flanking":
             case "Monologue":
             case "Shadowmeld":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, upgraded ? 2 : 1);
+                break;
+            case "Coordinate":
+                // CoordinatePower is a TemporaryStrengthPower at PowerVar<StrengthPower>(5m),
+                // OnUpgrade +3 — temporary Strength for an ally, which is the player in
+                // singleplayer. It was grouped with the retain-hand cards, which is a
+                // different effect entirely.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 8 : 5);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryStrength, upgraded ? 8 : 5);
                 break;
             case "CorrosiveWave":
                 ApplyAllEnemyDebuff(state, BuffId.Poison, upgraded ? 5 : 3, rng);

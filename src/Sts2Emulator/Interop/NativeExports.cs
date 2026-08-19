@@ -86,6 +86,10 @@ public static class NativeExports
             State.CardGenerationRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
             );
+            // Alchemize rolls its potion off "combat_potion_generation".
+            State.PotionGenerationRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng);
         }
@@ -122,6 +126,10 @@ public static class NativeExports
             State.CardGenerationRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
             );
+            // Alchemize rolls its potion off "combat_potion_generation".
+            State.PotionGenerationRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds);
         }
@@ -157,6 +165,10 @@ public static class NativeExports
             // Rolling up a NEW card comes off "combat_card_generation".
             State.CardGenerationRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
+            );
+            // Alchemize rolls its potion off "combat_potion_generation".
+            State.PotionGenerationRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
             );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId);
@@ -205,6 +217,10 @@ public static class NativeExports
             // Rolling up a NEW card comes off "combat_card_generation".
             State.CardGenerationRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
+            );
+            // Alchemize rolls its potion off "combat_potion_generation".
+            State.PotionGenerationRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
             );
             LastPlayerWon = false;
             int? encounterRngSeed = Sts2Emulator.Core.Run.EncounterRng.SeedFor(
@@ -255,6 +271,10 @@ public static class NativeExports
             State.CardGenerationRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
             );
+            // Alchemize rolls its potion off "combat_potion_generation".
+            State.PotionGenerationRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
+            );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, completedCombatRooms);
         }
@@ -290,6 +310,10 @@ public static class NativeExports
             // Rolling up a NEW card comes off "combat_card_generation".
             State.CardGenerationRng = new CountingRandom(
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
+            );
+            // Alchemize rolls its potion off "combat_potion_generation".
+            State.PotionGenerationRng = new CountingRandom(
+                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
             );
             LastPlayerWon = false;
             CombatFactory.Reset(State, Rng, deckIds, encounterId, relicIds);

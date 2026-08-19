@@ -166,6 +166,14 @@ public sealed class RunEngine
 
         combat.CardGenerationRng = cardGenerationRng;
 
+        var potionGenerationRng = new CountingRandom(State.Rng.CombatPotionGeneration.RawSeed);
+        for (int i = 0; i < State.Rng.CombatPotionGeneration.CallCount; i++)
+        {
+            potionGenerationRng.Next();
+        }
+
+        combat.PotionGenerationRng = potionGenerationRng;
+
         CombatFactory.Reset(
             combat,
             combatRng,
@@ -1528,6 +1536,13 @@ public sealed class RunEngine
         {
             State.Rng.CombatCardGeneration.AdvanceToCallCount(
                 State.ActiveCombat.CardGenerationRng.CallCount
+            );
+        }
+
+        if (State.ActiveCombat.PotionGenerationRng is not null)
+        {
+            State.Rng.CombatPotionGeneration.AdvanceToCallCount(
+                State.ActiveCombat.PotionGenerationRng.CallCount
             );
         }
 

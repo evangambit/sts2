@@ -43,6 +43,7 @@ internal sealed class Fight
         state.TargetRng = new CountingRandom(0);
         state.CardSelectionRng = new CountingRandom(0);
         state.CardGenerationRng = new CountingRandom(0);
+        state.PotionGenerationRng = new CountingRandom(0);
         return new Fight(state);
     }
 
@@ -56,6 +57,7 @@ internal sealed class Fight
         State.TargetRng = new CountingRandom(seed);
         State.CardSelectionRng = new CountingRandom(seed);
         State.CardGenerationRng = new CountingRandom(seed);
+        State.PotionGenerationRng = new CountingRandom(seed);
         return this;
     }
 

@@ -76,6 +76,11 @@ public sealed class CombatState
     // back to the combat RNG (only valid in single-combat tests).
     public CountingRandom? CardGenerationRng;
 
+    // Potion-generation RNG (RunRngSet.combat_potion_generation subsystem) — used when a
+    // card rolls up a potion in combat (Alchemize). Null falls back to the combat RNG
+    // (only valid in single-combat tests).
+    public CountingRandom? PotionGenerationRng;
+
     // AI RNG (RunRngSet.monster_ai subsystem) — used for enemy intent selection.
     // Null falls back to the combat RNG (used in single-combat tests).
     public Random? AiRng;
