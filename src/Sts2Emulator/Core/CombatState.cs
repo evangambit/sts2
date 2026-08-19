@@ -70,6 +70,12 @@ public sealed class CombatState
     // RNG (only valid in single-combat tests).
     public CountingRandom? CardSelectionRng;
 
+    // Card-generation RNG (RunRngSet.combat_card_generation subsystem) — used when an
+    // effect rolls up a NEW card (Stoke, Splash, Infernal Blade, Discovery). Distinct
+    // from combat_card_selection, which picks among cards that already exist. Null falls
+    // back to the combat RNG (only valid in single-combat tests).
+    public CountingRandom? CardGenerationRng;
+
     // AI RNG (RunRngSet.monster_ai subsystem) — used for enemy intent selection.
     // Null falls back to the combat RNG (used in single-combat tests).
     public Random? AiRng;

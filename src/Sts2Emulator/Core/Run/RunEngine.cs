@@ -158,6 +158,14 @@ public sealed class RunEngine
 
         combat.CardSelectionRng = cardSelectionRng;
 
+        var cardGenerationRng = new CountingRandom(State.Rng.CombatCardGeneration.RawSeed);
+        for (int i = 0; i < State.Rng.CombatCardGeneration.CallCount; i++)
+        {
+            cardGenerationRng.Next();
+        }
+
+        combat.CardGenerationRng = cardGenerationRng;
+
         CombatFactory.Reset(
             combat,
             combatRng,
@@ -1513,6 +1521,13 @@ public sealed class RunEngine
         {
             State.Rng.CombatCardSelection.AdvanceToCallCount(
                 State.ActiveCombat.CardSelectionRng.CallCount
+            );
+        }
+
+        if (State.ActiveCombat.CardGenerationRng is not null)
+        {
+            State.Rng.CombatCardGeneration.AdvanceToCallCount(
+                State.ActiveCombat.CardGenerationRng.CallCount
             );
         }
 

@@ -258,8 +258,14 @@ public static class CardEffects
                 DealDamageToAll(state, Dmg(def, upgraded));
                 break;
 
-            case IC.PactsEnd: // 0-cost, 17/23 dmg to ALL enemies
-                DealDamageToAll(state, Dmg(def, upgraded));
+            case IC.PactsEnd: // 0-cost, 17/23 dmg to ALL enemies if 3+ cards are exhausted
+                // OnPlay is wrapped in CanDealDamage, which is
+                // CardPile.GetCards(Exhaust).Count() >= CardsVar(3). Below that the card
+                // does nothing at all; the emulator used to swing regardless.
+                if (state.ExhaustPile.Count >= 3)
+                {
+                    DealDamageToAll(state, Dmg(def, upgraded));
+                }
                 break;
 
             case IC.Pillage: // 1-cost, 6/9 dmg + draw until drawing a non-Attack
@@ -329,7 +335,9 @@ public static class CardEffects
                 {
                     if (state.Hand.Count < MaxCardsInHand)
                     {
-                        int defId = _ironcladPool[rng.Next(_ironcladPool.Length)];
+                        int defId = _ironcladPool[
+                            CardGenerationRng(state, rng).Next(_ironcladPool.Length)
+                        ];
                         state.Hand.Add(new CardInstance(defId, upgraded));
                     }
                 }
@@ -409,10 +417,22 @@ public static class CardEffects
 
                 break;
 
-            case IC.Brand: // 0-cost, lose 1 HP, exhaust a card, gain 1/2 Strength
+            case IC.Brand: // 0-cost, lose 1 HP, exhaust a CHOSEN card, gain 1/2 Strength
                 LoseHp(state, 1);
-                ExhaustRandomCardFromHand(state, rng);
+                // The game applies the Strength after the exhaust resolves. Nothing reads
+                // Strength during an exhaust, so granting it first is observationally the
+                // same and keeps the pending selection as the last thing this play does.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
+                if (state.Hand.Count > 0)
+                {
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.ExhaustFromHand,
+                        state.Hand.Count,
+                        def.Id,
+                        autoPick: CardSelectionRng(state, rng).Next(state.Hand.Count)
+                    );
+                }
                 break;
 
             case IC.BattleTrance: // 0-cost, draw 3/4 (NoDraw omitted)
@@ -742,7 +762,7 @@ public static class CardEffects
 
             case CL.Discovery: // 1-cost, choose a card to add to hand; it's free this turn
             {
-                int defId = _ironcladPool[rng.Next(_ironcladPool.Length)];
+                int defId = _ironcladPool[CardGenerationRng(state, rng).Next(_ironcladPool.Length)];
                 if (state.Hand.Count < MaxCardsInHand)
                 {
                     state.Hand.Add(new CardInstance(defId, false, FreeThisTurn: true));
@@ -2042,6 +2062,14 @@ public static class CardEffects
     /// </summary>
     private static Random CardSelectionRng(CombatState state, Random rng) =>
         state.CardSelectionRng ?? rng;
+
+    /// <summary>
+    /// The stream an effect draws from when it rolls up a NEW card — Stoke, Splash,
+    /// Infernal Blade and Discovery all read Rng.CombatCardGeneration in the game, which
+    /// is a different subsystem from the one that picks among existing cards.
+    /// </summary>
+    private static Random CardGenerationRng(CombatState state, Random rng) =>
+        state.CardGenerationRng ?? rng;
 
     /// <summary>
     /// Picks the enemy an effect hits at random, off the run's combat_targets stream.
@@ -4660,7 +4688,7 @@ public static class CardEffects
                 break;
             }
 
-            int defId = _ironcladPool[rng.Next(_ironcladPool.Length)];
+            int defId = _ironcladPool[CardGenerationRng(state, rng).Next(_ironcladPool.Length)];
             state.Hand.Add(new CardInstance(defId, true));
         }
     }
@@ -4674,7 +4702,7 @@ public static class CardEffects
                 break;
             }
 
-            int defId = _attackPool[rng.Next(_attackPool.Length)];
+            int defId = _attackPool[CardGenerationRng(state, rng).Next(_attackPool.Length)];
             state.Hand.Add(new CardInstance(defId, false));
         }
     }

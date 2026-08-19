@@ -26,6 +26,10 @@ DAMAGE_VAR = re.compile(r"new DamageVar\((\d+(?:\.\d+)?)m?,")
 # BlockVar(5m, ...)
 BLOCK_VAR = re.compile(r"new BlockVar\((\d+(?:\.\d+)?)m?,")
 # UpgradeValueBy on damage / block
+# 56 cards get cheaper when upgraded via base.EnergyCost.UpgradeBy(-1). That was a
+# hand-written list of five in CombatEngine, which is exactly the kind of thing that
+# goes stale silently — read it off the card instead.
+UPGRADE_COST = re.compile(r"EnergyCost\.UpgradeBy\((-?\d+)\)")
 UPGRADE_DMG = re.compile(r"DynamicVars\.Damage\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
 UPGRADE_BLOCK = re.compile(r"DynamicVars\.Block\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
 
@@ -230,6 +234,9 @@ def extract_cards() -> str:
         base_dmg = decimal_to_int(dmg_m.group(1)) if dmg_m else 0
         base_block = decimal_to_int(blk_m.group(1)) if blk_m else 0
 
+        upg_cost_m = UPGRADE_COST.search(text)
+        upg_cost = int(upg_cost_m.group(1)) if upg_cost_m else 0
+
         upg_dmg_m = UPGRADE_DMG.search(text)
         upg_blk_m = UPGRADE_BLOCK.search(text)
         upg_dmg = decimal_to_int(upg_dmg_m.group(1)) if upg_dmg_m else 0
@@ -255,6 +262,7 @@ def extract_cards() -> str:
             f'        new CardDef(Id: {def_id}, Name: "{name}", '
             f"Cost: {cost}, BaseDamage: {base_dmg}, BaseBlock: {base_block}, "
             f"UpgradeDamage: {upg_dmg}, UpgradeBlock: {upg_block}, "
+            f"UpgradeCost: {upg_cost}, "
             f"Type: CardType.{card_type}, Rarity: CardRarity.{rarity}{flags_cs}),",
         )
     if not entries:

@@ -42,6 +42,7 @@ internal sealed class Fight
         // rather than the bare fallback.
         state.TargetRng = new CountingRandom(0);
         state.CardSelectionRng = new CountingRandom(0);
+        state.CardGenerationRng = new CountingRandom(0);
         return new Fight(state);
     }
 
@@ -54,6 +55,7 @@ internal sealed class Fight
         _rng = new Random(seed);
         State.TargetRng = new CountingRandom(seed);
         State.CardSelectionRng = new CountingRandom(seed);
+        State.CardGenerationRng = new CountingRandom(seed);
         return this;
     }
 

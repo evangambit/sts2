@@ -725,58 +725,14 @@ public static class CombatEngine
         }
 
         int cost = card.CostForCombat == int.MinValue ? def.Cost : card.CostForCombat;
-        if (def.Id == Effects.IC.BodySlam && card.Upgraded)
-        {
-            cost -= 1;
-        }
 
-        if (def.Id == Effects.IC.Havoc && card.Upgraded)
+        // The game says so on the card: base.EnergyCost.UpgradeBy(-1), extracted into
+        // CardDef.UpgradeCost. This used to be three hand-written id lists covering
+        // eighteen of the fifty-six cards that actually get cheaper, so Unmovable, Tank,
+        // Corruption and the rest silently kept their unupgraded cost.
+        if (card.Upgraded)
         {
-            cost -= 1;
-        }
-
-        if (def.Id == Effects.IC.InfernalBlade && card.Upgraded)
-        {
-            cost -= 1;
-        }
-
-        if (def.Id == Effects.IC.Nostalgia && card.Upgraded)
-        {
-            cost -= 1;
-        }
-
-        if (def.Id == Effects.IC.Stampede && card.Upgraded)
-        {
-            cost -= 1;
-        }
-
-        if (
-            def.Id
-                is Effects.CL.Automation
-                    or Effects.CL.Calamity
-                    or Effects.CL.Mayhem
-                    or Effects.CL.MindBlast
-                    or Effects.CL.Stratagem
-            && card.Upgraded
-        )
-        {
-            cost -= 1;
-        }
-
-        if (
-            def.Id
-                is 111 // CreativeAi
-                    or 156 // Dualcast
-                    or 186 // Feral
-                    or 375 // Quadcast
-                    or 435 // SignalBoost
-                    or 476 // Subroutine
-                    or 540 // WhiteNoise
-                    or 545 // Zap
-            && card.Upgraded
-        )
-        {
-            cost -= 1;
+            cost += def.UpgradeCost;
         }
 
         if (def.Id == Effects.IC.Stomp)

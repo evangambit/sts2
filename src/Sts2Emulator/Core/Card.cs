@@ -41,6 +41,7 @@ public readonly record struct CardDef(
     int BaseBlock,
     int UpgradeDamage,
     int UpgradeBlock,
+    int UpgradeCost,
     CardType Type,
     CardRarity Rarity,
     bool Ethereal = false,
