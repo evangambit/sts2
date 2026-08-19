@@ -52,7 +52,8 @@ public static class RelicEffects
 
         if (HasRelic(state, Anchor))
         {
-            CardEffects.GainBlock(state, 10, rng);
+            // BlockVar(10m, ValueProp.Unpowered) — Dexterity does not raise it.
+            CardEffects.GainUnpoweredBlock(state, 10, rng);
         }
 
         if (HasRelic(state, Vajra))
@@ -107,14 +108,15 @@ public static class RelicEffects
             }
         }
 
+        // Both are BlockVar(..., ValueProp.Unpowered): Dexterity does not raise them.
         if (turnNumber == 2 && HasRelic(state, HornCleat))
         {
-            CardEffects.GainBlock(state, 14, rng);
+            CardEffects.GainUnpoweredBlock(state, 14, rng);
         }
 
         if (turnNumber == 3 && HasRelic(state, CaptainsWheel))
         {
-            CardEffects.GainBlock(state, 18, rng);
+            CardEffects.GainUnpoweredBlock(state, 18, rng);
         }
 
         int index = state.Relics.FindIndex(relic => relic.DefId == HappyFlower);

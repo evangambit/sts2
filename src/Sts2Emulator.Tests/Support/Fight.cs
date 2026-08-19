@@ -1,4 +1,5 @@
 using Sts2Emulator.Core;
+using Sts2Emulator.Core.Effects;
 
 namespace Sts2Emulator.Tests;
 
@@ -40,6 +41,28 @@ internal sealed class Fight
         // Real entry points set this from the run's combat_targets stream. Setting it
         // here too means a card test exercises the same target-picking path they do,
         // rather than the bare fallback.
+        state.TargetRng = new CountingRandom(0);
+        state.CardSelectionRng = new CountingRandom(0);
+        state.CardGenerationRng = new CountingRandom(0);
+        state.PotionGenerationRng = new CountingRandom(0);
+        return new Fight(state);
+    }
+
+    /// <summary>
+    /// A fresh combat that already holds these relics. Relics fire during setup — Anchor
+    /// grants block before the first turn, Bag of Marbles debuffs as it starts — so they
+    /// have to be present when the combat is built rather than added afterwards.
+    /// </summary>
+    public static Fight WithRelics(params int[] relicIds)
+    {
+        var state = new CombatState();
+        CombatFactory.Reset(
+            state,
+            new Random(0),
+            TestDeck.StarterDeckIds,
+            encounterId: 1,
+            relicIds
+        );
         state.TargetRng = new CountingRandom(0);
         state.CardSelectionRng = new CountingRandom(0);
         state.CardGenerationRng = new CountingRandom(0);
@@ -161,6 +184,22 @@ internal sealed class Fight
 /// <summary>Card literals for test setup, kept short because tests are mostly card lists.</summary>
 internal static class TestDeck
 {
+    /// <summary>The highest-difficulty starter deck, as CombatFactory deals it.</summary>
+    public static ReadOnlySpan<int> StarterDeckIds =>
+        [
+            IC.StrikeIronclad,
+            IC.StrikeIronclad,
+            IC.StrikeIronclad,
+            IC.StrikeIronclad,
+            IC.StrikeIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.Bash,
+            IC.AscendersBane,
+        ];
+
     public static CardInstance Card(int defId, bool upgraded = false) => new(defId, upgraded);
 
     public static List<CardInstance> Pile(params int[] defIds) =>
