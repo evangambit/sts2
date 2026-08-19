@@ -10,6 +10,9 @@ public enum CardSelectionKind
 
     /// <summary>True Grit (upgraded): a card in hand is exhausted.</summary>
     ExhaustFromHand = 2,
+
+    /// <summary>Burning Pact: a card in hand is exhausted, and then cards are drawn.</summary>
+    ExhaustFromHandThenDraw = 3,
 }
 
 /// <summary>
@@ -33,4 +36,11 @@ public sealed class PendingCardSelection
 
     /// <summary>The card that asked, so an observation can say what the choice is for.</summary>
     public required int SourceCardDefId { get; init; }
+
+    /// <summary>
+    /// What the resolution does afterwards, for a choice that is not the last thing the
+    /// card does — Burning Pact draws this many cards once the exhaust is chosen, and the
+    /// draw has to happen after it so the newly drawn cards are not candidates.
+    /// </summary>
+    public int Amount { get; init; }
 }

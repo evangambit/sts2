@@ -429,8 +429,25 @@ public static class CardEffects
                 state.Energy += upgraded ? 3 : 2;
                 break;
 
-            case IC.BurningPact: // 1-cost, draw 2/3 (exhaust-a-card choice omitted)
-                DrawCards(state, upgraded ? 3 : 2, rng);
+            case IC.BurningPact: // 1-cost, exhaust a chosen card, then draw 2/3
+                // CardSelectCmd.FromHand then CardPileCmd.Draw. The draw must follow the
+                // choice, or the cards it draws become candidates for their own exhaust.
+                if (state.Hand.Count > 0)
+                {
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.ExhaustFromHandThenDraw,
+                        state.Hand.Count,
+                        def.Id,
+                        autoPick: CardSelectionRng(state, rng).Next(state.Hand.Count),
+                        amount: upgraded ? 3 : 2
+                    );
+                }
+
+                if (state.PendingSelection is null)
+                {
+                    DrawCards(state, upgraded ? 3 : 2, rng);
+                }
                 break;
 
             case IC.Colossus: // 1-cost, gain 5/8 block; Vulnerable enemies deal half attack damage this turn
@@ -438,9 +455,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Colossus, 1);
                 break;
 
-            case IC.Dominate: // 1-cost, Vulnerable 1 to enemy, gain Strength = total Vulnerable
+            case IC.Dominate: // 1-cost, Vulnerable 1/2 to enemy, gain Strength = its Vulnerable
             {
-                ApplyEnemyDebuff(state, BuffId.Vulnerable, 1, rng);
+                // PowerVar<VulnerablePower>(1m) with OnUpgrade UpgradeValueBy(1m); this
+                // used to apply 1 whether or not the card was upgraded.
+                ApplyEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 2 : 1, rng);
                 var t = FirstEnemy(state);
                 if (t != null)
                 {
@@ -564,9 +583,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Stampede, 1);
                 break;
 
-            case IC.Taunt: // 1-cost, 7/8 block + Vulnerable 1 to enemy
+            case IC.Taunt: // 1-cost, 7/8 block + Vulnerable 1/2 to enemy
+                // OnUpgrade raises BOTH the block and the Vulnerable by 1; the debuff
+                // used to stay at 1.
                 GainBlock(state, Blk(def, upgraded), rng);
-                ApplyEnemyDebuff(state, BuffId.Vulnerable, 1, rng);
+                ApplyEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 2 : 1, rng);
                 break;
 
             case IC.Tremble: // 1-cost, Vulnerable 3/4 to enemy
@@ -1966,7 +1987,8 @@ public static class CardEffects
         CardSelectionKind kind,
         int candidateCount,
         int sourceCardDefId,
-        int autoPick
+        int autoPick,
+        int amount = 0
     )
     {
         if (state.AutoPlaying)
@@ -1980,6 +2002,7 @@ public static class CardEffects
             Kind = kind,
             Candidates = [.. Enumerable.Range(0, candidateCount)],
             SourceCardDefId = sourceCardDefId,
+            Amount = amount,
         };
     }
 
@@ -2000,6 +2023,7 @@ public static class CardEffects
             }
 
             case CardSelectionKind.ExhaustFromHand when index < state.Hand.Count:
+            case CardSelectionKind.ExhaustFromHandThenDraw when index < state.Hand.Count:
             {
                 var card = state.Hand[index];
                 state.Hand.RemoveAt(index);

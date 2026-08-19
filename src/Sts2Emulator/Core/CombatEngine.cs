@@ -891,11 +891,17 @@ public static class CombatEngine
                 break;
 
             case CardSelectionKind.ExhaustFromHand:
+            case CardSelectionKind.ExhaustFromHandThenDraw:
                 if (index < state.Hand.Count)
                 {
                     var card = state.Hand[index];
                     state.Hand.RemoveAt(index);
                     Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+                }
+
+                if (selection.Kind == CardSelectionKind.ExhaustFromHandThenDraw)
+                {
+                    Effects.CardEffects.DrawCards(state, selection.Amount, rng);
                 }
 
                 break;
