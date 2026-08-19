@@ -3479,7 +3479,9 @@ public static class CardEffects
                 GainBlock(state, Blk(def, upgraded), rng);
                 if (def.Name == "TheGambit")
                 {
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
+                    // TheGambitPower kills you on the next unblocked powered attack.
+                    // NoBlock stood in for it, which is a far milder card.
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.TheGambitPower, 1);
                 }
 
                 return true;

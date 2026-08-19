@@ -2007,6 +2007,16 @@ public static class EnemyAI
         }
 
         state.PlayerHp = Math.Max(0, state.PlayerHp - unblocked);
+
+        // TheGambitPower.AfterDamageReceived: any unblocked powered attack removes the
+        // power and kills the owner outright. Modelling it as a lesser debuff would tell
+        // an agent the card is cheap when it can end the run.
+        if (unblocked > 0 && BuffSystem.Get(state.PlayerBuffs, BuffId.TheGambitPower) > 0)
+        {
+            BuffSystem.Remove(state.PlayerBuffs, BuffId.TheGambitPower);
+            state.PlayerHp = 0;
+        }
+
         if (unblocked > 0 && triggerSuck)
         {
             TriggerSuck(enemy);
