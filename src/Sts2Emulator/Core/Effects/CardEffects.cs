@@ -771,8 +771,10 @@ public static class CardEffects
                 break;
             }
 
-            case CL.Finesse: // 0-cost, 2/4 block + draw 1
-                GainBlock(state, upgraded ? 4 : 2, rng);
+            case CL.Finesse: // 0-cost, 4/7 block + draw 1
+                // BlockVar(4m) with OnUpgrade UpgradeValueBy(3m), and Cards.g.cs had
+                // 4(+3) all along; this case hardcoded 2/4.
+                GainBlock(state, Blk(def, upgraded), rng);
                 DrawCards(state, 1, rng);
                 break;
 
