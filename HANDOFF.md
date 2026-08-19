@@ -1,9 +1,9 @@
 # Handoff — Slay the Spire 2 AI project
 
 Orientation for a future agent. **PLAN.md** has the full design + chronological
-history and the *why* behind every decision; **docs/replay-verification.md** has the
-full-run verification design. This file is the *current state + how-to + gotchas +
-next steps*. Read this first, then PLAN.md for depth.
+history and the _why_ behind every decision; **docs/replay-verification.md** has the
+full-run verification design. This file is the _current state + how-to + gotchas +
+next steps_. Read this first, then PLAN.md for depth.
 
 ## What this is
 
@@ -17,11 +17,11 @@ The game is **StS2 v0.107.1**, C# on Godot 4, installed at:
 
 ## Repos & directories (under `~/Projects/STSS/`)
 
-| Dir | Repo | What |
-|---|---|---|
-| `emulator/` | **github.com/evangambit/sts2** | The emulator fork (this repo). C# sim + Python gym + scripts + docs. |
-| `STS2MCP/` | **github.com/evangambit/STS2MCP** | Our fork of Gennadiyev's STS2MCP mod (exposes game state/actions over HTTP). We added the custom actions below. `origin`=our fork, `upstream`=Gennadiyev. |
-| `STS2MCP-zamiell/` | Zamiell/STS2MCP | Reference-only clone (checked for debug actions; **not used** — safe to delete). |
+| Dir                | Repo                              | What                                                                                                                                                      |
+| ------------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `emulator/`        | **github.com/evangambit/sts2**    | The emulator fork (this repo). C# sim + Python gym + scripts + docs.                                                                                      |
+| `STS2MCP/`         | **github.com/evangambit/STS2MCP** | Our fork of Gennadiyev's STS2MCP mod (exposes game state/actions over HTTP). We added the custom actions below. `origin`=our fork, `upstream`=Gennadiyev. |
+| `STS2MCP-zamiell/` | Zamiell/STS2MCP                   | Reference-only clone (checked for debug actions; **not used** — safe to delete).                                                                          |
 
 Both repos are clean and pushed as of this handoff. `decompiled/` in the emulator repo
 is **gitignored** (MegaCrit's copyrighted code) — regenerate locally, see below.
@@ -36,6 +36,7 @@ is **gitignored** (MegaCrit's copyrighted code) — regenerate locally, see belo
 - **Xcode CLT + clang** present (needed for NativeAOT native linking).
 
 Put this in `~/.zshrc` (or prepend each shell) — nothing works without it:
+
 ```bash
 export DOTNET_ROOT="$HOME/.dotnet"
 export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
@@ -46,7 +47,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 214 pass)
+# C# unit tests (currently 445 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -91,6 +92,16 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   `McpMod.Debug.cs` / `McpMod.CustomRun.cs`):
   - `debug_start_encounter {encounter:"CorpseSlugsWeak"}` — jump straight into an encounter.
   - `debug_force_play_phase` — report play-phase readiness.
+  - `debug_add_card {card:"MOLTEN_FIST"|"MoltenFist", upgraded:false, pile:"hand"}` — put a
+    chosen card in a chosen pile. Takes the entry id **or** the C# class name, so callers
+    need no id map. Must clone via `CombatState.CreateCard`, not `ToMutable()`: an
+    ownerless clone NREs inside `AddGeneratedCardToCombat` and the action answers "ok"
+    while nothing appears.
+  - `debug_set_energy {amount:9}` — so a card's cost never decides whether a capture happens.
+  - `debug_add_power {power:"VULNERABLE_POWER", amount:2, target:"CORPSE_SLUG_0"|"player"}` —
+    stage a power so a capture can reach a card's conditional branch. `PowerCmd.Apply`
+    needs a choice context and stalls unless its task is driven the way `CombatManager`
+    drives its own hooks (`HookPlayerChoiceContext.AssignTaskAndWaitForPauseOrCompletion`).
   - `return_to_main_menu` — save-and-quit to menu (the harness's abandon flow needs it).
   - **`rooms_entered`** in every state payload — a count of `RunManager.RoomEntered`
     events, i.e. room entries that have finished. Room entry is async and the state
@@ -103,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 214 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 445 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -121,7 +132,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   reproducing the game means reproducing that bias exactly; and `NextGaussianInt` uses
   plain `Math.Round` (banker's/to-even), not away-from-zero.
 - ✅ **Run generation is exact for BOTH act-1 acts, across 30 live captures.** Act,
-  encounter sequences, boss, the whole map *and its edges* match on every seed swept so
+  encounter sequences, boss, the whole map _and its edges_ match on every seed swept so
   far, Overgrowth and Underdocks alike. Underdocks had been modelled entirely from
   decompiled source and never observed; it needed nothing fixed. The **map** did — three
   defects that the three hand-picked fixtures all missed and a batch sweep found in its
@@ -136,15 +147,46 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   than the game would.
 - **Enemy HP now rolled faithfully** (was hardcoded `fixedHp`; now uses the game's
   Niche stream + unique-HP set — commit `123fecf`).
+- ✅ **Every Ironclad card — all 92 — has tests**, written against `decompiled/` with the
+  source cited per file, never against emulator output. `CardCoverageTests` is the guard:
+  `scripts/generate_card_coverage.py` scrapes the `case` labels out of `CardEffects.Apply`
+  into `ImplementedCards.g.cs`, and implementing a card now fails the build until it is
+  tested or explicitly deferred in `Pending` (**123 left**, all Silent and Colourless).
+  Caveat worth knowing: the guard only sees cards with their own `case`. Strike, Defend
+  and Giant Rock run on the generic damage-and-block path and were invisible to it — they
+  have tests now, but an empty `Pending` still means "every card with effect code", not
+  "every card".
+- ✅ **Per-card ground truth from the running game.** `scripts/capture_card.py` stages one
+  card (plus powers, plus energy) in a live combat, plays it, and commits the before/after;
+  `scripts/generate_card_capture_tests.py` renders those into `Cards/CardCaptures.g.cs`.
+  Eight captures so far. Most confirm what the decompiled source already said; one
+  answered a question the source **cannot**: `Hook.ModifyDamage` carries a `decimal` with
+  no rounding step anywhere, so what happens to a fractional multiplier is unknowable from
+  the code — the game truncates (6 x 1.75 = 10, not 11).
+- ✅ **The three combat RNG streams are separate, as the game keeps them.** Target choice
+  is `combat_targets` (`CombatState.TargetRng`), picking an existing card to act on is
+  `combat_card_selection`, rolling up a new card is `combat_card_generation`. All three
+  used to draw from the combat rng, which desynchronises the stream for everything
+  downstream — the same failure `AiRng` was made to fix. Stampede is the trap: it picks a
+  card from hand like Thrash does but reads `Rng.Shuffle`. Check the decompiled effect for
+  which `Rng.*` it reads; do not infer from what the effect looks like.
+- ✅ **Card selection is a real decision, not an omission.** Headbutt, upgraded True Grit,
+  Burning Pact and Brand raise a `CombatState.PendingSelection`; while it is open
+  `ValidActions` offers only the candidates and `Step` reads an action as the answer. The
+  observation carries the open choice, which is what took the **native API to v17 and the
+  run API to v10** — rebuild the dylib and expect any policy trained on the old 164-wide
+  observation to be invalid. Auto-played and nested cards (Havoc, Hellraiser, Stampede)
+  still resolve their choice automatically; the engine cannot hand a selection back from
+  inside a queue it is draining.
 
 ## Key facts / mental model (save yourself the rediscovery)
 
-- **Seeds:** the game's *input* seed is a string (e.g. `"ABCDEF"`); it derives a uint
-  *gen seed* (`"ABCDEF"→3334281563`, `"0"→3452614542`). The emulator's `RunRngSet(str)`
+- **Seeds:** the game's _input_ seed is a string (e.g. `"ABCDEF"`); it derives a uint
+  _gen seed_ (`"ABCDEF"→3334281563`, `"0"→3452614542`). The emulator's `RunRngSet(str)`
   reproduces this. **Seedless standard runs use a RANDOM seed each time** — use **custom
   mode** for a chosen seed.
 - **The direct combat env ↔ game seed bridge:** `Sts2CombatEnv(int seed)` sets its per-
-  stream RNGs to `GameRng(seed, "<stream>")`. So passing the game's *derived gen seed*
+  stream RNGs to `GameRng(seed, "<stream>")`. So passing the game's _derived gen seed_
   (3334281563) makes the combat env use the same streams as the `"ABCDEF"` run. That's
   why the enemy match works.
 - **Named RNG streams** (`RunRngSet`): `Niche` (enemy HP, `SetUniqueMonsterHpValue`),
@@ -154,12 +196,16 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   for first-combat, a limitation otherwise.
 - **Weak encounter variants:** `completed_combat_rooms` in `[0,3)` selects the weak
   variant (e.g. CorpseSlugsWeak = 2 slugs vs Normal = 3). Wired through
-  `Sts2CombatEnv(..., completed_combat_rooms=)` and `Sts2_ResetEncounterWeak` (native
-  API v11; the API is at v12 as of the pile-introspection export).
+  `Sts2CombatEnv(..., completed_combat_rooms=)` and `Sts2_ResetEncounterWeak` (added at
+  native API v11). Version numbers quoted through this file are the version a feature
+  _landed at_, not the current one — the current pair is whatever
+  `NativeExports.NATIVE_API_VERSION` and `RunNativeExports.RUN_NATIVE_API_VERSION` say,
+  with `src/sts2_gym/native.py` pinned to match (v17 and v10 at the time of writing).
+  A mismatch fails loudly on load rather than misreading the observation.
 - **Ascension:** the emulator models high ascension (`ToughEnemies` values). Live runs
   at A8 give player 64/80 HP and CorpseSlug 27–29, matching the emulator.
 - **Save file** (custom run): `~/Library/Application Support/SlayTheSpire2/steam/
-  76561198104489966/profile1/saves/current_run.save` — `rng.seed` = input string,
+76561198104489966/profile1/saves/current_run.save` — `rng.seed` = input string,
   `players[0].rng.seed` = gen seed.
 
 ## Gotchas / known issues
@@ -173,12 +219,12 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   Seed/re-freeze the map with `scripts/build_id_map.py` (deliberate action only).
 - **`Folly` and `Writhe` are missing from `Cards.g.cs`** — both are canonically Innate
   cost-`-1` curses dropped by the same `cost < 0` filter. Harmless today (starter decks
-  have neither) but they'd be *unknown cards*, not merely misordered, if ever drawn.
+  have neither) but they'd be _unknown cards_, not merely misordered, if ever drawn.
 - ✅ **Embark crash — FIXED. It was our harness tearing the run down mid-entry.**
   Left here in full because two earlier diagnoses in this file were wrong, and the way
   it was settled is the point: read the log, do not theorise.
   `NGame.StartNewSingleplayerRun` is **async**. It generates the run, writes
-  `current_run.save`, and only *then* awaits `RunManager.EnterAct -> EnterRoomInternal`,
+  `current_run.save`, and only _then_ awaits `RunManager.EnterAct -> EnterRoomInternal`,
   which preloads the room's assets. The mod reports a non-menu state as soon as the run
   state exists — i.e. in the middle of that tail. The harness took that as "done" and
   moved on to the next seed, whose first act is `return_to_main_menu`. Every crash log
@@ -194,7 +240,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
              at RunManager.EnterRoomInternal
   ```
 
-  A *successful* embark has `Complete` before the quit. That is the whole bug: the NRE
+  A _successful_ embark has `Complete` before the quit. That is the whole bug: the NRE
   is the in-flight entry touching state we had just deleted.
   **The fix** is `wait_for_run` in `start_real_game_run.py` waiting for the game's own
   completion signal. The mod now counts `RunManager.RoomEntered` events — fired as the
@@ -204,30 +250,31 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   ⚠️ **Requires the current STS2MCP build** — reinstall the mod (and restart the game)
   or the harness silently falls back to a weaker proxy.
   **Two things this was NOT**, both measured rather than argued:
-  - *Not* `NonInteractiveMode`. The theory was good — the crashing line is guarded by
+  - _Not_ `NonInteractiveMode`. The theory was good — the crashing line is guarded by
     it, and MegaCrit's own AutoSlayer sets the hook we did not — so the mod grew a
     `set_non_interactive` action and it was A/B'd: **2 crashes in 12 embarks with it on,
     the same rate as off.** The action was removed again. (The audit stands, if it is
     ever wanted for speed: all ~30 `IsActive` sites are audio, animation waits or
     pause/unpause — none touch RNG, card effects or rules.)
-  - *Not* the lobby "reporting ready before it is", which is what the timeout message
+  - _Not_ the lobby "reporting ready before it is", which is what the timeout message
     ("Timed out waiting for menu screen 'main'") made it look like. That message was a
     downstream symptom: the game was sitting on the un-dismissable `report_bug` popup
     from a crash one seed earlier.
-  A capture taken before the crash is still valid — the save is written first — so old
-  crashed-embark fixtures remain good ground truth.
+    A capture taken before the crash is still valid — the save is written first — so old
+    crashed-embark fixtures remain good ground truth.
+
 - **`AbandonRun` also throws** when `current_run.save.backup` is absent ("Error deleting
   path … Failed"). Independent of the above; the preflight in `compare_draw_pile.py`
   refuses to drive the in-game abandon unless `--abandon` is passed.
   **Fix: hand it the file it wants to delete.** `cp current_run.save
-  current_run.save.backup` first, then `menu_select abandon_run` and confirm the popup
+current_run.save.backup` first, then `menu_select abandon_run` and confirm the popup
   (`menu_select yes` — the abandon raises a yes/no popup, and the main menu only offers
   `singleplayer` again once it is answered). Verified working.
   **And one data point on the embark crash above:** with the previous run abandoned that
   way, `start_real_game_run.py UNS55LCMKP --ascension 8` embarked **cleanly on the first
   try** — no popup, no `NRunMusicController` NRE in `godot.log`, run alive at Neow — and
   that is how the Underdocks capture was taken. n=1, so it does not settle the
-  NonInteractiveMode theory; but it does mean a mod-driven embark is *not* doomed, and it
+  NonInteractiveMode theory; but it does mean a mod-driven embark is _not_ doomed, and it
   points at the failed-abandon teardown as at least a contributing state. Worth an A/B
   before investing in the mod change.
 - **Deleting `current_run.save` does nothing — Steam Cloud restores it** on the next
@@ -237,8 +284,8 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   ("Seed should not be changed in standard mode!"). `start_seeded_run` defaults to
   `mode="custom"` for this reason.
 - **Driving the game hard CRASHES it.** Rapid `abandon → re-embark →
-  debug_start_encounter` cycling triggers an error popup (`report_bug`, needs restart).
-  A *single* clean sequence with generous `time.sleep` waits is stable. **Follow-on:**
+debug_start_encounter` cycling triggers an error popup (`report_bug`, needs restart).
+  A _single_ clean sequence with generous `time.sleep` waits is stable. **Follow-on:**
   add settled-state guards to the debug/menu actions before any unattended sweep.
 - **macOS NativeAOT exports:** the csproj uses `[UnmanagedCallersOnly(EntryPoint=...)]`
   (cross-platform) — we removed the original Windows-only `/EXPORT:` linker args. If you
@@ -251,8 +298,29 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Next work (prioritized, with pointers)
 
-**Combat start is bit-exact** (opening hand + enemies, see "what's proven"). The open
-front is now *run generation*: what the engine rolls up front for a seed.
+**Combat start and run generation are both bit-exact** (see "what's proven"). The open
+front is now _per-card correctness_: 123 implemented cards still have no tests, all of
+them Silent and Colourless, and every batch of them written so far has turned up real
+defects — thirteen across the Ironclad set alone. The cheapest next move is to keep
+going class by class, because the work is mechanical and the yield has not dropped off.
+
+Four mechanics are knowingly unmodelled and pinned as approximations rather than
+pretended-correct; each is a self-contained piece of work:
+
+| mechanic      | what is missing                                                     |
+| ------------- | ------------------------------------------------------------------- |
+| Rampage       | damage grows by 5 (9 upgraded) per play and persists for the combat |
+| Memento Mori  | scales with cards discarded this turn; there is no discard counter  |
+| StranglePower | Vulnerable 2 stands in for it                                       |
+| NoDrawPower   | Battle Trance's "draw no more cards this turn"                      |
+
+Also open: the powers and relics that read `combat_card_selection` in the game
+(Aggression, Improvement, Mummified Hand, Bookmark, Jewelled Mask, Stone Cracker, Power
+Cell, Drain) — several are not modelled at all, and the modelled ones were out of scope
+when the stream was wired up.
+
+The older run-generation notes below are kept because the _method_ is what matters, not
+because that front is still open.
 
 `scripts/verify_run_generation.py` compares the emulator against a live
 `current_run.save` — plain JSON recording exactly what the game generated
@@ -260,20 +328,20 @@ front is now *run generation*: what the engine rolls up front for a seed.
 **No need to drive the game**; just have a run saved, and note the crashed-embark save
 is still a valid capture. Verified on **three seeds — now including an Underdocks act 1**:
 
-| section | "ABCDEF" (Overgrowth, A8) | "AAB" (Overgrowth, A8) | "UNS55LCMKP" (**Underdocks**, A8) |
-|---|---|---|---|
-| act | PASS | PASS | PASS |
-| normal encounters | PASS 15/15 | PASS 15/15 | **PASS 15/15** |
-| elite encounters | PASS 15/15 | PASS 15/15 | **PASS 15/15** |
-| boss | PASS (TheKin) | PASS (CeremonialBeast) | **PASS (WaterfallGiant)** |
-| map | PASS (exact) | **PASS (exact)** | **PASS (exact, 64 nodes / 17 rows)** |
+| section           | "ABCDEF" (Overgrowth, A8) | "AAB" (Overgrowth, A8) | "UNS55LCMKP" (**Underdocks**, A8)    |
+| ----------------- | ------------------------- | ---------------------- | ------------------------------------ |
+| act               | PASS                      | PASS                   | PASS                                 |
+| normal encounters | PASS 15/15                | PASS 15/15             | **PASS 15/15**                       |
+| elite encounters  | PASS 15/15                | PASS 15/15             | **PASS 15/15**                       |
+| boss              | PASS (TheKin)             | PASS (CeremonialBeast) | **PASS (WaterfallGiant)**            |
+| map               | PASS (exact)              | **PASS (exact)**       | **PASS (exact, 64 nodes / 17 rows)** |
 
 **Underdocks needed nothing fixed — every act-specific branch was already right.** Worth
 knowing exactly what that capture cleared, because all of it was modelled from the
 decompiled act and never observed: its four weak / ten normal / three elite / three boss
-pools *and their order* (declaration order, per `Acts/Underdocks.cs`), and — the piece
+pools _and their order_ (declaration order, per `Acts/Underdocks.cs`), and — the piece
 most likely to have been wrong — the up-front RNG burn in `RunMapGenerator`, which is
-`202 + (underdocks ? 57 : 60)` calls. That 57 was *derived*, not measured: Underdocks
+`202 + (underdocks ? 57 : 60)` calls. That 57 was _derived_, not measured: Underdocks
 declares 3 fewer act events than Overgrowth (10 vs 13; +18 shared either way, matching
 the live save's 31 `event_ids`), and everything else up front was assumed act-independent
 even though Underdocks differs elsewhere (one `BgMusicOptions` entry vs two, its own
@@ -299,8 +367,9 @@ every section**, and the last two runs were 10/10 and 12/12 with no capture fail
 
 **Three map defects the sweep found — all of them "the emulator does slightly more than
 the game does":**
+
 - **Post-processing moved the ancient and boss nodes.** The game's `CenterGrid`,
-  `SpreadAdjacentMapPoints` and `StraightenPaths` all take `Grid`, which is *only* the
+  `SpreadAdjacentMapPoints` and `StraightenPaths` all take `Grid`, which is _only_ the
   path rows: `StandardActMap` holds `StartingMapPoint` / `BossMapPoint` separately, in
   the middle column, and the boss's row is one past the grid's last. So a centered map
   never drags them along — which is also why the save writes `start` and `boss` outside
@@ -308,15 +377,15 @@ the game does":**
   columns shifted start and boss to column 2 while the game kept them at 3.
 - **Edge-breaking stopped after the first break.**
   `MapPathPruning.BreakAParentChildRelationshipInSegment` walks the whole segment and
-  breaks *every* qualifying parent→child link, setting a flag; the emulator returned on
+  breaks _every_ qualifying parent→child link, setting a flag; the emulator returned on
   the first one. The re-scan that follows then sees a different graph, so the rest may
   never be broken at all — leaving an edge the game had pruned, which pinned a node to
   the only column both its children allowed.
 - **The ancient counted as a parent in the prune guard.** `PruneSegment` skips a node
-  when a parent has exactly one child *and is still in the grid*; the ancient is never
+  when a parent has exactly one child _and is still in the grid_; the ancient is never
   in the grid, so the game ignores it there and the emulator did not.
 
-**Map *edges* are compared now, not just node positions** (native list 16, run API v9).
+**Map _edges_ are compared now, not just node positions** (native list 16, run API v9).
 The same dots can be wired differently, the save records each point's `children`, and
 connectivity is what constrains the post-processing passes — it was free ground truth we
 were throwing away. It is what identified the second defect above.
@@ -330,19 +399,20 @@ divergence. Fixed in `RunRngSet` and `sts2_gym.game_seed`; the sweep hit it with
 seconds by generating a seed with an `I` in it.
 
 **The second seed earned its keep — it caught three defects one sample could not:**
+
 - **Act selection was wrong in mechanism and stream.** It was `NextBool()` on the
-  *unnamed* raw-seed stream. The game uses `rng.NextItem` over the unlocked acts for
+  _unnamed_ raw-seed stream. The game uses `rng.NextItem` over the unlocked acts for
   that index on a dedicated **`"act_selection"`** stream
   (`StartRunLobby.BeginRunLocally`). "ABCDEF" passed by luck — with a two-way roll a
   single sample cannot distinguish a correct model from a coin flip.
-  ⚠️ **Not seed-pure**: the candidate list is whatever the *profile* has unlocked, and
+  ⚠️ **Not seed-pure**: the candidate list is whatever the _profile_ has unlocked, and
   the game force-selects an unlocked-but-undiscovered alt act instead of rolling. We
   model the mature-profile case. Same caveat as boss discovery.
 - **`NibbitsNormal` was wrongly tagged `Nibbit`.** Only `NibbitsWeak` declares that tag;
   `NibbitsNormal` overrides nothing and inherits the empty default. The bogus tag made
   the no-repeat rule block the game's legitimate `NibbitsWeak -> NibbitsNormal` run,
   shifting the whole remaining sequence by one (2/15 -> 15/15 once fixed).
-- **The map stream was keyed on act *identity*, not act *index*** (`state.Act - 1`).
+- **The map stream was keyed on act _identity_, not act _index_** (`state.Act - 1`).
   An Underdocks act 1 would have read `"act_2_map"` and desynced the entire map. The
   index for act 1 is always 0.
 - Two more invented names corrected: `Nibbit` -> `NibbitsWeak`, `Nibbits` ->
@@ -351,7 +421,7 @@ seconds by generating a seed with an `I` in it.
 **Run generation is now exact on both captured seeds.** The last residual — "AAB" row 1
 holding a node at the wrong column — was **edge insertion order**. The game wires the
 start node's children with `ForEachInRow`, which walks grid columns 0..6; we wired them
-in *path-draw* order (the order the 7 starts were rolled). That insertion order becomes
+in _path-draw_ order (the order the 7 starts were rolled). That insertion order becomes
 the child-enumeration order in `FindAllPaths`, which sets the order segments land in
 their duplicate group — and `PrunePaths` shuffles each group before keeping one, so a
 different starting order prunes a different node. Same fix applied to the row-15 → boss
@@ -378,7 +448,7 @@ So captures are committed:
   them Underdocks, distilled from the profile's own run history (see below). Seeds and
   acts only, no account id or timestamps.
 - `tests/fixtures/combat/*.json` — combat starts. Six captures from `combat_sweep.py
-  --save-fixtures` (both acts, both pools, and the three encounters that roll their own
+--save-fixtures` (both acts, both pools, and the three encounters that roll their own
   composition), each carrying a `capture` block with the seed, encounter, weak/normal
   context and TotalFloor needed to rebuild the emulator side offline. Plus the original
   `ABCDEF-corpse-slugs.json`, which predates that block and is checked the old way —
@@ -392,14 +462,16 @@ So captures are committed:
   version stamp** (all fixtures must agree, and `verify_run_generation.py` shouts when
   the installed game has moved on) and the **profile facts** — act selection and boss
   discovery read the profile, so a capture from a fresher account is not comparable.
-  The boss check reads *the captured act's own* `BossDiscoveryOrder`.
+  The boss check reads _the captured act's own_ `BossDiscoveryOrder`.
 
 Capture more with:
+
 ```bash
 python scripts/verify_run_generation.py --save-fixture tests/fixtures/run_generation/<SEED>.json
 python scripts/compare_draw_pile.py --seed <SEED> --encounter <enc> --jump-encounter \
     --save-live-json tests/fixtures/combat/<SEED>-<enc>.json
 ```
+
 `verify_run_generation.py --fixture <path>` then re-runs offline, with no game needed.
 
 ### Act selection is verified in bulk, from the profile's run history
@@ -411,7 +483,7 @@ the emulator: **88/88 on the installed v0.107.1, 45 Overgrowth / 43 Underdocks.*
 turns the act-1 coin flip from "one sample, 50% odds of luck" into a real result.
 
 Read the per-build breakdown carefully: older builds sit near 50%, which is expected,
-not a regression. A record is ground truth for *its own* patch, and early runs also hit
+not a regression. A record is ground truth for _its own_ patch, and early runs also hit
 `GetRandomList`'s force-select path (an unlocked-but-undiscovered alt act is taken
 instead of rolled) rather than rolling at all. Only the installed build's rows are a
 statement about the emulator as it stands.
@@ -433,13 +505,13 @@ python scripts/combat_sweep.py --act underdocks --count 4
 ```
 
 **Normal-pool encounters do NOT need three easy fights behind them.** The
-`completed_combat_rooms in [0,3)` rule only decides which variant the *map* hands you;
+`completed_combat_rooms in [0,3)` rule only decides which variant the _map_ hands you;
 `debug_start_encounter` looks the encounter up by class name and enters a `CombatRoom`
 for it directly, so `NibbitsNormal` works on floor 1 of a fresh run. The emulator matches
 with `completed_combat_rooms = -1`. Verified: `nibbits`, `punch-construct`, `sewer-clam`,
 `fossil-stalker`, `mawler`, `vine-shambler` and `haunted-ship` all captured that way.
 The real constraint is **stream freshness** — the direct combat env assumes every named
-RNG stream is at CallCount 0, which is true of a run's *first* combat whichever variant
+RNG stream is at CallCount 0, which is true of a run's _first_ combat whichever variant
 it is. So: never answer Neow, never enter a room, one fresh run per capture.
 
 **First run: 3/16. Now 32/32** across both pools and both acts. What it found:
@@ -476,11 +548,11 @@ it is. So: never answer Neow, never enter a room, one fresh run per capture.
   - `CorpseSlug.EnsureCorpseSlugsStartWithDifferentMoves` rolls `NextInt(3)` once and
     deals consecutive starting moves. The old hardcoded `(2, 0)` is that sequence for a
     roll of 2 — right one time in three.
-  And separately: `state.AiRng` was never wired in the direct combat env, so intent rolls
-  fell back to the combat RNG. Invisible for the many enemies whose opening move is
-  deterministic; wrong for every enemy that opens on a random branch (LeafSlimeS,
-  SludgeSpinner, Exoskeleton). It is now `GameRng(seed, "monster_ai")`, and
-  `CombatFactory` no longer stomps a caller-provided one.
+    And separately: `state.AiRng` was never wired in the direct combat env, so intent rolls
+    fell back to the combat RNG. Invisible for the many enemies whose opening move is
+    deterministic; wrong for every enemy that opens on a random branch (LeafSlimeS,
+    SludgeSpinner, Exoskeleton). It is now `GameRng(seed, "monster_ai")`, and
+    `CombatFactory` no longer stomps a caller-provided one.
 
 **`TotalFloor` at a Neow jump is 1** — the ancient is the single map point in the run's
 history. Measured, not assumed: floors 0 and 2 give the wrong slime roster on seeds where
@@ -490,7 +562,7 @@ composition silently fall back to the combat rng.
 
 ### Fights, not just openings (`--turns`)
 
-An opening-state check proves an enemy's *first* move, which for a three-move enemy is a
+An opening-state check proves an enemy's _first_ move, which for a three-move enemy is a
 third of it — and which move it opens on is itself a roll. `combat_sweep.py --turns N`
 ends N turns with no cards played, comparing intents every turn, and reports **coverage**:
 how many of each enemy's declared moves the fight actually reached.
@@ -507,8 +579,9 @@ MoveStates would make 100% coverage unreachable. Coverage counts distinct
 **(type, magnitude)** pairs, not types: WhipSlap and Glomp are both "Attack".
 
 **Three defects turns caught that openings could not:**
+
 - **Multi-hit attacks executed at their A9 per-hit damage** while announcing the correct
-  A8 total. The per-hit number is written out *separately* from the intent, in
+  A8 total. The per-hit number is written out _separately_ from the intent, in
   `ExecuteIntent`'s attack branch (`for (i < 3) DealAttackDamage(enemy, state, 4)`), so
   fixing the intent table left the damage wrong. Toadpole announced 9 and dealt 12. Fixed
   for Toadpole, Byrdonis, PhrogParasite, SkulkingColony.
@@ -529,9 +602,10 @@ python scripts/combat_sweep.py --seeds <SEED> --ascension 10 --turns 6 --save-fi
 ```
 
 What actually differs between A8 and A10, and nothing else does:
+
 - **`DeadlyEnemies` (9)** flips nearly every monster damage and buff amount to its high
   value. This is the whole practical difference in combat.
-- **`DoubleBoss` (10)** adds a second boss — but only to the *last* act
+- **`DoubleBoss` (10)** adds a second boss — but only to the _last_ act
   (`i == Acts.Count - 1` in `RunManager.GenerateRooms`), which act-1 generation never
   reaches. Verified in passing: an A10 capture's deck, enemy roster and HP all match an
   A8-modelled emulator, because HP comes from `ToughEnemies` (live at both).
@@ -546,7 +620,7 @@ of `Ascension.Value(DeadlyEnemies, 9, 8)` fails the three `_a10_` tests and leav
 **Known-open: the emulator's reported intent magnitude excludes Strength.** The live game
 displays effective damage — a Nibbit at +2 Strength announces 14 for a 12-damage Butt,
 and Seapunk's 2x4 SpinningKick shows 12 at +1 Strength. The emulator reports the base, so
-any enemy that buffs itself diverges *in display* from the turn it buffs, even when the
+any enemy that buffs itself diverges _in display_ from the turn it buffs, even when the
 damage it deals is right. Fixing it properly means `Intent` carrying a **hit count**
 instead of a pre-multiplied total, so display (`base + strength` per hit) and execution
 (the loop) both derive from one place — which is also what would have prevented the
@@ -566,6 +640,7 @@ literals. Every encounter in `LIVE_ENCOUNTER_BY_EMULATOR` is reachable in ~40s, 
 is a sweep-and-fix loop, not a research problem.
 
 ### Introspection & verification tooling (built)
+
 - `scripts/compare_draw_pile.py` — emulator vs live ordered piles. `--live-json`
   re-diffs a saved capture offline; `--jump-encounter` avoids the lobby crash.
 - `scripts/verify_run_generation.py` — the table above, straight from a save.
@@ -610,9 +685,9 @@ cd "$MACOS" && ./"Slay the Spire 2" --headless &
 
 - The binary is a custom Godot 4.5 build ("MegaDot", mono) and the release export
   template **keeps `--headless`** (`--display-driver headless --audio-driver Dummy`).
-- Without `steam_appid.txt` it dies at Steamworks init — *"No appID found"* — and then
+- Without `steam_appid.txt` it dies at Steamworks init — _"No appID found"_ — and then
   blocks forever on a confirmation popup nobody can click. The appid is **2868840**.
-  ⚠️ That file is a Steamworks *development* convenience; it lets the binary start
+  ⚠️ That file is a Steamworks _development_ convenience; it lets the binary start
   without being launched by Steam. Harmless when launching through Steam normally, but
   delete it if that bothers you (headless then stops working).
 - Costs ~148 MB RSS and a few % CPU. Boot to drivable is ~6s.
@@ -652,7 +727,7 @@ python scripts/patch_refresh.py --apply   # also decompile + extract + diff
 **Expectations sourced from the game are regenerated for you.** Re-capture a fixture
 with `--save-fixture`, then run `scripts/generate_capture_tests.py` — it rewrites
 `Generated`-style C# capture assertions (`RunGenerationCaptures.g.cs`) straight from
-the fixtures. That is not a rubber stamp: only the *game* side moves, so an emulator
+the fixtures. That is not a rubber stamp: only the _game_ side moves, so an emulator
 regression still fails the comparison.
 
 **What it will not do is rewrite expectations from the emulator's own output.** Auto-updating an
@@ -664,7 +739,7 @@ the game.
 
 ### The modelled profile (why generation is seed-deterministic)
 
-Two decisions read the **profile**, not the seed: Act 1 is rolled only among *unlocked*
+Two decisions read the **profile**, not the seed: Act 1 is rolled only among _unlocked_
 acts (an unlocked-but-undiscovered one is force-selected instead), and the boss is
 overwritten by the first Act-1 boss the profile has never seen
 (`ActModel.ApplyDiscoveryOrderModifications`). The emulator models **one fixed profile —

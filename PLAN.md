@@ -31,13 +31,13 @@ not as the simulator you search over.
 - **No free auto-update.** Every balance patch, new card, relic, and character is
   manual work. This is the standing maintenance tax and is why the existing
   emulator (Zamiell) covers only one character — content coverage is the grind.
-  *Mitigated but not eliminated by tooling:* because the game is decompilable C#
+  _Mitigated but not eliminated by tooling:_ because the game is decompilable C#
   (§4), the logic can be **read directly and ported**, not guessed, and data can be
   extracted semi-automatically each patch — so the tax is real but much lower than
   reverse-engineering a black box.
 - **Split data from logic.** Card numbers, relic stats, enemy movesets, and map
-  parameters are *data* that can be extracted from `sts2.pck` / decompiled models
-  and re-imported semi-automatically each patch. The *interaction logic* (how
+  parameters are _data_ that can be extracted from `sts2.pck` / decompiled models
+  and re-imported semi-automatically each patch. The _interaction logic_ (how
   effects combine) is ported from decompiled C# and is where bugs and update-churn
   live. Design the simulator along this seam from day one.
 
@@ -52,12 +52,12 @@ not as the simulator you search over.
 > instead of re-deriving it in another language — the single biggest correctness
 > lever in the whole project.
 
-| Component | Language | Rationale |
-|---|---|---|
-| Simulator + MCTS + self-play orchestration | **C#** (.NET, NativeAOT) | Matches the game and the reference emulator. Lets you copy/adapt method bodies straight from decompiled `src/Core/` instead of hand-translating them — massively fewer fidelity bugs. NativeAOT gives good, GC-manageable performance; use structs + pooling for cheap state clones. |
-| NN definition + training | **Python + PyTorch** | Standard; nothing pushes off it. The emulator already exposes a Gymnasium interface to Python. |
-| Bridge (sim ↔ Python) | NativeAOT shared lib via `ctypes` | Exactly how the Zamiell emulator already bridges C# sim → Python. Proven. |
-| Bridge (inference in search) | serialized model boundary | Keep sim↔model a stable format (ONNX, or batched requests to a GPU server), not a tight FFI you rebuild constantly. |
+| Component                                  | Language                          | Rationale                                                                                                                                                                                                                                                                            |
+| ------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Simulator + MCTS + self-play orchestration | **C#** (.NET, NativeAOT)          | Matches the game and the reference emulator. Lets you copy/adapt method bodies straight from decompiled `src/Core/` instead of hand-translating them — massively fewer fidelity bugs. NativeAOT gives good, GC-manageable performance; use structs + pooling for cheap state clones. |
+| NN definition + training                   | **Python + PyTorch**              | Standard; nothing pushes off it. The emulator already exposes a Gymnasium interface to Python.                                                                                                                                                                                       |
+| Bridge (sim ↔ Python)                      | NativeAOT shared lib via `ctypes` | Exactly how the Zamiell emulator already bridges C# sim → Python. Proven.                                                                                                                                                                                                            |
+| Bridge (inference in search)               | serialized model boundary         | Keep sim↔model a stable format (ONNX, or batched requests to a GPU server), not a tight FFI you rebuild constantly.                                                                                                                                                                  |
 
 **Why not Rust anymore.** Rust is faster raw and GC-free, but the game logic you
 must replicate is C#. Porting decompiled C# into Rust multiplies the bug surface
@@ -68,7 +68,7 @@ port only the hot path, not the whole sim.**
 
 ### The inference bridge
 
-Inference must be fast *inside* search. Options, roughly in order of throughput:
+Inference must be fast _inside_ search. Options, roughly in order of throughput:
 
 1. **Batched inference server (preferred).** Search workers send leaf states to a
    GPU process that batches evals across many parallel MCTS trees. Batching keeps
@@ -82,17 +82,17 @@ Plan: train in Python, serve batched, search in C#.
 
 ## 3. Correctness: how to get to high fidelity
 
-You cannot *guarantee* zero bugs, but the path to high fidelity is well-precedented
+You cannot _guarantee_ zero bugs, but the path to high fidelity is well-precedented
 — and largely **already built** for StS2: the Zamiell emulator ships
 differential-testing infra (trace-JSON comparison, validation against the running
 game via the **STS2MCP** mod), and effects there are "trace-observed" from
 decompiled code. Reuse that harness rather than rebuilding it. Note too that
-porting from decompiled C# (§4) means much logic is *read*, not inferred, so
+porting from decompiled C# (§4) means much logic is _read_, not inferred, so
 differential testing becomes a **cross-check on the port** rather than the primary
 means of discovering behavior.
 
 1. **Reproduce the game's RNG exactly** — same algorithm, same seeding, same
-   *order* draws are consumed (card draws, map gen, combat rolls). If RNG matches,
+   _order_ draws are consumed (card draws, map gen, combat rolls). If RNG matches,
    a seed + action sequence reproduces an identical playthrough, which unlocks
    everything below. This is the highest-leverage early task. If RNG does not
    match, you can only diff deterministic transitions.
@@ -101,8 +101,8 @@ means of discovering behavior.
    same seed + actions in your sim and assert identical resulting states. Gold
    standard and regression corpus.
 3. **Large golden-replay suite** — capture playthroughs, freeze them, run every
-   commit. New content = new goldens. Catches update-regressions. See *Capturing
-   playthroughs* below for how, and **[docs/replay-verification.md](docs/replay-verification.md)**
+   commit. New content = new goldens. Catches update-regressions. See _Capturing
+   playthroughs_ below for how, and **[docs/replay-verification.md](docs/replay-verification.md)**
    for the full-run corpus + replay-harness design (the primary fidelity signal, and
    the honest answer to "how do we know a character is correct").
 4. **Property / invariant tests + fuzzing** — energy conservation, deck-count
@@ -110,15 +110,15 @@ means of discovering behavior.
    Catches interaction bugs that per-card unit tests miss.
 5. **Per-card / relic / enemy unit tests** for the specific numbers.
 
-**Honest framing:** for *training*, minor divergences are often tolerable as long
-as they do not open unrealistic exploits the agent learns to farm. For *actual
-play fidelity* you want tight matching. Differential testing with matched RNG plus
+**Honest framing:** for _training_, minor divergences are often tolerable as long
+as they do not open unrealistic exploits the agent learns to farm. For _actual
+play fidelity_ you want tight matching. Differential testing with matched RNG plus
 a growing golden corpus is the proven route.
 
 ### Capturing playthroughs
 
-The game does not persist a per-state, per-action log. You do not *save* states —
-you *instrument* the game to emit them, and thanks to bit-exact RNG you need far
+The game does not persist a per-state, per-action log. You do not _save_ states —
+you _instrument_ the game to emit them, and thanks to bit-exact RNG you need far
 less than "every state."
 
 **What a golden replay needs:**
@@ -126,7 +126,7 @@ less than "every state."
 - **The seed** — the whole run is a function of it.
 - **The action sequence** — cards played + targets + order in combat, path taken,
   rewards chosen.
-- **Ground-truth checkpoints** to compare against — *not* every state.
+- **Ground-truth checkpoints** to compare against — _not_ every state.
 
 Given seed + actions, the simulator regenerates every intermediate state itself.
 
@@ -136,7 +136,7 @@ deterministically; to validate, the real game only needs to emit a **compact sta
 hash per turn (or per action)**, not full state:
 
 - Hashes match throughout → replay passes, near-zero storage.
-- A hash diverges → the *first* mismatched turn pinpoints the exact bad transition.
+- A hash diverges → the _first_ mismatched turn pinpoints the exact bad transition.
 - Full-state dumps only when a hash diverges and you want to debug it (re-run with
   verbose logging at that point).
 
@@ -147,7 +147,7 @@ hash per turn (or per action)**, not full state:
    **CommunicationMod** exposed complete game state as JSON over stdio specifically
    so bots could read state and send actions — exactly this capability. Feasibility
    is the open moddability question (§4).
-2. **The game's own run-history / metrics save files** — usually free but *coarse*
+2. **The game's own run-history / metrics save files** — usually free but _coarse_
    (map-level: path, card rewards, relics; not per-card combat actions). Good for
    map/economy-layer goldens, insufficient for combat.
 3. **Memory reading** (external process reconstructs state from RAM) — fragile,
@@ -193,7 +193,7 @@ readable, not inferred.
   "trace-observed" from decompiled code, plus **differential-testing infra**
   (compare trace JSONs; validate vs the running game via STS2MCP). **Verified
   behavior: Ironclad only** — but see the source evaluation below; the architecture
-  is *not* single-character-shaped. → **Decision: fork it** (see §4a).
+  is _not_ single-character-shaped. → **Decision: fork it** (see §4a).
 - **STS2MCP** — `github.com/Gennadiyev/STS2MCP`. A mod that exposes full in-game
   state as JSON over a localhost REST API (`127.0.0.1:15526`) plus an MCP server.
   Covers all screens (combat, rewards, map DAG w/ lookahead, shop, events, card
@@ -210,7 +210,7 @@ readable, not inferred.
 ## 4a. Zamiell emulator: source evaluation & fork decision
 
 Read the actual source (`src/Sts2Emulator/`) to decide fork vs. rebuild. **Verdict:
-fork it.** The "single character" concern is about *verified content depth*, not
+fork it.** The "single character" concern is about _verified content depth_, not
 architecture — the engine is already multi-character and structured so content is
 an additive grind, not a wall.
 
@@ -230,17 +230,17 @@ C# NativeAOT core (`Core/`) ↔ Python `ctypes`/Gym (`Interop/`) ↔ generated d
   per-patch update pipeline).
 - **Behavior = one big switch on card ID** in `Core/Effects/CardEffects.cs` (184KB).
   Each card is an isolated case (`case IC.Bludgeon: DealDamage(state, Dmg(def,
-  upgraded)); break;`). Adding/fixing a card is **additive and isolated — zero
+upgraded)); break;`). Adding/fixing a card is **additive and isolated — zero
   impact on existing cards** (and parallelizable, incl. AI-assisted).
 - **Graceful fallback.** `ApplyGeneratedCardApproximation()` runs any card lacking a
-  hand-written case straight from its generated data. So all 546 cards *already run*
+  hand-written case straight from its generated data. So all 546 cards _already run_
   approximately; you promote approximate → exact **one card at a time, gated by
   differential tests.** Coverage is a smooth gradient, never a blocking wall.
 
 **Residual risks (execution, not architecture):**
 
 1. The switch file gets large at full scale — inelegant but mergeable; refactor later.
-2. Non-Ironclad fidelity is **unproven** — broad data, narrow *verified* behavior;
+2. Non-Ironclad fidelity is **unproven** — broad data, narrow _verified_ behavior;
    the approximate→exact loop is only battle-tested on Ironclad.
 3. Bus-factor-1 WIP in a churny state (fixtures recently deleted, progress
    self-described as blocked on new traces). Forking means owning it.
@@ -303,7 +303,7 @@ foundation already exists and the fork decision is made, so the first move is
    `extract_data.py`/`diff_patch.py` flow for card/relic/enemy/map data; make it a
    clean per-patch re-run.
 3. **Extend content coverage** — promote cards from the `ApplyGeneratedCard-
-   Approximation()` fallback to hand-ported exact logic, one at a time, gated by
+Approximation()` fallback to hand-ported exact logic, one at a time, gated by
    differential tests: remaining Act 1 → full run → other characters. The additive
    switch makes this parallelizable.
 4. **MCTS over the simulator** (no NN yet — pure rollouts as a baseline).
@@ -324,6 +324,7 @@ Cloned the Zamiell emulator to `./emulator/` (HEAD `04cfe6d`, 2026-06-03, MIT).
 Stood up the toolchain on macOS and **proved the patch-update story empirically**.
 
 **Environment set up:**
+
 - **.NET SDK 9.0.317** installed to `~/.dotnet` via Microsoft's `dotnet-install.sh`
   (no sudo; Homebrew's cask needs a sudo `.pkg` install and failed headless). SDK 9
   matches the `net9.0` target exactly.
@@ -331,20 +332,22 @@ Stood up the toolchain on macOS and **proved the patch-update story empirically*
   The latest, 11.0.0.9375, has a broken package (missing `DotnetToolSettings.xml`) —
   pin 8.2.
 - Per-shell env needed: `export DOTNET_ROOT="$HOME/.dotnet"; export
-  PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"` (add to `~/.zshrc` to persist).
+PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"` (add to `~/.zshrc` to persist).
 
 **Scripts adapted for macOS** (`emulator/scripts/`):
+
 - `decompile.sh` — now OS-aware: finds `sts2.dll` under any `data_sts2_<platform>`
   folder via `find`, and uses `shasum -a 256` when `sha256sum` is absent.
 - `build.sh` — default runtime auto-detects host (`osx-arm64` here) instead of
   hardcoded `win-x64`.
 
 **Pipeline results (against local game v0.107.1):**
+
 - `decompile.sh` → regenerated `decompiled/` from the local macOS `sts2.dll`.
 - `extract_data.py` → **545 cards, 106 enemies, 242 powers, 296 relics, 63 potions**.
 - `diff_patch.py` vs the repo's June-3 baseline → **all deltas numeric** (card
-  costs/block/damage, enemy HP); script's own verdict: *"no manual effect
-  implementation needed."* This is the patch-currency proof: updating = decompile →
+  costs/block/damage, enemy HP); script's own verdict: _"no manual effect
+  implementation needed."_ This is the patch-currency proof: updating = decompile →
   extract → diff, zero hand-coding for this patch.
 - `dotnet test` → **198/198 pass on baseline data**; 6 fail only when run against the
   regenerated v0.107.1 data (value-pinned tests: Spite/Bloodletting HP math,
@@ -369,6 +372,7 @@ on macOS (the author's comment suspecting otherwise is outdated) — so the frie
 symbols export directly on every platform with **zero per-platform linker args**.
 
 **Verified end-to-end on macOS:**
+
 - `build.sh osx-arm64` → `out/Sts2Emulator.dylib`; `nm -gU` shows all **33 friendly
   symbols** exported (`_Sts2_Step`, `_Sts2Run_Create`, …).
 - `native.py` already maps `darwin → Sts2Emulator.dylib`; no change needed.
@@ -388,10 +392,10 @@ green, but hasn't been re-verified on a Windows runner here.
 - `uv venv --python 3.12` + `uv sync` → `.venv` with gymnasium 1.2.3, numpy 2.4.6,
   torch 2.12.0, stable-baselines3 2.8.0, sb3-contrib 2.8.0.
 - **Full Python Gym suite green: 17/17** (`uv run python -m unittest discover -s
-  tests/python`), driving the live `.dylib` end-to-end (gymnasium env → ctypes → C#).
+tests/python`), driving the live `.dylib` end-to-end (gymnasium env → ctypes → C#).
 - Gotcha: `native.py` mtime-based freshness guard fails if any `src/Sts2Emulator`
   source is touched after the dylib build — just re-run `bash scripts/build.sh
-  osx-arm64`, or set `STS2_ALLOW_STALE_NATIVE=1` for intentional stale runs.
+osx-arm64`, or set `STS2_ALLOW_STALE_NATIVE=1` for intentional stale runs.
 
 **macOS setup is now complete — both halves of the stack run locally:** C# build +
 198 unit tests, the decompile/extract/diff patch pipeline, the NativeAOT dylib with
@@ -405,7 +409,7 @@ The oracle/observability mod is live on the local game.
   source tested v0.103.2; local game is v0.107.1). Cloned `Gennadiyev/STS2MCP` to
   `../STS2MCP` (outside the fork repo) and built against the local v0.107.1
   assemblies: `dotnet build STS2_MCP.csproj -c Release -o out/STS2_MCP
-  -p:STS2GameDir="<game root>"` → **0 warnings, 0 errors** (the mod's game-API
+-p:STS2GameDir="<game root>"` → **0 warnings, 0 errors** (the mod's game-API
   surface still exists in v0.107.1). The csproj already has macOS `.app`-bundle
   reference paths built in.
 - **Installed** as a subfolder mod (the loader's format, matching MovesViewer et al.):
@@ -424,7 +428,7 @@ The oracle/observability mod is live on the local game.
 **v0.107.1 script-adaptation findings (for the differential-test phase):**
 
 - **Standard mode blocks custom seeds.** `menu_select confirm` with a `seed` fails:
-  `Seed should not be changed in standard mode!`. Embark *without* a seed instead.
+  `Seed should not be changed in standard mode!`. Embark _without_ a seed instead.
 - **Seed not exposed via the API** at early floors — `compendium.current_run` has no
   `seed` ("save not found yet"), and no `seed` field appears in singleplayer state.
   So the seeded-run scripts (`start_real_game_run.py --seed`, and
@@ -438,7 +442,7 @@ The oracle/observability mod is live on the local game.
 - Replay-based capture (`trace_real_game_run.py`) additionally needs Zamiell's
   `start_replay` fork of STS2MCP.
 
-**Net:** the mod and API are fully functional on v0.107.1; the *automation scripts*
+**Net:** the mod and API are fully functional on v0.107.1; the _automation scripts_
 need modest adaptation (seed handling + Neow/event timing + `battle` key) before the
 seeded differential-test loop runs unattended.
 
@@ -448,7 +452,7 @@ Rebuilt/installed the mod (now with `return_to_main_menu`) and ran the harness a
 the live game:
 
 - **Verified working**: `return_to_main_menu` (abandon flow), `debug_start_encounter
-  CorpseSlugsWeak` (lands in combat, 2 slugs, reaches play phase), and
+CorpseSlugsWeak` (lands in combat, 2 slugs, reaches play phase), and
   `validate_real_game_trace.find_matching_seed` runs end-to-end. All the v0.107.1
   plumbing works.
 - **New divergence surfaced — DIAGNOSED (real emulator bug, not a comparison issue).**
@@ -457,7 +461,7 @@ the live game:
 ### Enemy-HP-roll diagnosis (2026-08-15)
 
 Empirical (4 seedless embarks + `debug_start_encounter CorpseSlugsWeak`): slug HP came
-out **[27,28], [27,29], [29,28]** — 28s appear, and each pair is two *distinct* values.
+out **[27,28], [27,29], [29,28]** — 28s appear, and each pair is two _distinct_ values.
 Also: **seedless standard runs use a random seed each time** (`R4NJ30ZGS8`, `NVUU5SJD9A`,
 …), which is why the earlier `find_matching_seed` failed (it was hunting a random seed).
 
@@ -470,7 +474,7 @@ The emulator **already has a correct port** of this in `CombatFactory.CreateEnem
 `else if (_currentNicheHpRng != null)` branch (`Enumerable.Range` → `ExceptWith(
 _usedNicheHps)` → `Next(0,count)`/`ElementAt` → add to used). **The bug: `CreateCorpseSlug`
 opts out with `fixedHp: 27/29`,** which takes a broken branch — uses the fixed value
-(never 28) *and* consumes the wrong RNG (`Next(0,3)` instead of `NextItem` with
+(never 28) _and_ consumes the wrong RNG (`Next(0,3)` instead of `NextItem` with
 `ExceptWith`), desyncing the Niche stream for the next slug too.
 
 **This is NOT an ordering/comparison issue** — order-insensitive matching would mask it
@@ -490,7 +494,7 @@ Built full custom-run screen support into the STS2MCP fork (`McpMod.CustomRun.cs
 routing in `McpMod.Actions.cs` + state reporting in `McpMod.StateBuilder.cs`):
 `NCustomRunScreen` now reports as `menu_screen: "character_select"` (`custom_run: true`,
 with characters / `seed_input` / `ascension`), and `menu_select` drives it — select
-character, `confirm` with a seed (via `Lobby.SetSeed`, which custom mode *accepts*),
+character, `confirm` with a seed (via `Lobby.SetSeed`, which custom mode _accepts_),
 set ascension. **Verified live:** `singleplayer → custom → IRONCLAD → confirm(seed=
 "ABCDEF")` embarks with `current_run.seed == "ABCDEF"` (gen seed 3334281563).
 
@@ -514,8 +518,9 @@ proves the whole chain (seed derivation + Niche stream + HP-roll fix) is bit-exa
 Gave the combat env `ShuffleRng = GameRng(seed,"shuffle")` and shuffle with it
 (`ShufflePile` is the same Fisher-Yates as `GameRng.Shuffle`). The hand now uses the
 Shuffle stream but doesn't match live yet. Deeper diagnosis (2026-08-15):
+
 - **Deck order matches — ruled out.** `AscensionManager` adds Ascender's Bane via
-  `Deck.AddInternal(bane, -1)` which *appends* (`CardPile.AddInternal` index -1 → `Add`),
+  `Deck.AddInternal(bane, -1)` which _appends_ (`CardPile.AddInternal` index -1 → `Add`),
   so the game's run deck is `[5 Strike, 4 Defend, Bash, Bane]` — identical to the
   emulator's `StarterDeckIds`. Algorithm matches (both Fisher-Yates); stream derivation
   matches (Niche proved the mechanism).
@@ -530,8 +535,8 @@ Shuffle stream but doesn't match live yet. Deeper diagnosis (2026-08-15):
   neither top 5), pointing to the Shuffle stream's call-count / a subtle shuffle
   difference. Needs full-deck introspection on both sides (the combat obs summary doesn't
   expose ordered draw-pile) to pin down.
-Enemy HP already matches exactly; these two close the opening-hand gap for full combat
-exact-match.
+  Enemy HP already matches exactly; these two close the opening-hand gap for full combat
+  exact-match.
 
 **Robustness note:** rapid abandon→re-embark→`debug_start_encounter` cycling crashes
 the game (error popup); a single clean sequence with generous waits is stable. Harden
@@ -544,10 +549,10 @@ Question: can a real run be aligned to an emulator trace via a seed? **Yes.**
 - **Two ways to control the seed.** (1) Custom mode: the mod exposes
   `menu_select "custom"` (`_customButton`) whose embark path calls
   `Lobby.SetSeed(seed)` — standard mode rejects this (`Seed should not be changed in
-  standard mode!`), custom accepts a chosen seed. (2) Read-back: after the save
+standard mode!`), custom accepts a chosen seed. (2) Read-back: after the save
   writes, the seed is in `compendium.current_run` and the save file.
 - **Careful — the API's reported `seed` is the input field, not the generator.** The
-  save has `/rng/seed = "0"` (custom-input, 0 for a default standard run) *and*
+  save has `/rng/seed = "0"` (custom-input, 0 for a default standard run) _and_
   `/players[0]/rng/seed = 3452614542` (the derived generation seed). The API surfaces
   the former. Our API-embarked "standard" run actually ran with input seed **`"0"`**.
 - **RNG parity for seed `"0"` is already validated in-emulator and passing.**
@@ -559,7 +564,7 @@ Question: can a real run be aligned to an emulator trace via a seed? **Yes.**
 - **Enemy-stat parity checks out.** Real first combat = two Corpse Slugs at 27 & 29
   HP; emulator `EnemyDef(CorpseSlug, MinHp: 27, MaxHp: 29)`. Matches.
 - **Encounter-identity quick-compare diverged — but the comparison was confounded,
-  not a proven bug.** Emulator seed-`"0"` first combat via *auto-navigation* was
+  not a proven bug.** Emulator seed-`"0"` first combat via _auto-navigation_ was
   `fuzzy-wurm-crawler` (id 8) vs the real run's `corpse-slugs` (id 9). Two
   uncontrolled variables: (a) different map path (real: chose node 0; emulator:
   first-valid-action) — StS2 assigns encounters per node, so path matters; (b)
@@ -569,7 +574,7 @@ Question: can a real run be aligned to an emulator trace via a seed? **Yes.**
 **Takeaway:** alignment is mechanically solved and the RNG foundation is proven. The
 remaining work to run a rigorous live differential test is (1) adapt the driver
 scripts to v0.107.1 (seedless-embark + read-back or custom-mode set-seed; Neow
-timing; `battle` key), (2) pin ascension on both sides, (3) replay the *same* action
+timing; `battle` key), (2) pin ascension on both sides, (3) replay the _same_ action
 sequence in the emulator and diff — the intended `trace_real_game` → `compare_traces`
 loop.
 
@@ -582,7 +587,7 @@ Investigated adapting the driver scripts and hit a hard architectural blocker:
   real game straight into a chosen encounter, then seed-searches for a match.
 - **These actions exist in no public mod.** Not in upstream `Gennadiyev/STS2MCP`,
   and not in `Zamiell/STS2MCP` (public fork, last commit 2026-05-13). Per the
-  emulator's `AGENTS.md`, Zamiell runs a *local* `D:\Repositories\STS2MCP` with added
+  emulator's `AGENTS.md`, Zamiell runs a _local_ `D:\Repositories\STS2MCP` with added
   APIs (`start_replay`, and evidently these debug actions). The harness was written
   against that unpublished build.
 - So "adapt the scripts" is not sufficient — the harness depends on **mod
@@ -592,16 +597,17 @@ Investigated adapting the driver scripts and hit a hard architectural blocker:
 **Concrete direct comparison done anyway** (live seed-0 run's natural Corpse-Slug
 combat vs emulator `Sts2CombatEnv(seed=0, encounter="corpse-slugs")`): **enemies and
 the full 11-card deck match exactly**; the **5-card opening draw differs** — expected,
-because a *direct* combat setup has a different shuffle-RNG context than a *natural
-in-run* combat, and the live run also carries a Neow **Kaleidoscope** relic. This is
+because a _direct_ combat setup has a different shuffle-RNG context than a _natural
+in-run_ combat, and the live run also carries a Neow **Kaleidoscope** relic. This is
 precisely the artifact `debug_start_encounter` exists to eliminate.
 
 **Paths to a rigorous automated differential test (decision needed):**
+
 1. **Implement `debug_start_encounter` + `debug_force_play_phase` in the public mod
    ourselves.** We have the decompiled game combat-init code to reference. Unlocks
    the existing harness directly. Focused mod-dev task; the highest-leverage option.
 2. **Build a bespoke navigation-based test** on the public API: custom-mode set-seed
-   → drive to a natural combat → capture (`battle`) → compare to an emulator *run*
+   → drive to a natural combat → capture (`battle`) → compare to an emulator _run_
    (not direct) trace at the same seed/actions. Avoids mod-dev but is more
    navigation-fragile and needs the v0.107.1 script fixes.
 3. **Spot-check manually** for now (as done above) and defer automation.
@@ -625,7 +631,7 @@ in `McpMod.Actions.cs`):
 Builds clean against v0.107.1; installed; **verified live**: from a seedless-embarked
 run at Neow, `debug_start_encounter CorpseSlugsWeak` lands directly in that combat —
 correct enemies, reaches play phase (`is_play_phase: true`), proper Ironclad opening
-(5-hand / 6-draw / 3 energy), and — because it jumps from the Neow *event* — **no Neow
+(5-hand / 6-draw / 3 energy), and — because it jumps from the Neow _event_ — **no Neow
 relic** (clean Burning-Blood-only state).
 
 **First controlled comparison surfaced a discrepancy — now fully resolved:** live
@@ -644,18 +650,19 @@ relic** (clean Burning-Blood-only state).
   maps many encounters to `*Weak` live combats (`corpse-slugs → CorpseSlugsWeak`,
   `toadpoles → ToadpolesWeak`, …). It would mismatch enemy counts on every weak-mapped
   first-floor encounter.
-- (Opening hands also differ, expected: a *direct* emulator combat vs an *in-run* debug
+- (Opening hands also differ, expected: a _direct_ emulator combat vs an _in-run_ debug
   combat consume RNG at different offsets.)
 
 **Fix IMPLEMENTED (2026-08-15):** threaded the weak-combat context through the sim so
 the direct combat env can produce weak variants.
+
 - C#: new `CombatFactory.Reset(state, rng, deckIds, encounterId,
-  completedCombatRoomsBeforeCurrent)` overload → new `NativeCombat.Reset(deckIds,
-  encounterId, completedCombatRooms)` → **new native export `Sts2_ResetEncounterWeak`**
+completedCombatRoomsBeforeCurrent)` overload → new `NativeCombat.Reset(deckIds,
+encounterId, completedCombatRooms)` → **new native export `Sts2_ResetEncounterWeak`**
   (kept `Sts2_ResetEncounter` for ABI stability). Bumped `NATIVE_API_VERSION` 10→11.
 - Python: `native.reset_encounter(..., completed_combat_rooms=-1)` dispatches to the new
   export when set; `_REQUIRED_NATIVE_API_VERSION` 11; `Sts2CombatEnv(..., completed_combat_rooms=-1)`
-  + a `completed_combat_rooms` reset-option.
+  - a `completed_combat_rooms` reset-option.
 - Verified: `Sts2CombatEnv(seed=0, encounter="corpse-slugs", completed_combat_rooms=0)`
   → **2 slugs at 27/29, exactly matching the live `CorpseSlugsWeak`**; default (-1)
   still 3 slugs; **198 C# + 17 Python tests still green**.
@@ -665,7 +672,8 @@ the direct combat env can produce weak variants.
 
 **Remaining to run the harness unattended:** `start_seeded_run` still uses standard-mode
 seeded embark (blocked on v0.107.1) — switch it to custom-mode `SetSeed` or seedless
-+ read-back; then the seed-search comparison in `validate_real_game_trace.py` can run.
+
+- read-back; then the seed-search comparison in `validate_real_game_trace.py` can run.
 
 **Mod home:** the debug actions are committed to **`github.com/evangambit/STS2MCP`**
 (a fork of `Gennadiyev/STS2MCP`, our commit on top of upstream's v0.107 compat fix).
@@ -686,7 +694,7 @@ itself: ours was .NET's legacy `Random`, the game's is Xoshiro256\*\*/Splitmix64
 Porting `MegaRandom` made the entire 11-card opening deck match in order (1 in 13,860
 by chance). Two details are load-bearing and easy to "fix" wrongly: the range mapping
 is `(int)(NextDouble() * max)` — reproduce the bias, do not substitute modulo — and
-`Rng.NextBool` is `Next(2) == 0`, *not* MegaRandom's own sign-bit `NextBool`.
+`Rng.NextBool` is `Next(2) == 0`, _not_ MegaRandom's own sign-bit `NextBool`.
 
 **Ground truth comes from `current_run.save`, not from driving the game.** It is plain
 JSON recording exactly what the game generated for a seed: act, encounter sequences,
@@ -695,7 +703,7 @@ and scrape state" to "start a run, read a file". Captures are committed as fixtu
 stamped with the Steam buildid, and the comparison runs offline in ~2s.
 
 **Two generation decisions are not functions of the seed.** Act 1 is rolled only among
-acts the *profile* has unlocked (an unlocked-but-undiscovered one is force-selected),
+acts the _profile_ has unlocked (an unlocked-but-undiscovered one is force-selected),
 and the boss is overwritten by the first Act-1 boss the profile has never seen. We
 model one fixed profile — fully unlocked, fully discovered — because that is the only
 choice that keeps generation seed-deterministic, which self-play requires. Captures
@@ -708,13 +716,13 @@ freezes them; new content appends, removed content keeps its id reserved. This i
 made `patch_update.sh` safe to run at all.
 
 **Extraction must be scoped, not substring-matched.** Reading keyword flags with a
-whole-file substring search marked ~30 cards `Exhaust` because their *tooltips*
+whole-file substring search marked ~30 cards `Exhaust` because their _tooltips_
 mentioned exhausting. Flags now come from `CanonicalKeywords` only.
 
 **Architecture decision: real game for truth, native emulator for speed.** The game
 boots headless (`--headless`, plus a `steam_appid.txt` with 2868840) and is fully
 drivable, so ground-truth capture can be automated — a scripted embark that crashes in
-GUI mode completes cleanly headless. But the game is *not* a candidate to replace the
+GUI mode completes cleanly headless. But the game is _not_ a candidate to replace the
 simulator: `CiCoreRunner` in its own DLL is a `Godot.Node`, so the logic is inseparable
 from the SceneTree (`Cmd.Wait` uses `SceneTree.CreateTimer`, actions marshal through
 `ProcessFrame`, combat runs on async `ActionExecutor` queues). Fine at human speed,
@@ -723,16 +731,79 @@ also rejected: it is Godot-coupled, and `decompiled/` is gitignored as MegaCrit'
 copyrighted code, so mechanical translation would be a derivative work.
 
 **Methodology lessons worth keeping.**
-- *One sample cannot validate a coin flip.* Act selection "passed" on the first seed by
+
+- _One sample cannot validate a coin flip._ Act selection "passed" on the first seed by
   luck while being wrong in both mechanism and stream. It took a second seed to catch,
   and 88 runs of history to make it a result.
-- *Update expectations from the game, never from the emulator.* The former is
+- _Update expectations from the game, never from the emulator._ The former is
   re-reading ground truth and is automated (`--save-fixture` →
   `generate_capture_tests.py`); the latter is a rubber stamp. A failing test is how the
   ~30-card Exhaust bug surfaced.
-- *Prefer the loud failure.* Version stamps, profile checks, and an extraction step that
+- _Prefer the loud failure._ Version stamps, profile checks, and an extraction step that
   exits non-zero on a dead card-id constant all exist because the alternative is data
   that is quietly wrong.
+
+### 2026-08-18 — Per-card verification; three RNG streams; choices become actions
+
+The session that took card effects from "ported, largely untested" to "every Ironclad
+card tested against the game's own source". Decisions, not diffs.
+
+**One test file per card, and a guard that makes the gap fail the build.** The suite was
+one 4,262-line file mixing engine, cards, enemies and relics; 235 cards had effect code
+and 55 had any test. Cohesion is per-card — nobody reading Molten Fist wants Iron Wave —
+so tests live in `Cards/<Class>/<Card>Tests.cs`, and `CardCoverageTests` asserts every
+card with a `case` in `CardEffects.Apply` has a suite. The list of implemented cards is
+scraped from the switch, not maintained by hand, and the untested remainder sits in a
+`Pending` burn-down that cannot go stale in either direction. The point is not tidiness:
+implementing a card now fails the build until someone either tests it or says out loud
+that they are deferring it.
+
+**Expected values come from `decompiled/`, never from running the emulator.** This is the
+rule the whole exercise rests on. Writing a test by observing what the emulator does
+produces a green suite that pins the bugs in place. Reading `DamageVar(10m)` and
+`OnUpgrade UpgradeValueBy(4m)` off the card and asserting _that_ is what turned up
+thirteen defects in the Ironclad set — including Juggernaut applying 5/7 where the card
+says 6/8, Flash of Steel hardcoding 3/6 while the extracted data had the right 5(+3), and
+Pact's End ignoring the `CanDealDamage` guard that gates its entire effect.
+
+**Live capture is for the questions source cannot answer.** `capture_card.py` stages a
+card in the running game and commits the before/after. Most captures only confirm what
+the decompiled card already said. The one that earned its keep: `Hook.ModifyDamage`
+carries a `decimal` through every modifier with no rounding step anywhere, so what a
+fractional multiplier does is genuinely unknowable from the code — captured it, and the
+game truncates. That is the shape of question worth spending a capture on.
+
+**Randomness is per-stream, and the streams are not interchangeable.** Which enemy to hit
+is `combat_targets`; which existing card to exhaust is `combat_card_selection`; rolling
+up a new card is `combat_card_generation`. All three were drawing from the combat rng,
+which is not merely "a different random result" — it desynchronises that stream for
+everything downstream, the same defect `AiRng` was introduced to fix. Stampede is the
+warning: it picks a card from hand exactly like Thrash, and reads `Rng.Shuffle`. Read the
+effect, do not infer from the behaviour.
+
+**A choice the player makes is an action, not an omission.** Four cards raised a
+selection screen in the game and picked for you in the emulator, always in the weaker
+direction — Headbutt took the most recently discarded card rather than the best one. They
+now set `PendingSelection`, which owns the action space until answered, and the
+observation carries the open choice so a policy can learn it. That cost an observation
+widening (native API 17, run API 10) and invalidates policies trained on the old shape,
+which is the honest price of the choice existing at all. Cards played from a queue
+(Havoc, Hellraiser) still auto-resolve: the engine cannot hand a selection back from
+inside a drain it is already running.
+
+**Do not hand-maintain a list of which cards do a thing.** `EffectiveCost` held three id
+lists of "gets cheaper when upgraded" covering 18 of the 56 cards that actually do. The
+fix was not to extend the list but to delete it: `extract_data.py` reads
+`EnergyCost.UpgradeBy` off each card into `CardDef.UpgradeCost`. A list in the engine goes
+stale silently; extracted data fails loudly.
+
+**Mutation-check the test, not just the fix.** Every fix here was verified by reverting it
+and watching a specific test fail. One check was a false negative worth recording:
+swapping truncation for `Math.Round` left 10.5 at 10 under banker's rounding, so the test
+passed and the behaviour looked pinned when it was not. `Math.Ceiling` was the mutation
+that moved the value.
+
+C# tests 214 → 445. Ironclad: 92 of 92 cards tested. `Pending` 235 → 123.
 
 ### Environment quick-reference
 
@@ -747,8 +818,10 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 
 ### Next up
 
-1. **Port combat logic** — the remaining bulk. Run generation and combat start are
-   exact; card effects, relics and powers are where the porting work now is.
+1. **Verify the remaining card effects** — Ironclad is done and every batch found real
+   defects, so keep going class by class through the 123 in `Pending` (Silent, then
+   Colourless). Relics and powers are the same job, one layer out, and have had no
+   equivalent pass.
 2. **Automate capture over many seeds** using the headless harness, so coverage stops
    depending on which seeds anyone happened to try.
 3. **Test the `NonInteractiveMode` fix** for the GUI embark crash (mirrors what the

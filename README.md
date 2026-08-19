@@ -126,6 +126,21 @@ Run the full repository validation suite:
 bash lint-and-test.sh
 ```
 
+Card behaviour is verified two ways. Hand-written tests live one file per card under
+`src\Sts2Emulator.Tests\Cards`, with expected values read off the decompiled game and
+cited in each file; `CardCoverageTests` fails the build when a card gains an
+implementation without gaining tests. For the questions decompiled source cannot answer —
+effect ordering, rounding, what a power sees mid-effect — capture the running game
+instead:
+
+```bash
+python scripts/capture_card.py --card MoltenFist --power VULNERABLE_POWER=2
+python scripts/generate_card_capture_tests.py
+```
+
+That needs the game running with STS2MCP; see AGENTS.md for the conventions and for what
+the capture harness deliberately refuses to do.
+
 Check the Gymnasium environment:
 
 ```powershell

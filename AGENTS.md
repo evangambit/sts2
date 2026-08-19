@@ -35,6 +35,16 @@
 - Native cards that apply temporary enemy Strength loss should consume Artifact before applying paired `Strength` and `TemporaryStrength` buffs, then restore the enemy Strength in `EnemyAI.ExecuteIntent` at that enemy's turn end.
 - Native card powers that modify a played card's destination pile should make that decision in `CombatEngine` after effects resolve but before adding the card to discard.
 - Native card powers with extra dynamic variables can be represented with companion `BuffId` entries when `BuffState` needs to track both the visible counter and hidden per-power state.
+- Never hand-maintain a list of which cards do a thing. `EffectiveCost` carried three id
+  lists of "cards that get cheaper when upgraded" covering 18 of the 56 cards that
+  actually do, so Corruption, Tank, Barricade and the rest silently kept their unupgraded
+  cost. `extract_data.py` reads `EnergyCost.UpgradeBy` off each card into
+  `CardDef.UpgradeCost` instead — the same treatment the Innate flags get. If a property
+  is stated on the card, extract it; a list in the engine goes stale without failing.
+- A card's numbers live in `Cards.g.cs` and its behaviour lives in `CardEffects.Apply`.
+  When they disagree the data is usually right: Flash of Steel's case hardcoded 3/6 while
+  the extracted `CardDef` had the game's 5(+3) all along. Prefer `Dmg(def, upgraded)` and
+  `Blk(def, upgraded)` over literals so the two cannot drift.
 
 ## Card Selection
 
