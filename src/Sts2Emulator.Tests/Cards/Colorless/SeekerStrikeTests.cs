@@ -9,9 +9,9 @@ namespace Sts2Emulator.Tests;
 // DamageVar(9m), then CardsVar(3) draw-pile cards are offered and the chosen one goes to
 // hand; OnUpgrade raises the damage by 3.
 //
-// The emulator approximates the search: instead of offering three shuffled draw-pile
-// cards to choose from, it pulls the first Attack out of the draw pile. These pin that
-// approximation, not the choice.
+// The choice is real: the card raises a selection over the Attacks in the draw pile. The
+// game samples three shuffled cards to offer; the emulator offers every Attack, which is
+// the remaining difference.
 public class SeekerStrikeTests
 {
     [Fact]
@@ -39,23 +39,25 @@ public class SeekerStrikeTests
     }
 
     [Fact]
-    public void PullsTheFirstAttackOutOfTheDrawPile()
+    public void OffersTheAttacksAndTakesTheChosenOne()
     {
         var fight = Fight
             .Hand(Card(CL.SeekerStrike))
             .Energy(1)
             .Draw(Card(IC.DefendIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
             .Enemy(hp: 60);
-
         fight.Play();
 
-        // The Defend is skipped; Bash is the first Attack in the pile.
-        Assert.Equal([IC.Bash], Fight.Ids(fight.State.Hand));
-        Assert.Equal([IC.DefendIronclad, IC.StrikeIronclad], Fight.Ids(fight.State.DrawPile));
+        // The Defend is not on offer; candidate 1 is the Strike behind the Bash.
+        Assert.Equal(2, fight.Pending?.Candidates.Count);
+        fight.Choose(1);
+
+        Assert.Equal([IC.StrikeIronclad], Fight.Ids(fight.State.Hand));
+        Assert.Equal([IC.DefendIronclad, IC.Bash], Fight.Ids(fight.State.DrawPile));
     }
 
     [Fact]
-    public void TakesNothingWhenTheDrawPileHasNoAttack()
+    public void AsksNothingWhenTheDrawPileHasNoAttack()
     {
         var fight = Fight
             .Hand(Card(CL.SeekerStrike))
@@ -65,6 +67,7 @@ public class SeekerStrikeTests
 
         fight.Play();
 
+        Assert.Null(fight.Pending);
         Assert.Empty(fight.State.Hand);
         Assert.Equal([IC.DefendIronclad], Fight.Ids(fight.State.DrawPile));
     }

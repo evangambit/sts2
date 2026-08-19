@@ -848,6 +848,7 @@ public static class CombatEngine
 
             case CardSelectionKind.ExhaustFromHand:
             case CardSelectionKind.ExhaustFromHandThenDraw:
+            case CardSelectionKind.ExhaustFromHandRepeated:
                 if (index < state.Hand.Count)
                 {
                     var card = state.Hand[index];
@@ -858,6 +859,43 @@ public static class CombatEngine
                 if (selection.Kind == CardSelectionKind.ExhaustFromHandThenDraw)
                 {
                     Effects.CardEffects.DrawCards(state, selection.Amount, rng);
+                }
+
+                // Purity asks again until its picks are spent or the hand empties.
+                if (
+                    selection.Kind == CardSelectionKind.ExhaustFromHandRepeated
+                    && selection.Amount > 1
+                    && state.Hand.Count > 0
+                )
+                {
+                    Effects.CardEffects.ReopenExhaustSelection(
+                        state,
+                        selection.SourceCardDefId,
+                        selection.Amount - 1
+                    );
+                }
+
+                break;
+
+            case CardSelectionKind.DrawPileToHand:
+                if (
+                    index < state.DrawPile.Count
+                    && state.Hand.Count < Effects.CardEffects.MaxCardsInHand
+                )
+                {
+                    var card = state.DrawPile[index];
+                    state.DrawPile.RemoveAt(index);
+                    state.Hand.Add(card);
+                }
+
+                break;
+
+            case CardSelectionKind.HandToDrawPileTop:
+                if (index < state.Hand.Count)
+                {
+                    var card = state.Hand[index];
+                    state.Hand.RemoveAt(index);
+                    state.DrawPile.Insert(0, card);
                 }
 
                 break;

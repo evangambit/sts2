@@ -66,6 +66,13 @@
   `CombatState.AutoPlaying` for exactly that, saving and restoring it rather than clearing.
   Adding another "play a card from within an effect" path means routing it through
   `PlayNestedCard`, or the engine will strand a selection inside a queue nobody can answer.
+- The kinds in `CardSelectionKind` cover the shapes seen so far: a card out of the discard
+  pile (Headbutt), a card exhausted from hand (True Grit, Brand), exhaust-then-draw
+  (Burning Pact), a card fetched out of the draw pile (Secret Technique, Secret Weapon,
+  Seeker Strike), a card put back on top of it (Thinking Ahead), and a repeated exhaust
+  that reopens until its picks are spent (Purity). A card that only offers part of a pile
+  passes explicit candidate indices, so the filter lives in `Candidates` rather than in
+  the resolution.
 - Tests make the choice explicitly with `Fight.Choose(candidate)`; there is deliberately no
   "pick something sensible" helper, since the emulator picking on the player's behalf is
   the behaviour this replaced.

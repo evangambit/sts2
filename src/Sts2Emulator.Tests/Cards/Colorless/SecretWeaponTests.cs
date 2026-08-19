@@ -5,25 +5,44 @@ using static Sts2Emulator.Tests.TestDeck;
 
 namespace Sts2Emulator.Tests;
 
-// 0-cost Skill, CardKeyword.Exhaust. MegaCrit.Sts2.Core.Models.Cards/SecretWeapon.cs lets you CHOOSE an Attack from the draw pile and puts it in hand; OnUpgrade removes the Exhaust. The emulator takes the first Attack instead of asking.
+// 0-cost Skill, CardKeyword.Exhaust. MegaCrit.Sts2.Core.Models.Cards/SecretWeapon.cs lets
+// you choose a Attack from the draw pile and puts it in hand; OnUpgrade removes the
+// Exhaust. The choice is a real selection: only the Attacks in the pile are offered.
 public class SecretWeaponTests
 {
     [Fact]
-    public void TakesTheFirstAttackFromTheDrawPile()
+    public void OffersOnlyTheAttacksInTheDrawPile()
     {
         var fight = Fight
             .Hand(Card(CL.SecretWeapon))
             .Energy(1)
-            .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad))
+            .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
             .Enemy(hp: 40);
 
         fight.Play();
 
-        Assert.Equal([IC.StrikeIronclad], Fight.Ids(fight.State.Hand));
+        Assert.Equal(CardSelectionKind.DrawPileToHand, fight.Pending?.Kind);
+        Assert.Equal(2, fight.Pending?.Candidates.Count);
     }
 
     [Fact]
-    public void TakesNothingWhenTheDrawPileHasNoAttack()
+    public void PutsTheChosenCardInHand()
+    {
+        var fight = Fight
+            .Hand(Card(CL.SecretWeapon))
+            .Energy(1)
+            .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash))
+            .Enemy(hp: 40);
+        fight.Play();
+
+        fight.Choose(0);
+
+        Assert.Equal([IC.StrikeIronclad], Fight.Ids(fight.State.Hand));
+        Assert.Null(fight.Pending);
+    }
+
+    [Fact]
+    public void AsksNothingWhenTheDrawPileHasNoAttack()
     {
         var fight = Fight
             .Hand(Card(CL.SecretWeapon))
@@ -33,8 +52,8 @@ public class SecretWeaponTests
 
         fight.Play();
 
+        Assert.Null(fight.Pending);
         Assert.Empty(fight.State.Hand);
-        Assert.Equal([IC.DefendIronclad], Fight.Ids(fight.State.DrawPile));
     }
 
     [Fact]
@@ -45,9 +64,9 @@ public class SecretWeaponTests
             .Energy(1)
             .Draw(Card(IC.StrikeIronclad))
             .Enemy(hp: 40);
-
         fight.Play();
+        fight.Choose(0);
 
-        Assert.Equal([CL.SecretWeapon], Fight.Ids(fight.State.ExhaustPile));
+        Assert.Contains(fight.State.ExhaustPile, card => card.DefId == CL.SecretWeapon);
     }
 }

@@ -103,7 +103,12 @@ public static class CombatObservation
             obs[157] = (int)selection.Kind;
             obs[158] = selection.Candidates.Count;
 
-            var pile = selection.Kind == CardSelectionKind.ExhaustFromHand ? s.Hand : s.DiscardPile;
+            var pile = selection.Kind switch
+            {
+                CardSelectionKind.DiscardToDrawPileTop => s.DiscardPile,
+                CardSelectionKind.DrawPileToHand => s.DrawPile,
+                _ => s.Hand,
+            };
             for (int i = 0; i < MaxSelectionCandidates && i < selection.Candidates.Count; i++)
             {
                 int index = selection.Candidates[i];

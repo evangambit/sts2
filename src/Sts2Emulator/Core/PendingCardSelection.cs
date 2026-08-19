@@ -13,6 +13,22 @@ public enum CardSelectionKind
 
     /// <summary>Burning Pact: a card in hand is exhausted, and then cards are drawn.</summary>
     ExhaustFromHandThenDraw = 3,
+
+    /// <summary>
+    /// Secret Technique, Secret Weapon, Seeker Strike: a card from the draw pile goes to
+    /// hand. The candidates are the draw-pile indices the card is allowed to offer, so a
+    /// type filter lives in the candidate list rather than in the resolution.
+    /// </summary>
+    DrawPileToHand = 4,
+
+    /// <summary>Thinking Ahead: a card in hand goes back on top of the draw pile.</summary>
+    HandToDrawPileTop = 5,
+
+    /// <summary>
+    /// Purity: a card in hand is exhausted, and the screen reopens until
+    /// <see cref="PendingCardSelection.Amount" /> picks are spent or the hand runs out.
+    /// </summary>
+    ExhaustFromHandRepeated = 6,
 }
 
 /// <summary>

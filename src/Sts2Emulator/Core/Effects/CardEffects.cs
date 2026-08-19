@@ -841,21 +841,40 @@ public static class CardEffects
                 state.Energy += upgraded ? 3 : 2;
                 break;
 
-            case CL.Purity: // 0-cost, exhaust up to 3/5 cards from hand
-                ExhaustFirstCardsFromHand(state, upgraded ? 5 : 3, rng);
+            case CL.Purity: // 0-cost, exhaust up to 3/5 CHOSEN cards from hand
+                if (state.Hand.Count > 0)
+                {
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.ExhaustFromHandRepeated,
+                        state.Hand.Count,
+                        def.Id,
+                        autoPick: 0,
+                        amount: upgraded ? 5 : 3
+                    );
+                }
                 break;
 
-            case CL.SecretTechnique: // 0-cost, move a Skill from draw pile to hand
-                MoveFirstDrawPileCardOfTypeToHand(state, CardType.Skill);
+            case CL.SecretTechnique: // 0-cost, put a CHOSEN Skill from the draw pile in hand
+                OpenDrawPileSelection(state, def.Id, CardType.Skill);
                 break;
 
-            case CL.SecretWeapon: // 0-cost, move an Attack from draw pile to hand
-                MoveFirstDrawPileCardOfTypeToHand(state, CardType.Attack);
+            case CL.SecretWeapon: // 0-cost, put a CHOSEN Attack from the draw pile in hand
+                OpenDrawPileSelection(state, def.Id, CardType.Attack);
                 break;
 
-            case CL.ThinkingAhead: // 0-cost, draw 2 then put a card from hand on draw
+            case CL.ThinkingAhead: // 0-cost, draw 2 then put a CHOSEN card back on top of draw
                 DrawCards(state, 2, rng);
-                MoveFirstHandCardToTopOfDrawPile(state);
+                if (state.Hand.Count > 0)
+                {
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.HandToDrawPileTop,
+                        state.Hand.Count,
+                        def.Id,
+                        autoPick: 0
+                    );
+                }
                 break;
 
             case CL.TheBomb: // 2-cost, after 3 turns deal 40/50 to ALL enemies
@@ -2015,8 +2034,35 @@ public static class CardEffects
         int sourceCardDefId,
         int autoPick,
         int amount = 0
+    ) =>
+        OpenCardSelection(
+            state,
+            kind,
+            [.. Enumerable.Range(0, candidateCount)],
+            sourceCardDefId,
+            autoPick,
+            amount
+        );
+
+    /// <summary>
+    /// Opens a selection over an explicit set of pile indices, which is how a card that
+    /// only offers part of a pile (Secret Weapon's Attacks) keeps its filter in the
+    /// candidate list rather than in the resolution.
+    /// </summary>
+    private static void OpenCardSelection(
+        CombatState state,
+        CardSelectionKind kind,
+        List<int> candidates,
+        int sourceCardDefId,
+        int autoPick,
+        int amount = 0
     )
     {
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
         if (state.AutoPlaying)
         {
             ResolveSelectionImmediately(state, kind, autoPick);
@@ -2026,11 +2072,47 @@ public static class CardEffects
         state.PendingSelection = new PendingCardSelection
         {
             Kind = kind,
-            Candidates = [.. Enumerable.Range(0, candidateCount)],
+            Candidates = candidates,
             SourceCardDefId = sourceCardDefId,
             Amount = amount,
         };
     }
+
+    /// <summary>
+    /// Offers every draw-pile card of a type, for the cards that let you fetch one.
+    /// Nothing opens when the pile holds none, which is the game's behaviour too.
+    /// </summary>
+    private static void OpenDrawPileSelection(CombatState state, int sourceCardDefId, CardType type)
+    {
+        var candidates = state
+            .DrawPile.Select((card, index) => (card, index))
+            .Where(entry => GeneratedData.Cards.Get(entry.card.DefId).Type == type)
+            .Select(entry => entry.index)
+            .ToList();
+
+        OpenCardSelection(
+            state,
+            CardSelectionKind.DrawPileToHand,
+            candidates,
+            sourceCardDefId,
+            autoPick: candidates.Count > 0 ? candidates[0] : 0
+        );
+    }
+
+    /// <summary>Reopens Purity's screen for its next pick; see CardSelectionKind.</summary>
+    internal static void ReopenExhaustSelection(
+        CombatState state,
+        int sourceCardDefId,
+        int remaining
+    ) =>
+        OpenCardSelection(
+            state,
+            CardSelectionKind.ExhaustFromHandRepeated,
+            state.Hand.Count,
+            sourceCardDefId,
+            autoPick: 0,
+            amount: remaining
+        );
 
     private static void ResolveSelectionImmediately(
         CombatState state,
@@ -2050,10 +2132,27 @@ public static class CardEffects
 
             case CardSelectionKind.ExhaustFromHand when index < state.Hand.Count:
             case CardSelectionKind.ExhaustFromHandThenDraw when index < state.Hand.Count:
+            case CardSelectionKind.ExhaustFromHandRepeated when index < state.Hand.Count:
             {
                 var card = state.Hand[index];
                 state.Hand.RemoveAt(index);
                 ExhaustCard(state, card);
+                break;
+            }
+
+            case CardSelectionKind.DrawPileToHand when index < state.DrawPile.Count:
+            {
+                var card = state.DrawPile[index];
+                state.DrawPile.RemoveAt(index);
+                state.Hand.Add(card);
+                break;
+            }
+
+            case CardSelectionKind.HandToDrawPileTop when index < state.Hand.Count:
+            {
+                var card = state.Hand[index];
+                state.Hand.RemoveAt(index);
+                state.DrawPile.Insert(0, card);
                 break;
             }
         }
@@ -3450,7 +3549,9 @@ public static class CardEffects
                 }
                 else if (def.Name == "SeekerStrike")
                 {
-                    MoveFirstDrawPileCardOfTypeToHand(state, CardType.Attack);
+                    // The game shuffles the draw pile and offers three; the emulator
+                    // offers every Attack in it rather than a sampled three.
+                    OpenDrawPileSelection(state, def.Id, CardType.Attack);
                 }
 
                 return true;
@@ -4156,7 +4257,7 @@ public static class CardEffects
         return def.Type is not (CardType.Status or CardType.Curse);
     }
 
-    private const int MaxCardsInHand = 10;
+    internal const int MaxCardsInHand = 10;
 
     private static void DrawUntilNonAttack(CombatState state, Random rng)
     {
