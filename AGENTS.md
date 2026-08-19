@@ -82,6 +82,13 @@
   either write the tests or add the card to `CardCoverageTests.Pending`. The build fails otherwise.
   `Pending` is a burn-down list: shrink it, and expect to justify any growth.
 - `python scripts/generate_card_coverage.py --print-untested` lists what is still unverified.
+- The guard counts a card as implemented when it has a `case` in `CardEffects.Apply`, so
+  cards that reach the engine through the generic damage-and-block path are invisible to
+  it — Strike, Defend and Giant Rock have no case and were never listed. An empty
+  `Pending` therefore means "every card with its own effect code is tested", not "every
+  card is tested". Widening the rule to "has damage or block in the data" is wrong: it
+  matches 146 cards, most of which do more than the data describes and are only partly
+  modelled.
 
 ### Ground truth from the running game
 
