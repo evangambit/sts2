@@ -28,18 +28,18 @@ public static class RelicEffects
             return;
         }
 
+        // The relic takes Cards.Where(IsUpgradable).Take(2) off the draw pile — the first
+        // two in pile order, not two at random, which is what this used to roll for.
         var upgradableIndices = state
             .DrawPile.Select((card, index) => (card, index))
             .Where(item => RunConstants.IsRunCardUpgradable(item.card))
             .Select(item => item.index)
+            .Take(2)
             .ToList();
 
-        for (int i = 0; i < 2 && upgradableIndices.Count > 0; i++)
+        foreach (int drawPileIndex in upgradableIndices)
         {
-            int selected = rng.Next(upgradableIndices.Count);
-            int drawPileIndex = upgradableIndices[selected];
             state.DrawPile[drawPileIndex] = state.DrawPile[drawPileIndex] with { Upgraded = true };
-            upgradableIndices.RemoveAt(selected);
         }
     }
 
@@ -157,7 +157,8 @@ public static class RelicEffects
     {
         if (HasRelic(state, Orichalcum) && state.PlayerBlock == 0)
         {
-            CardEffects.GainBlock(state, 6, rng);
+            // BlockVar(6m, ValueProp.Unpowered) — flat, whatever the player's Dexterity.
+            CardEffects.GainUnpoweredBlock(state, 6, rng);
         }
     }
 
