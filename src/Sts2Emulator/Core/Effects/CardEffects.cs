@@ -882,7 +882,9 @@ public static class CardEffects
                 break;
 
             case CL.Entropy: // 1-cost, transform 1 card in hand each turn
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.EntropyPower, upgraded ? 2 : 1);
+                // CardsVar(1), and OnUpgrade only adds CardKeyword.Innate — the amount
+                // does not move. This used to transform two cards when upgraded.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.EntropyPower, 1);
                 break;
 
             case CL.EternalArmor: // 3-cost, gain 9/12 Plating
@@ -4787,7 +4789,7 @@ public static class CardEffects
                 break;
             }
 
-            int defId = _colorlessPool[rng.Next(_colorlessPool.Length)];
+            int defId = _colorlessPool[CardGenerationRng(state, rng).Next(_colorlessPool.Length)];
             state.Hand.Add(new CardInstance(defId, false));
         }
     }
@@ -4799,7 +4801,9 @@ public static class CardEffects
             return;
         }
 
-        int defId = _generatedClassPool[rng.Next(_generatedClassPool.Length)];
+        int defId = _generatedClassPool[
+            CardGenerationRng(state, rng).Next(_generatedClassPool.Length)
+        ];
         state.Hand.Add(new CardInstance(defId, false, FreeThisTurn: freeThisTurn));
     }
 

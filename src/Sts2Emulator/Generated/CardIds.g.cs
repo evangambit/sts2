@@ -147,6 +147,22 @@ public static class CL
     public const int TheBomb = 498;
     public const int ThinkingAhead = 504;
     public const int Volley = 535;
+    public const int BeatDown = 34;
+    public const int Catastrophe = 80;
+    public const int Coordinate = 105;
+    public const int Equilibrium = 170;
+    public const int Fisticuffs = 193;
+    public const int HiddenGem = 250;
+    public const int Intercept = 266;
+    public const int Jackpot = 271;
+    public const int Knockdown = 277;
+    public const int Lift = 286;
+    public const int Rally = 380;
+    public const int SeekerStrike = 417;
+    public const int TagTeam = 491;
+    public const int TheGambit = 499;
+    public const int ThrummingHatchet = 506;
+    public const int UltimateStrike = 522;
 }
 
 /// <summary>Silent cards.</summary>
