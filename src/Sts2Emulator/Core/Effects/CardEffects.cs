@@ -372,8 +372,13 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.FreeAttackPower, 1);
                 break;
 
-            case IC.Rampage: // 1-cost, 9 dmg + gains 5/6 more damage per prior play (approx: static base)
-                DealDamage(state, Dmg(def, upgraded));
+            case IC.Rampage: // 1-cost, 9 dmg, and this copy permanently gains 5/9 more
+                // OnPlay hits for the card's CURRENT damage and then raises its own
+                // DamageVar by DynamicVar("Increase", 5m), OnUpgrade +4. The growth lives
+                // on the copy, so it survives into the discard pile and comes back around
+                // with it; a second Rampage in the deck grows on its own schedule.
+                DealDamage(state, Dmg(def, upgraded) + card.BonusDamage);
+                state.PlayedCardBonusDamage += upgraded ? 9 : 5;
                 break;
 
             case IC.TearAsunder: // 2-cost, 5/7 dmg × (1 + unblocked damage hits received this combat)
@@ -435,8 +440,9 @@ public static class CardEffects
                 }
                 break;
 
-            case IC.BattleTrance: // 0-cost, draw 3/4 (NoDraw omitted)
+            case IC.BattleTrance: // 0-cost, draw 3/4, then no more drawing this turn
                 DrawCards(state, upgraded ? 4 : 3, rng);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoDraw, 1);
                 break;
 
             case IC.BloodWall: // 2-cost, lose 2 HP + gain 16/20 block
@@ -1812,6 +1818,12 @@ public static class CardEffects
 
     public static void DrawCards(CombatState state, int count, Random rng)
     {
+        // NoDrawPower stops every later draw this turn, whatever asks for it.
+        if (BuffSystem.Get(state.PlayerBuffs, BuffId.NoDraw) > 0)
+        {
+            return;
+        }
+
         for (int i = 0; i < count; i++)
         {
             if (state.DrawPile.Count == 0)

@@ -199,18 +199,38 @@ public static class CombatEngine
         }
         else if (feralReturn)
         {
-            state.Hand.Add(card with { FreeThisTurn = false });
+            state.Hand.Add(
+                card with
+                {
+                    FreeThisTurn = false,
+                    BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                }
+            );
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FeralUsed, 1);
         }
         else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
         {
-            state.DrawPile.Insert(0, card with { FreeThisTurn = false });
+            state.DrawPile.Insert(
+                0,
+                card with
+                {
+                    FreeThisTurn = false,
+                    BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                }
+            );
         }
         else
         {
-            state.DiscardPile.Add(card with { FreeThisTurn = false });
+            state.DiscardPile.Add(
+                card with
+                {
+                    FreeThisTurn = false,
+                    BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                }
+            );
         }
 
+        state.PlayedCardBonusDamage = 0;
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
@@ -298,6 +318,8 @@ public static class CombatEngine
         // Rage expires at end of player turn.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.Rage);
         BuffSystem.Remove(state.PlayerBuffs, BuffId.OneTwoPunch);
+        // Battle Trance's NoDrawPower only gags the turn it was played on.
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.NoDraw);
 
         int constrict = BuffSystem.Get(state.PlayerBuffs, BuffId.Constrict);
         if (constrict > 0)
@@ -646,6 +668,7 @@ public static class CombatEngine
         }
 
         AutoPlayMayhemCards(state, rng);
+        AutoPlayHowlsFromExhaust(state, rng);
 
         // Enemies choose their next intent.
         EnemyAI.ChooseIntents(state.Enemies, state.Turn, rng, state.AiRng, state.AscensionLevel);
@@ -1083,6 +1106,27 @@ public static class CombatEngine
             var stampedeRng = state.ShuffleRng ?? rng;
             int handIndex = attackIndexes[stampedeRng.Next(attackIndexes.Count)];
             AutoPlayCardFromHand(state, handIndex, rng);
+        }
+    }
+
+    /// <summary>
+    /// Howl From Beyond replays itself out of the exhaust pile.
+    /// HowlFromBeyond.AfterAutoPostPlayPhaseEntered auto-plays the card whenever it is
+    /// sitting in the owner's exhaust pile as the play phase begins, so exhausting it is
+    /// not the end of it. The copy stays exhausted and fires again next turn.
+    /// </summary>
+    private static void AutoPlayHowlsFromExhaust(CombatState state, Random rng)
+    {
+        foreach (
+            var card in state.ExhaustPile.Where(c => c.DefId == Effects.IC.HowlFromBeyond).ToList()
+        )
+        {
+            if (state.Enemies.All(e => e.Hp <= 0))
+            {
+                return;
+            }
+
+            AutoPlay(state, card, rng);
         }
     }
 

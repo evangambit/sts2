@@ -48,6 +48,7 @@ public enum BuffId
     TheBombDamage, // player: damage dealt by The Bomb when it expires
     Vigor, // player: add N damage to the next Attack, then expire
     NoBlock, // player: card-based block gains are prevented for N enemy turns
+    NoDraw, // player: no further cards can be drawn this turn (Battle Trance)
     TheGambitPower, // player: the next unblocked powered attack kills you outright
     ClawDamage, // player: bonus damage for future Claw plays
     Focus, // player: orb-like generated effects scale by N

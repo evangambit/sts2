@@ -9,9 +9,8 @@ namespace Sts2Emulator.Tests;
 // "Increase" of 5 (9 upgraded) that is added to the card's own damage on every play and
 // persists for the rest of the combat.
 //
-// The emulator does not model that growth — CardEffects calls it out as "approx: static
-// base" — so every play deals the printed damage. These tests pin the first play, which
-// is correct either way, rather than asserting the missing growth is right.
+// The growth lives on the copy that was played, so it rides into the discard pile and
+// comes back with it, and a second Rampage in the deck grows on its own schedule.
 public class RampageTests
 {
     [Fact]
@@ -33,6 +32,45 @@ public class RampageTests
         fight.Play();
 
         Assert.Equal(31, fight.Enemy0.Hp);
+    }
+
+    [Fact]
+    public void GainsFiveDamageForItsNextPlay()
+    {
+        var fight = Fight.Hand(Card(IC.Rampage), Card(IC.Rampage)).Energy(9).Enemy(hp: 90);
+
+        fight.Play(index: 0);
+
+        // The copy in hand is untouched; only the one that was played grew.
+        Assert.Equal(81, fight.Enemy0.Hp);
+        Assert.Equal(5, fight.State.DiscardPile[0].BonusDamage);
+        Assert.Equal(0, fight.State.Hand[0].BonusDamage);
+    }
+
+    [Fact]
+    public void HitsHarderEachTimeTheSameCopyIsPlayed()
+    {
+        var fight = Fight.Hand(Card(IC.Rampage)).Energy(9).Enemy(hp: 90);
+
+        // Play it, draw it back, play it again: 9 then 14.
+        fight.Play();
+        var grown = fight.State.DiscardPile[0];
+        fight.State.DiscardPile.Clear();
+        fight.State.Hand.Add(grown);
+        fight.Play();
+
+        Assert.Equal(67, fight.Enemy0.Hp);
+        Assert.Equal(10, fight.State.DiscardPile[0].BonusDamage);
+    }
+
+    [Fact]
+    public void UpgradedGrowsByNine()
+    {
+        var fight = Fight.Hand(Card(IC.Rampage, upgraded: true)).Energy(9).Enemy(hp: 90);
+
+        fight.Play();
+
+        Assert.Equal(9, fight.State.DiscardPile[0].BonusDamage);
     }
 
     [Fact]

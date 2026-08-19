@@ -9,7 +9,8 @@ namespace Sts2Emulator.Tests;
 // PowerCmd.Apply<NoDrawPower>(1) — no further drawing this turn. OnUpgrade raises the
 // draw to 4.
 //
-// NoDrawPower is not modelled, so these tests cover the draw only.
+// The NoDrawPower is what makes it a gamble: nothing else draws for the rest of the turn,
+// whatever asks.
 public class BattleTranceTests
 {
     [Fact]
@@ -38,6 +39,39 @@ public class BattleTranceTests
         fight.Play();
 
         Assert.Equal(4, fight.State.Hand.Count);
+    }
+
+    [Fact]
+    public void StopsAnyLaterDrawThisTurn()
+    {
+        var fight = Fight
+            .Hand(Card(IC.BattleTrance), Card(IC.PommelStrike))
+            .Energy(9)
+            .Draw(Card(IC.Bash), Card(IC.StrikeIronclad), Card(IC.Anger), Card(IC.DefendIronclad))
+            .Enemy(hp: 40);
+        fight.Play(index: 0);
+        int handAfterTrance = fight.State.Hand.Count;
+
+        // Pommel Strike would draw one; the power stops it.
+        fight.Play(index: 0);
+
+        Assert.Equal(1, fight.PlayerBuffAmount(BuffId.NoDraw));
+        Assert.Equal(handAfterTrance - 1, fight.State.Hand.Count);
+    }
+
+    [Fact]
+    public void TheDrawBanLiftsAtTheEndOfTheTurn()
+    {
+        var fight = Fight
+            .Hand(Card(IC.BattleTrance))
+            .Energy(9)
+            .Draw(Card(IC.Bash), Card(IC.StrikeIronclad), Card(IC.Anger), Card(IC.DefendIronclad))
+            .Enemy(hp: 40);
+        fight.Play();
+
+        fight.EndTurn();
+
+        Assert.Equal(0, fight.PlayerBuffAmount(BuffId.NoDraw));
     }
 
     [Fact]

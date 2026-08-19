@@ -63,7 +63,11 @@ public readonly record struct CardInstance(
     int Sharp = 0,
     int Nimble = 0,
     int Swift = 0,
-    int CostForCombat = int.MinValue
+    int CostForCombat = int.MinValue,
+    // Damage this copy has permanently gained during the combat. Rampage raises its own
+    // damage every time it is played, and the growth rides on the card rather than on the
+    // player, so two Rampages in a deck grow independently.
+    int BonusDamage = 0
 );
 
 public static class CardInstanceExtensions

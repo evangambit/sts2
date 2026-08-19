@@ -100,6 +100,11 @@ public sealed class CombatState
     // those resolve with the old automatic pick.
     public bool AutoPlaying;
 
+    // Damage to add to the copy currently being played, before it lands in a pile. Set by
+    // CardEffects during Apply and consumed by CombatEngine.PlayCard, because Apply takes
+    // the CardInstance by value and cannot hand a mutation back any other way.
+    public int PlayedCardBonusDamage;
+
     // Turn tracking
     public int Turn;
     public bool PlayerTurn = true;

@@ -9,7 +9,8 @@ namespace Sts2Emulator.Tests;
 // transformable Attack in hand into a GiantRock, upgraded when the card is; there is no
 // numeric upgrade at all.
 //
-// The game filters on IsTransformable, which the emulator does not model.
+// The game filters on IsTransformable, which is `!Eternal || not in the Deck pile` — in
+// combat every card in hand qualifies, so there is nothing for the emulator to exclude.
 public class PrimalForceTests
 {
     [Fact]
