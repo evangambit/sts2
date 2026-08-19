@@ -70,7 +70,9 @@
   pile (Headbutt), a card exhausted from hand (True Grit, Brand), exhaust-then-draw
   (Burning Pact), a card fetched out of the draw pile (Secret Technique, Secret Weapon,
   Seeker Strike), a card put back on top of it (Thinking Ahead), and a repeated exhaust
-  that reopens until its picks are spent (Purity). A card that only offers part of a pile
+  that reopens until its picks are spent (Purity), and a choice among freshly generated
+  cards (Discovery), whose options ride on the selection because they exist in no pile
+  until one is picked. A card that only offers part of a pile
   passes explicit candidate indices, so the filter lives in `Candidates` rather than in
   the resolution.
 - Tests make the choice explicitly with `Fight.Choose(candidate)`; there is deliberately no

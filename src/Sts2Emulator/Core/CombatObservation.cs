@@ -103,19 +103,34 @@ public static class CombatObservation
             obs[157] = (int)selection.Kind;
             obs[158] = selection.Candidates.Count;
 
-            var pile = selection.Kind switch
+            // A generated choice has no pile behind it; its options are on the selection.
+            if (selection.Kind == CardSelectionKind.GeneratedCardToHand)
             {
-                CardSelectionKind.DiscardToDrawPileTop => s.DiscardPile,
-                CardSelectionKind.DrawPileToHand => s.DrawPile,
-                _ => s.Hand,
-            };
-            for (int i = 0; i < MaxSelectionCandidates && i < selection.Candidates.Count; i++)
-            {
-                int index = selection.Candidates[i];
-                if (index < pile.Count)
+                for (
+                    int i = 0;
+                    i < MaxSelectionCandidates && i < selection.GeneratedCandidates.Count;
+                    i++
+                )
                 {
-                    obs[159 + i * 2] = pile[index].DefId;
-                    obs[159 + i * 2 + 1] = pile[index].Upgraded ? 1 : 0;
+                    obs[159 + i * 2] = selection.GeneratedCandidates[i];
+                }
+            }
+            else
+            {
+                var pile = selection.Kind switch
+                {
+                    CardSelectionKind.DiscardToDrawPileTop => s.DiscardPile,
+                    CardSelectionKind.DrawPileToHand => s.DrawPile,
+                    _ => s.Hand,
+                };
+                for (int i = 0; i < MaxSelectionCandidates && i < selection.Candidates.Count; i++)
+                {
+                    int index = selection.Candidates[i];
+                    if (index < pile.Count)
+                    {
+                        obs[159 + i * 2] = pile[index].DefId;
+                        obs[159 + i * 2 + 1] = pile[index].Upgraded ? 1 : 0;
+                    }
                 }
             }
         }

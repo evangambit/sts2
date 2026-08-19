@@ -29,6 +29,13 @@ public enum CardSelectionKind
     /// <see cref="PendingCardSelection.Amount" /> picks are spent or the hand runs out.
     /// </summary>
     ExhaustFromHandRepeated = 6,
+
+    /// <summary>
+    /// Discovery: one of several freshly generated cards joins the hand, free for the
+    /// turn. The candidates are not in any pile, so they are carried on the selection
+    /// itself — see <see cref="PendingCardSelection.GeneratedCandidates" />.
+    /// </summary>
+    GeneratedCardToHand = 7,
 }
 
 /// <summary>
@@ -59,4 +66,11 @@ public sealed class PendingCardSelection
     /// draw has to happen after it so the newly drawn cards are not candidates.
     /// </summary>
     public int Amount { get; init; }
+
+    /// <summary>
+    /// Card def ids the choice is over, for a selection whose options do not exist in a
+    /// pile yet. <see cref="Candidates" /> indexes into this rather than into the hand or
+    /// the draw pile.
+    /// </summary>
+    public List<int> GeneratedCandidates { get; init; } = [];
 }

@@ -890,6 +890,23 @@ public static class CombatEngine
 
                 break;
 
+            case CardSelectionKind.GeneratedCardToHand:
+                if (
+                    index < selection.GeneratedCandidates.Count
+                    && state.Hand.Count < Effects.CardEffects.MaxCardsInHand
+                )
+                {
+                    state.Hand.Add(
+                        new CardInstance(
+                            selection.GeneratedCandidates[index],
+                            false,
+                            FreeThisTurn: true
+                        )
+                    );
+                }
+
+                break;
+
             case CardSelectionKind.HandToDrawPileTop:
                 if (index < state.Hand.Count)
                 {

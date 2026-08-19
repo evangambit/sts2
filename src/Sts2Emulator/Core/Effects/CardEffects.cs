@@ -760,13 +760,12 @@ public static class CardEffects
                 DrawRareCards(state, upgraded, rng);
                 break;
 
-            case CL.Discovery: // 1-cost, choose a card to add to hand; it's free this turn
+            case CL.Discovery: // 1-cost, choose one of three generated cards; free this turn
             {
-                int defId = _ironcladPool[CardGenerationRng(state, rng).Next(_ironcladPool.Length)];
-                if (state.Hand.Count < MaxCardsInHand)
-                {
-                    state.Hand.Add(new CardInstance(defId, false, FreeThisTurn: true));
-                }
+                // CardFactory.GetDistinctForCombat(..., 3, Rng.CombatCardGeneration) then
+                // a choose-a-card screen. The game's canSkip is not modelled: every action
+                // in a selection is a candidate, and skipping would need one of its own.
+                OpenGeneratedCardSelection(state, def.Id, optionCount: 3, rng);
 
                 break;
             }
@@ -2097,6 +2096,53 @@ public static class CardEffects
             sourceCardDefId,
             autoPick: candidates.Count > 0 ? candidates[0] : 0
         );
+    }
+
+    /// <summary>
+    /// Rolls distinct cards off the generation stream and offers them, for a card that
+    /// lets you pick one to create. The options live on the selection because they are in
+    /// no pile until the choice is made.
+    /// </summary>
+    private static void OpenGeneratedCardSelection(
+        CombatState state,
+        int sourceCardDefId,
+        int optionCount,
+        Random rng
+    )
+    {
+        var generationRng = CardGenerationRng(state, rng);
+        var options = new List<int>();
+        for (int attempt = 0; attempt < optionCount * 8 && options.Count < optionCount; attempt++)
+        {
+            int defId = _colorlessPool[generationRng.Next(_colorlessPool.Length)];
+            if (!options.Contains(defId))
+            {
+                options.Add(defId);
+            }
+        }
+
+        if (options.Count == 0)
+        {
+            return;
+        }
+
+        if (state.AutoPlaying)
+        {
+            if (state.Hand.Count < MaxCardsInHand)
+            {
+                state.Hand.Add(new CardInstance(options[0], false, FreeThisTurn: true));
+            }
+
+            return;
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.GeneratedCardToHand,
+            Candidates = [.. Enumerable.Range(0, options.Count)],
+            SourceCardDefId = sourceCardDefId,
+            GeneratedCandidates = options,
+        };
     }
 
     /// <summary>Reopens Purity's screen for its next pick; see CardSelectionKind.</summary>
