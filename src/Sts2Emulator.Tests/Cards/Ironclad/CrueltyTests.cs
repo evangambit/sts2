@@ -39,11 +39,32 @@ public class CrueltyTests
             .Enemy(hp: 40, buffs: [new BuffState(BuffId.Vulnerable, 2)]);
         fight.Play(index: 0);
 
-        // Bash's 8 at 1.5 + 0.25, chosen over a 6-damage Strike so the multiplier lands
-        // on a whole number and the test pins the rate rather than a rounding rule.
+        // Bash's 8 at 1.5 + 0.25, which lands on a whole number, so this covers the
+        // rate itself; the fractional case is the test below.
         fight.Play(index: 0);
 
         Assert.Equal(26, fight.Enemy0.Hp);
+    }
+
+    /// <summary>
+    /// 6 x 1.75 is 10.5, and the game truncates it to 10 rather than rounding up. The
+    /// damage pipeline carries a decimal all the way through Hook.ModifyDamage, so the
+    /// rounding is not visible in the decompiled source — this is settled by a live
+    /// capture, StrikeIronclad-cruelty-vulnerable-CorpseSlugsWeak.json, where the game
+    /// took a 28 HP Corpse Slug to 18.
+    /// </summary>
+    [Fact]
+    public void AFractionalMultiplierIsTruncated()
+    {
+        var fight = Fight
+            .Hand(Card(IC.Cruelty), Card(IC.StrikeIronclad))
+            .Energy(9)
+            .Enemy(hp: 40, buffs: [new BuffState(BuffId.Vulnerable, 2)]);
+        fight.Play(index: 0);
+
+        fight.Play(index: 0);
+
+        Assert.Equal(30, fight.Enemy0.Hp);
     }
 
     [Fact]
