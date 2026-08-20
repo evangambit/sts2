@@ -389,6 +389,34 @@ public class CardPlayRelicTests
         Assert.Equal(8, fight.State.Energy);
     }
 
+    /// <summary>
+    /// An X card is printed at cost zero and takes the rest of the bar inside its own
+    /// effect, so the printed cost is not what the play cost — CardDef.HasEnergyCostX,
+    /// extracted from the game's CardModel.HasEnergyCostX, is what says so.
+    /// </summary>
+    [Fact]
+    public void IvoryTileCountsWhatAnXCostCardActuallySpent()
+    {
+        var fight = Fight.WithRelics(RelicEffects.IvoryTile).Energy(4);
+        fight.State.Hand = TestDeck.Pile(IC.Whirlwind);
+
+        fight.Play();
+
+        // Whirlwind swallows all four energy; the relic hands one back.
+        Assert.Equal(1, fight.State.Energy);
+    }
+
+    [Fact]
+    public void IvoryTileIgnoresAnXCostCardPlayedForTooLittle()
+    {
+        var fight = Fight.WithRelics(RelicEffects.IvoryTile).Energy(2);
+        fight.State.Hand = TestDeck.Pile(IC.Whirlwind);
+
+        fight.Play();
+
+        Assert.Equal(0, fight.State.Energy);
+    }
+
     [Fact]
     public void IvoryTileIgnoresCheaperCards()
     {

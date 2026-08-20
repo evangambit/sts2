@@ -185,6 +185,12 @@
 - Tests are grouped by timing, not one file per relic: `Relics\CombatStartRelicTests.cs`,
   `TurnTimingRelicTests.cs`, `CardPlayRelicTests.cs`, `DamageReceivedRelicTests.cs`. Relics are far
   fewer than cards and read best side by side.
+- A relic hook that has no chokepoint to hang off needs the chokepoint built first, not an
+  approximation written down: gold gain, potion acquisition, deck additions, enemy spawns
+  and the energy a play actually cost all became single functions because a relic needed
+  them. Routing every call site is a mechanical edit; leaving one out is the bug, so grep
+  for the raw operation afterwards (`\.Deck\.Add(`, `Enemies.Add(`) and expect zero hits
+  outside the chokepoint itself.
 - **The default encounter eats debuffs.** Both enemies in encounter 1 hold Artifact, so
   `Fight.WithRelics(...)` plus "assert every unprotected enemy is Weak" asserts over an empty list
   and passes whatever the code does. Use `Fight.Encounter(3, ...)` — three enemies, none protected —

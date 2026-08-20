@@ -22,6 +22,13 @@ public sealed class RunState
     /// across the boundary rather than living on the combat's RelicInstance.
     /// </summary>
     public List<int> UsedUpRelics = [];
+
+    /// <summary>
+    /// Potion rewards still owed by a rest site (Tiny Mailbox offers two). The reward
+    /// screen carries one potion at a time, so the second is queued here and offered once
+    /// the first is claimed.
+    /// </summary>
+    public int PendingRestPotions;
     public int[] PotionSlots = new int[3];
     public int CurrentNodeType;
     public int[] NeowOptions = new int[3];

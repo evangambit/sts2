@@ -216,6 +216,21 @@ public static class RelicEffects
         }
     }
 
+    /// <summary>
+    /// Hook.AfterCreatureAddedToCombat: an enemy that joins a combat in progress gets the
+    /// same treatment as one that started it. Returns the enemy so a spawn site can wrap
+    /// its own construction call rather than remembering to follow it with this.
+    /// </summary>
+    public static EnemyState Spawned(CombatState state, EnemyState enemy)
+    {
+        if (HasRelic(state, PhilosophersStone))
+        {
+            BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 1);
+        }
+
+        return enemy;
+    }
+
     public static void ApplyStartOfPlayerTurn(CombatState state, Random? rng = null)
     {
         int turnNumber = state.Turn + 1;

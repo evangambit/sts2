@@ -135,6 +135,86 @@ public class EnergyRelicTests
         Assert.Equal(0, fight.State.Energy);
     }
 
+    /// <summary>
+    /// Hook.ShouldPlay gates auto-plays as well as chosen ones. Stampede is the reachable
+    /// case: it fires at the end of the player's turn, by which point six chosen cards can
+    /// already have used the allowance up. The card is spent without playing, the way
+    /// CardCmd.AutoPlay answers a refusal.
+    /// </summary>
+    [Fact]
+    public void VelvetChokerStopsAutoPlayedCardsToo()
+    {
+        var fight = Fight.WithRelics(RelicEffects.VelvetChoker).Energy(20);
+        BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Stampede, 1);
+        fight.State.Hand = Pile(
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.StrikeIronclad
+        );
+
+        for (int i = 0; i < 6; i++)
+        {
+            fight.Play();
+        }
+
+        int hpBefore = fight.State.Enemies.Sum(enemy => enemy.Hp);
+        fight.EndTurn();
+
+        Assert.Equal(hpBefore, fight.State.Enemies.Sum(enemy => enemy.Hp));
+    }
+
+    /// <summary>
+    /// The queued auto-play path (Havoc, Hellraiser, Mayhem) refuses too. The queue drains
+    /// after the play that filled it, by which point that play has been counted — so a
+    /// sixth card that draws a Strike into a Hellraiser cannot smuggle a seventh play out.
+    /// </summary>
+    [Fact]
+    public void VelvetChokerStopsQueuedAutoPlaysToo()
+    {
+        var fight = Fight.WithRelics(RelicEffects.VelvetChoker).Energy(20);
+        BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Hellraiser, 1);
+        fight.State.Hand = Pile(
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.DefendIronclad,
+            IC.ShrugItOff
+        );
+        fight.State.DrawPile = Pile(IC.StrikeIronclad, IC.StrikeIronclad);
+
+        int hpBefore = fight.State.Enemies.Sum(enemy => enemy.Hp);
+        for (int i = 0; i < 6; i++)
+        {
+            fight.Play();
+        }
+
+        Assert.Equal(hpBefore, fight.State.Enemies.Sum(enemy => enemy.Hp));
+        Assert.Contains(fight.State.DiscardPile, card => card.DefId == IC.StrikeIronclad);
+    }
+
+    /// <summary>The same Stampede attack lands when the allowance has not been used up.</summary>
+    [Fact]
+    public void VelvetChokerLetsAutoPlaysThroughUnderTheLimit()
+    {
+        var fight = Fight.WithRelics(RelicEffects.VelvetChoker).Energy(20);
+        BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Stampede, 1);
+        fight.State.Hand = Pile(IC.DefendIronclad, IC.StrikeIronclad);
+
+        fight.Play();
+        int hpBefore = fight.State.Enemies.Sum(enemy => enemy.Hp);
+        fight.EndTurn();
+
+        Assert.True(
+            fight.State.Enemies.Sum(enemy => enemy.Hp) < hpBefore,
+            "the Stampede attack should land"
+        );
+    }
+
     [Fact]
     public void PhilosophersStoneGivesEveryEnemyOneStrength()
     {
@@ -145,6 +225,26 @@ public class EnergyRelicTests
             fight.State.Enemies,
             enemy => Assert.Equal(1, BuffSystem.Get(enemy.Buffs, BuffId.Strength))
         );
+    }
+
+    /// <summary>
+    /// AfterCreatureAddedToCombat: an enemy that joins the fight later gets the Strength
+    /// too, not just the ones standing there when it opened.
+    /// </summary>
+    [Fact]
+    public void PhilosophersStoneAlsoBuffsEnemiesThatArriveLater()
+    {
+        var fight = Fight.Encounter(3, RelicEffects.PhilosophersStone);
+        var latecomer = new EnemyState
+        {
+            DefId = 16,
+            Hp = 10,
+            MaxHp = 10,
+        };
+
+        fight.State.Enemies.Add(RelicEffects.Spawned(fight.State, latecomer));
+
+        Assert.Equal(1, BuffSystem.Get(latecomer.Buffs, BuffId.Strength));
     }
 
     /// <summary>

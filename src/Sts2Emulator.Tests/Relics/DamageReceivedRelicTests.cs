@@ -69,6 +69,24 @@ public class DamageReceivedRelicTests
     }
 
     /// <summary>
+    /// Hook.AfterDamageReceived does not ask who dealt the damage, so a card that hits its
+    /// own owner arms the relic exactly as an enemy attack does.
+    /// </summary>
+    [Fact]
+    public void CentennialPuzzleAnswersDamageDealtByACard()
+    {
+        var plain = Fight.WithRelics();
+        var withPuzzle = Fight.WithRelics(RelicEffects.CentennialPuzzle);
+
+        foreach (var fight in new[] { plain, withPuzzle })
+        {
+            CardEffects.DealDamageToPlayer(fight.State, 5);
+        }
+
+        Assert.Equal(plain.State.Hand.Count + 3, withPuzzle.State.Hand.Count);
+    }
+
+    /// <summary>
     /// SelfFormingClayPower gains its block in AfterBlockCleared, so the three block shows
     /// up on the next player turn rather than immediately.
     /// </summary>

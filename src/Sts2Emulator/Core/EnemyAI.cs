@@ -1512,7 +1512,10 @@ public static class EnemyAI
                         stunned: true
                     );
                     BuffSystem.Apply(eye.Buffs, BuffId.Illusion, 1);
-                    state.Enemies.Insert(state.Enemies.IndexOf(enemy), eye);
+                    state.Enemies.Insert(
+                        state.Enemies.IndexOf(enemy),
+                        Effects.RelicEffects.Spawned(state, eye)
+                    );
                 }
                 break;
 
@@ -1526,7 +1529,7 @@ public static class EnemyAI
                         stunned: true
                     );
                     BuffSystem.Apply(bomb.Buffs, BuffId.Minion, 1);
-                    state.Enemies.Add(bomb);
+                    state.Enemies.Add(Effects.RelicEffects.Spawned(state, bomb));
                 }
                 DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
                 break;
@@ -2020,6 +2023,9 @@ public static class EnemyAI
         if (unblocked > 0)
         {
             Effects.RelicEffects.ApplyAfterUnblockedDamageReceived(state);
+            // Red Skull and Lizard Tail both answer a changed HP total, and a multi-hit
+            // intent must not land its later hits on a player the relic already revived.
+            Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
         }
 
         if (unblocked > 0 && triggerSuck)
@@ -2118,7 +2124,7 @@ public static class EnemyAI
                 stunned: true
             );
             BuffSystem.Apply(egg.Buffs, BuffId.Minion, 1);
-            state.Enemies.Insert(insertIndex + i, egg);
+            state.Enemies.Insert(insertIndex + i, Effects.RelicEffects.Spawned(state, egg));
         }
     }
 
@@ -2135,14 +2141,14 @@ public static class EnemyAI
             int defensive = rng.Next(2) == 0 ? KE.Guardbot : KE.Noisebot;
             var bot = CreateEnemy(defensive, rng, BotIntent(defensive), stunned: true);
             BuffSystem.Apply(bot.Buffs, BuffId.Minion, 1);
-            state.Enemies.Insert(insertIndex++, bot);
+            state.Enemies.Insert(insertIndex++, Effects.RelicEffects.Spawned(state, bot));
         }
         if (state.Enemies.Count < 6)
         {
             int aggro = rng.Next(2) == 0 ? KE.Zapbot : KE.Stabbot;
             var bot = CreateEnemy(aggro, rng, BotIntent(aggro), stunned: true);
             BuffSystem.Apply(bot.Buffs, BuffId.Minion, 1);
-            state.Enemies.Insert(insertIndex, bot);
+            state.Enemies.Insert(insertIndex, Effects.RelicEffects.Spawned(state, bot));
         }
     }
 
@@ -2165,7 +2171,10 @@ public static class EnemyAI
             stunned: true
         );
         BuffSystem.Apply(parafright.Buffs, BuffId.Illusion, 1);
-        state.Enemies.Insert(state.Enemies.IndexOf(enemy), parafright);
+        state.Enemies.Insert(
+            state.Enemies.IndexOf(enemy),
+            Effects.RelicEffects.Spawned(state, parafright)
+        );
     }
 
     private static bool CanRatSummon(EnemyState enemy, Random rng)
@@ -2197,7 +2206,10 @@ public static class EnemyAI
         }
 
         state.Enemies.Add(
-            CreateEnemy(KE.TwoTailedRat, rng, new Intent(IntentType.Unknown, 0), stunned: true)
+            Effects.RelicEffects.Spawned(
+                state,
+                CreateEnemy(KE.TwoTailedRat, rng, new Intent(IntentType.Unknown, 0), stunned: true)
+            )
         );
 
         int nextBackupCount =

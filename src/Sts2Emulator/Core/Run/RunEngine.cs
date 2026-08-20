@@ -1881,6 +1881,8 @@ public sealed class RunEngine
 
         if (action == RunConstants.RewardSkipAction)
         {
+            // Skipping the screen abandons everything still on it, queued potions included.
+            State.PendingRestPotions = 0;
             return AdvanceAfterRelicReward(out terminal);
         }
 
@@ -1894,7 +1896,25 @@ public sealed class RunEngine
             return -1;
         }
 
-        return RunRewardGenerator.ClaimRewardAtIndex(State, action) ? 0 : -1;
+        if (!RunRewardGenerator.ClaimRewardAtIndex(State, action))
+        {
+            return -1;
+        }
+
+        OfferNextRestPotion();
+        return 0;
+    }
+
+    /// <summary>Moves the next queued rest potion onto the reward screen, if the screen is free.</summary>
+    private void OfferNextRestPotion()
+    {
+        if (State.PendingRestPotions <= 0 || State.RewardPotion != 0)
+        {
+            return;
+        }
+
+        State.PendingRestPotions--;
+        State.RewardPotion = RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards);
     }
 
     private int StepShop(int action, out bool terminal)
@@ -2085,17 +2105,14 @@ public sealed class RunEngine
                 State.PlayerHp = 59;
             }
             // Tiny Mailbox's TryModifyRestSiteHealRewards adds two PotionRewards to the
-            // rest. The emulator has no reward screen at a rest site, so they go straight
-            // into the belt and are dropped when it is full, as an unclaimed reward is.
+            // rest, and a reward is offered rather than given: the player chooses whether
+            // to take it, and may drop a held potion to make room.
             if (Effects.RelicEffects.Has(State.Relics, Effects.RelicEffects.TinyMailbox))
             {
-                for (int i = 0; i < 2; i++)
-                {
-                    RunRewardGenerator.AddPotion(
-                        State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                    );
-                }
+                State.PendingRestPotions = 2;
+                OfferNextRestPotion();
+                State.Phase = RunPhase.RelicReward;
+                return 0;
             }
 
             State.RestResultPending = true;

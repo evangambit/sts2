@@ -1968,6 +1968,10 @@ public static class CardEffects
 
             state.PlayerHp -= hpLoss;
             state.PlayerHpLostThisTurn += hpLoss;
+            // Hook.AfterDamageReceived does not care who dealt the damage, so a card that
+            // hits its own owner arms Centennial Puzzle and Self-Forming Clay too.
+            RelicEffects.ApplyAfterUnblockedDamageReceived(state);
+            RelicEffects.ApplyAfterPlayerHpChanged(state);
         }
     }
 

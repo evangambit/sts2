@@ -97,6 +97,10 @@ public static class CombatEngine
         }
 
         state.Energy -= energyToSpend;
+        // What this play actually cost, which is what CardPlay.Resources.EnergyValue
+        // reports: an X card is printed at zero and takes the rest of the bar inside its
+        // own effect, so the printed cost would tell a relic the play was free.
+        int energySpent = def.HasEnergyCostX ? state.Energy : energyToSpend;
         state.Hand.RemoveAt(handIndex);
         if (def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.Smoggy) > 0)
         {
@@ -233,10 +237,7 @@ public static class CombatEngine
 
         state.PlayedCardBonusDamage = 0;
         IncrementPlayedCardTypeCounters(state, def);
-        // The energy this play cost, for the relics that read CardPlay.Resources. An
-        // X-cost card spends the rest of the bar inside its own effect, which this does
-        // not see — see the approximation table in HANDOFF.md.
-        ApplyAfterCardPlayedPowers(state, def, rng, energyToSpend);
+        ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         bool playerDead = state.PlayerHp <= 0;
@@ -1082,7 +1083,7 @@ public static class CombatEngine
                 new Intent(IntentType.Unknown, 0),
                 stunned: true
             );
-            state.Enemies.Insert(insertIndex + i, wriggler);
+            state.Enemies.Insert(insertIndex + i, Effects.RelicEffects.Spawned(state, wriggler));
         }
     }
 
@@ -1092,10 +1093,15 @@ public static class CombatEngine
         int stolenGold
     )
     {
-        state.Enemies.Add(CreateEnemy(78, rng, new Intent(IntentType.Unknown, 0), stunned: true));
+        state.Enemies.Add(
+            Effects.RelicEffects.Spawned(
+                state,
+                CreateEnemy(78, rng, new Intent(IntentType.Unknown, 0), stunned: true)
+            )
+        );
         var fatGremlin = CreateEnemy(28, rng, new Intent(IntentType.Unknown, 0), stunned: true);
         fatGremlin.HeistGold = stolenGold;
-        state.Enemies.Add(fatGremlin);
+        state.Enemies.Add(Effects.RelicEffects.Spawned(state, fatGremlin));
     }
 
     private static void AutoPlayStampedeAttacks(CombatState state, Random rng)
@@ -1198,6 +1204,23 @@ public static class CombatEngine
     {
         var card = state.Hand[handIndex];
         var def = GeneratedData.Cards.Get(card.DefId);
+
+        // Same refusal as AutoPlayCore: a blocked card leaves hand for its result pile
+        // without its effect running.
+        if (Effects.RelicEffects.BlocksFurtherCardPlays(state))
+        {
+            state.Hand.RemoveAt(handIndex);
+            if (ShouldExhaustAfterPlay(def, card))
+            {
+                Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+            }
+            else
+            {
+                state.DiscardPile.Add(card with { FreeThisTurn = false });
+            }
+
+            return;
+        }
 
         Span<int> enemyHpsBefore = stackalloc int[state.Enemies.Count];
         for (int i = 0; i < state.Enemies.Count; i++)
@@ -1431,6 +1454,23 @@ public static class CombatEngine
     private static void AutoPlayCore(CombatState state, CardInstance card, Random rng)
     {
         var def = GeneratedData.Cards.Get(card.DefId);
+
+        // Hook.ShouldPlay gates auto-plays as well as chosen ones, and CardCmd.AutoPlay
+        // answers a refusal with MoveToResultPileWithoutPlaying — the card is spent, its
+        // effect never happens, and it does not count towards the limit that refused it.
+        if (Effects.RelicEffects.BlocksFurtherCardPlays(state))
+        {
+            if (ShouldExhaustAfterPlay(def, card))
+            {
+                Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+            }
+            else
+            {
+                state.DiscardPile.Add(card with { FreeThisTurn = false });
+            }
+
+            return;
+        }
 
         // Auto-play picks its target the way CardCmd does when a played card has no
         // explicit one: Rng.CombatTargets.NextItem(HittableEnemies).

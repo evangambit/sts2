@@ -47,7 +47,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 711 pass)
+# C# unit tests (currently 721 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -114,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 711 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 721 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -380,16 +380,27 @@ Also open: the powers and relics that read `combat_card_selection` in the game
 modelled at all, and the modelled ones were out of scope when the stream was wired up.
 Mummified Hand is modelled and reads `CombatState.CardSelectionRng`.
 
-The relics carry three approximations of their own, each pinned rather than accidental:
+**The relics have no approximations left.** The six they carried were fixed rather than
+documented, and each needed a piece of plumbing that did not exist:
 
-| relic              | what is approximated                                                  |
-| ------------------ | --------------------------------------------------------------------- |
-| Velvet Choker      | blocks the player's plays, not auto-plays (Havoc, Mayhem)             |
-| Philosopher's Stone| buffs the enemies present at combat start, not ones summoned later    |
-| Centennial Puzzle  | fires on enemy attacks, not on damage a card deals the player         |
-| Ivory Tile         | sees the printed cost, not energy an X-cost card spends in its effect |
-| Tiny Mailbox       | potions land in the belt directly; there is no rest reward screen      |
-| Lizard Tail        | revives on the HP-changed hook, so a multi-hit intent can overshoot    |
+- **Velvet Choker** now refuses auto-plays as `Hook.ShouldPlay` does, on both auto-play
+  paths, and a refused card goes to its result pile without its effect running. The
+  reachable cases are Stampede (fires at turn end, after the allowance is spent) and a
+  queued Hellraiser play (the queue drains after the play that filled it was counted).
+- **Philosopher's Stone** catches enemies that join mid-combat: all ten spawn sites go
+  through `RelicEffects.Spawned`, the emulator's `AfterCreatureAddedToCombat`.
+- **Centennial Puzzle** and **Self-Forming Clay** answer damage a card deals the player,
+  not just enemy attacks — `Hook.AfterDamageReceived` never asks who dealt it.
+- **Ivory Tile** reads what the play actually cost. X cards are printed at zero and take
+  the rest of the bar inside their own effect, so `CardDef.HasEnergyCostX` was extracted
+  from the game's `CardModel.HasEnergyCostX` (10 cards) rather than inferred from a delta.
+- **Tiny Mailbox** offers its two potions on the reward screen instead of forcing them
+  into the belt, so the player can decline, or drop a held potion to make room. The screen
+  carries one potion at a time, so the second is queued in `RunState.PendingRestPotions`
+  and appears when the first is claimed; skipping abandons both, as skipping the screen
+  does in the game.
+- **Lizard Tail** revives on the hit that killed rather than at the end of the turn, so
+  the rest of a multi-hit intent lands on the revived player.
 
 The older run-generation notes below are kept because the _method_ is what matters, not
 because that front is still open.

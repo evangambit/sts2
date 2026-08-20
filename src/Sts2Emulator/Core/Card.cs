@@ -52,7 +52,11 @@ public readonly record struct CardDef(
     // CanonicalKeywords (always innate), or added by OnUpgrade (innate only once
     // upgraded).  Keep them separate — see CardInstanceExtensions.IsInnate.
     bool Innate = false,
-    bool InnateWhenUpgraded = false
+    bool InnateWhenUpgraded = false,
+    // The game's CardModel.HasEnergyCostX. An X card is printed at cost 0 and spends
+    // whatever is left on the bar, so the printed cost says nothing about what a play
+    // actually cost — which is what CardPlay.Resources.EnergyValue reports to relics.
+    bool HasEnergyCostX = false
 );
 
 public readonly record struct CardInstance(

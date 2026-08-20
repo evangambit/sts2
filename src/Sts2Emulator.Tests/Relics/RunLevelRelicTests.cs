@@ -116,13 +116,45 @@ public class RunLevelRelicTests
     }
 
     [Fact]
-    public void TinyMailboxFillsTheBeltWhenTheRunRests()
+    public void TinyMailboxOffersTwoPotionsWhenTheRunRests()
     {
         var plain = RestingRun(withMailbox: false);
         var withMailbox = RestingRun(withMailbox: true);
 
-        Assert.All(plain.PotionSlots, slot => Assert.Equal(0, slot));
-        Assert.Equal(2, withMailbox.PotionSlots.Count(slot => slot != 0));
+        Assert.NotEqual(RunPhase.RelicReward, plain.Phase);
+        Assert.Equal(RunPhase.RelicReward, withMailbox.Phase);
+        Assert.NotEqual(0, withMailbox.RewardPotion);
+        Assert.Equal(1, withMailbox.PendingRestPotions);
+    }
+
+    /// <summary>
+    /// A reward is offered, not given: claiming the first potion brings out the second,
+    /// so both end up in the belt only if the player takes both.
+    /// </summary>
+    [Fact]
+    public void TinyMailboxsSecondPotionArrivesAfterTheFirstIsClaimed()
+    {
+        var engine = RestingEngine(withMailbox: true);
+
+        engine.Step(0, -1, out _, out _, out _);
+        Assert.NotEqual(0, engine.State.RewardPotion);
+        Assert.Equal(0, engine.State.PendingRestPotions);
+
+        engine.Step(0, -1, out _, out _, out _);
+
+        Assert.Equal(2, engine.State.PotionSlots.Count(slot => slot != 0));
+    }
+
+    /// <summary>Skipping the screen abandons what is still on it, queued potions included.</summary>
+    [Fact]
+    public void TinyMailboxsPotionsAreLostIfTheScreenIsSkipped()
+    {
+        var engine = RestingEngine(withMailbox: true);
+
+        engine.Step(RunConstants.RewardSkipAction, -1, out _, out _, out _);
+
+        Assert.Equal(0, engine.State.PendingRestPotions);
+        Assert.All(engine.State.PotionSlots, slot => Assert.Equal(0, slot));
     }
 
     /// <summary>
@@ -153,6 +185,30 @@ public class RunLevelRelicTests
 
         // A card-dealt hit does not floor at zero, so this is "dead", not "at zero".
         Assert.True(combat.PlayerHp <= 0, "the second death should stand");
+    }
+
+    /// <summary>
+    /// The revival happens on the hit that killed, not at the end of the turn it happened
+    /// in — otherwise a multi-hit intent keeps swinging at a player who is already dead
+    /// and the relic hands back a corpse's worth of HP at the end.
+    /// </summary>
+    [Fact]
+    public void LizardTailRevivesBeforeTheRestOfAMultiHitIntentLands()
+    {
+        var fight = Fight.Hand().Enemy(hp: 100);
+        fight.State.Relics.Add(new RelicInstance(RelicEffects.LizardTail));
+        fight.State.PlayerHp = 1;
+        fight.State.PlayerMaxHp = 80;
+        // Toadpole's spike spit is SpikeSpitDamage x3 as three separate hits, so the
+        // first one kills and the other two have to find someone to land on.
+        fight.State.Enemies[0].DefId = KE.Toadpole;
+        fight.State.Enemies[0].MoveIndex = 1;
+        fight.State.Enemies[0].CurrentIntent = new Intent(IntentType.Attack, 0);
+
+        fight.EndTurn();
+
+        // Revived to 40 by the first hit, then hit twice more for 3 each.
+        Assert.Equal(40 - 6, fight.State.PlayerHp);
     }
 
     [Fact]
@@ -219,7 +275,10 @@ public class RunLevelRelicTests
         return engine.State;
     }
 
-    private static RunState RestingRun(bool withMailbox)
+    private static RunState RestingRun(bool withMailbox) => RestingEngine(withMailbox).State;
+
+    /// <summary>A run parked at a rest site that has just taken the heal.</summary>
+    private static RunEngine RestingEngine(bool withMailbox)
     {
         var engine = new RunEngine();
         engine.Reset("0");
@@ -232,6 +291,6 @@ public class RunLevelRelicTests
         engine.State.PlayerHp = 1;
         Array.Clear(engine.State.PotionSlots);
         engine.Step(RunConstants.RestHealAction, -1, out _, out _, out _);
-        return engine.State;
+        return engine;
     }
 }
