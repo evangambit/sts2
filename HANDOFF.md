@@ -792,6 +792,46 @@ The sweep now compares **the hand, in order, every turn**, which is what caught 
 three of those; `test_every_turn_hand_matches` pins it offline against four committed
 captures. All four mutations tried against it were caught.
 
+### Closing the coverage-only encounters
+
+The eight `coverage:FAIL` encounters are closed too, and only one of the four causes was
+an emulator defect:
+
+- **The coverage instrument counted moves no capture could reach.** A live intent type
+  the harness does not map returns None and is dropped from the count, so `Sleep`,
+  `Summon`, `Heal` and `DebuffStrong` each cost a monster a declared move permanently —
+  that alone was Lagavulin Matriarch, Bygone Effigy, the Two-Tailed Rats and the Shrinker
+  Beetle. `live_enemy_intent` now covers the game's whole IntentType enum and the sweep
+  reports anything unmapped.
+- **Some declared states are unreachable from the machine's initial state**, entered only
+  by `CreatureCmd.Stun(owner, ..., stateId)` from a power when the monster is damaged past
+  a threshold: Terror Eel's STUN/TERROR, Waterfall Giant's ABOUT_TO_BLOW/EXPLODE,
+  Ceremonial Beast's second phase. `enemy_moves.py` walks the machine and drops what it
+  cannot reach — and counts everything when it cannot parse one. It was also swallowing
+  the declaration after any MoveState with an object initializer, which *understated*
+  denominators.
+- **`combat_sweep.py --play`** plays the first card the live game says is playable. A
+  capture that fights back survives long enough to walk a boss's ring, which is what
+  closed the Giant and the Matriarch. Two harness bugs surfaced doing it, both the same
+  shape as the round-counter one: a posted action has to be waited for, or the live state
+  read back is the state before it.
+- **Constrict and Disintegration are blockable damage**, not HP loss — invisible until a
+  capture holds block. That was the Slithering Strangler.
+
+One emulator rule was wrong and is now right: the one-tick grace on a player debuff
+belongs to the POWER, so it applies to a debuff newly created on the player and not to
+one added to a stack already there. The rats screech nearly every turn and live's Frail
+sits at 1; the emulator's was climbing, costing a point of block a turn.
+
+Still open, and both only reachable by killing things — which is new ground, since no
+capture used to get that far:
+
+| what | detail |
+| --- | --- |
+| phrog-parasite's Wrigglers | after the parasite dies its four Wrigglers spawn, and their bite/wriggle alternation runs out of phase with live's |
+| terror-eel's second phase | `ShriekPower` stuns it into TERROR when an unblocked hit drops it to its threshold; the emulator models only CRASH and THRASH |
+| a card the live game will not play | one capture aborted with "live game never played the card" — the play policy needs to handle a card that does not leave the hand |
+
 **The previous standing, before this pass: 30 ALL MATCH, 5 more correct on behaviour,
 6 wrong.** Newly closed: the Kin, Vantom, jaxfruit-and-flyconid,
 and Slithering Strangler (now `turns:ok`, coverage-only). The five behaviour-correct ones

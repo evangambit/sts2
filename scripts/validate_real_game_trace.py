@@ -273,6 +273,12 @@ def initial_matches(
     return True
 
 
+# Intent types seen live that the map does not know. Empty is the expected state: the
+# map covers the game's whole enum, so anything landing here is a readout the harness is
+# silently dropping — which reads as a move the capture could never reach.
+UNMAPPED_INTENT_TYPES: set[str] = set()
+
+
 def live_enemy_intent(enemy: dict[str, Any]) -> tuple[int, int | None] | None:
     intents = enemy.get("intents") or []
     if not intents:
@@ -302,8 +308,28 @@ def live_enemy_intent(enemy: dict[str, Any]) -> tuple[int, int | None] | None:
         "Debuff": 3,
         "CardDebuff": 3,
         "StatusCard": 3,
+        # A readout the map does not know becomes None, which the turn comparison skips
+        # and the coverage count drops — so an unmapped type is not a neutral omission,
+        # it is a move that can never be seen. Sleep, Summon and DebuffStrong each cost a
+        # monster a declared move permanently: Lagavulin Matriarch, the Two-Tailed Rats,
+        # Bygone Effigy and the Shrinker Beetle all sat one short of their table for that
+        # reason alone. This now covers the game's whole MonsterMoves.Intents.IntentType,
+        # so a None here means "showed no intent", not "we did not recognise it".
+        "DebuffStrong": 3,
+        "Sleep": 4,
+        "Stun": 4,
+        "Hidden": 4,
+        "Unknown": 4,
+        "Escape": 4,
+        # Summon and Heal announce as buffs emulator-side: CALL_FOR_BACKUP as Buff 0, the
+        # Waterfall Giant's SIPHON as the amount it heals.
+        "Summon": 2,
+        "Heal": 2,
+        # A DeathBlow is announced as the damage it will do — Gas Bomb's explosion.
+        "DeathBlow": 0,
     }
     if intent_type not in intent_by_type:
+        UNMAPPED_INTENT_TYPES.add(str(intent_type))
         return None
     return intent_by_type[intent_type], live_intent_magnitude(intent)
 

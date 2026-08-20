@@ -223,6 +223,80 @@ def end_turn_action(live_state: dict[str, Any]) -> int:
     return len(hand)
 
 
+def play_action(live_state: dict[str, Any]) -> int:
+    """The first card the live game says is playable, or end turn if none is.
+
+    Deliberately the dumbest policy that still fights: the point is not to play well but
+    to keep the player alive long enough for an enemy to reach the far end of its move
+    table. A no-cards capture of the Waterfall Giant sees five of its seven moves because
+    the player is dead by turn six, and no amount of re-seeding fixes that — three seeds
+    of two-tailed-rats all end on turn 5 with three of four moves seen.
+
+    Reading `can_play` off the live state rather than deciding ourselves keeps the
+    emulator honest: it is told which card to play, not asked which it would allow.
+    """
+    hand = (live_state.get("player") or {}).get("hand") or []
+    for index, card in enumerate(hand):
+        if card.get("can_play"):
+            return index
+    return len(hand)
+
+
+def action_is_legal_for_emulator(env: Any, action: int) -> bool:
+    """Does the emulator agree this action is available?
+
+    The play policy reads `can_play` off the LIVE state and sends the same index to
+    both sides, so a disagreement about what is playable silently desynchronises the
+    hands and every later row is noise. Asking the mask turns that into a stated
+    failure at the turn it happens.
+    """
+    try:
+        mask = env.action_masks()
+    except Exception:  # noqa: BLE001 - masks are an optional convenience here
+        return True
+    return bool(action < len(mask) and mask[action])
+
+
+def wait_for_card_to_leave_hand(base_url: str, hand_size_before: int, timeout: float = 20.0):
+    """Wait until the live game has actually PLAYED the card that was just posted.
+
+    Posting an action and reading the state straight back reads it before the game has
+    acted: the card is still in hand and the energy is unspent. Every later action then
+    indexes into a hand the live game has already moved on from, and the two sides drift
+    apart within one turn — which reads as the emulator playing cards the game would not
+    allow. Same trap as `wait_for_next_round`, one level down.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = start_real_game_run.get_state(base_url)
+        if state.get("state_type") not in COMBAT_STATE_TYPES:
+            return state
+        hand = (state.get("player") or {}).get("hand") or []
+        if len(hand) < hand_size_before:
+            return state
+        time.sleep(0.2)
+    raise RuntimeError("live game never played the card")
+
+
+def apply_action(base_url: str, env: Any, live_state: dict[str, Any], action: int):
+    """Send one integer action to both sides, and hand back the new live state."""
+    hand_size = len((live_state.get("player") or {}).get("hand") or [])
+    trace_real_game.post_action(base_url, trace_real_game.action_payload_from_index(live_state, action))
+    _obs, _reward, terminated, truncated, _info = env.step(action)
+    return wait_for_card_to_leave_hand(base_url, hand_size), terminated, truncated
+
+
+def living_emu_enemies(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    """The emulator's enemies that are still alive.
+
+    The emulator keeps a dead enemy in the roster at 0 HP so an agent's observation has
+    stable slots; the game removes the creature outright. Comparing the raw lists makes
+    every fight where something dies look like an emulator hallucinating an extra
+    attacker — which is exactly how it read the first time cards were played.
+    """
+    return [enemy for enemy in (summary.get("enemies") or []) if enemy.get("hp", 0) > 0]
+
+
 def enemy_intents(summary: dict[str, Any], live: bool) -> list[tuple[Any, Any]]:
     if live:
         return [
@@ -231,7 +305,7 @@ def enemy_intents(summary: dict[str, Any], live: bool) -> list[tuple[Any, Any]]:
         ]
     return [
         (e.get("intent_type"), e.get("intent_magnitude"))
-        for e in summary.get("enemies") or []
+        for e in living_emu_enemies(summary)
     ]
 
 
@@ -272,6 +346,9 @@ def hands_agree(live_player: dict[str, Any], emu_player: dict[str, Any]) -> bool
 
 COMBAT_STATE_TYPES = {"monster", "elite", "boss"}
 
+# A turn can play at most this many cards before the sweep gives up and ends it.
+MAX_PLAYS_PER_TURN = 12
+
 
 def live_round(state: dict[str, Any]) -> int:
     return int((state.get("battle") or {}).get("round") or 0)
@@ -303,6 +380,7 @@ def drive_turns(
     base_url: str,
     env: Any,
     turns: int,
+    play: bool = False,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """End turn on both sides in lockstep, comparing what the enemies announce.
 
@@ -323,7 +401,45 @@ def drive_turns(
             notes.append(f"combat ended live before turn {turn}")
             break
 
+        actions: list[int] = []
+        terminated = truncated = False
+        illegal = False
+        if play:
+            # Spend the turn first, then end it. Bounded because a card that fails to
+            # leave the hand on one side would otherwise loop until the sweep hangs.
+            for _ in range(MAX_PLAYS_PER_TURN):
+                choice = play_action(live_state)
+                if choice >= len(((live_state.get("player") or {}).get("hand") or [])):
+                    break
+                if not action_is_legal_for_emulator(env, choice):
+                    hand = (live_state.get("player") or {}).get("hand") or []
+                    name = hand[choice].get("id") if choice < len(hand) else "?"
+                    notes.append(
+                        f"turn {turn}: live can play {name} at index {choice}, "
+                        "the emulator says it cannot",
+                    )
+                    illegal = True
+                    break
+
+                actions.append(choice)
+                live_state, terminated, truncated = apply_action(
+                    base_url,
+                    env,
+                    live_state,
+                    choice,
+                )
+                if live_state.get("state_type") not in COMBAT_STATE_TYPES or terminated:
+                    break
+
+            if illegal:
+                break
+
+            if live_state.get("state_type") not in COMBAT_STATE_TYPES or terminated:
+                notes.append(f"combat ended during turn {turn}")
+                break
+
         action = end_turn_action(live_state)
+        actions.append(action)
         round_before = live_round(live_state)
         trace_real_game.post_action(base_url, {"action": "end_turn"})
         try:
@@ -349,6 +465,10 @@ def drive_turns(
             {
                 "turn": turn + 1,
                 "action": action,
+                # Every action the turn took, in order, ending with end turn. The offline
+                # replay walks this; `action` alone only describes a turn that played
+                # nothing.
+                "actions": actions,
                 "live_enemies": [
                     {
                         "name": e.get("name"),
@@ -362,7 +482,7 @@ def drive_turns(
                         "hp": e.get("hp"),
                         "intent": (e.get("intent_type"), e.get("intent_magnitude")),
                     }
-                    for e in emu_summary.get("enemies") or []
+                    for e in living_emu_enemies(emu_summary)
                 ],
                 "intents_match": len(live_intents) == len(emu_intents)
                 and all(
@@ -431,6 +551,7 @@ def capture_one(
     encounter: str,
     ascension: int,
     turns: int = 0,
+    play: bool = False,
 ) -> dict[str, Any]:
     live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(encounter)
     if live_encounter is None:
@@ -461,7 +582,9 @@ def capture_one(
     try:
         obs, _info = env.reset()
         emu_summary = validate.emulator_trace.summarize_observation(obs)
-        turn_rows, turn_notes = drive_turns(base_url, env, turns) if turns else ([], [])
+        turn_rows, turn_notes = (
+            drive_turns(base_url, env, turns, play) if turns else ([], [])
+        )
     finally:
         env.close()
 
@@ -499,6 +622,11 @@ def capture_one(
     notes += turn_notes
     if missing:
         notes.append("intents never seen: " + ", ".join(missing))
+    if validate.UNMAPPED_INTENT_TYPES:
+        notes.append(
+            "live intent types the harness does not map: "
+            + ", ".join(sorted(validate.UNMAPPED_INTENT_TYPES)),
+        )
     for row in turn_rows:
         if not row["intents_match"]:
             notes.append(
@@ -554,6 +682,15 @@ def main() -> None:
         help="end this many turns per fight and compare intents each turn; enough turns "
         "walk every enemy through its whole move table (0 = opening state only)",
     )
+    parser.add_argument(
+        "--play",
+        action="store_true",
+        help=(
+            "play the first playable card each turn instead of passing. A capture that "
+            "fights back survives long enough to reach the far end of a move table, "
+            "which is the only way the coverage-only encounters can be closed."
+        ),
+    )
     parser.add_argument("--random-seed", type=int, default=0)
     parser.add_argument(
         "--save-fixtures",
@@ -591,6 +728,7 @@ def main() -> None:
                 encounter,
                 args.ascension,
                 turns=args.turns,
+                play=args.play,
             )
         except Exception as exc:  # noqa: BLE001 - one bad job must not end the sweep
             print(f"  CAPTURE FAILED: {exc}", flush=True)
@@ -630,6 +768,7 @@ def main() -> None:
                     "total_floor": validate.NEOW_JUMP_TOTAL_FLOOR,
                     "ascension": args.ascension,
                     "turns": args.turns,
+                    "play": args.play,
                 },
                 # The turn-by-turn live readout, when turns were driven: enough to
                 # replay the fight offline and check every intent an enemy showed, not

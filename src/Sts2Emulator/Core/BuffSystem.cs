@@ -113,10 +113,20 @@ public static class BuffSystem
         }
     }
 
+    /// <summary>
+    /// Whether this debuff is new to the player this round, and so owed the one-tick
+    /// grace. It is the POWER that carries `SkipNextDurationTick`, not the application:
+    /// `PowerCmd.Apply` sets the flag on the model it creates, so a debuff that lands on
+    /// a stack the player already had leaves the existing power's flag alone and that
+    /// power ticks as usual.
+    ///
+    /// Live, at A8, the Two-Tailed Rats screech nearly every turn and the player's Frail
+    /// reads 1, 1, 0, 1 — each new point cancelled by the same round's tick. Treating any
+    /// increase as a skip made it climb instead, which is a point of block a turn.
+    /// </summary>
     private static bool WasAppliedThisRound(BuffState buff, List<BuffState> atRoundStart)
     {
-        int before = atRoundStart.FirstOrDefault(other => other.Id == buff.Id).Magnitude;
-        return buff.Magnitude > before;
+        return !atRoundStart.Any(other => other.Id == buff.Id);
     }
 
     public static int IncomingDamage(

@@ -330,16 +330,19 @@ public static class CombatEngine
         // Battle Trance's NoDrawPower only gags the turn it was played on.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.NoDraw);
 
+        // Both of these deal DAMAGE (CreatureCmd.Damage with ValueProp.Unpowered), so
+        // block absorbs them. Taking it off HP directly is indistinguishable in a capture
+        // that plays no cards and so holds no block, and wrong in every fight that does.
         int constrict = BuffSystem.Get(state.PlayerBuffs, BuffId.Constrict);
         if (constrict > 0)
         {
-            state.PlayerHp = Math.Max(0, state.PlayerHp - constrict);
+            Effects.CardEffects.DealDamageToPlayer(state, constrict);
         }
 
         int disintegration = BuffSystem.Get(state.PlayerBuffs, BuffId.Disintegration);
         if (disintegration > 0)
         {
-            state.PlayerHp = Math.Max(0, state.PlayerHp - disintegration);
+            Effects.CardEffects.DealDamageToPlayer(state, disintegration);
         }
 
         // Move hand to discard, exhausting ethereal cards unless a retain-hand effect is active.

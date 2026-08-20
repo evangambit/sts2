@@ -63,6 +63,33 @@ public class DebuffDurationTests
     }
 
     /// <summary>
+    /// The grace belongs to the power, not the application: a debuff landing on a stack
+    /// the player already had does not stop that stack ticking. Live, the rats screech
+    /// most turns and the player's Frail sits at 1 — a point applied and a point ticked
+    /// every round — rather than climbing.
+    /// </summary>
+    [Fact]
+    public void AddingToAStackThePlayerAlreadyHadDoesNotStopItTicking()
+    {
+        var fight = Fight.Hand().Enemy();
+        fight.Enemy0.DefId = KE.TwoTailedRat;
+        fight.Enemy0.CurrentIntent = new Intent(IntentType.Debuff, 1);
+
+        // Turn one creates it, which is the tick it skips.
+        fight.EndTurn();
+        Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Frail));
+
+        // Every turn after applies one and ticks one, so it stays where it is.
+        fight.Enemy0.CurrentIntent = new Intent(IntentType.Debuff, 1);
+        fight.EndTurn();
+        Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Frail));
+
+        fight.Enemy0.CurrentIntent = new Intent(IntentType.Debuff, 1);
+        fight.EndTurn();
+        Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Frail));
+    }
+
+    /// <summary>
     /// Enemies get no grace period: a debuff the player lands on one ticks at the end of
     /// the very next enemy turn — but only after that enemy has swung with it.
     /// </summary>
@@ -79,5 +106,45 @@ public class DebuffDurationTests
         // Weak is a 25% cut, so 10 lands as 7 and only then does the stack run out.
         Assert.Equal(before - 7, fight.State.PlayerHp);
         Assert.Equal(0, fight.EnemyBuffAmount(BuffId.Weak));
+    }
+}
+
+/// <summary>
+/// Constrict and Disintegration both tick at the end of the player's turn, and both do
+/// it with CreatureCmd.Damage rather than a straight HP loss — so block absorbs them.
+/// A capture that plays no cards holds no block and cannot tell the difference, which is
+/// why the Slithering Strangler only diverged once the sweep started playing Defends.
+/// </summary>
+public class TurnEndSelfDamageTests
+{
+    [Theory]
+    [InlineData(BuffId.Constrict)]
+    [InlineData(BuffId.Disintegration)]
+    public void BlockAbsorbsIt(BuffId debuff)
+    {
+        var fight = Fight.Hand().Enemy();
+        fight.Enemy0.CurrentIntent = new Intent(IntentType.Defend, 0);
+        fight.PlayerBuff(debuff, 3);
+        fight.State.PlayerBlock = 5;
+        int before = fight.State.PlayerHp;
+
+        fight.EndTurn();
+
+        Assert.Equal(before, fight.State.PlayerHp);
+    }
+
+    [Theory]
+    [InlineData(BuffId.Constrict)]
+    [InlineData(BuffId.Disintegration)]
+    public void AndItStillLandsWithoutBlock(BuffId debuff)
+    {
+        var fight = Fight.Hand().Enemy();
+        fight.Enemy0.CurrentIntent = new Intent(IntentType.Defend, 0);
+        fight.PlayerBuff(debuff, 3);
+        int before = fight.State.PlayerHp;
+
+        fight.EndTurn();
+
+        Assert.Equal(before - 3, fight.State.PlayerHp);
     }
 }

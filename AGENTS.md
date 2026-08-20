@@ -312,6 +312,59 @@ The shuffle is a bigger source of "the damage is wrong on turn five" than any mo
 - The per-turn hands the sweep records are what puts all of this under test; see
   `test_every_turn_hand_matches`.
 
+## Buff and Debuff Duration
+
+- **Weak, Frail and Vulnerable tick after the ENEMY side's turn**, once a round — all
+  three do it in `AfterSideTurnEnd(side == CombatSide.Enemy)`. Ticking anywhere earlier
+  loses the last turn of every one of them: an enemy swinging into the player's final
+  point of Vulnerable still hits for 1.5x, and an enemy the player made Weak still swings
+  weakened.
+- **A debuff NEWLY created on a player-side creature skips one tick**, because
+  `PowerCmd.Apply` sets `SkipNextDurationTick` on the model it creates. Adding to a stack
+  the player already holds does NOT — the existing power's flag is untouched, so it ticks
+  as usual. Live at A8 the Two-Tailed Rats screech nearly every turn and the player's
+  Frail reads 1, 1, 0, 1: a point applied, a point ticked. Treating any increase as a
+  skip makes it climb, which is a point of block a turn. Enemies get no grace at all.
+- **Turn-end self-damage goes through block.** Constrict and Disintegration both use
+  `CreatureCmd.Damage`, not an HP loss, and so does every `HasTurnEndInHandEffect` status
+  bar Beckon. A capture that plays no cards holds no block and cannot tell the difference.
+
+## Coverage, and What It Cannot See
+
+Coverage is `distinct live readouts seen / declared moves`, and BOTH sides of that
+fraction have been wrong in ways that read as an emulator defect:
+
+- **A live intent type the harness does not map returns None, which is dropped from the
+  count** — so the move can never be seen, however long the capture runs. `Sleep`,
+  `Summon`, `Heal` and `DebuffStrong` each cost a monster a declared move permanently.
+  `live_enemy_intent` now covers the game's whole `MonsterMoves.Intents.IntentType`, and
+  the sweep reports any type that turns up unmapped instead of silently dropping it.
+- **Some declared states are unreachable from the machine's initial state.** Terror Eel's
+  STUN_MOVE is entered by `ShriekPower` when an unblocked hit drops it to a threshold,
+  Waterfall Giant's ABOUT_TO_BLOW by `TriggerAboutToBlowState`, Ceremonial Beast's by
+  `PlowPower` — always `CreatureCmd.Stun(owner, ..., stateId)`. `enemy_moves.py` walks
+  the FollowUpState/AddBranch graph from the initial state and drops what it cannot
+  reach; it counts everything when it cannot parse the machine, because a parser that
+  quietly found no edges would drop every move and turn coverage green.
+- A capture that passes every turn dies too early to reach the far end of a move table.
+  `--play` plays the first card the LIVE game says is playable, which is what closed the
+  Waterfall Giant and Lagavulin Matriarch.
+
+## Driving the Live Game
+
+Both harness bugs found here have the same shape — **posting an action and reading the
+state straight back reads it before the game has acted**:
+
+- After `end_turn`, wait for `battle.round` to increase (`wait_for_next_round`). Without
+  it a live turn that had not yet taken made the emulator look a turn ahead, and two
+  encounters were investigated as damage bugs on that basis.
+- After `play_card`, wait for the hand to shrink (`wait_for_card_to_leave_hand`). Without
+  it every later action indexes into a hand the game has moved on from, and the two sides
+  drift apart inside one turn.
+- **The emulator keeps a dead enemy in the roster at 0 HP** so an agent's observation has
+  stable slots; the game removes the creature. Compare only living enemies, or every
+  fight where something dies looks like an emulator inventing an attacker.
+
 ## STS2MCP
 
 - This project uses a fork of STS2MCP, checked out beside this repo as `..\STS2MCP`
