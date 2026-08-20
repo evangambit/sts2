@@ -221,6 +221,37 @@
   Assert the hit count with Thorns (one retaliation per hit) or a per-instance effect; a block-based
   assertion passes whether the attack lands once or three times, which a mutation check will catch.
 
+## Monster Move Machines
+
+The decompiled `MonsterMoveStateMachine` answers most "the emulator picks a different move"
+bugs, and the rules are not guessable — read them there rather than inferring from a fight.
+
+- **Only a `RandomBranchState` draws.** `MoveState.GetNextState` returns its `FollowUpState`
+  id and consumes nothing. `FindNextMoveState` loops until it lands on a move, so a
+  transition costs exactly one draw per branch traversed, and zero when a move leads
+  straight to another move.
+- **The first move never draws.** `FindNextMoveState` returns early while
+  `!_performedFirstMove`, so `initialState` is used as-is. An `initialState` can be
+  conditional — Toadpole and Nibbit branch on `IsFront`, Inklet on `_middleInklet`.
+- **`CannotRepeat` scores against the LAST LOGGED MOVE, not any older one**, and the log
+  holds moves only (a branch has `ShouldAppearInLogs => false`). So a branch reached from a
+  fixed move — Inklet's, always entered from JAB — never excludes anything, and its roll is
+  always over the full set. Excluding an older move makes it a roll over a smaller set,
+  which is a DIFFERENT draw from the same stream: this is what made three Inklets desync
+  from the live game while the damage was already right.
+- **A cooldown is a different rule from `CannotRepeat`**: `AddBranch(state, 2)` is the
+  *maxRepeats* overload (barred after coming up twice running), while
+  `AddBranch(state, 3, MoveRepeatType.CannotRepeat)` is a *cooldown* of 3. `EnemyState`
+  carries `MoveHistory` because one `LastMove` cannot answer either question.
+- The roll itself is `NextFloat(total weight)` then a walk over the branches in the order
+  they were added — `EnemyAI.PickBranch`. `Next(n)` is a different number from the same
+  stream, so it desyncs everything after it.
+- `CombatManager` rolls every enemy's next move at the START OF THE PLAYER'S TURN, iterating
+  the roster in order, which is what `EnemyAI.ChooseIntents` mirrors. A creature added
+  mid-combat also rolls as it is added (`AfterCreatureAdded`), so a summon costs a draw when
+  its machine starts on a branch — check this before assuming a summoning encounter has an
+  intent bug.
+
 ## STS2MCP
 
 - This project uses a fork of STS2MCP, checked out beside this repo as `..\STS2MCP`

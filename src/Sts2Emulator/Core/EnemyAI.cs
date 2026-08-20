@@ -660,9 +660,12 @@ public static class EnemyAI
                 }
                 else
                 {
-                    var eligible = new List<int> { piercingGaze, whirlwind };
-                    eligible.Remove(enemy.MoveHistory.Count > 1 ? enemy.MoveHistory[^2] : -1);
-                    move = PickBranch(eligible, rng);
+                    // Both branches are CannotRepeat, which RandomBranchState scores
+                    // against the LAST LOGGED MOVE — and this branch is only ever reached
+                    // from JAB, so neither is ever excluded and the roll is always over
+                    // two. Excluding the move before the jab made it a roll over one on
+                    // half the turns, which is a different draw from the same stream.
+                    move = PickBranch([piercingGaze, whirlwind], rng);
                 }
 
                 enemy.LastMove = move;
