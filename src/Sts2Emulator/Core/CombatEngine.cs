@@ -293,6 +293,13 @@ public static class CombatEngine
         AutoPlayStampedeAttacks(state, rng);
 
         Effects.RelicEffects.ApplyEndOfPlayerTurn(state, rng);
+
+        // TangledPower.AfterSideTurnEnd removes itself when its OWNER's side turn ends —
+        // the player's. Removing it at the start of the player turn instead meant the Vine
+        // Shambler applied it during the enemy turn and it was gone before a single card
+        // could be taxed, which made the debuff do nothing at all.
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.Tangled);
+
         bool allDeadAfterEndTurnPowers = state.Enemies.All(e => e.Hp <= 0);
         if (allDeadAfterEndTurnPowers)
         {
@@ -624,7 +631,6 @@ public static class CombatEngine
             }
         }
 
-        BuffSystem.Remove(state.PlayerBuffs, BuffId.Tangled);
         BuffSystem.Remove(state.PlayerBuffs, BuffId.Smoggy);
         BuffSystem.Remove(state.PlayerBuffs, BuffId.FeralUsed);
         state.SkillPlayedWhileSmoggy = false;

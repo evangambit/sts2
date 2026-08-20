@@ -47,7 +47,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 748 pass)
+# C# unit tests (currently 766 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -114,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 748 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 766 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -367,6 +367,14 @@ turned out to exclude nothing in combat.
   `EnemyDef.HpBand` and both branches are extracted now. **Expect more of this**: 84
   encounters have never been walked past their opening state in C#, and the Python
   live-fixture suite only replays the six that have committed captures.
+  Five encounters in, the count is **eight defects**: Haunted Ship's cycle, its two
+  ascension branches and its single-hit Stomp; Vine Shambler's single-hit Swipe and a
+  Tangled that was cleared at the start of the player turn instead of the end, so the
+  debuff never taxed a card; both Cultists' Dark Strike and Damp's Ritual on the Deadly
+  branch at A8. Plus one parity gap that is not an encounter bug at all: **the observation
+  announced an attack's raw move damage**, where `AttackIntent.GetSingleDamage` runs it
+  through `Hook.ModifyDamage` first — so a Ritual-stacking cultist told a policy it was
+  hitting for nine on the turn it hit for fifteen.
 
 - ✅ **Multiplayer-only cards can no longer be offered.** `CardFactory.FilterForPlayerCount`
   drops every `MultiplayerOnly` card from a pool before anything is rolled from it, and

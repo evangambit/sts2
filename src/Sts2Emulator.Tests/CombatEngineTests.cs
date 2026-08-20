@@ -511,34 +511,6 @@ public class CombatEngineTests
     }
 
     [Fact]
-    public void ForcedCultists_MatchesDecompiledOpeningAndRitual()
-    {
-        var state = new CombatState();
-        CombatFactory.Reset(state, new Random(0), StarterDeckIds, encounterId: 0);
-
-        Assert.Equal(0, state.EncounterId);
-        Assert.Collection(
-            state.Enemies,
-            enemy =>
-            {
-                Assert.Equal(14, enemy.DefId);
-                Assert.Equal(IntentType.Buff, enemy.CurrentIntent.Type);
-                EnemyAI.ExecuteIntent(enemy, state, new Random(0));
-                Assert.Equal(2, BuffSystem.Get(enemy.Buffs, BuffId.Ritual));
-                Assert.Equal(0, BuffSystem.Get(enemy.Buffs, BuffId.Strength));
-            },
-            enemy =>
-            {
-                Assert.Equal(21, enemy.DefId);
-                Assert.Equal(IntentType.Buff, enemy.CurrentIntent.Type);
-                EnemyAI.ExecuteIntent(enemy, state, new Random(0));
-                Assert.Equal(6, BuffSystem.Get(enemy.Buffs, BuffId.Ritual));
-                Assert.Equal(0, BuffSystem.Get(enemy.Buffs, BuffId.Strength));
-            }
-        );
-    }
-
-    [Fact]
     public void SlimeDebuff_AddsSlimedToDiscard()
     {
         var state = CombatFactory.NewCombat(seed: 0);

@@ -11,6 +11,18 @@ public static class CombatObservation
     /// <summary>Candidates an open card selection can expose; a hand or pile is capped anyway.</summary>
     public const int MaxSelectionCandidates = 10;
 
+    /// <summary>
+    /// What the game shows on an attack intent. AttackIntent.GetSingleDamage runs the
+    /// move's damage through Hook.ModifyDamage before displaying it, so the number the
+    /// player reads already includes the attacker's Strength and its own Weak — reporting
+    /// the raw move damage would tell a policy a Ritual-stacking cultist still hits for
+    /// nine on the turn it hits for fifteen. Non-attack intents carry a count, not damage.
+    /// </summary>
+    private static int AnnouncedMagnitude(CombatState s, EnemyState enemy) =>
+        enemy.CurrentIntent.Type == IntentType.Attack
+            ? BuffSystem.IncomingDamage(enemy.CurrentIntent.Magnitude, enemy.Buffs, s.PlayerBuffs)
+            : enemy.CurrentIntent.Magnitude;
+
     public static void Write(CombatState s, Span<int> obs)
     {
         if (obs.Length < ObsSize)
@@ -70,7 +82,7 @@ public static class CombatObservation
             obs[baseIndex + 1] = enemy.MaxHp;
             obs[baseIndex + 2] = enemy.Block;
             obs[baseIndex + 3] = (int)enemy.CurrentIntent.Type;
-            obs[baseIndex + 4] = enemy.CurrentIntent.Magnitude;
+            obs[baseIndex + 4] = AnnouncedMagnitude(s, enemy);
             for (int buffIndex = 0; buffIndex < MaxEnemyBuffs; buffIndex++)
             {
                 if (buffIndex < enemy.Buffs.Count)

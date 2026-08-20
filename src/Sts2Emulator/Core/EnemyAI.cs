@@ -70,6 +70,21 @@ public static class EnemyAI
                     break;
                 }
 
+                if (enemy.DefId == KE.VineShambler && enemy.MoveIndex % 3 == 0)
+                {
+                    // SwipeDamage x 2, per hit — the intent announces the total.
+                    for (int i = 0; i < 2; i++)
+                    {
+                        DealAttackDamage(
+                            enemy,
+                            state,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
+                        );
+                    }
+
+                    break;
+                }
+
                 if (enemy.DefId == KE.HauntedShip && enemy.MoveIndex % 2 == 0)
                 {
                     // StompDamage x StompRepeat, per hit — the intent announces the total.
@@ -444,16 +459,23 @@ public static class EnemyAI
         switch (enemy.DefId)
         {
             case KE.CalcifiedCultist:
-                // Turn 0: Incantation (Buff). Turn 1+: Dark Strike (9 dmg, loops).
+                // Turn 0: Incantation (Buff). Turn 1+: DarkStrikeDamage, which loops.
                 return enemy.MoveIndex == 0
                     ? new Intent(IntentType.Buff, 0)
-                    : new Intent(IntentType.Attack, 9);
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 9)
+                    );
 
             case KE.DampCultist:
-                // Turn 0: Incantation (Buff). Turn 1+: Dark Strike (3 dmg, loops).
+                // Turn 0: Incantation (Buff). Turn 1+: DarkStrikeDamage, which loops.
+                // This was a flat 3 — the Deadly branch — so it hit triple at A8.
                 return enemy.MoveIndex == 0
                     ? new Intent(IntentType.Buff, 0)
-                    : new Intent(IntentType.Attack, 3);
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 1)
+                    );
 
             case KE.Chomper:
                 // Alternates Clamp (9x2) and Screech (add Dazed).
@@ -1452,8 +1474,13 @@ public static class EnemyAI
                 break;
 
             case KE.DampCultist:
-                // Incantation: apply Ritual to self (deadly ascension value).
-                BuffSystem.Apply(enemy.Buffs, BuffId.Ritual, 6);
+                // Incantation: IncantationAmount of Ritual to self. The comment used to
+                // say "deadly ascension value" and mean it — 6 at every level.
+                BuffSystem.Apply(
+                    enemy.Buffs,
+                    BuffId.Ritual,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 5)
+                );
                 break;
 
             case KE.Nibbit:

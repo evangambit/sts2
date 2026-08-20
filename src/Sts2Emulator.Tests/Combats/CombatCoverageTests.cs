@@ -43,7 +43,6 @@ public class CombatCoverageTests
         "CorpseSlugs",
         "CubexConstruct",
         "CultistAndSeapunk",
-        "Cultists",
         "Decimillipede",
         "DenseVegetation",
         "DevotedSculptor",
@@ -109,7 +108,6 @@ public class CombatCoverageTests
         "TurretOperator",
         "TwoTailedRats",
         "Vantom",
-        "VineShambler",
         "WaterfallGiant",
     ];
 
