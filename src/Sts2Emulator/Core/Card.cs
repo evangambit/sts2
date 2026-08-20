@@ -56,7 +56,11 @@ public readonly record struct CardDef(
     // The game's CardModel.HasEnergyCostX. An X card is printed at cost 0 and spends
     // whatever is left on the bar, so the printed cost says nothing about what a play
     // actually cost — which is what CardPlay.Resources.EnergyValue reports to relics.
-    bool HasEnergyCostX = false
+    bool HasEnergyCostX = false,
+    // The game's CardModel.MultiplayerConstraint. CardFactory.FilterForPlayerCount drops
+    // these from every pool in a solo run, so a single-player agent must never be offered
+    // one — 21 cards, and the emulator's pools were built without the filter.
+    bool MultiplayerOnly = false
 );
 
 public readonly record struct CardInstance(

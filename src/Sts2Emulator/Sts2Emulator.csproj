@@ -11,6 +11,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Tests assert on generated card/relic data, which is internal to keep it off the
+         native surface. Without this the test would have to hand-copy ids instead. -->
+    <InternalsVisibleTo Include="Sts2Emulator.Tests" />
     <TrimmerRootDescriptor Include="ILLink.Roots.xml" />
     <!--
       Native exports are named via [UnmanagedCallersOnly(EntryPoint = "...")] in

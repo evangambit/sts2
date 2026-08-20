@@ -47,7 +47,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 721 pass)
+# C# unit tests (currently 725 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -114,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 721 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 725 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -355,14 +355,25 @@ left** — Rampage's per-copy growth, Battle Trance's NoDrawPower and Howl From 
 replay out of the exhaust pile are modelled, and Primal Force's IsTransformable filter
 turned out to exclude nothing in combat.
 
+- ✅ **Multiplayer-only cards can no longer be offered.** `CardFactory.FilterForPlayerCount`
+  drops every `MultiplayerOnly` card from a pool before anything is rolled from it, and
+  `IRunState.CardMultiplayerConstraint` reports `SingleplayerOnly` whenever the run has one
+  player — which ours always does. The emulator's pools are copies of the character's full
+  card pool and still list them, so the Ironclad reward pool was offering Tank and Demonic
+  Shield and the Colourless pool ten more, Intercept, Knockdown and Tag Team among them.
+  `CardDef.MultiplayerOnly` is now extracted (21 cards) and the filter is applied once, at
+  the top of `ChooseCardWithRarity`, and again when transforming. Two things corroborate
+  it: `RareIroncladSingleplayerPool`, built separately, contains none of them, and none of
+  the 23 live-recorded reward cards is one. Worth knowing either way: **the card reward
+  pools have never been checked against a live capture** — the recorded rewards are pinned
+  per floor by `ApplyRetainedTraceCardReward`, which bypasses the pool entirely.
+
 Every card that made a choice for the player now raises a real one (see Card Selection).
 What remains are missing mechanics, all Colourless or Silent, and each is self-contained:
 
 | card                | what is missing                                                     |
 | ------------------- | ------------------------------------------------------------------- |
-| Intercept           | CoveredPower; **Intangible stands in, which caps damage at 1**      |
 | Strangle            | StranglePower; Vulnerable 2 stands in                               |
-| Knockdown, Tag Team | their multiplayer powers                                            |
 | Hidden Gem          | replay counts on a draw-pile card                                   |
 | Beat Down           | auto-plays Attacks from the discard pile                            |
 | Catastrophe         | auto-plays cards off the draw pile                                  |
@@ -370,9 +381,11 @@ What remains are missing mechanics, all Colourless or Silent, and each is self-c
 | Memento Mori        | scales per card discarded this turn; no discard counter exists      |
 | Discovery, Jackpot  | roll from the emulator's own pool, not the character's unlocked one |
 
-Intercept is the one to fix first on risk: it hands the player near-immunity for a card
-that should guard an ally. Eleven Silent cards also carry an `approximation` comment in
-`CardEffects` with no tests at all — those are unverified rather than merely
+Intercept, Knockdown and Tag Team are gone from this list: all three are `MultiplayerOnly`
+and can no longer be drawn from any pool, so their stand-in powers are unreachable in a
+solo run. **Strangle is now the one to fix first**, being the only reachable one left that
+changes a number rather than a flavour. Eleven Silent cards also carry an `approximation`
+comment in `CardEffects` with no tests at all — those are unverified rather than merely
 approximate, and The Gambit is the warning about what hides there.
 
 Also open: the powers and relics that read `combat_card_selection` in the game

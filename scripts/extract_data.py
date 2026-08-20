@@ -34,6 +34,13 @@ UPGRADE_COST = re.compile(r"EnergyCost\.UpgradeBy\((-?\d+)\)")
 # X-cost cards are printed at cost 0 and declare themselves this way instead. Without
 # the flag nothing downstream can tell "free" from "spends the whole bar".
 HAS_ENERGY_COST_X = re.compile(r"HasEnergyCostX\s*=>\s*true")
+
+# CardFactory.FilterForPlayerCount drops MultiplayerOnly cards from every pool in a solo
+# run. Without the flag the reward pools are larger than the game's and offer cards that
+# cannot appear.
+MULTIPLAYER_ONLY = re.compile(
+    r"MultiplayerConstraint\s*=>\s*CardMultiplayerConstraint\.MultiplayerOnly"
+)
 UPGRADE_DMG = re.compile(r"DynamicVars\.Damage\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
 UPGRADE_BLOCK = re.compile(r"DynamicVars\.Block\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
 
@@ -262,6 +269,8 @@ def extract_cards() -> str:
             flags.append("InnateWhenUpgraded: true")
         if HAS_ENERGY_COST_X.search(text):
             flags.append("HasEnergyCostX: true")
+        if MULTIPLAYER_ONLY.search(text):
+            flags.append("MultiplayerOnly: true")
         flags_cs = f", {', '.join(flags)}" if flags else ""
 
         entries.append(
@@ -284,6 +293,9 @@ internal static class Cards
     [
 {lines}
     ];
+
+    /// <summary>Every card, for callers that need to ask a question of the whole set.</summary>
+    public static ReadOnlySpan<CardDef> All => _all;
 
     public static CardDef Get(int id) =>
         Array.Find(_all, c => c.Id == id) is {{ Id: not 0 }} def

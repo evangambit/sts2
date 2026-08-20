@@ -1141,9 +1141,14 @@ public static class RunRewardGenerator
         GameRng rng
     )
     {
+        // CardFactory.FilterForPlayerCount runs on the pool before anything is rolled from
+        // it, so every branch below chooses from the same solo-legal set — including the
+        // last-resort one, which used to reach past the blacklist into the raw pool.
+        var allowed = pool.ToArray().Where(IsAllowedSolo).ToArray();
+
         foreach (int allowedRarity in RarityFallbacks(rarity))
         {
-            var available = pool.ToArray()
+            var available = allowed
                 .Where(cardId => !blacklist.Contains(cardId) && CardRarity(cardId) == allowedRarity)
                 .ToArray();
             if (available.Length > 0)
@@ -1152,9 +1157,17 @@ public static class RunRewardGenerator
             }
         }
 
-        var fallback = pool.ToArray().Where(cardId => !blacklist.Contains(cardId)).ToArray();
-        return fallback.Length > 0 ? rng.NextItem(fallback) : rng.NextItem(pool.ToArray());
+        var fallback = allowed.Where(cardId => !blacklist.Contains(cardId)).ToArray();
+        return rng.NextItem(fallback.Length > 0 ? fallback : allowed);
     }
+
+    /// <summary>
+    /// CardFactory.FilterForPlayerCount: a solo run drops every MultiplayerOnly card from
+    /// the pool before the rarity roll, so the choice is made over a smaller set — not just
+    /// re-rolled when one comes up.
+    /// </summary>
+    public static bool IsAllowedSolo(int cardId) =>
+        !GeneratedData.Cards.Get(cardId).MultiplayerOnly;
 
     private static bool RollCardUpgrade(RunState state, int cardId, GameRng rng)
     {
