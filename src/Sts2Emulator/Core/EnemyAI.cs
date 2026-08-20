@@ -60,6 +60,15 @@ public static class EnemyAI
                     BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, -2);
                 }
 
+                if (enemy.DefId == KE.VineShambler && enemy.MoveIndex % 3 == 1)
+                {
+                    // GRASPING_VINES: the attack the intent announces, plus the card
+                    // debuff its second intent stands for.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Tangled, 1);
+                    break;
+                }
+
                 // A declared multi-hit lands one hit at a time, so block, Thorns and
                 // every per-instance effect see each of them. Enemies whose intent still
                 // carries a pre-multiplied total fall through to the single-hit path below.
@@ -1032,9 +1041,11 @@ public static class EnemyAI
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6),
                         Hits: 2
                     ),
-                    // GraspingVinesDamage; GRASPING_VINES is attack + card debuff.
+                    // GraspingVinesDamage. The MoveState lists SingleAttackIntent first
+                    // and CardDebuffIntent second, and the live game announces the attack
+                    // — a sweep caught this reported as a Debuff.
                     1 => new Intent(
-                        IntentType.Debuff,
+                        IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                     ),
                     // ChompDamage
@@ -1514,6 +1525,7 @@ public static class EnemyAI
                 IntentType.Attack,
                 enemy.CurrentIntent.Magnitude
             ),
+            KE.VineShambler when enemy.MoveIndex % 3 == 1 => new Intent(IntentType.Debuff, 1),
             KE.Stabbot => new Intent(IntentType.Attack, enemy.CurrentIntent.Magnitude),
             KE.SkulkingColony when enemy.MoveIndex % 4 == 2 => new Intent(
                 IntentType.Attack,
@@ -2078,11 +2090,6 @@ public static class EnemyAI
 
             case KE.TrackerRubyRaider:
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
-                break;
-
-            case KE.VineShambler:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Tangled, 1);
                 break;
 
             case KE.FossilStalker:

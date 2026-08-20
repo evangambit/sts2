@@ -744,6 +744,23 @@ coverage. Mutation-checked the way that matters here: corrupting only the **high
 of `Ascension.Value(DeadlyEnemies, 9, 8)` fails the three `_a10_` tests and leaves every
 `_a8_` test green.
 
+✅ **Live-verified on the running game (this pass).** `combat_sweep.py --turns 6` over all
+sixteen known encounters: **11/16 ALL MATCH**, up from a baseline where Nibbit, Seapunk and
+SludgeSpinner all failed on the Strength-display gap. Nibbit now passes, which is that fix
+landing. Punch Construct, Vine Shambler and Haunted Ship — three of the encounters whose
+damage this pass corrected — match the live game through six turns, so those A8 values are
+ground truth now rather than inference. The sweep also found one defect no reading of the
+source had: **Grasping Vines announces an Attack, not a Debuff** (emu `(Debuff, 8)` vs live
+`(Attack, 8)`); its MoveState lists `SingleAttackIntent` first and `CardDebuffIntent`
+second, and the emulator had taken the second as primary. Still failing: mawler, seapunk,
+sludge-spinner, fossil-stalker on `turns`, and shrinker-beetle on `coverage` (its capture
+never reached one of its moves).
+
+**Operational note:** the first sweep after launching with a run already in progress
+reports spurious turn mismatches — the direct combat env assumes every RNG stream is at
+CallCount 0, which only holds once the sweep has embarked its own run. Run it twice and
+trust the second, or abandon the in-progress run first.
+
 **FIXED (was known-open): the reported intent magnitude excluded Strength.** `Intent` now
 carries `Hits` alongside per-hit `Magnitude`, exactly as this note prescribed, and
 `Intent.AnnouncedDamage` builds the label the way `AttackIntent.GetTotalDamage` does —

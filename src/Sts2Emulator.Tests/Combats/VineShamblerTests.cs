@@ -63,7 +63,7 @@ public class VineShamblerTests
         Assert.Equal(
             [
                 (IntentType.Attack, 12),
-                (IntentType.Debuff, 8),
+                (IntentType.Attack, 8),
                 (IntentType.Attack, 16),
                 (IntentType.Attack, 12),
             ],
@@ -84,7 +84,7 @@ public class VineShamblerTests
         }
 
         Assert.Equal(
-            [(IntentType.Attack, 14), (IntentType.Debuff, 9), (IntentType.Attack, 18)],
+            [(IntentType.Attack, 14), (IntentType.Attack, 9), (IntentType.Attack, 18)],
             announced
         );
     }
@@ -112,6 +112,21 @@ public class VineShamblerTests
     /// whole player turn after. The emulator used to clear it at the start of that turn,
     /// which meant it never taxed a single card.
     /// </summary>
+    /// <summary>
+    /// GRASPING_VINES lists SingleAttackIntent first and CardDebuffIntent second, so the
+    /// game announces an Attack and carries the debuff alongside. The emulator announced a
+    /// Debuff; a live sweep caught it, reporting emu (Debuff, 8) against live (Attack, 8).
+    /// </summary>
+    [Fact]
+    public void GraspingVinesAnnouncesAnAttackWithADebuffBeside()
+    {
+        var fight = Encounter();
+        fight.EndTurn();
+
+        Assert.Equal((IntentType.Attack, 8), fight.Intents.First());
+        Assert.Equal(IntentType.Debuff, fight.State.Enemies[0].SecondaryIntent?.Type);
+    }
+
     [Fact]
     public void GraspingVinesTaxesTheFollowingPlayerTurn()
     {

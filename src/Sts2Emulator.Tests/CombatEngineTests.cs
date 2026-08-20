@@ -1352,26 +1352,6 @@ public class CombatEngineTests
     }
 
     [Fact]
-    public void VineShambler_GraspingVinesAppliesTangled()
-    {
-        var state = CombatFactory.NewCombat(seed: 0);
-        state.PlayerBlock = 0;
-        var enemy = new EnemyState
-        {
-            DefId = 103,
-            Hp = 65,
-            MaxHp = 65,
-            CurrentIntent = new Intent(IntentType.Debuff, 9),
-            Buffs = [],
-        };
-
-        EnemyAI.ExecuteIntent(enemy, state, new Random(0));
-
-        Assert.Equal(55, state.PlayerHp);
-        Assert.Equal(1, BuffSystem.Get(state.PlayerBuffs, BuffId.Tangled));
-    }
-
-    [Fact]
     public void Fogmog_IllusionSummonsEyeWithTeeth()
     {
         var state = CombatFactory.NewCombat(seed: 0);
