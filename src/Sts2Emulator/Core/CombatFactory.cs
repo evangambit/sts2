@@ -597,7 +597,7 @@ public static class CombatFactory
             ActOneEncounter.SnappingJaxfruitNormal =>
             [
                 CreateEnemy(KE.SnappingJaxfruit, rng, new Intent(IntentType.Attack, 4)),
-                CreateEnemy(KE.Flyconid, rng, FlyconidInitialIntent(rng), moveIndex: rng.Next(2)),
+                CreateEnemy(KE.Flyconid, rng, new Intent(IntentType.Attack, 8)),
             ],
 
             ActOneEncounter.CubexConstruct => [CreateCubexConstruct(rng)],
@@ -1289,7 +1289,7 @@ public static class CombatFactory
         return
         [
             CreateSlime(medium, rng),
-            CreateEnemy(KE.Flyconid, rng, FlyconidInitialIntent(rng), moveIndex: rng.Next(2)),
+            CreateEnemy(KE.Flyconid, rng, new Intent(IntentType.Attack, 8)),
         ];
     }
 
@@ -1362,13 +1362,6 @@ public static class CombatFactory
             0 => new Intent(IntentType.Attack, 9),
             1 => new Intent(IntentType.Attack, 7),
             _ => new Intent(IntentType.Debuff, 1),
-        };
-
-    private static Intent FlyconidInitialIntent(Random rng) =>
-        rng.Next(3) switch
-        {
-            0 or 1 => new Intent(IntentType.Attack, 9),
-            _ => new Intent(IntentType.Attack, 12),
         };
 
     private static List<EnemyState> CreateCorpseSlugsEncounter(

@@ -79,6 +79,13 @@ public sealed class EnemyState
 
     /// <summary>A UseOnlyOnce branch, spent for the combat once taken (Mawler's ROAR).</summary>
     public bool RoarUsed;
+
+    /// <summary>
+    /// Moves taken this combat, most recent last. A RandomBranchState branch added with a
+    /// cooldown is ineligible while it appears in the last N moves — Flyconid's spores are
+    /// on cooldowns of 3 and 2 — so a single LastMove cannot answer the question.
+    /// </summary>
+    public List<int> MoveHistory = [];
     public int StolenGold;
     public int HeistGold;
 }

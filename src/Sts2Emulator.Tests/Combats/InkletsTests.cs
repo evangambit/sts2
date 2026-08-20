@@ -31,40 +31,69 @@ public class InkletsTests
         Assert.All(fight.State.Enemies, enemy => Assert.InRange(enemy.MaxHp, 12, 18));
     }
 
+    /// <summary>
+    /// JAB leads into a branch of {PIERCING_GAZE, WHIRLWIND} and both lead back to JAB, so
+    /// an Inklet alternates JAB with a rolled move. Only the FIRST move is fixed — and the
+    /// middle Inklet's is WHIRLWIND, which the emulator had as PIERCING_GAZE until a live
+    /// sweep read the opening as 3, 6, 3.
+    /// </summary>
     [Fact]
-    public void JabAndGazeUseTheAscensionEightDamage()
+    public void TheMiddleInkletOpensOnWhirlwindAndTheOthersOnJab()
     {
         var fight = Encounter();
-        var announced = new List<(IntentType, int)>();
 
-        for (int turn = 0; turn < 3; turn++)
-        {
-            announced.Add(fight.Intents.First());
-            fight.EndTurn();
-        }
-
-        // Jab 3, Piercing Gaze 10, Whirlwind 2x3 — not 4, 11 and 9.
         Assert.Equal(
-            [(IntentType.Attack, 3), (IntentType.Attack, 10), (IntentType.Attack, 6)],
-            announced
+            [(IntentType.Attack, 3), (IntentType.Attack, 6), (IntentType.Attack, 3)],
+            fight.Intents
         );
     }
 
     [Fact]
-    public void EveryMoveHitsHarderAtAscensionNine()
+    public void TheOpeningIsHarderAtAscensionNine()
     {
         var fight = Encounter(ascension: 9);
-        var announced = new List<(IntentType, int)>();
 
-        for (int turn = 0; turn < 3; turn++)
+        Assert.Equal(
+            [(IntentType.Attack, 4), (IntentType.Attack, 9), (IntentType.Attack, 4)],
+            fight.Intents
+        );
+    }
+
+    /// <summary>
+    /// Whatever the branch rolls, no Inklet ever announces two non-JAB moves running: the
+    /// rolled move's FollowUpState is JAB, unconditionally.
+    /// </summary>
+    [Fact]
+    public void EveryRolledMoveIsFollowedByJab()
+    {
+        var fight = Encounter();
+        List<List<int>> perEnemy =
+        [
+            [],
+            [],
+            [],
+        ];
+
+        for (int turn = 0; turn < 6; turn++)
         {
-            announced.Add(fight.Intents.First());
+            var intents = fight.Intents.ToList();
+            for (int i = 0; i < perEnemy.Count && i < intents.Count; i++)
+            {
+                perEnemy[i].Add(intents[i].Magnitude);
+            }
+
             fight.EndTurn();
         }
 
-        Assert.Equal(
-            [(IntentType.Attack, 4), (IntentType.Attack, 11), (IntentType.Attack, 9)],
-            announced
-        );
+        foreach (var announced in perEnemy)
+        {
+            for (int i = 1; i < announced.Count; i++)
+            {
+                if (announced[i - 1] != 3)
+                {
+                    Assert.Equal(3, announced[i]);
+                }
+            }
+        }
     }
 }

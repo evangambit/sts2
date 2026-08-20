@@ -640,32 +640,96 @@ public static class EnemyAI
                     : new Intent(IntentType.Buff, 0);
 
             case KE.Inklet:
-                return (enemy.MoveIndex % 3) switch
+            {
+                // JAB leads into a branch of {PIERCING_GAZE, WHIRLWIND}; both of those lead
+                // back to JAB. So an Inklet alternates JAB with a rolled move — and the
+                // MIDDLE one opens on WHIRLWIND rather than JAB, which is what
+                // MonsterMoveStateMachine's initialState says and what put this roster's
+                // second Inklet on the wrong move from turn one.
+                const int jab = 0;
+                const int whirlwind = 1;
+                const int piercingGaze = 2;
+                int move;
+                if (enemy.LastMove < 0)
+                {
+                    move = enemy.MoveIndex == 1 ? whirlwind : jab;
+                }
+                else if (enemy.LastMove != jab)
+                {
+                    move = jab;
+                }
+                else
+                {
+                    var eligible = new List<int> { piercingGaze, whirlwind };
+                    eligible.Remove(enemy.MoveHistory.Count > 1 ? enemy.MoveHistory[^2] : -1);
+                    move = PickBranch(eligible, rng);
+                }
+
+                enemy.LastMove = move;
+                enemy.MoveHistory.Add(move);
+                return move switch
                 {
                     // JabDamage
-                    0 => new Intent(
+                    jab => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
                     ),
-                    // PiercingGazeDamage
-                    1 => new Intent(
-                        IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
-                    ),
                     // WhirlwindDamage x 3
-                    _ => new Intent(
+                    whirlwind => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2),
                         Hits: 3
                     ),
+                    // PiercingGazeDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
+                    ),
                 };
+            }
 
             case KE.Flyconid:
-                return rng.Next(6) switch
+            {
+                // INITIAL rolls {FRAIL_SPORES, SMASH}; every move then rolls RAND, which is
+                // {VULNERABLE_SPORES, FRAIL_SPORES, SMASH} with cooldowns of 3, 2 and none.
+                // The emulator rolled a flat 6-way weighting that could open on
+                // VULNERABLE_SPORES, which the opening branch does not offer at all.
+                const int vulnerableSpores = 0;
+                const int frailSpores = 1;
+                const int smash = 2;
+                var eligible = new List<int>();
+                if (enemy.LastMove < 0)
                 {
-                    0 or 1 or 2 => new Intent(IntentType.Debuff, 2),
-                    // SporeDamage (FRAIL_SPORES is attack + debuff)
-                    3 or 4 => new Intent(
+                    eligible.Add(frailSpores);
+                    eligible.Add(smash);
+                }
+                else
+                {
+                    foreach (
+                        var (candidate, cooldown) in ((int, int)[])
+                            [(vulnerableSpores, 3), (frailSpores, 2), (smash, 0)]
+                    )
+                    {
+                        bool onCooldown = enemy
+                            .MoveHistory.AsEnumerable()
+                            .Reverse()
+                            .Take(cooldown)
+                            .Contains(candidate);
+                        if (candidate != enemy.LastMove && !onCooldown)
+                        {
+                            eligible.Add(candidate);
+                        }
+                    }
+                }
+
+                int move = eligible.Count > 0 ? PickBranch(eligible, rng) : smash;
+                enemy.LastMove = move;
+                enemy.MoveHistory.Add(move);
+                return move switch
+                {
+                    vulnerableSpores => new Intent(IntentType.Debuff, 2),
+                    // SporeDamage; FRAIL_SPORES is attack + debuff, announced as an attack.
+                    frailSpores => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                     ),
@@ -675,6 +739,7 @@ public static class EnemyAI
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 12, 11)
                     ),
                 };
+            }
 
             case KE.SnappingJaxfruit:
                 // EnergyDamage; ENERGY_ORB loops on itself forever
