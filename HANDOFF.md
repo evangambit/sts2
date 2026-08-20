@@ -754,7 +754,22 @@ Closed in this pass, each verified against the running game: inklets, cubex-cons
 fogmog, gremlin-merc, ruby-raiders, fossil-stalker, byrdonis, skulking-colony,
 phantasmal-gardeners, ceremonial-beast, vantom, terror-eel's behaviour, and the Kin.
 
-Still wrong, in the order I would take them:
+**Standing after the follow-up pass (targeted sweeps, not one full run): 30 ALL MATCH,
+5 more correct on behaviour, 6 wrong.** Newly closed: the Kin, Vantom, jaxfruit-and-flyconid,
+and Slithering Strangler (now `turns:ok`, coverage-only). The five behaviour-correct ones
+are shrinker-beetle, shrinker-and-fuzzy, bygone-effigy, terror-eel and
+slithering-strangler — all `turns:ok`, all failing only `coverage`, which is a property of
+a capture that plays no cards.
+
+Still wrong:
+
+| encounter | what is wrong |
+| --- | --- |
+| living-fog | ONE difference left: its Gas Bomb survives a turn longer than the game's, which shows a bomb appear announcing nothing and then go |
+| waterfall-giant, lagavulin-matriarch, soul-fysh | boss growth that is not modelled — the Giant stacks SteamEruptionPower(3) per move and its PRESSURE_GUN damage is a lambda climbing by PressureGunIncrease; soul-fysh announces every intent correctly and only its damage diverges, by a constant 6 from turn three |
+| phrog-parasite, slime-and-flyconid, two-tailed-rats | intents all match; only damage dealt diverges, and it grows each turn — look at what the summons do, not at the parent's moves |
+
+The earlier list, before that pass:
 
 | encounter | what is wrong |
 | --- | --- |
