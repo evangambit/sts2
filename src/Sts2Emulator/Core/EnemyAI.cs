@@ -234,22 +234,11 @@ public static class EnemyAI
                     break;
                 }
 
-                if (enemy.DefId == KE.FossilStalker && enemy.MoveIndex == 2)
-                {
-                    int unblockedHits = 0;
-                    if (DealAttackDamage(enemy, state, 4, triggerSuck: false))
-                    {
-                        unblockedHits++;
-                    }
-
-                    if (DealAttackDamage(enemy, state, 4, triggerSuck: false))
-                    {
-                        unblockedHits++;
-                    }
-
-                    TriggerSuck(enemy, unblockedHits);
-                    break;
-                }
+                // A Fossil Stalker special case used to sit here, firing on whichever
+                // turn MoveIndex happened to be 2 and dealing a two-hit Lash at its A9
+                // damage regardless of the move the machine had chosen — which also
+                // doubled the Strength its SuckPower grants, since Suck triggers per hit.
+                // The intent's own Hits carries this now.
 
                 if (enemy.DefId == KE.CorpseSlug && enemy.MoveIndex % 3 == 0)
                 {
@@ -1599,7 +1588,11 @@ public static class EnemyAI
                 const int tackle = 1;
                 const int lash = 2;
                 int move;
-                if (enemy.MoveIndex == 0)
+                // LastMove, not MoveIndex: this encounter builds its stalker with
+                // moveIndex 1, so an "is this the first move" test written against
+                // MoveIndex never fires and the machine rolled a branch at combat setup —
+                // one draw the game never makes, which desynchronises every roll after it.
+                if (enemy.LastMove < 0)
                 {
                     move = latch;
                 }
