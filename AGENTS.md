@@ -221,6 +221,21 @@
   Assert the hit count with Thorns (one retaliation per hit) or a per-instance effect; a block-based
   assertion passes whether the attack lands once or three times, which a mutation check will catch.
 
+## Waiting on a Long Sweep
+
+- A full act-1 `combat_sweep.py` run is ~20 minutes: the direct combat env assumes every
+  RNG stream is at `CallCount 0`, so each encounter embarks its own fresh run. That is
+  inherent. Work in batches of one to three encounters (~1-2 min) and save the full sweep
+  for a tally.
+- **Do not pipe a sweep through `tail`** — nothing prints until it finishes, so a working
+  run is indistinguishable from a hung one.
+- **Poll the process, not the output**: `until ! pgrep -f combat_sweep; do sleep 60; done`.
+  An `until grep -q "<expected line>"` loop waits forever when the sweep dies early or its
+  output never takes the expected shape, and it leaves an orphaned shell behind — three of
+  those accumulated in one session, the oldest spinning for ten hours.
+- Before reporting a sweep result as final, check nothing of yours is still running:
+  `ps -eo pid,etime,command | grep -E "[u]ntil|[c]ombat_sweep"`.
+
 ## Monster Move Machines
 
 The decompiled `MonsterMoveStateMachine` answers most "the emulator picks a different move"
