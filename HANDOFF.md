@@ -47,7 +47,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 766 pass)
+# C# unit tests (currently 800 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -114,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 766 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 800 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -367,7 +367,17 @@ turned out to exclude nothing in combat.
   `EnemyDef.HpBand` and both branches are extracted now. **Expect more of this**: 84
   encounters have never been walked past their opening state in C#, and the Python
   live-fixture suite only replays the six that have committed captures.
-  Five encounters in, the count is **eight defects**: Haunted Ship's cycle, its two
+  Eleven encounters in, the count is **twenty defects**, and the largest group is one
+  class: `CombatFactory`'s opening intents were converted to `Ascension.Value` years ago,
+  but **`EnemyAI`'s per-turn intents never were** — eleven act-1 enemies were dealing their
+  A9 damage at A8 (Inklet, Flyconid, Cubex Construct, Snapping Jaxfruit, Slithering
+  Strangler, Fogmog, Living Fog, Gremlin Merc, Sneaky Gremlin, Two-Tailed Rat, Punch
+  Construct), on top of both Cultists. A sweep of every monster's `GetValueIfAscension`
+  pairs against `EnemyAI` flags **134 more suspect literals**, most of them act 2. Worth
+  knowing while reading `CombatFactory`: `ChooseIntents` overwrites every enemy's intent
+  immediately after the roster is built, so the opening-intent literals there are
+  placeholders — `moveIndex` is what actually selects the opening move.
+  The earlier count of **eight defects**: Haunted Ship's cycle, its two
   ascension branches and its single-hit Stomp; Vine Shambler's single-hit Swipe and a
   Tangled that was cleared at the start of the player turn instead of the end, so the
   debuff never taxed a card; both Cultists' Dark Strike and Damp's Ritual on the Deadly
@@ -734,7 +744,16 @@ coverage. Mutation-checked the way that matters here: corrupting only the **high
 of `Ascension.Value(DeadlyEnemies, 9, 8)` fails the three `_a10_` tests and leaves every
 `_a8_` test green.
 
-**Known-open: the emulator's reported intent magnitude excludes Strength.** The live game
+**FIXED (was known-open): the reported intent magnitude excluded Strength.** `Intent` now
+carries `Hits` alongside per-hit `Magnitude`, exactly as this note prescribed, and
+`Intent.AnnouncedDamage` builds the label the way `AttackIntent.GetTotalDamage` does —
+modified per-hit damage, then multiplied. Execution reads the same two fields through one
+generic loop, so a multi-hit attack lands per hit for block, Thorns and every per-instance
+effect without a per-enemy special case. Enemies whose intent still carries a
+pre-multiplied total keep `Hits = 1` and behave as before; converting one is part of
+writing its encounter suite. The old note follows, since it explains why:
+
+**Known-open (historical): the emulator's reported intent magnitude excludes Strength.** The live game
 displays effective damage — a Nibbit at +2 Strength announces 14 for a 12-damage Butt,
 and Seapunk's 2x4 SpinningKick shows 12 at +1 Strength. The emulator reports the base, so
 any enemy that buffs itself diverges _in display_ from the turn it buffs, even when the

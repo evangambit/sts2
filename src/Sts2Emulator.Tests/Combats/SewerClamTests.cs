@@ -67,11 +67,13 @@ public class SewerClamTests
             fight.EndTurn();
         }
 
+        // PressurizeMove gives the clam 4 Strength, and the game's intent label is the
+        // MODIFIED damage — so the second Jet reads 14, not the 10 it is printed at.
         Assert.Equal(
             [
                 (IntentType.Attack, 10),
                 (IntentType.Buff, 0),
-                (IntentType.Attack, 10),
+                (IntentType.Attack, 14),
                 (IntentType.Buff, 0),
             ],
             announced

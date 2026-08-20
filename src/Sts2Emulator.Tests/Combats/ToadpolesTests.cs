@@ -113,4 +113,31 @@ public class ToadpolesTests
         Assert.Equal(2, thornsAfterSpiken);
         Assert.Equal(0, BuffSystem.Get(fight.State.Enemies[0].Buffs, BuffId.Thorns));
     }
+
+    /// <summary>
+    /// Moved from CombatEngineTests, where it hand-built the intent as a pre-multiplied
+    /// total. SpikeSpitDamage is 3 at A8 (4 only from A9) across three hits, which a live
+    /// four-turn capture settled: the emulator dealt 12 to the game's 9.
+    /// </summary>
+    [Fact]
+    public void SpikeSpitConsumesThornsThenLandsThreeHits()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.PlayerBlock = 0;
+        state.PlayerHp = 64;
+        var enemy = new EnemyState
+        {
+            DefId = KE.Toadpole,
+            Hp = 22,
+            MaxHp = 22,
+            CurrentIntent = new Intent(IntentType.Attack, 3, Hits: 3),
+            Buffs = [new BuffState(BuffId.Thorns, 2)],
+            MoveIndex = 1,
+        };
+
+        EnemyAI.ExecuteIntent(enemy, state, new Random(0));
+
+        Assert.Equal(0, BuffSystem.Get(enemy.Buffs, BuffId.Thorns));
+        Assert.Equal(55, state.PlayerHp);
+    }
 }

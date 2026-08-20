@@ -55,46 +55,19 @@ public static class EnemyAI
             {
                 if (enemy.DefId == KE.Toadpole && enemy.MoveIndex % 3 == 1)
                 {
+                    // SpikeSpitMove spends the Spiken thorns before it swings; the hits
+                    // themselves come from the intent's declared Hits below.
                     BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, -2);
-                    // SpikeSpitDamage x SpikeSpitRepeat, per hit — the loop is not
-                    // cosmetic, Block and Thorns apply to each hit separately.
-                    for (int i = 0; i < 3; i++)
-                    {
-                        DealAttackDamage(
-                            enemy,
-                            state,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
-                        );
-                    }
-
-                    break;
                 }
 
-                if (enemy.DefId == KE.VineShambler && enemy.MoveIndex % 3 == 0)
+                // A declared multi-hit lands one hit at a time, so block, Thorns and
+                // every per-instance effect see each of them. Enemies whose intent still
+                // carries a pre-multiplied total fall through to the single-hit path below.
+                if (enemy.CurrentIntent.Hits > 1)
                 {
-                    // SwipeDamage x 2, per hit — the intent announces the total.
-                    for (int i = 0; i < 2; i++)
+                    for (int i = 0; i < enemy.CurrentIntent.Hits; i++)
                     {
-                        DealAttackDamage(
-                            enemy,
-                            state,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
-                        );
-                    }
-
-                    break;
-                }
-
-                if (enemy.DefId == KE.HauntedShip && enemy.MoveIndex % 2 == 0)
-                {
-                    // StompDamage x StompRepeat, per hit — the intent announces the total.
-                    for (int i = 0; i < 3; i++)
-                    {
-                        DealAttackDamage(
-                            enemy,
-                            state,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
-                        );
+                        DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
                     }
 
                     break;
@@ -519,15 +492,32 @@ public static class EnemyAI
             case KE.GremlinMerc:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 16),
-                    1 => new Intent(IntentType.Debuff, 14),
-                    _ => new Intent(IntentType.Buff, 9),
+                    // GimmeDamage x 2
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7),
+                        Hits: 2
+                    ),
+                    // DoubleSmashDamage x 2
+                    1 => new Intent(
+                        IntentType.Debuff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6) * 2
+                    ),
+                    // HeheDamage, which keys off ToughEnemies rather than Deadly
+                    _ => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.ToughEnemies, 9, 8)
+                    ),
                 };
 
             case KE.SneakyGremlin:
+                // TackleDamage
                 return enemy.MoveIndex == 0
                     ? new Intent(IntentType.Unknown, 0)
-                    : new Intent(IntentType.Attack, 10);
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 10, 9)
+                    );
 
             case KE.FatGremlin:
                 return enemy.MoveIndex == 0
@@ -537,21 +527,46 @@ public static class EnemyAI
             case KE.Inklet:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 4),
-                    1 => new Intent(IntentType.Attack, 11),
-                    _ => new Intent(IntentType.Attack, 9),
+                    // JabDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
+                    ),
+                    // PiercingGazeDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
+                    ),
+                    // WhirlwindDamage x 3
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2),
+                        Hits: 3
+                    ),
                 };
 
             case KE.Flyconid:
                 return rng.Next(6) switch
                 {
                     0 or 1 or 2 => new Intent(IntentType.Debuff, 2),
-                    3 or 4 => new Intent(IntentType.Attack, 9),
-                    _ => new Intent(IntentType.Attack, 12),
+                    // SporeDamage (FRAIL_SPORES is attack + debuff)
+                    3 or 4 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
+                    // SmashDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 12, 11)
+                    ),
                 };
 
             case KE.SnappingJaxfruit:
-                return new Intent(IntentType.Attack, 4);
+                // EnergyDamage; ENERGY_ORB loops on itself forever
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
+                );
 
             case KE.BowlbugRock:
                 return enemy.MoveIndex % 2 == 0
@@ -991,9 +1006,21 @@ public static class EnemyAI
                 return (enemy.MoveIndex % 4) switch
                 {
                     0 => new Intent(IntentType.Buff, 0),
-                    1 => new Intent(IntentType.Buff, 8),
-                    2 => new Intent(IntentType.Buff, 8),
-                    _ => new Intent(IntentType.Attack, 12),
+                    // BlastDamage; REPEATER_BLAST is attack + buff, twice over
+                    1 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    ),
+                    2 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    ),
+                    // ExpelDamage x 2
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 5),
+                        Hits: 2
+                    ),
                 };
 
             case KE.VineShambler:
@@ -1002,7 +1029,8 @@ public static class EnemyAI
                     // SwipeDamage x 2
                     0 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6) * 2
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6),
+                        Hits: 2
                     ),
                     // GraspingVinesDamage; GRASPING_VINES is attack + card debuff.
                     1 => new Intent(
@@ -1020,8 +1048,16 @@ public static class EnemyAI
                 return (enemy.MoveIndex % 3) switch
                 {
                     0 => new Intent(IntentType.Debuff, 3),
-                    1 => new Intent(IntentType.Attack, 8),
-                    _ => new Intent(IntentType.Attack, 13),
+                    // ThwackDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    ),
+                    // LashDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 12)
+                    ),
                 };
 
             case KE.HauntedShip:
@@ -1039,26 +1075,47 @@ public static class EnemyAI
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 13)
                     )
-                    // StompDamage x StompRepeat, announced as the total
+                    // StompDamage x StompRepeat
                     : new Intent(
                         IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4) * 3
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4),
+                        Hits: 3
                     );
 
             case KE.LivingFog:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Debuff, 9),
-                    1 => new Intent(IntentType.Buff, 6),
-                    _ => new Intent(IntentType.Attack, 9),
+                    // AdvancedGasDamage
+                    0 => new Intent(
+                        IntentType.Debuff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
+                    // BloatDamage
+                    1 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 5)
+                    ),
+                    // SuperGasBlastDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
                 };
 
             case KE.Fogmog:
                 return (enemy.MoveIndex % 3) switch
                 {
                     0 => new Intent(IntentType.Buff, 0),
-                    1 => new Intent(IntentType.Buff, 9),
-                    _ => new Intent(IntentType.Attack, 16),
+                    // SwipeDamage; the summon move announces as a buff
+                    1 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
+                    // HeadbuttDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
+                    ),
                 };
 
             case KE.EyeWithTeeth:
@@ -1235,8 +1292,16 @@ public static class EnemyAI
 
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 9),
-                    1 => new Intent(IntentType.Attack, 7),
+                    // ScratchDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
+                    // DiseaseBiteDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
+                    ),
                     _ => new Intent(IntentType.Debuff, 1),
                 };
 
@@ -1296,10 +1361,11 @@ public static class EnemyAI
                 return (enemy.MoveIndex % 3) switch
                 {
                     0 => new Intent(IntentType.Buff, 0),
-                    // SpikeSpitDamage * SpikeSpitRepeat (repeat is 3, no ascension term)
+                    // SpikeSpitDamage x SpikeSpitRepeat (repeat is 3, no ascension term)
                     1 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3) * 3
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3),
+                        Hits: 3
                     ),
                     // WhirlDamage
                     _ => new Intent(
@@ -1347,8 +1413,17 @@ public static class EnemyAI
                 return (enemy.MoveIndex % 3) switch
                 {
                     0 => new Intent(IntentType.Defend, 10),
-                    1 => new Intent(IntentType.Attack, 12),
-                    _ => new Intent(IntentType.Attack, 16),
+                    // FastPunchDamage x 2
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 5),
+                        Hits: 2
+                    ),
+                    // StrongPunchDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
+                    ),
                 };
 
             case KE.SewerClam:

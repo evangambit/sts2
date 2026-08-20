@@ -586,30 +586,6 @@ public class CombatEngineTests
     }
 
     [Fact]
-    public void Toadpole_SpikeSpitConsumesThornsBeforeAttacking()
-    {
-        var state = CombatFactory.NewCombat(seed: 0);
-        state.PlayerBlock = 0;
-        state.PlayerHp = 64;
-        var enemy = new EnemyState
-        {
-            DefId = 93,
-            Hp = 22,
-            MaxHp = 22,
-            CurrentIntent = new Intent(IntentType.Attack, 12),
-            Buffs = [new BuffState(BuffId.Thorns, 2)],
-            MoveIndex = 1,
-        };
-
-        EnemyAI.ExecuteIntent(enemy, state, new Random(0));
-
-        Assert.Equal(0, BuffSystem.Get(enemy.Buffs, BuffId.Thorns));
-        // SpikeSpitDamage is 3 at A8 (4 only at DeadlyEnemies) x 3 hits = 9. Confirmed
-        // against a live 4-turn capture, where the emulator dealt 12 to the game's 9.
-        Assert.Equal(55, state.PlayerHp);
-    }
-
-    [Fact]
     public void Ravenous_StrengthensAndStunsCorpseSlugWhenAllyDies()
     {
         var state = CombatFactory.NewCombat(seed: 0);

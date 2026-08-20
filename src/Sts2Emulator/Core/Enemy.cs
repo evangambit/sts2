@@ -29,7 +29,25 @@ public readonly record struct EnemyDef(
             : (MinHpBelowToughEnemies, MaxHpBelowToughEnemies);
 }
 
-public readonly record struct Intent(IntentType Type, int Magnitude);
+/// <summary>
+/// A monster's declared move. <paramref name="Magnitude"/> is damage PER HIT for an
+/// attack, and <paramref name="Hits"/> is how many land — the game's MultiAttackIntent
+/// keeps them apart the same way, and derives both its label and its damage from them.
+/// Pre-multiplying into a total loses the distinction twice over: the display cannot add
+/// Strength per hit, and the execution cannot let block absorb per hit.
+/// </summary>
+public readonly record struct Intent(IntentType Type, int Magnitude, int Hits = 1)
+{
+    /// <summary>
+    /// What the game shows, which AttackIntent.GetTotalDamage builds from the modified
+    /// per-hit damage — so a two-hit attack from a +2 Strength monster reads four higher,
+    /// not two.
+    /// </summary>
+    public int AnnouncedDamage(List<BuffState> attackerBuffs, List<BuffState> defenderBuffs) =>
+        Type == IntentType.Attack
+            ? BuffSystem.IncomingDamage(Magnitude, attackerBuffs, defenderBuffs) * Hits
+            : Magnitude;
+}
 
 public sealed class EnemyState
 {

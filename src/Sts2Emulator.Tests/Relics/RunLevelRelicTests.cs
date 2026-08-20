@@ -203,7 +203,7 @@ public class RunLevelRelicTests
         // first one kills and the other two have to find someone to land on.
         fight.State.Enemies[0].DefId = KE.Toadpole;
         fight.State.Enemies[0].MoveIndex = 1;
-        fight.State.Enemies[0].CurrentIntent = new Intent(IntentType.Attack, 0);
+        fight.State.Enemies[0].CurrentIntent = new Intent(IntentType.Attack, 3, Hits: 3);
 
         fight.EndTurn();
 

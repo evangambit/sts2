@@ -85,9 +85,17 @@ internal sealed class Fight
     /// <summary>The enemies' def ids in position order — the roster, as a list to assert on.</summary>
     public IEnumerable<int> EnemyDefIds => State.Enemies.Select(enemy => enemy.DefId);
 
-    /// <summary>Each enemy's current intent as (type, magnitude), in position order.</summary>
+    /// <summary>
+    /// Each enemy's intent as the game announces it: type, and the damage the player would
+    /// read — per-hit damage times hits, with the attacker's Strength already in it.
+    /// </summary>
     public IEnumerable<(IntentType Type, int Magnitude)> Intents =>
-        State.Enemies.Select(enemy => (enemy.CurrentIntent.Type, enemy.CurrentIntent.Magnitude));
+        State.Enemies.Select(enemy =>
+            (
+                enemy.CurrentIntent.Type,
+                enemy.CurrentIntent.AnnouncedDamage(enemy.Buffs, State.PlayerBuffs)
+            )
+        );
 
     /// <summary>Ends the turn without playing anything, the way an encounter test watches a fight.</summary>
     public Fight Turns(int count)

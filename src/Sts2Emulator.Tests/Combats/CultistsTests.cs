@@ -139,7 +139,7 @@ public class CultistsTests
         ];
 
         // Strength 2 from the first Ritual payout, on top of the printed 9.
-        Assert.Equal((IntentType.Attack, 9), fight.Intents.First());
         Assert.Equal(11, announced);
+        Assert.Equal((IntentType.Attack, 11), fight.Intents.First());
     }
 }

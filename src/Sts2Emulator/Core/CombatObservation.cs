@@ -19,9 +19,7 @@ public static class CombatObservation
     /// nine on the turn it hits for fifteen. Non-attack intents carry a count, not damage.
     /// </summary>
     private static int AnnouncedMagnitude(CombatState s, EnemyState enemy) =>
-        enemy.CurrentIntent.Type == IntentType.Attack
-            ? BuffSystem.IncomingDamage(enemy.CurrentIntent.Magnitude, enemy.Buffs, s.PlayerBuffs)
-            : enemy.CurrentIntent.Magnitude;
+        enemy.CurrentIntent.AnnouncedDamage(enemy.Buffs, s.PlayerBuffs);
 
     public static void Write(CombatState s, Span<int> obs)
     {
