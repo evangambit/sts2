@@ -53,7 +53,7 @@ dotnet test src/Sts2Emulator.Tests/
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (119 pass) — drives the live dylib via ctypes
+# Python gym tests (140 pass) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -114,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 800 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 800 C# + 140 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and

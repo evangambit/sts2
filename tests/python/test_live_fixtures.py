@@ -463,11 +463,17 @@ class FightChecks(_TestCaseIfChecking):
                 f"no move table found for {name}; scripts/enemy_moves.py reads them "
                 "from decompiled/, which is gitignored — regenerate it",
             )
-            self.assertEqual(
-                counts["declared"],
+            # `seen` counts distinct (type, magnitude) readouts, which is how two
+            # attacks of different damage are told apart — but a monster that buffs
+            # itself announces ONE move at several magnitudes, so the count can exceed
+            # the move table. Seapunk climbs 8, 12, 13, 16 on four hits of Bubble Burp
+            # Strength. The signal worth keeping is the shortfall: a capture that never
+            # reached a move shows fewer readouts than the table declares.
+            self.assertGreaterEqual(
                 counts["seen"],
-                f"{name}: the capture only ever saw {counts['seen']} of its "
-                f"{counts['declared']} moves, so the rest are untested",
+                counts["declared"],
+                f"{name}: the capture only ever saw {counts['seen']} readouts for its "
+                f"{counts['declared']} moves, so some were never reached",
             )
 
     def test_every_turn_intents_match(self):

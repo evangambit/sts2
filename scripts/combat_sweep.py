@@ -290,7 +290,9 @@ def coverage_for(rows: list[dict[str, Any]], opening: dict[str, Any]) -> dict[st
     later move in the table is wrong.
     """
     # Count distinct (type, magnitude) pairs, not types: WhipSlap and Glomp are both
-    # "Attack", so counting types alone caps a three-move slug at 2/3 forever.
+    # "Attack", so counting types alone caps a three-move slug at 2/3 forever. The count
+    # can also EXCEED the table, because a monster that buffs itself announces one move
+    # at several magnitudes — so treat a shortfall as the signal and a surplus as normal.
     seen: dict[str, set[Any]] = {}
     for enemy in opening.get("enemies") or []:
         intent = validate.live_enemy_intent(enemy)
