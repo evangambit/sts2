@@ -229,7 +229,12 @@
   for a tally.
 - **Do not pipe a sweep through `tail`** — nothing prints until it finishes, so a working
   run is indistinguishable from a hung one.
-- **Poll the process, not the output**: `until ! pgrep -f combat_sweep; do sleep 60; done`.
+- **Poll the process, not the output** — but anchor the pattern so the waiter does not
+  match ITSELF. `until ! pgrep -f combat_sweep` never exits: the waiting shell's own
+  command line contains "combat_sweep", so pgrep always finds it. Use a pattern that only
+  the real process has, e.g. `until ! pgrep -f "python.*combat_sweep"; do sleep 60; done`,
+  and confirm with `ps -eo pid,command | grep "[c]ombat_sweep"` — bracketing the first
+  character is what keeps grep out of its own results.
   An `until grep -q "<expected line>"` loop waits forever when the sweep dies early or its
   output never takes the expected shape, and it leaves an orphaned shell behind — three of
   those accumulated in one session, the oldest spinning for ten hours.
