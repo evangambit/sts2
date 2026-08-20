@@ -1368,29 +1368,6 @@ public class CombatEngineTests
     }
 
     [Fact]
-    public void LivingFog_BloatSummonsGasBombAndAttacks()
-    {
-        var state = CombatFactory.NewCombat(seed: 0);
-        var enemy = new EnemyState
-        {
-            DefId = 49,
-            Hp = 82,
-            MaxHp = 82,
-            CurrentIntent = new Intent(IntentType.Buff, 6),
-            Buffs = [],
-            MoveIndex = 1,
-        };
-
-        EnemyAI.ExecuteIntent(enemy, state, new Random(0));
-
-        Assert.Equal(58, state.PlayerHp);
-        Assert.Contains(
-            state.Enemies,
-            e => e.DefId == 35 && BuffSystem.Get(e.Buffs, BuffId.Minion) == 1
-        );
-    }
-
-    [Fact]
     public void Tangled_IncreasesAttackEnergyCostUntilNextTurn()
     {
         var state = CombatFactory.NewCombat(seed: 0);

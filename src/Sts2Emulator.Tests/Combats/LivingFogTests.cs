@@ -39,20 +39,31 @@ public class LivingFogTests
         Assert.Equal(80, fight.State.Enemies[0].MaxHp);
     }
 
+    /// <summary>
+    /// ADVANCED_GAS happens once — its FollowUpState is BLOAT, and BLOAT and
+    /// SUPER_GAS_BLAST then point at each other forever. The emulator cycled all three on
+    /// MoveIndex % 3, re-gassing every third turn, which a live sweep caught.
+    /// </summary>
     [Fact]
-    public void EveryMoveUsesTheAscensionEightValue()
+    public void GassesOnceThenAlternatesBloatAndBlast()
     {
         var fight = Encounter();
         var announced = new List<(IntentType, int)>();
 
-        for (int turn = 0; turn < 3; turn++)
+        for (int turn = 0; turn < 5; turn++)
         {
             announced.Add(fight.Intents.First());
             fight.EndTurn();
         }
 
         Assert.Equal(
-            [(IntentType.Debuff, 8), (IntentType.Buff, 5), (IntentType.Attack, 8)],
+            [
+                (IntentType.Debuff, 8),
+                (IntentType.Attack, 5),
+                (IntentType.Attack, 8),
+                (IntentType.Attack, 5),
+                (IntentType.Attack, 8),
+            ],
             announced
         );
     }
@@ -70,8 +81,19 @@ public class LivingFogTests
         }
 
         Assert.Equal(
-            [(IntentType.Debuff, 9), (IntentType.Buff, 6), (IntentType.Attack, 9)],
+            [(IntentType.Debuff, 9), (IntentType.Attack, 6), (IntentType.Attack, 9)],
             announced
         );
+    }
+
+    /// <summary>BLOAT carries a SummonIntent: each one adds a Gas Bomb.</summary>
+    [Fact]
+    public void BloatSummonsAGasBomb()
+    {
+        var fight = Encounter();
+        fight.EndTurn();
+        fight.EndTurn();
+
+        Assert.Contains(KE.GasBomb, fight.EnemyDefIds);
     }
 }

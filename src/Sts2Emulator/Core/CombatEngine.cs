@@ -429,6 +429,12 @@ public static class CombatEngine
 
             EnemyAI.ExecuteIntent(enemy, state, rng);
         }
+
+        // A Gas Bomb kills itself as it explodes and leaves the roster. Left in place at
+        // zero HP it kept announcing an intent every turn, so a Living Fog fight grew an
+        // extra attacker per Bloat where the live game shows one bomb appear and go.
+        state.Enemies.RemoveAll(e => e.Hp <= 0 && e.DefId == KE.GasBomb);
+
         HandleEnemyDeaths(state, enemyHpsBefore, rng);
 
         // Restore temporary Strength debuffs applied this turn (e.g. DarkShackles).

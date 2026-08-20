@@ -67,6 +67,40 @@ public static class EnemyAI
                     BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, -2);
                 }
 
+                if (enemy.DefId == KE.SnappingJaxfruit)
+                {
+                    // ENERGY_ORB is an attack plus StrengthPower(2), and it loops on
+                    // itself — so the jaxfruit's announcement climbs 3, 5, 7. The buff sat
+                    // in the debuff branch, which its attack intent no longer reaches, so
+                    // it never grew at all.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
+                    break;
+                }
+
+                if (enemy.DefId == KE.LivingFog && enemy.MoveIndex % 2 == 1)
+                {
+                    // BLOAT: an attack plus a SummonIntent. GetNextSlot decides whether a
+                    // bomb fits — LivingFogNormal declares five bomb slots.
+                    if (state.Enemies.Count(e => e.Hp > 0 && e.DefId == KE.GasBomb) < 5)
+                    {
+                        var bloatBomb = CreateEnemy(
+                            KE.GasBomb,
+                            rng,
+                            new Intent(
+                                IntentType.Attack,
+                                Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                            ),
+                            stunned: true
+                        );
+                        BuffSystem.Apply(bloatBomb.Buffs, BuffId.Minion, 1);
+                        state.Enemies.Add(Effects.RelicEffects.Spawned(state, bloatBomb));
+                    }
+
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    break;
+                }
+
                 if (enemy.DefId == KE.TerrorEel && enemy.MoveIndex % 2 == 1)
                 {
                     // THRASH_MOVE: three hits, then VigorPower(6) — not Strength, which is
@@ -240,6 +274,40 @@ public static class EnemyAI
                         DealAttackDamage(enemy, state, 11);
                     }
 
+                    break;
+                }
+
+                if (enemy.DefId == KE.SnappingJaxfruit)
+                {
+                    // ENERGY_ORB is an attack plus StrengthPower(2), and it loops on
+                    // itself — so the jaxfruit's announcement climbs 3, 5, 7. The buff sat
+                    // in the debuff branch, which its attack intent no longer reaches, so
+                    // it never grew at all.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
+                    break;
+                }
+
+                if (enemy.DefId == KE.LivingFog && enemy.MoveIndex % 2 == 1)
+                {
+                    // BLOAT: an attack plus a SummonIntent. GetNextSlot decides whether a
+                    // bomb fits — LivingFogNormal declares five bomb slots.
+                    if (state.Enemies.Count(e => e.Hp > 0 && e.DefId == KE.GasBomb) < 5)
+                    {
+                        var bloatBomb = CreateEnemy(
+                            KE.GasBomb,
+                            rng,
+                            new Intent(
+                                IntentType.Attack,
+                                Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                            ),
+                            stunned: true
+                        );
+                        BuffSystem.Apply(bloatBomb.Buffs, BuffId.Minion, 1);
+                        state.Enemies.Add(Effects.RelicEffects.Spawned(state, bloatBomb));
+                    }
+
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
                     break;
                 }
 
@@ -1399,20 +1467,26 @@ public static class EnemyAI
                 };
 
             case KE.SlitheringStrangler:
-                return (enemy.MoveIndex % 3) switch
+                // CONSTRICT -> a branch of {THWACK, LASH}, and both of those lead straight
+                // back to CONSTRICT. So it alternates the debuff with a ROLLED attack;
+                // MoveIndex % 3 made it a fixed three-cycle instead. Both branches are
+                // CanRepeatForever, so the roll is always over two.
+                if (enemy.MoveIndex % 2 == 0)
                 {
-                    0 => new Intent(IntentType.Debuff, 3),
-                    // ThwackDamage
-                    1 => new Intent(
+                    return new Intent(IntentType.Debuff, 3);
+                }
+
+                return PickBranch([0, 1], rng) == 0
+                    // ThwackDamage; THWACK also carries a DefendIntent.
+                    ? new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
-                    ),
+                    )
                     // LashDamage
-                    _ => new Intent(
+                    : new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 12)
-                    ),
-                };
+                    );
 
             case KE.HauntedShip:
                 // HAUNT.FollowUpState is SWIPE, and SWIPE and STOMP then point at each
@@ -1437,24 +1511,30 @@ public static class EnemyAI
                     );
 
             case KE.LivingFog:
-                return (enemy.MoveIndex % 3) switch
+                // ADVANCED_GAS happens ONCE: its FollowUpState is BLOAT, and BLOAT and
+                // SUPER_GAS_BLAST then point at each other forever. Cycling all three on
+                // MoveIndex % 3 re-gassed every third turn. Same shape as Haunted Ship.
+                if (enemy.MoveIndex == 0)
                 {
-                    // AdvancedGasDamage
-                    0 => new Intent(
+                    // AdvancedGasDamage; ADVANCED_GAS is an attack plus a card debuff.
+                    return new Intent(
                         IntentType.Debuff,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
-                    ),
-                    // BloatDamage
-                    1 => new Intent(
-                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8),
+                        CarriesDamage: true
+                    );
+                }
+
+                return enemy.MoveIndex % 2 == 1
+                    // BloatDamage; BLOAT is an attack plus a SummonIntent.
+                    ? new Intent(
+                        IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 5)
-                    ),
+                    )
                     // SuperGasBlastDamage
-                    _ => new Intent(
+                    : new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
-                    ),
-                };
+                    );
 
             case KE.Fogmog:
             {
@@ -2155,17 +2235,9 @@ public static class EnemyAI
                 break;
 
             case KE.LivingFog:
-                if (state.Enemies.Count(e => e.Hp > 0 && e.DefId == KE.GasBomb) < 3)
-                {
-                    var bomb = CreateEnemy(
-                        KE.GasBomb,
-                        rng,
-                        new Intent(IntentType.Attack, 9),
-                        stunned: true
-                    );
-                    BuffSystem.Apply(bomb.Buffs, BuffId.Minion, 1);
-                    state.Enemies.Add(Effects.RelicEffects.Spawned(state, bomb));
-                }
+                // Only ADVANCED_GAS reaches this branch now, and it does not summon —
+                // BLOAT is the SummonIntent, and it executes as an attack. Leaving the
+                // summon here spawned a bomb on the opening gas as well.
                 DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
                 break;
 
