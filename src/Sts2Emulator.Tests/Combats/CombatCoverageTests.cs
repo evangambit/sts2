@@ -82,7 +82,6 @@ public class CombatCoverageTests
         "ScrollsWeak",
         "Seapunk",
         "ShrinkerBeetle",
-        "SkulkingColony",
         "SlimedBerserker",
         "SlimesNormal",
         "SlimesWeak",

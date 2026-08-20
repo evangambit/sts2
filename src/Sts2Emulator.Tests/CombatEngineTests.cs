@@ -923,37 +923,6 @@ public class CombatEngineTests
     }
 
     [Fact]
-    public void SkulkingColony_MatchesDecompiledMoveCycle()
-    {
-        var state = CombatFactory.NewCombat(seed: 0);
-        state.PlayerHp = 100;
-        state.PlayerBlock = 999;
-        var colony = new EnemyState
-        {
-            DefId = KE.SkulkingColony,
-            Hp = 80,
-            MaxHp = 80,
-            CurrentIntent = new Intent(IntentType.Attack, 16),
-            Buffs = [new BuffState(BuffId.HardenedShell, 20)],
-        };
-
-        EnemyAI.ExecuteIntent(colony, state, new Random(0));
-        EnemyAI.ChooseIntents([colony], 0, new Random(0));
-        EnemyAI.ExecuteIntent(colony, state, new Random(0));
-        EnemyAI.ChooseIntents([colony], 0, new Random(0));
-        EnemyAI.ExecuteIntent(colony, state, new Random(0));
-        EnemyAI.ChooseIntents([colony], 0, new Random(0));
-        EnemyAI.ExecuteIntent(colony, state, new Random(0));
-
-        // Was 934. PiercingStabs is 7 per hit at A8 (8 only at DeadlyEnemies) and the
-        // cycle lands on it once, so two hits cost 1 less each.
-        // NOTE: this enemy's Inertia is still pinned at its A9 value (11; A8 is 9), like
-        // every elite the combat sweep does not reach yet — see HANDOFF.
-        Assert.Equal(936, state.PlayerBlock);
-        Assert.Equal(3, BuffSystem.Get(colony.Buffs, BuffId.Strength));
-    }
-
-    [Fact]
     public void AdversaryVariants_UseBarrageAttackAndStrengthMove()
     {
         var state = CombatFactory.NewCombat(seed: 0);

@@ -34,6 +34,13 @@ public static class EnemyAI
         // damage and buff below picks the same branch the live game would.
         int ascension = state.AscensionLevel;
         bool wasBuffMove = enemy.CurrentIntent.Type == IntentType.Buff;
+        // VigorPower is spent by the attack that benefits from it. Captured here because a
+        // move can GRANT Vigor as it swings — Terror Eel's THRASH does — and the grant must
+        // survive to the next turn while the amount it swung with does not.
+        int vigorSpentThisTurn =
+            enemy.CurrentIntent.Type == IntentType.Attack
+                ? BuffSystem.Get(enemy.Buffs, BuffId.Vigor)
+                : 0;
 
         enemy.Block = 0; // block clears at start of enemy turn
         if (BuffSystem.Get(enemy.Buffs, BuffId.Stunned) > 0)
@@ -58,6 +65,34 @@ public static class EnemyAI
                     // SpikeSpitMove spends the Spiken thorns before it swings; the hits
                     // themselves come from the intent's declared Hits below.
                     BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, -2);
+                }
+
+                if (enemy.DefId == KE.TerrorEel && enemy.MoveIndex % 2 == 1)
+                {
+                    // THRASH_MOVE: three hits, then VigorPower(6) — not Strength, which is
+                    // what the emulator granted. Vigor is spent by its next attack, so the
+                    // Crash after a Thrash announces six higher and the one after that
+                    // does not.
+                    for (int i = 0; i < enemy.CurrentIntent.Hits; i++)
+                    {
+                        DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    }
+
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Vigor, 6);
+                    break;
+                }
+
+                if (enemy.DefId == KE.SkulkingColony && enemy.MoveIndex % 4 == 2)
+                {
+                    // INERTIA_MOVE: the attack the intent announces, plus the Strength its
+                    // BuffIntent stands for.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(
+                        enemy.Buffs,
+                        BuffId.Strength,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 2)
+                    );
+                    break;
                 }
 
                 if (enemy.DefId == KE.CubexConstruct && (enemy.MoveIndex - 1) % 3 is 0 or 1)
@@ -205,6 +240,34 @@ public static class EnemyAI
                         DealAttackDamage(enemy, state, 11);
                     }
 
+                    break;
+                }
+
+                if (enemy.DefId == KE.TerrorEel && enemy.MoveIndex % 2 == 1)
+                {
+                    // THRASH_MOVE: three hits, then VigorPower(6) — not Strength, which is
+                    // what the emulator granted. Vigor is spent by its next attack, so the
+                    // Crash after a Thrash announces six higher and the one after that
+                    // does not.
+                    for (int i = 0; i < enemy.CurrentIntent.Hits; i++)
+                    {
+                        DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    }
+
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Vigor, 6);
+                    break;
+                }
+
+                if (enemy.DefId == KE.SkulkingColony && enemy.MoveIndex % 4 == 2)
+                {
+                    // INERTIA_MOVE: the attack the intent announces, plus the Strength its
+                    // BuffIntent stands for.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(
+                        enemy.Buffs,
+                        BuffId.Strength,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 2)
+                    );
                     break;
                 }
 
@@ -454,6 +517,11 @@ public static class EnemyAI
             {
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, ritual);
             }
+        }
+
+        if (vigorSpentThisTurn > 0)
+        {
+            BuffSystem.Apply(enemy.Buffs, BuffId.Vigor, -vigorSpentThisTurn);
         }
 
         ApplyHighVoltageEndOfEnemyTurn(enemy);
@@ -916,7 +984,10 @@ public static class EnemyAI
 
             case KE.Wriggler:
                 return (enemy.MoveIndex % 2) == 0
-                    ? new Intent(IntentType.Attack, 7)
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
+                    )
                     : new Intent(IntentType.Buff, 1);
 
             case KE.FakeMerchant:
@@ -941,7 +1012,10 @@ public static class EnemyAI
                 {
                     0 => new Intent(IntentType.Unknown, 0),
                     1 => new Intent(IntentType.Buff, 10),
-                    _ => new Intent(IntentType.Attack, 15),
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 13)
+                    ),
                 };
 
             case KE.Entomancer:
@@ -962,9 +1036,14 @@ public static class EnemyAI
                 };
 
             case KE.PhrogParasite:
+                // INFECT_MOVE's StatusIntent(3), then LashDamage x 4.
                 return (enemy.MoveIndex % 2) == 0
                     ? new Intent(IntentType.Debuff, 3)
-                    : new Intent(IntentType.Attack, 20);
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4),
+                        Hits: 4
+                    );
 
             case KE.SoulNexus:
                 return (enemy.MoveIndex % 3) switch
@@ -975,14 +1054,31 @@ public static class EnemyAI
                 };
 
             case KE.TerrorEel:
+                // CrashDamage, then THRASH_MOVE: ThrashDamage x ThrashRepeat plus a
+                // BuffIntent, which the live readout announces as the attack.
                 return (enemy.MoveIndex % 2) == 0
-                    ? new Intent(IntentType.Attack, 18)
-                    : new Intent(IntentType.Buff, 12);
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 18, 16)
+                    )
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3),
+                        Hits: 3
+                    );
 
             case KE.Byrdonis:
+                // SwoopDamage, alternating with PeckDamage x PeckRepeat.
                 return (enemy.MoveIndex % 2) == 0
-                    ? new Intent(IntentType.Attack, 19)
-                    : new Intent(IntentType.Attack, 12);
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 19, 17)
+                    )
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3),
+                        Hits: 3
+                    );
 
             case KE.DecimillipedeSegment:
                 return (enemy.MoveIndex % 3) switch
@@ -1020,12 +1116,23 @@ public static class EnemyAI
                 };
 
             case KE.PhantasmalGardener:
+                // BITE -> LASH -> FLAIL -> ENLARGE, a fixed ring. Bite, Lash and the flail
+                // repeat do NOT scale with ascension; only EnlargeStr does. An automated
+                // conversion pass matched Lash's 7 to SkittishAmount and Flail's 3 to
+                // EnlargeStr, which made the flail announce 2 where the game announces 3.
                 return (enemy.MoveIndex % 4) switch
                 {
+                    // BiteDamage
                     0 => new Intent(IntentType.Attack, 5),
+                    // LashDamage
                     1 => new Intent(IntentType.Attack, 7),
-                    2 => new Intent(IntentType.Attack, 3),
-                    _ => new Intent(IntentType.Buff, 3),
+                    // FlailDamage(1) x FlailRepeat
+                    2 => new Intent(IntentType.Attack, 1, Hits: 3),
+                    // ENLARGE_MOVE's BuffIntent, worth EnlargeStr
+                    _ => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
+                    ),
                 };
 
             case KE.Aeonglass:
@@ -1038,8 +1145,14 @@ public static class EnemyAI
 
             case KE.CeremonialBeast:
                 return enemy.MoveIndex == 0
-                    ? new Intent(IntentType.Buff, 160)
-                    : new Intent(IntentType.Attack, 20);
+                    ? new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 160, 150)
+                    )
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 20, 18)
+                    );
 
             case KE.Crusher:
                 return (enemy.MoveIndex % 5) switch
@@ -1075,7 +1188,10 @@ public static class EnemyAI
                     ? new Intent(IntentType.Unknown, 0)
                     : (enemy.MoveIndex % 4) switch
                     {
-                        1 => new Intent(IntentType.Attack, 21),
+                        1 => new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 21, 19)
+                        ),
                         2 => new Intent(IntentType.Attack, 20),
                         3 => new Intent(IntentType.Attack, 14),
                         _ => new Intent(IntentType.Debuff, 0),
@@ -1101,10 +1217,19 @@ public static class EnemyAI
                 return (enemy.MoveIndex % 5) switch
                 {
                     0 => new Intent(IntentType.Debuff, 2),
-                    1 => new Intent(IntentType.Attack, 17),
-                    2 => new Intent(IntentType.Attack, 8),
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 17, 16)
+                    ),
+                    2 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    ),
                     3 => new Intent(IntentType.Buff, 2),
-                    _ => new Intent(IntentType.Attack, 15),
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 13)
+                    ),
                 };
 
             case KE.TestSubject:
@@ -1142,7 +1267,10 @@ public static class EnemyAI
                 {
                     0 => new Intent(IntentType.Attack, 5),
                     1 => new Intent(IntentType.Attack, 4),
-                    _ => new Intent(IntentType.Buff, 3),
+                    _ => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
+                    ),
                 };
 
             case KE.KinPriest:
@@ -1151,27 +1279,51 @@ public static class EnemyAI
                     0 => new Intent(IntentType.Attack, 9),
                     1 => new Intent(IntentType.Attack, 9),
                     2 => new Intent(IntentType.Attack, 9),
-                    _ => new Intent(IntentType.Buff, 3),
+                    _ => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
+                    ),
                 };
 
             case KE.Vantom:
                 return (enemy.MoveIndex % 4) switch
                 {
-                    0 => new Intent(IntentType.Attack, 8),
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    ),
                     1 => new Intent(IntentType.Attack, 14),
-                    2 => new Intent(IntentType.Attack, 30),
+                    2 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 30, 26)
+                    ),
                     _ => new Intent(IntentType.Buff, 2),
                 };
 
             case KE.WaterfallGiant:
                 return enemy.MoveIndex switch
                 {
-                    0 => new Intent(IntentType.Buff, 20),
-                    1 => new Intent(IntentType.Attack, 16),
-                    2 => new Intent(IntentType.Buff, 11),
+                    0 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 20, 15)
+                    ),
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 15)
+                    ),
+                    2 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
+                    ),
                     3 => new Intent(IntentType.Buff, 15),
-                    4 => new Intent(IntentType.Buff, 23),
-                    _ => new Intent(IntentType.Buff, 14),
+                    4 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 23, 20)
+                    ),
+                    _ => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 13)
+                    ),
                 };
 
             case KE.CubexConstruct:
@@ -1321,7 +1473,10 @@ public static class EnemyAI
                 return new Intent(IntentType.Debuff, 3);
 
             case KE.GasBomb:
-                return new Intent(IntentType.Attack, 9);
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                );
 
             case KE.AxeRubyRaider:
                 // BigSwingDamage / SwingDamage
@@ -1751,9 +1906,22 @@ public static class EnemyAI
             case KE.SkulkingColony:
                 return (enemy.MoveIndex % 4) switch
                 {
-                    0 or 1 => new Intent(IntentType.Attack, 16),
-                    2 => new Intent(IntentType.Buff, 11),
-                    _ => new Intent(IntentType.Attack, 16),
+                    // ZoomDamage, twice over
+                    0 or 1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
+                    ),
+                    // InertiaDamage; INERTIA_MOVE is an attack plus a BuffIntent
+                    2 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 9)
+                    ),
+                    // PiercingStabsDamage x PiercingStabsRepeat
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7),
+                        Hits: 2
+                    ),
                 };
 
             case KE.TheAdversaryMkOne:
@@ -2100,11 +2268,6 @@ public static class EnemyAI
                 enemy.Block += BuffSystem.IncomingBlock(22, enemy.Buffs);
                 break;
 
-            case KE.TerrorEel:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 6);
-                break;
-
             case KE.PhantasmalGardener:
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
                 break;
@@ -2191,11 +2354,6 @@ public static class EnemyAI
                 int hatchlingHp = rng.Next(20, 24);
                 enemy.Hp = hatchlingHp;
                 enemy.MaxHp = hatchlingHp;
-                break;
-
-            case KE.SkulkingColony:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
                 break;
 
             case KE.TheAdversaryMkOne:

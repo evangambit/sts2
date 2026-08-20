@@ -112,8 +112,25 @@ NORMAL_BY_ACT = {
         "living-fog",
     ],
 }
+# Act-1 elites and bosses. `debug_start_encounter` reaches these the same way it reaches
+# any other encounter — they were simply never listed, so nothing checked the fights an
+# agent has to survive to finish the act.
+ELITE_BY_ACT = {
+    "overgrowth": ["bygone-effigy", "byrdonis", "phrog-parasite"],
+    "underdocks": ["phantasmal-gardeners", "skulking-colony", "terror-eel"],
+}
+BOSS_BY_ACT = {
+    "overgrowth": ["kin", "vantom", "ceremonial-beast"],
+    "underdocks": ["lagavulin-matriarch", "soul-fysh", "waterfall-giant"],
+}
 ENCOUNTERS_BY_ACT = {
-    act: [*WEAK_BY_ACT[act], *NORMAL_BY_ACT[act]] for act in WEAK_BY_ACT
+    act: [
+        *WEAK_BY_ACT[act],
+        *NORMAL_BY_ACT[act],
+        *ELITE_BY_ACT[act],
+        *BOSS_BY_ACT[act],
+    ]
+    for act in WEAK_BY_ACT
 }
 DEFAULT_ENCOUNTERS = [
     *ENCOUNTERS_BY_ACT["overgrowth"],

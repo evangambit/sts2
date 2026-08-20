@@ -122,6 +122,7 @@ LIVE_ENCOUNTER_BY_EMULATOR = {
     "knights": "KnightsElite",
     "mecha-knight": "MechaKnightElite",
     "phantasmal-gardeners": "PhantasmalGardenersElite",
+    "skulking-colony": "SkulkingColonyElite",
     "aeonglass": "AeonglassBoss",
     "ceremonial-beast": "CeremonialBeastBoss",
     "kaiser-crab": "KaiserCrabBoss",
