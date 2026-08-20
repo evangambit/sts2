@@ -913,6 +913,15 @@ public static class RunRewardGenerator
 
     public static void EnterShop(RunState state)
     {
+        // Meal Ticket's AfterRoomEntered(MerchantRoom): HealVar(15m), skipped when dead.
+        if (state.PlayerHp > 0 && HasRelic(state, Effects.RelicEffects.MealTicket))
+        {
+            state.PlayerHp = Math.Min(
+                state.PlayerMaxHp,
+                state.PlayerHp + Effects.RelicEffects.MealTicketHeal
+            );
+        }
+
         state.Phase = RunPhase.Shop;
         Array.Clear(state.ShopCards);
         Array.Clear(state.ShopRelics);

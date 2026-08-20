@@ -47,7 +47,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 674 pass)
+# C# unit tests (currently 698 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -114,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 674 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 698 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -170,7 +170,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   downstream — the same failure `AiRng` was made to fix. Stampede is the trap: it picks a
   card from hand like Thrash does but reads `Rng.Shuffle`. Check the decompiled effect for
   which `Rng.*` it reads; do not infer from what the effect looks like.
-- ✅ **36 relics have combat effects, chosen by mechanic rather than by act.** Nearly every
+- ✅ **47 relics have combat effects, chosen by mechanic rather than by act.** Nearly every
   relic can appear in nearly any act, so "act 1 relics first" is not a useful axis; the set
   instead covers each hook archetype a policy has to reason about — combat-start buffs,
   turn-scheduled effects, per-card-played counters (Shuriken, Kunai, Ornamental Fan, Letter
@@ -179,6 +179,10 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   (Ectoplasm's gold, Sozu's potions, Velvet Choker's six-card turn, Spiked Gauntlets'
   pricier Powers, Philosopher's Stone's stronger enemies, Blessed Antler's Dazed) — which
   meant giving gold gain and potion acquisition single chokepoints to hang a relic off.
+  The last batch added the relics that read the previous turn (Art of War, Pocketwatch),
+  the turn-end ones (Cloak Clasp, Screaming Flagon, Stone Calendar, Parrying Shield), the
+  rest of the per-card-played family (Kusarigama, Tuning Fork, Ivory Tile) and the two
+  between-combat Commons (Meal Ticket, Regal Pillow).
   Of the 298 decompiled relics, **146 have an
   in-combat hook**; the rest are run-level (rewards, shops, rest sites). Counting by rarity,
   the in-combat ones are 20 Common, 25 Uncommon, 29 Rare, 11 Shop, 18 Event, 35 Ancient
@@ -377,6 +381,7 @@ The relics carry three approximations of their own, each pinned rather than acci
 | Velvet Choker      | blocks the player's plays, not auto-plays (Havoc, Mayhem)             |
 | Philosopher's Stone| buffs the enemies present at combat start, not ones summoned later    |
 | Centennial Puzzle  | fires on enemy attacks, not on damage a card deals the player         |
+| Ivory Tile         | sees the printed cost, not energy an X-cost card spends in its effect |
 
 The older run-generation notes below are kept because the _method_ is what matters, not
 because that front is still open.

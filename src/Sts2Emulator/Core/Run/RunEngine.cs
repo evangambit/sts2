@@ -3500,7 +3500,15 @@ public sealed class RunEngine
         return AdvanceAfterNode(out terminal);
     }
 
-    private int RestHealAmount() => Math.Max(1, (int)(State.PlayerMaxHp * 0.3));
+    private int RestHealAmount() =>
+        Math.Max(1, (int)(State.PlayerMaxHp * 0.3))
+        // Regal Pillow's ModifyRestSiteHealAmount adds its HealVar(15m) to whatever the
+        // site was going to heal.
+        + (
+            Effects.RelicEffects.Has(State.Relics, Effects.RelicEffects.RegalPillow)
+                ? Effects.RelicEffects.RegalPillowRestHeal
+                : 0
+        );
 
     private void HealPlayer(int amount)
     {

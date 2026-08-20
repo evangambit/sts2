@@ -233,7 +233,10 @@ public static class CombatEngine
 
         state.PlayedCardBonusDamage = 0;
         IncrementPlayedCardTypeCounters(state, def);
-        ApplyAfterCardPlayedPowers(state, def, rng);
+        // The energy this play cost, for the relics that read CardPlay.Resources. An
+        // X-cost card spends the rest of the bar inside its own effect, which this does
+        // not see — see the approximation table in HANDOFF.md.
+        ApplyAfterCardPlayedPowers(state, def, rng, energyToSpend);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         bool playerDead = state.PlayerHp <= 0;
@@ -641,7 +644,9 @@ public static class CombatEngine
         // Draw five cards.
         Effects.CardEffects.DrawCards(
             state,
-            5 + BuffSystem.Get(state.PlayerBuffs, BuffId.MachineLearning),
+            5
+                + BuffSystem.Get(state.PlayerBuffs, BuffId.MachineLearning)
+                + Effects.RelicEffects.ExtraHandDraw(state),
             rng
         );
         int nextTurnDraw = BuffSystem.Get(state.PlayerBuffs, BuffId.NextTurnDraw);
@@ -1277,9 +1282,14 @@ public static class CombatEngine
         }
     }
 
-    private static void ApplyAfterCardPlayedPowers(CombatState state, CardDef def, Random? rng)
+    private static void ApplyAfterCardPlayedPowers(
+        CombatState state,
+        CardDef def,
+        Random? rng,
+        int energySpent = 0
+    )
     {
-        Effects.RelicEffects.ApplyAfterCardPlayed(state, def, rng);
+        Effects.RelicEffects.ApplyAfterCardPlayed(state, def, rng, energySpent);
 
         if (def.Type == CardType.Skill)
         {

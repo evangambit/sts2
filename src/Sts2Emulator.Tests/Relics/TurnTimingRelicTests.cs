@@ -8,7 +8,9 @@ namespace Sts2Emulator.Tests;
 /// Relics that fire on a particular turn, read off MegaCrit.Sts2.Core.Models.Relics:
 /// Lantern EnergyVar(1) and Bag of Marbles VulnerablePower(1) on turn one, Horn Cleat
 /// BlockVar(14m) on turn two, Captain's Wheel BlockVar(18m) on turn three, Happy Flower
-/// EnergyVar(1) every DynamicVar("Turns", 3m), Pendulum CardsVar(1) on the same cycle.
+/// EnergyVar(1) every DynamicVar("Turns", 3m), Pendulum CardsVar(1) on the same cycle,
+/// Art of War EnergyVar(1) after an Attack-free turn, Pocketwatch CardsVar(3) after a turn
+/// of DynamicVar("CardThreshold", 3m) cards or fewer.
 /// </summary>
 public class TurnTimingRelicTests
 {
@@ -126,5 +128,74 @@ public class TurnTimingRelicTests
         withPendulum.EndTurn();
         plain.EndTurn();
         Assert.Equal(plain.State.Hand.Count + 1, withPendulum.State.Hand.Count);
+    }
+
+    [Fact]
+    public void ArtOfWarGivesEnergyAfterATurnWithNoAttacks()
+    {
+        var plain = Fight.WithRelics();
+        var withRelic = Fight.WithRelics(RelicEffects.ArtOfWar);
+
+        // Turn one pays nothing however it goes — the relic only looks backwards.
+        Assert.Equal(plain.State.Energy, withRelic.State.Energy);
+
+        plain.EndTurn();
+        withRelic.EndTurn();
+
+        Assert.Equal(plain.State.Energy + 1, withRelic.State.Energy);
+    }
+
+    [Fact]
+    public void ArtOfWarStaysQuietAfterATurnWithAnAttack()
+    {
+        var plain = Fight.WithRelics().Energy(20);
+        var withRelic = Fight.WithRelics(RelicEffects.ArtOfWar).Energy(20);
+        foreach (var fight in new[] { plain, withRelic })
+        {
+            fight.State.Hand = TestDeck.Pile(IC.StrikeIronclad);
+            fight.Play();
+            fight.EndTurn();
+        }
+
+        Assert.Equal(plain.State.Energy, withRelic.State.Energy);
+    }
+
+    [Fact]
+    public void PocketwatchDrawsThreeExtraAfterAQuietTurn()
+    {
+        var plain = Fight.WithRelics();
+        var withWatch = Fight.WithRelics(RelicEffects.Pocketwatch);
+
+        // The opening hand is untouched: the relic gives nothing on turn one.
+        Assert.Equal(plain.State.Hand.Count, withWatch.State.Hand.Count);
+
+        plain.EndTurn();
+        withWatch.EndTurn();
+
+        Assert.Equal(plain.State.Hand.Count + 3, withWatch.State.Hand.Count);
+    }
+
+    [Fact]
+    public void PocketwatchStaysQuietAfterFourCards()
+    {
+        var plain = Fight.WithRelics().Energy(20);
+        var withWatch = Fight.WithRelics(RelicEffects.Pocketwatch).Energy(20);
+        foreach (var fight in new[] { plain, withWatch })
+        {
+            fight.State.Hand = TestDeck.Pile(
+                IC.DefendIronclad,
+                IC.DefendIronclad,
+                IC.DefendIronclad,
+                IC.DefendIronclad
+            );
+            for (int i = 0; i < 4; i++)
+            {
+                fight.Play();
+            }
+
+            fight.EndTurn();
+        }
+
+        Assert.Equal(plain.State.Hand.Count, withWatch.State.Hand.Count);
     }
 }

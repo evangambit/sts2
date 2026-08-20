@@ -6,6 +6,7 @@ public static class RelicEffects
 {
     public const int Akabeko = 1;
     public const int Anchor = 4;
+    public const int ArtOfWar = 7;
     public const int BagOfMarbles = 9;
     public const int BagOfPreparation = 10;
     public const int BlessedAntler = 21;
@@ -14,32 +15,42 @@ public static class RelicEffects
     public const int BronzeScales = 35;
     public const int CaptainsWheel = 41;
     public const int CentennialPuzzle = 43;
+    public const int CloakClasp = 51;
     public const int Ectoplasm = 70;
     public const int DataDisk = 56;
     public const int FestivePopper = 87;
     public const int Gorget = 107;
     public const int HappyFlower = 110;
     public const int HornCleat = 114;
+    public const int IvoryTile = 119;
     public const int Kunai = 126;
+    public const int Kusarigama = 127;
     public const int Lantern = 128;
     public const int LetterOpener = 136;
+    public const int MealTicket = 147;
     public const int MummifiedHand = 158;
     public const int Nunchaku = 166;
     public const int OddlySmoothStone = 169;
     public const int Orichalcum = 172;
     public const int OrnamentalFan = 173;
+    public const int ParryingShield = 189;
     public const int Pendulum = 191;
+    public const int Pocketwatch = 199;
     public const int PhilosophersStone = 196;
     public const int Permafrost = 193;
     public const int RedMask = 214;
     public const int RedSkull = 215;
+    public const int RegalPillow = 217;
+    public const int ScreamingFlagon = 230;
     public const int SelfFormingClay = 234;
     public const int Shuriken = 237;
     public const int Sozu = 245;
     public const int SpikedGauntlets = 247;
     public const int StoneCracker = 249;
+    public const int StoneCalendar = 248;
     public const int VenerableTeaSetActive = 100282;
     public const int Vajra = 279;
+    public const int TuningFork = 274;
     public const int VelvetChoker = 281;
 
     /// <summary>
@@ -246,17 +257,62 @@ public static class RelicEffects
         {
             CardEffects.DrawCards(state, 1, DrawRng(state, rng));
         }
+
+        // Both of these ask what the player did LAST turn, and the engine clears its
+        // per-turn tallies after this hook — so this is the one moment they still hold it.
+        if (turnNumber > 1 && HasRelic(state, ArtOfWar) && state.AttackCardsPlayedThisTurn == 0)
+        {
+            // AfterEnergyReset: the energy arrives on a turn following one with no Attack.
+            state.Energy += 1;
+        }
+
+        // Pocketwatch's ModifyHandDraw runs after the tallies are cleared, so the verdict
+        // is taken here and parked on the relic for the draw to read.
+        SetCounter(
+            state,
+            Pocketwatch,
+            turnNumber > 1 && state.CardPlaysThisTurn <= PocketwatchCardThreshold ? 1 : 0
+        );
     }
+
+    /// <summary>Pocketwatch's DynamicVar("CardThreshold", 3m) and CardsVar(3).</summary>
+    private const int PocketwatchCardThreshold = 3;
+
+    /// <summary>
+    /// Extra cards the opening draw of a turn owes to relics — Pocketwatch's CardsVar(3)
+    /// after a turn of three cards or fewer.
+    /// </summary>
+    public static int ExtraHandDraw(CombatState state) =>
+        state.Relics.Any(relic => relic.DefId == Pocketwatch && relic.Counter > 0) ? 3 : 0;
 
     /// <summary>
     /// The relics that pay out every Nth card of a type played in one turn. The game holds
     /// this on the relic (Kunai's AttacksPlayedThisTurn and friends), so the counter lives
     /// on the relic instance here too rather than on a shared per-turn tally.
     /// </summary>
-    private static readonly int[] PerTurnCounters = [Kunai, Shuriken, OrnamentalFan, LetterOpener];
+    private static readonly int[] PerTurnCounters =
+    [
+        Kunai,
+        Kusarigama,
+        Shuriken,
+        OrnamentalFan,
+        LetterOpener,
+    ];
 
-    public static void ApplyAfterCardPlayed(CombatState state, CardDef def, Random? rng = null)
+    public static void ApplyAfterCardPlayed(
+        CombatState state,
+        CardDef def,
+        Random? rng = null,
+        int energySpent = 0
+    )
     {
+        // Ivory Tile reads CardPlay.Resources.EnergyValue — what was actually spent, so an
+        // X-cost card or a cost reduction changes the answer — and ignores card type.
+        if (HasRelic(state, IvoryTile) && energySpent >= 3)
+        {
+            state.Energy += 1;
+        }
+
         switch (def.Type)
         {
             case CardType.Attack:
@@ -276,6 +332,16 @@ public static class RelicEffects
                     CardEffects.GainUnpoweredBlock(state, 4, rng);
                 }
 
+                if (CountTowards(state, Kusarigama, period: 3))
+                {
+                    // DamageVar(6m, Unpowered) at Rng.CombatTargets.NextItem(HittableEnemies).
+                    var target = CardEffects.RandomLivingEnemy(state, rng);
+                    if (target != null)
+                    {
+                        CardEffects.DealUnpoweredDamageToEnemy(state, target, 6);
+                    }
+                }
+
                 // Nunchaku counts attacks for the whole combat, not the turn, so its
                 // counter is deliberately absent from PerTurnCounters.
                 if (CountTowards(state, Nunchaku, period: 10))
@@ -290,6 +356,13 @@ public static class RelicEffects
                 {
                     // DamageVar(5m, ValueProp.Unpowered), to every hittable enemy.
                     CardEffects.DealUnpoweredDamageToAll(state, 5);
+                }
+
+                // Tuning Fork keeps its tally across turns (SkillsPlayed is a
+                // SavedProperty), unlike Letter Opener two lines up.
+                if (CountTowards(state, TuningFork, period: 10))
+                {
+                    CardEffects.GainUnpoweredBlock(state, 7, rng);
                 }
 
                 break;
@@ -448,7 +521,45 @@ public static class RelicEffects
             // BlockVar(6m, ValueProp.Unpowered) — flat, whatever the player's Dexterity.
             CardEffects.GainUnpoweredBlock(state, 6, rng);
         }
+
+        if (HasRelic(state, CloakClasp) && state.Hand.Count > 0)
+        {
+            // BlockVar(1m, Unpowered) per card left in hand.
+            CardEffects.GainUnpoweredBlock(state, state.Hand.Count, rng);
+        }
+
+        if (HasRelic(state, ScreamingFlagon) && state.Hand.Count == 0)
+        {
+            CardEffects.DealUnpoweredDamageToAll(state, 20);
+        }
+
+        if (HasRelic(state, StoneCalendar) && state.Turn + 1 == StoneCalendarDamageTurn)
+        {
+            CardEffects.DealUnpoweredDamageToAll(state, 52);
+        }
+
+        // AfterSideTurnEnd rather than Before, so it sees the block the three above added.
+        if (HasRelic(state, ParryingShield) && state.PlayerBlock >= 10)
+        {
+            var target = CardEffects.RandomLivingEnemy(state, rng);
+            if (target != null)
+            {
+                CardEffects.DealUnpoweredDamageToEnemy(state, target, 6);
+            }
+        }
     }
+
+    /// <summary>Stone Calendar's DynamicVar("DamageTurn", 7m).</summary>
+    private const int StoneCalendarDamageTurn = 7;
+
+    /// <summary>Meal Ticket's HealVar(15m), on entering a merchant room.</summary>
+    public const int MealTicketHeal = 15;
+
+    /// <summary>Regal Pillow's ModifyRestSiteHealAmount: HealVar(15m) on top.</summary>
+    public const int RegalPillowRestHeal = 15;
+
+    public static bool Has(IEnumerable<RelicInstance> relics, int relicId) =>
+        relics.Any(relic => relic.DefId == relicId);
 
     private static bool HasRelic(CombatState state, int relicId) =>
         state.Relics.Any(relic => relic.DefId == relicId);

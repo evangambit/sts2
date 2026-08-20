@@ -4655,7 +4655,7 @@ public static class CardEffects
     private static void DealUnpoweredDamageToEnemy(EnemyState target, int amount) =>
         DealUnpoweredDamageToEnemy(null, target, amount, triggerThorns: false);
 
-    private static void DealUnpoweredDamageToEnemy(
+    internal static void DealUnpoweredDamageToEnemy(
         CombatState state,
         EnemyState target,
         int amount
