@@ -1324,27 +1324,52 @@ public static class EnemyAI
                 return new Intent(IntentType.Attack, 9);
 
             case KE.AxeRubyRaider:
+                // BigSwingDamage / SwingDamage
                 return (enemy.MoveIndex % 3) == 2
-                    ? new Intent(IntentType.Attack, 13)
-                    : new Intent(IntentType.Attack, 6);
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 12)
+                    )
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 5)
+                    );
 
             case KE.AssassinRubyRaider:
-                return new Intent(IntentType.Attack, 11);
+                // KillshotDamage; KILLSHOT_MOVE loops on itself forever.
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
+                );
 
             case KE.BruteRubyRaider:
+                // BeatDamage, alternating with ROAR_MOVE's buff.
                 return enemy.MoveIndex % 2 == 0
-                    ? new Intent(IntentType.Attack, 8)
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    )
                     : new Intent(IntentType.Buff, 0);
 
             case KE.CrossbowRubyRaider:
+                // FireDamage
                 return enemy.MoveIndex % 2 == 0
                     ? new Intent(IntentType.Defend, 3)
-                    : new Intent(IntentType.Attack, 16);
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
+                    );
 
             case KE.TrackerRubyRaider:
+                // HoundsDamage(1) x HoundsRepeat, which is the ascension-dependent part —
+                // the emulator announced a flat 9, its A9 repeat count, as one hit.
                 return enemy.MoveIndex == 0
                     ? new Intent(IntentType.Debuff, 2)
-                    : new Intent(IntentType.Attack, 9);
+                    : new Intent(
+                        IntentType.Attack,
+                        1,
+                        Hits: Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    );
 
             case KE.Seapunk:
                 return (enemy.MoveIndex % 3) switch

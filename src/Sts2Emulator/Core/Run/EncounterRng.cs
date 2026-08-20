@@ -39,6 +39,9 @@ public static class EncounterRng
             // The rats roll which move the FIRST of them opens on; the other two take the
             // next two in order, so one draw decides all three openings.
             RunConstants.TwoTailedRatsEncounterId => "TWO_TAILED_RATS_NORMAL",
+            // Three raiders drawn from five, each capped at one, so the roster is three
+            // draws on the encounter's stream over a shrinking list.
+            RunConstants.RubyRaidersEncounterId => "RUBY_RAIDERS_NORMAL",
             RunConstants.SlitheringStranglerEncounterId => "SLITHERING_STRANGLER_NORMAL",
             // Both slug variants share one emulator enum id but not one entry id.
             RunConstants.CorpseSlugsEncounterId => weakVariant

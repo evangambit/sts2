@@ -654,7 +654,7 @@ public static class CombatFactory
                 encounterRngSeed
             ),
 
-            ActOneEncounter.RubyRaiders => CreateRubyRaiders(rng),
+            ActOneEncounter.RubyRaiders => CreateRubyRaiders(rng, encounterRngSeed),
 
             ActOneEncounter.SkulkingColony => [CreateSkulkingColony(rng)],
 
@@ -1344,14 +1344,35 @@ public static class CombatFactory
         return enemies;
     }
 
-    private static List<EnemyState> CreateRubyRaiders(Random rng)
+    /// <summary>
+    /// RubyRaidersNormal.GenerateMonsters: three NextItem draws on the encounter's own
+    /// stream over the raiders not yet taken — every type is capped at one, so the list
+    /// shrinks 5, 4, 3 — in the order the count dictionary declares them. The emulator
+    /// built a fixed Tracker/Assassin/Brute trio, which is one of the sixty possibilities.
+    /// </summary>
+    private static List<EnemyState> CreateRubyRaiders(Random rng, int? encounterRngSeed)
     {
-        return
+        int[] pool =
         [
-            CreateEnemy(KE.TrackerRubyRaider, rng, new Intent(IntentType.Debuff, 2)),
-            CreateEnemy(KE.AssassinRubyRaider, rng, new Intent(IntentType.Attack, 11)),
-            CreateEnemy(KE.BruteRubyRaider, rng, new Intent(IntentType.Attack, 8)),
+            KE.AxeRubyRaider,
+            KE.AssassinRubyRaider,
+            KE.BruteRubyRaider,
+            KE.CrossbowRubyRaider,
+            KE.TrackerRubyRaider,
         ];
+
+        var stream = encounterRngSeed.HasValue ? EncounterRng.Stream(encounterRngSeed.Value) : null;
+        var remaining = pool.ToList();
+        var raiders = new List<EnemyState>();
+        for (int i = 0; i < 3; i++)
+        {
+            int index = stream?.NextInt(0, remaining.Count) ?? rng.Next(remaining.Count);
+            int defId = remaining[index];
+            remaining.RemoveAt(index);
+            raiders.Add(CreateEnemy(defId, rng, new Intent(IntentType.Unknown, 0)));
+        }
+
+        return raiders;
     }
 
     private static EnemyState CreateTwoTailedRat(Random rng, int moveIndex)
