@@ -50,7 +50,7 @@ public static class RunNonCombatEffects
         switch (relicId)
         {
             case RunConstants.RelicGoldenPearl:
-                state.Gold += 150;
+                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 150);
                 break;
             case RunConstants.RelicNeowsTorment:
                 state.Deck.Add(new CardInstance(RunConstants.NeowsFuryCard, Upgraded: false));
@@ -85,7 +85,7 @@ public static class RunNonCombatEffects
                 state.PlayerHp = state.PlayerMaxHp;
                 break;
             case RunConstants.RelicOldCoin:
-                state.Gold += 300;
+                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 300);
                 break;
             case RunConstants.RelicSmallCapsule:
                 ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
@@ -107,7 +107,7 @@ public static class RunNonCombatEffects
                 state.Deck.Add(
                     new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                 );
-                state.Gold += 333;
+                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 333);
                 break;
             case RunConstants.RelicHeftyTablet:
                 AddRandomRewardCard(state, state.Rng.UpFront);

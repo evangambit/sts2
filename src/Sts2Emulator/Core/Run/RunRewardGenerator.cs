@@ -727,7 +727,7 @@ public static class RunRewardGenerator
         {
             if (itemIndex == 0)
             {
-                state.Gold += state.RewardGold;
+                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, state.RewardGold);
                 state.RewardGold = 0;
                 return true;
             }
@@ -901,13 +901,13 @@ public static class RunRewardGenerator
 
         if (state.Floor == 10 && state.Gold == 126)
         {
-            state.Gold += 53;
+            state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 53);
             state.Phase = RunPhase.Treasure;
             return;
         }
 
         int gold = state.PlayerRng.Rewards.NextInt(42, 53);
-        state.Gold += (int)(gold * 0.75);
+        state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, (int)(gold * 0.75));
         state.Phase = RunPhase.Treasure;
     }
 
@@ -1012,6 +1012,13 @@ public static class RunRewardGenerator
 
     public static bool AddPotion(RunState state, int potionId)
     {
+        // Sozu's ShouldProcurePotion is false for its owner, and PotionCmd is the game's
+        // single gate for gaining one — so this covers rewards, events and shop buys alike.
+        if (HasRelic(state, Effects.RelicEffects.Sozu))
+        {
+            return false;
+        }
+
         int maxPotionSlots = Math.Min(2, state.PotionSlots.Length);
         for (int i = 0; i < maxPotionSlots; i++)
         {

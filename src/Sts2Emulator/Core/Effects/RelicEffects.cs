@@ -8,11 +8,13 @@ public static class RelicEffects
     public const int Anchor = 4;
     public const int BagOfMarbles = 9;
     public const int BagOfPreparation = 10;
+    public const int BlessedAntler = 21;
     public const int BloodVial = 23;
     public const int BoomingConch = 29;
     public const int BronzeScales = 35;
     public const int CaptainsWheel = 41;
     public const int CentennialPuzzle = 43;
+    public const int Ectoplasm = 70;
     public const int DataDisk = 56;
     public const int FestivePopper = 87;
     public const int Gorget = 107;
@@ -27,17 +29,64 @@ public static class RelicEffects
     public const int Orichalcum = 172;
     public const int OrnamentalFan = 173;
     public const int Pendulum = 191;
+    public const int PhilosophersStone = 196;
     public const int Permafrost = 193;
     public const int RedMask = 214;
     public const int RedSkull = 215;
     public const int SelfFormingClay = 234;
     public const int Shuriken = 237;
+    public const int Sozu = 245;
+    public const int SpikedGauntlets = 247;
     public const int StoneCracker = 249;
     public const int VenerableTeaSetActive = 100282;
     public const int Vajra = 279;
+    public const int VelvetChoker = 281;
+
+    /// <summary>
+    /// The relics whose ModifyMaxEnergy adds an EnergyVar(1). Every one of them is the same
+    /// +1; what separates them is the price, which each pays through a different hook.
+    /// </summary>
+    private static readonly int[] MaxEnergyRelics =
+    [
+        Ectoplasm,
+        Sozu,
+        SpikedGauntlets,
+        VelvetChoker,
+        PhilosophersStone,
+        BlessedAntler,
+    ];
+
+    /// <summary>The game's DynamicVar("Cards", 6) on Velvet Choker.</summary>
+    private const int VelvetChokerCardLimit = 6;
+
+    /// <summary>
+    /// Velvet Choker's ShouldPlay: once six cards have been played this turn, nothing else
+    /// can be. The game applies this to auto-played cards too (Havoc, Mayhem), which the
+    /// engine does not — see the approximation table in HANDOFF.md.
+    /// </summary>
+    public static bool BlocksFurtherCardPlays(CombatState state) =>
+        HasRelic(state, VelvetChoker) && state.CardPlaysThisTurn >= VelvetChokerCardLimit;
+
+    /// <summary>
+    /// Spiked Gauntlets' TryModifyEnergyCostInCombat: Powers cost one more. Returned as an
+    /// addend so the caller keeps owning the rest of the cost rules.
+    /// </summary>
+    public static int ExtraEnergyCost(CombatState state, CardDef def) =>
+        def.Type == CardType.Power && HasRelic(state, SpikedGauntlets) ? 1 : 0;
+
+    /// <summary>Ectoplasm's ModifyGoldGained returns 0m: the owner gains no gold, ever.</summary>
+    public static int ModifyGoldGained(IEnumerable<RelicInstance> relics, int amount) =>
+        relics.Any(relic => relic.DefId == Ectoplasm) ? 0 : amount;
 
     public static void ApplyBeforeOpeningHand(CombatState state, Random rng)
     {
+        if (HasRelic(state, BlessedAntler))
+        {
+            // BeforeHandDraw on turn one: three Dazed into the draw pile at
+            // CardPilePosition.Random, which CardPileCmd resolves off Rng.Shuffle.
+            CardEffects.AddCardToDrawPileRandomly(state, ST.Dazed, 3, state.ShuffleRng ?? rng);
+        }
+
         if (!HasRelic(state, StoneCracker))
         {
             return;
@@ -60,6 +109,24 @@ public static class RelicEffects
 
     public static void ApplyCombatStart(CombatState state, Random rng)
     {
+        // ModifyMaxEnergy is read every time the game asks for max energy, so the bonus has
+        // to reach MaxEnergy (which each turn refills from) and the energy already handed
+        // out for turn one.
+        int extraEnergy = state.Relics.Count(relic => MaxEnergyRelics.Contains(relic.DefId));
+        state.MaxEnergy += extraEnergy;
+        state.Energy += extraEnergy;
+
+        if (HasRelic(state, PhilosophersStone))
+        {
+            // AfterRoomEntered applies StrengthPower(1m) to every living opponent. The game
+            // also catches enemies that join mid-combat (AfterCreatureAddedToCombat); a
+            // summoned enemy here does not get it.
+            foreach (var enemy in state.Enemies.Where(enemy => enemy.Hp > 0))
+            {
+                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 1);
+            }
+        }
+
         if (HasRelic(state, BloodVial))
         {
             state.PlayerHp = Math.Min(state.PlayerHp + 2, state.PlayerMaxHp);

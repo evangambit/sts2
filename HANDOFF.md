@@ -47,7 +47,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 658 pass)
+# C# unit tests (currently 674 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -114,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 658 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 674 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -170,12 +170,16 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   downstream — the same failure `AiRng` was made to fix. Stampede is the trap: it picks a
   card from hand like Thrash does but reads `Rng.Shuffle`. Check the decompiled effect for
   which `Rng.*` it reads; do not infer from what the effect looks like.
-- ✅ **30 relics have combat effects, chosen by mechanic rather than by act.** Nearly every
+- ✅ **36 relics have combat effects, chosen by mechanic rather than by act.** Nearly every
   relic can appear in nearly any act, so "act 1 relics first" is not a useful axis; the set
   instead covers each hook archetype a policy has to reason about — combat-start buffs,
   turn-scheduled effects, per-card-played counters (Shuriken, Kunai, Ornamental Fan, Letter
   Opener, Nunchaku, Permafrost, Mummified Hand), damage-triggered draws and block (Centennial
-  Puzzle, Self-Forming Clay), and HP thresholds. Of the 298 decompiled relics, **146 have an
+  Puzzle, Self-Forming Clay), HP thresholds, and the +1 energy family with its downsides
+  (Ectoplasm's gold, Sozu's potions, Velvet Choker's six-card turn, Spiked Gauntlets'
+  pricier Powers, Philosopher's Stone's stronger enemies, Blessed Antler's Dazed) — which
+  meant giving gold gain and potion acquisition single chokepoints to hang a relic off.
+  Of the 298 decompiled relics, **146 have an
   in-combat hook**; the rest are run-level (rewards, shops, rest sites). Counting by rarity,
   the in-combat ones are 20 Common, 25 Uncommon, 29 Rare, 11 Shop, 18 Event, 35 Ancient
   (boss) and 8 Starter. Energy relics (`ModifyMaxEnergy`) are almost entirely Ancient/boss
@@ -362,9 +366,17 @@ that should guard an ally. Eleven Silent cards also carry an `approximation` com
 approximate, and The Gambit is the warning about what hides there.
 
 Also open: the powers and relics that read `combat_card_selection` in the game
-(Aggression, Improvement, Mummified Hand, Bookmark, Jewelled Mask, Stone Cracker, Power
-Cell, Drain) — several are not modelled at all, and the modelled ones were out of scope
-when the stream was wired up.
+(Aggression, Improvement, Bookmark, Jewelled Mask, Power Cell, Drain) — several are not
+modelled at all, and the modelled ones were out of scope when the stream was wired up.
+Mummified Hand is modelled and reads `CombatState.CardSelectionRng`.
+
+The relics carry three approximations of their own, each pinned rather than accidental:
+
+| relic              | what is approximated                                                  |
+| ------------------ | --------------------------------------------------------------------- |
+| Velvet Choker      | blocks the player's plays, not auto-plays (Havoc, Mayhem)             |
+| Philosopher's Stone| buffs the enemies present at combat start, not ones summoned later    |
+| Centennial Puzzle  | fires on enemy attacks, not on damage a card deals the player         |
 
 The older run-generation notes below are kept because the _method_ is what matters, not
 because that front is still open.

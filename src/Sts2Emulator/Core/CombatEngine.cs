@@ -77,6 +77,7 @@ public static class CombatEngine
             || energyToSpend > state.Energy
             || IsBlockedBySmoggy(def, state)
             || IsBlockedByEnthralled(card, state)
+            || Effects.RelicEffects.BlocksFurtherCardPlays(state)
         )
         {
             return StepResult.Invalid;
@@ -762,6 +763,8 @@ public static class CombatEngine
             cost += def.UpgradeCost;
         }
 
+        cost += Effects.RelicEffects.ExtraEnergyCost(state, def);
+
         if (def.Id == Effects.IC.Stomp)
         {
             cost -= state.AttackCardsPlayedThisTurn;
@@ -827,6 +830,7 @@ public static class CombatEngine
                 && energyToSpend <= state.Energy
                 && !IsBlockedBySmoggy(def, state)
                 && !IsBlockedByEnthralled(state.Hand[i], state)
+                && !Effects.RelicEffects.BlocksFurtherCardPlays(state)
             )
             {
                 actions.Add(i);
@@ -984,7 +988,10 @@ public static class CombatEngine
                 && state.Enemies[i].HeistGold > 0
             )
             {
-                state.PlayerGold += state.Enemies[i].HeistGold;
+                state.PlayerGold += Effects.RelicEffects.ModifyGoldGained(
+                    state.Relics,
+                    state.Enemies[i].HeistGold
+                );
                 state.Enemies[i].HeistGold = 0;
             }
 

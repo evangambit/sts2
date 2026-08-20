@@ -803,7 +803,10 @@ public static class CardEffects
                         && !BuffSystem.Has(target.Buffs, BuffId.Minion)
                     )
                     {
-                        state.PlayerGold += upgraded ? 25 : 20;
+                        state.PlayerGold += RelicEffects.ModifyGoldGained(
+                            state.Relics,
+                            upgraded ? 25 : 20
+                        );
                     }
                 }
                 break;
@@ -1965,6 +1968,26 @@ public static class CardEffects
 
             state.PlayerHp -= hpLoss;
             state.PlayerHpLostThisTurn += hpLoss;
+        }
+    }
+
+    /// <summary>
+    /// Inserts cards at CardPilePosition.Random, which the game resolves as one
+    /// Rng.Shuffle.NextInt(count + 1) per card — not a shuffle of the whole pile.
+    /// </summary>
+    internal static void AddCardToDrawPileRandomly(
+        CombatState state,
+        int cardId,
+        int count,
+        Random rng
+    )
+    {
+        for (int i = 0; i < count; i++)
+        {
+            state.DrawPile.Insert(
+                rng.Next(state.DrawPile.Count + 1),
+                new CardInstance(cardId, false)
+            );
         }
     }
 
@@ -4189,7 +4212,7 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, upgraded ? 2 : 1);
                 break;
             case "Wish":
-                state.PlayerGold += upgraded ? 30 : 25;
+                state.PlayerGold += RelicEffects.ModifyGoldGained(state.Relics, upgraded ? 30 : 25);
                 break;
             case "WraithForm":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, upgraded ? 3 : 2);

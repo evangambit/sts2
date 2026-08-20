@@ -1700,7 +1700,7 @@ public static class EnemyAI
                 if (enemy.MoveIndex == 0)
                 {
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Sandpit, 4);
-                    AddStatusToDrawPileRandomly(state, ST.FranticEscape, 3, rng);
+                    Effects.CardEffects.AddCardToDrawPileRandomly(state, ST.FranticEscape, 3, rng);
                     AddStatus(state, ST.FranticEscape, 3);
                 }
                 else
@@ -1903,7 +1903,7 @@ public static class EnemyAI
                 break;
 
             case KE.SoulFysh:
-                AddStatusToDrawPileRandomly(state, ST.Beckon, 1, rng);
+                Effects.CardEffects.AddCardToDrawPileRandomly(state, ST.Beckon, 1, rng);
                 AddStatus(state, ST.Beckon, enemy.CurrentIntent.Magnitude - 1);
                 break;
 
@@ -1973,7 +1973,7 @@ public static class EnemyAI
 
             case KE.Noisebot:
                 AddStatus(state, ST.Dazed, 1);
-                AddStatusToDrawPileRandomly(state, ST.Dazed, 1, rng);
+                Effects.CardEffects.AddCardToDrawPileRandomly(state, ST.Dazed, 1, rng);
                 break;
 
             case KE.Stabbot:
@@ -2094,22 +2094,6 @@ public static class EnemyAI
         for (int i = 0; i < count; i++)
         {
             state.DiscardPile.Add(new CardInstance(cardId, false));
-        }
-    }
-
-    private static void AddStatusToDrawPileRandomly(
-        CombatState state,
-        int cardId,
-        int count,
-        Random rng
-    )
-    {
-        for (int i = 0; i < count; i++)
-        {
-            state.DrawPile.Insert(
-                rng.Next(state.DrawPile.Count + 1),
-                new CardInstance(cardId, false)
-            );
         }
     }
 
