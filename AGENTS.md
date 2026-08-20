@@ -165,6 +165,31 @@
   fixture. Re-capturing re-reads ground truth; deriving it from our own output is the
   rubber stamp `scripts\generate_capture_tests.py` warns about.
 
+## Relic Tests
+
+- Relic effects live in `src\Sts2Emulator\Core\Effects\RelicEffects.cs`, one `public const int`
+  per relic (the id from `Generated\Relics.g.cs`) and one hook method per timing:
+  `ApplyBeforeOpeningHand`, `ApplyCombatStart`, `ApplyStartOfPlayerTurn`, `ApplyAfterCardPlayed`,
+  `ApplyAfterUnblockedDamageReceived`, `ApplyAfterPlayerHpChanged`, `ApplyEndOfPlayerTurn`.
+  Match the hook to the override the decompiled relic actually declares; `AfterRoomEntered` on a
+  `CombatRoom` is combat start, and `BeforeSideTurnStart`/`AfterSideTurnStart`/`AfterPlayerTurnStart`
+  all land on `ApplyStartOfPlayerTurn` here.
+- A relic's only per-relic state is `RelicInstance.Counter`. Use `CountTowards` for "every Nth"
+  relics (Happy Flower, Pendulum, Shuriken, Nunchaku) and `FiresOncePerCombat` for "the first time
+  each combat" relics (Centennial Puzzle, Permafrost). A relic whose count is per turn is listed in
+  `PerTurnCounters`, which the turn-start hook clears; leaving it out is how a per-turn relic
+  silently becomes per-combat, so the test that plays across a turn boundary is the one that matters.
+- `ValueProp.Unpowered` on a `BlockVar`/`DamageVar` means Strength and Dexterity do **not** apply —
+  call `GainUnpoweredBlock`/`DealUnpoweredDamageToAll`, and write the test that stacks the buff and
+  asserts the number did not move. Four relics were wrong this way before anyone checked.
+- Tests are grouped by timing, not one file per relic: `Relics\CombatStartRelicTests.cs`,
+  `TurnTimingRelicTests.cs`, `CardPlayRelicTests.cs`, `DamageReceivedRelicTests.cs`. Relics are far
+  fewer than cards and read best side by side.
+- **The default encounter eats debuffs.** Both enemies in encounter 1 hold Artifact, so
+  `Fight.WithRelics(...)` plus "assert every unprotected enemy is Weak" asserts over an empty list
+  and passes whatever the code does. Use `Fight.Encounter(3, ...)` — three enemies, none protected —
+  for anything that applies a debuff. Two tests were vacuous this way.
+
 ## STS2MCP
 
 - This project uses a fork of STS2MCP, checked out beside this repo as `..\STS2MCP`

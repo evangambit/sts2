@@ -47,7 +47,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 445 pass)
+# C# unit tests (currently 658 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -114,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 445 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 658 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -170,6 +170,17 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   downstream — the same failure `AiRng` was made to fix. Stampede is the trap: it picks a
   card from hand like Thrash does but reads `Rng.Shuffle`. Check the decompiled effect for
   which `Rng.*` it reads; do not infer from what the effect looks like.
+- ✅ **30 relics have combat effects, chosen by mechanic rather than by act.** Nearly every
+  relic can appear in nearly any act, so "act 1 relics first" is not a useful axis; the set
+  instead covers each hook archetype a policy has to reason about — combat-start buffs,
+  turn-scheduled effects, per-card-played counters (Shuriken, Kunai, Ornamental Fan, Letter
+  Opener, Nunchaku, Permafrost, Mummified Hand), damage-triggered draws and block (Centennial
+  Puzzle, Self-Forming Clay), and HP thresholds. Of the 298 decompiled relics, **146 have an
+  in-combat hook**; the rest are run-level (rewards, shops, rest sites). Counting by rarity,
+  the in-combat ones are 20 Common, 25 Uncommon, 29 Rare, 11 Shop, 18 Event, 35 Ancient
+  (boss) and 8 Starter. Energy relics (`ModifyMaxEnergy`) are almost entirely Ancient/boss
+  and are the biggest remaining gap.
+
 - ✅ **Card selection is a real decision, not an omission.** Headbutt, upgraded True Grit,
   Burning Pact and Brand raise a `CombatState.PendingSelection`; while it is open
   `ValidActions` offers only the candidates and `Step` reads an action as the answer. The

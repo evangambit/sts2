@@ -53,16 +53,17 @@ internal sealed class Fight
     /// grants block before the first turn, Bag of Marbles debuffs as it starts — so they
     /// have to be present when the combat is built rather than added afterwards.
     /// </summary>
-    public static Fight WithRelics(params int[] relicIds)
+    public static Fight WithRelics(params int[] relicIds) => Encounter(1, relicIds);
+
+    /// <summary>
+    /// The same, against a chosen encounter. Encounter 1's two enemies both hold Artifact,
+    /// which swallows a debuff whole — a test about applying one has to pick an encounter
+    /// that can actually receive it (3 is three enemies, none protected).
+    /// </summary>
+    public static Fight Encounter(int encounterId, params int[] relicIds)
     {
         var state = new CombatState();
-        CombatFactory.Reset(
-            state,
-            new Random(0),
-            TestDeck.StarterDeckIds,
-            encounterId: 1,
-            relicIds
-        );
+        CombatFactory.Reset(state, new Random(0), TestDeck.StarterDeckIds, encounterId, relicIds);
         state.TargetRng = new CountingRandom(0);
         state.CardSelectionRng = new CountingRandom(0);
         state.CardGenerationRng = new CountingRandom(0);

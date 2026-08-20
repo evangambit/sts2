@@ -734,6 +734,10 @@ public static class CombatEngine
         return state.MaxEnergy + BuffSystem.Get(state.PlayerBuffs, BuffId.PyrePower);
     }
 
+    /// <summary>Cost of a card in hand, for callers that hold no CardDef (relics).</summary>
+    internal static int EffectiveCost(CardInstance card, CombatState state) =>
+        EffectiveCost(card, GeneratedData.Cards.Get(card.DefId), state);
+
     // Returns the energy cost of a card after applying active powers (e.g. Corruption).
     private static int EffectiveCost(CardInstance card, CardDef def, CombatState state)
     {
@@ -1268,6 +1272,8 @@ public static class CombatEngine
 
     private static void ApplyAfterCardPlayedPowers(CombatState state, CardDef def, Random? rng)
     {
+        Effects.RelicEffects.ApplyAfterCardPlayed(state, def, rng);
+
         if (def.Type == CardType.Skill)
         {
             foreach (var enemy in state.Enemies.Where(e => e.Hp > 0))

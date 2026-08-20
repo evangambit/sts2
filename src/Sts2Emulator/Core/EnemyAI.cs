@@ -2017,6 +2017,11 @@ public static class EnemyAI
             state.PlayerHp = 0;
         }
 
+        if (unblocked > 0)
+        {
+            Effects.RelicEffects.ApplyAfterUnblockedDamageReceived(state);
+        }
+
         if (unblocked > 0 && triggerSuck)
         {
             TriggerSuck(enemy);

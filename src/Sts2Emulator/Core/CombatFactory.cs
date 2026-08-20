@@ -383,7 +383,7 @@ public static class CombatFactory
         }
 
         RelicEffects.ApplyCombatStart(state, rng);
-        RelicEffects.ApplyStartOfPlayerTurn(state);
+        RelicEffects.ApplyStartOfPlayerTurn(state, rng);
         RelicEffects.ApplyAfterPlayerHpChanged(state);
     }
 

@@ -8,7 +8,7 @@ namespace Sts2Emulator.Tests;
 /// Relics that fire on a particular turn, read off MegaCrit.Sts2.Core.Models.Relics:
 /// Lantern EnergyVar(1) and Bag of Marbles VulnerablePower(1) on turn one, Horn Cleat
 /// BlockVar(14m) on turn two, Captain's Wheel BlockVar(18m) on turn three, Happy Flower
-/// EnergyVar(1) every DynamicVar("Turns", 3m).
+/// EnergyVar(1) every DynamicVar("Turns", 3m), Pendulum CardsVar(1) on the same cycle.
 /// </summary>
 public class TurnTimingRelicTests
 {
@@ -27,13 +27,18 @@ public class TurnTimingRelicTests
         Assert.NotEqual(afterFirst, withLantern.State.Energy);
     }
 
+    /// <summary>
+    /// Encounter 3, because every enemy in the default encounter holds Artifact and eats
+    /// the debuff — filtering those out left this asserting over an empty list.
+    /// </summary>
     [Fact]
-    public void BagOfMarblesMakesUnprotectedEnemiesVulnerableOnTurnOne()
+    public void BagOfMarblesMakesEnemiesVulnerableOnTurnOne()
     {
-        var fight = Fight.WithRelics(RelicEffects.BagOfMarbles);
+        var fight = Fight.Encounter(3, RelicEffects.BagOfMarbles);
 
+        Assert.NotEmpty(fight.State.Enemies);
         Assert.All(
-            fight.State.Enemies.Where(enemy => BuffSystem.Get(enemy.Buffs, BuffId.Artifact) == 0),
+            fight.State.Enemies,
             enemy => Assert.Equal(1, BuffSystem.Get(enemy.Buffs, BuffId.Vulnerable))
         );
     }
@@ -104,5 +109,22 @@ public class TurnTimingRelicTests
         withFlower.EndTurn();
         plain.EndTurn();
         Assert.Equal(plain.State.Energy + 1, withFlower.State.Energy);
+    }
+
+    [Fact]
+    public void PendulumDrawsOneCardEveryThirdTurn()
+    {
+        var plain = Fight.WithRelics();
+        var withPendulum = Fight.WithRelics(RelicEffects.Pendulum);
+
+        Assert.Equal(plain.State.Hand.Count, withPendulum.State.Hand.Count);
+
+        withPendulum.EndTurn();
+        plain.EndTurn();
+        Assert.Equal(plain.State.Hand.Count, withPendulum.State.Hand.Count);
+
+        withPendulum.EndTurn();
+        plain.EndTurn();
+        Assert.Equal(plain.State.Hand.Count + 1, withPendulum.State.Hand.Count);
     }
 }
