@@ -744,7 +744,37 @@ coverage. Mutation-checked the way that matters here: corrupting only the **high
 of `Ascension.Value(DeadlyEnemies, 9, 8)` fails the three `_a10_` tests and leaves every
 `_a8_` test green.
 
-✅ **Live-verified on the running game (this pass): 15/16.** `combat_sweep.py --turns 6`
+✅ **Act 1 is swept end to end for the first time: 41 encounters, 26 ALL MATCH.**
+`combat_sweep.py --turns 6` now covers every weak, normal, elite and boss encounter both
+act-1 acts declare (41 of the 42; CorpseSlugsNormal has no name-map entry yet). Elites and
+bosses had never been checked at all — they were reachable the whole time, the sweep list
+simply stopped at the normal pool.
+
+Passing: the sixteen originally-covered encounters bar the ones below, plus cultists,
+cultist-and-seapunk, gremlin-merc, inklets, cubex-construct, fogmog, ruby-raiders,
+two-tailed-rats' roster and openings, fossil-stalker, byrdonis, skulking-colony,
+phantasmal-gardeners, bygone-effigy and ceremonial-beast.
+
+Still failing, in the order I would take them:
+
+| encounter | what is wrong |
+| --- | --- |
+| terror-eel | phase: its stun/terror opening consumes a turn the emulator does not |
+| phrog-parasite | phase by one from turn six |
+| slithering-strangler, living-fog, two-tailed-rats | one branch roll differs mid-fight |
+| kin, vantom, lagavulin-matriarch, soul-fysh, waterfall-giant | the five bosses whose literals were converted by the automated pass and never verified — expect mis-attributions like Phantasmal Gardener's |
+
+`bygone-effigy` and `terror-eel` also report `coverage:FAIL`, which is not an emulator
+defect: the live fight ends before their third move ever appears, because the sweep plays
+no cards. Reaching those moves needs a capture that fights back.
+
+**On sweep cost:** a full act-1 sweep is ~20 minutes because the direct combat env assumes
+every RNG stream is at CallCount 0, so each encounter needs its own fresh run. That is
+inherent, not a hang. The working loop is one to three encounters at a time (~1-2 min); run
+the full sweep as a tally, and do NOT pipe it through `tail`, which hides progress until it
+finishes.
+
+The previous figure was **15/16** on the smaller list: `combat_sweep.py --turns 6`
 over all sixteen known encounters. Fixed against the live readout in this pass: Seapunk's
 SPINNING_KICK (pre-multiplied 2x4, so its four hits could not each take the Strength Bubble
 Burp grants — announced 9 where the game said 12), Sludge Spinner's RAGE (announced as a
