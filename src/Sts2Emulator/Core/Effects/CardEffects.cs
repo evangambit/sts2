@@ -2,6 +2,14 @@ namespace Sts2Emulator.Core.Effects;
 
 public static class CardEffects
 {
+    /// <summary>
+    /// Statuses that damage whoever is holding them when the turn ends. The game marks
+    /// these with HasTurnEndInHandEffect and damages for the card's own damage value;
+    /// Beckon also fires at turn end but loses HP directly, so it is handled separately.
+    /// </summary>
+    public static bool BurnsHolderAtTurnEnd(int defId) =>
+        defId is ST.Burn or ST.Infection or ST.Toxic or ST.Wither;
+
     public static void Apply(
         CardDef def,
         bool upgraded,
@@ -26,8 +34,10 @@ public static class CardEffects
                 DrawCards(state, 1, rng);
                 break;
 
+            // Toxic is playable and exhausts, and that is the whole point of it: its 5
+            // damage is a turn-end-in-hand effect, so paying 1 to exhaust it is how you
+            // avoid the damage rather than a way to take it.
             case ST.Toxic:
-                DealDamageToPlayer(state, 5);
                 break;
 
             case ST.Beckon:
@@ -1831,14 +1841,7 @@ public static class CardEffects
         {
             if (state.DrawPile.Count == 0)
             {
-                // StableShuffle sorts by CardModel identity before FY-shuffling.
-                state.DrawPile = state
-                    .DiscardPile.OrderBy(c => c.DefId)
-                    .ThenBy(c => c.Upgraded ? 1 : 0)
-                    .ToList();
-                ShufflePile(state.DrawPile, state.ShuffleRng ?? rng);
-                state.DiscardPile.Clear();
-                MoveStratagemCardsToHandAfterShuffle(state);
+                ShuffleDiscardIntoDraw(state, rng);
             }
             if (state.DrawPile.Count == 0)
             {
@@ -1887,6 +1890,31 @@ public static class CardEffects
     {
         var name = GeneratedData.Cards.Get(defId).Name;
         return name.Contains("Strike", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The game's CardPileCmd.Shuffle: the discard pile and whatever is left of the
+    /// draw pile are merged (discard first, then draw), sorted by ModelId, and then
+    /// Fisher-Yates'd from the Shuffle stream.
+    ///
+    /// The sort is the part that is easy to get wrong. ListExtensions.StableShuffle
+    /// sorts before shuffling so that two piles holding the same cards in different
+    /// orders shuffle alike, and CardModel sorts by ModelId — an ordinal comparison of
+    /// the slugified class name — then by upgrade level. Sorting by our own numeric ids
+    /// instead lands the pile in a different order, and Fisher-Yates over a different
+    /// order draws a different sequence out of the same stream.
+    /// </summary>
+    public static void ShuffleDiscardIntoDraw(CombatState state, Random rng)
+    {
+        var merged = new List<CardInstance>(state.DiscardPile);
+        merged.AddRange(state.DrawPile);
+        state.DrawPile = merged
+            .OrderBy(c => GeneratedData.Cards.Get(c.DefId).Entry, StringComparer.Ordinal)
+            .ThenBy(c => c.Upgraded ? 1 : 0)
+            .ToList();
+        ShufflePile(state.DrawPile, state.ShuffleRng ?? rng);
+        state.DiscardPile.Clear();
+        MoveStratagemCardsToHandAfterShuffle(state);
     }
 
     public static void ShufflePile<T>(IList<T> pile, Random rng)
@@ -1986,10 +2014,15 @@ public static class CardEffects
         Random rng
     )
     {
+        // CardPilePosition.Random draws from Rng.Shuffle, not the combat stream: the
+        // insert point is Shuffle.NextInt(pile.Count + 1). Rolling it off the wrong
+        // stream lands the card in a plausible place on a different turn, which shows up
+        // as damage that arrives early or late rather than as anything obviously random.
+        var placementRng = state.ShuffleRng ?? rng;
         for (int i = 0; i < count; i++)
         {
             state.DrawPile.Insert(
-                rng.Next(state.DrawPile.Count + 1),
+                placementRng.Next(state.DrawPile.Count + 1),
                 new CardInstance(cardId, false)
             );
         }
@@ -3006,9 +3039,11 @@ public static class CardEffects
                 AddGeneratedStatusToDiscard(state, ST.Burn, rng);
                 return true;
             case "Reboot":
+                // Reboot puts the hand into the draw pile and then calls the game's
+                // shuffle, which folds the discard pile in as well.
                 state.DrawPile.AddRange(state.Hand);
                 state.Hand.Clear();
-                ShufflePile(state.DrawPile, state.ShuffleRng ?? rng);
+                ShuffleDiscardIntoDraw(state, rng);
                 DrawCards(state, upgraded ? 6 : 4, rng);
                 return true;
             case "Scrape":

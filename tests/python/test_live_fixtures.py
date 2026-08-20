@@ -13,9 +13,11 @@ Capture a new one with:
 """
 
 import contextlib
+import functools
 import importlib.util
 import io
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -410,6 +412,22 @@ class CombatCaptureChecks(_TestCaseIfChecking):
         self.assertEqual((64, 80), (emu["hp"], emu["max_hp"]))
 
 
+@functools.cache
+def _card_slug_to_id() -> dict[str, int]:
+    """Map the game's ModelId.Entry to our numeric card id, off the generated table.
+
+    Read from Cards.g.cs rather than the native library because the point is to
+    compare against what the *extractor* recorded: if a slug there is wrong, the
+    reshuffle sorts wrongly and this map would hide it by being wrong the same way
+    — so the values it maps come from the live capture, not from either.
+    """
+    text = (ROOT / "src" / "Sts2Emulator" / "Generated" / "Cards.g.cs").read_text()
+    return {
+        match.group(2): int(match.group(1))
+        for match in re.finditer(r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text)
+    }
+
+
 class FightChecks(_TestCaseIfChecking):
     """Replay a whole fight offline, turn by turn.
 
@@ -504,6 +522,28 @@ class FightChecks(_TestCaseIfChecking):
                     f"emulator {(emu_enemy.get('intent_type'), emu_enemy.get('intent_magnitude'))} "
                     f"vs live {tuple(live_intent)}",
                 )
+
+    def test_every_turn_hand_matches(self):
+        """The draw order, which is really the mid-combat reshuffle under test.
+
+        The game re-sorts the pile by ModelId before Fisher-Yates (StableShuffle), so
+        the order the shuffle starts from is the slugified card name, not any numeric
+        id of ours. Sorting by the wrong key yields the right pile *counts* and the
+        wrong cards on top — which reads as a damage bug several turns later, when a
+        status card that should still be buried burns the player in hand.
+        """
+        recorded = [row for row in self.trace if row.get("live_hand") is not None]
+        if not recorded:
+            self.skipTest("capture predates per-turn hands")
+        slug_to_id = _card_slug_to_id()
+        for row, emu in zip(recorded, self.emu_turns):
+            expected = [slug_to_id.get(slug, slug) for slug in row["live_hand"]]
+            actual = [card["id"] for card in emu["player"]["hand"]]
+            self.assertEqual(
+                expected,
+                actual,
+                f"turn {row['turn']} hand, in order: live {row['live_hand']}",
+            )
 
     def test_every_turn_player_hp_matches(self):
         """Enemy damage, indirectly: HP only tracks if every attack lands for the same."""

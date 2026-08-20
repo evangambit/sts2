@@ -67,7 +67,14 @@ internal sealed class Fight
         params int[] relicIds
     )
     {
-        var state = new CombatState { AscensionLevel = ascension };
+        var state = new CombatState
+        {
+            AscensionLevel = ascension,
+            // The stream the game rolls monster HP on. Real entry points set it, and it
+            // is what makes SetUniqueMonsterHpValue's "no two creatures on a side share
+            // an HP" rule apply — without it a test roster rolls flat and duplicates.
+            NicheHpRng = new CountingRandom(seed),
+        };
         CombatFactory.Reset(
             state,
             new Random(seed),
@@ -115,7 +122,7 @@ internal sealed class Fight
     /// </summary>
     public static Fight Encounter(int encounterId, params int[] relicIds)
     {
-        var state = new CombatState();
+        var state = new CombatState { NicheHpRng = new CountingRandom(0) };
         CombatFactory.Reset(state, new Random(0), TestDeck.StarterDeckIds, encounterId, relicIds);
         state.TargetRng = new CountingRandom(0);
         state.CardSelectionRng = new CountingRandom(0);

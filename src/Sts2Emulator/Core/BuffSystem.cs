@@ -68,7 +68,20 @@ public static class BuffSystem
     }
 
     // Called at end of turn for the owning side (tick debuffs down by 1).
-    public static void TickEndOfTurn(List<BuffState> buffs)
+    /// <summary>The duration debuffs, as a snapshot to compare a later stack against.</summary>
+    public static List<BuffState> DurationDebuffSnapshot(List<BuffState> buffs) =>
+        [.. buffs.Where(buff => IsDurationDebuff(buff.Id))];
+
+    private static bool IsDurationDebuff(BuffId id) =>
+        id is BuffId.Vulnerable or BuffId.Weak or BuffId.Frail or BuffId.Shrink;
+
+    /// <param name="atRoundStart">
+    /// What the owner held when the round began, for the player's one-tick grace: a stack
+    /// bigger now than it was then was applied during this round, and the game's
+    /// SkipNextDurationTick means this tick passes it over. Omit for enemies, which get
+    /// no grace.
+    /// </param>
+    public static void TickEndOfTurn(List<BuffState> buffs, List<BuffState>? atRoundStart = null)
     {
         for (int i = buffs.Count - 1; i >= 0; i--)
         {
@@ -84,6 +97,11 @@ public static class BuffSystem
                         break; // negative = permanent (e.g. ShrinkerBeetle Shrink)
                     }
 
+                    if (atRoundStart != null && WasAppliedThisRound(b, atRoundStart))
+                    {
+                        break;
+                    }
+
                     buffs[i] = b with { Magnitude = b.Magnitude - 1 };
                     if (buffs[i].Magnitude <= 0)
                     {
@@ -93,6 +111,12 @@ public static class BuffSystem
                     break;
             }
         }
+    }
+
+    private static bool WasAppliedThisRound(BuffState buff, List<BuffState> atRoundStart)
+    {
+        int before = atRoundStart.FirstOrDefault(other => other.Id == buff.Id).Magnitude;
+        return buff.Magnitude > before;
     }
 
     public static int IncomingDamage(

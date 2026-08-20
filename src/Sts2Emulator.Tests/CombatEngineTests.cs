@@ -801,10 +801,19 @@ public class CombatEngineTests
             state.Enemies.Where(e => e.DefId == 101),
             rat => Assert.Equal(1, BuffSystem.Get(rat.Buffs, BuffId.BackupCount))
         );
-        Assert.Contains(
-            state.Enemies,
-            e => e.DefId == 101 && BuffSystem.Get(e.Buffs, BuffId.Stunned) == 1
+        // NOT stunned. CallForBackup adds the rat with a plain CreatureCmd.Add — a
+        // monster meant to sit out its arrival sets StartStunned, and this one does not —
+        // and the enemy phase iterates a snapshot of the roster, so the newcomer misses
+        // the phase that summoned it either way. In a live A8 capture the rat summoned on
+        // turn 3 attacks for 6 on turn 4; with a stun it stood there instead.
+        Assert.All(
+            state.Enemies.Where(e => e.DefId == 101),
+            rat => Assert.Equal(0, BuffSystem.Get(rat.Buffs, BuffId.Stunned))
         );
+        // The newcomer goes to the FRONT: the rats hold Slots[2..4] and CallForBackup
+        // takes the last free slot, so a summon always lands ahead of them.
+        Assert.NotSame(state.Enemies[^1], state.Enemies[0]);
+        Assert.Equal(IntentType.Unknown, state.Enemies[0].CurrentIntent.Type);
     }
 
     [Fact]
@@ -1342,9 +1351,14 @@ public class CombatEngineTests
             state.Enemies,
             e => e.DefId == 26 && BuffSystem.Get(e.Buffs, BuffId.Illusion) == 1
         );
-        Assert.Contains(
-            state.Enemies,
-            e => e.DefId == 26 && BuffSystem.Get(e.Buffs, BuffId.Stunned) == 1
+        // NOT stunned. Wriggler is the only monster in the game that sets StartStunned,
+        // and Fogmog adds the eye with a plain CreatureCmd.Add; the enemy phase iterates
+        // a snapshot of the roster, so the eye misses the phase that summoned it without
+        // needing a stun. With one, its three Dazed reached the player's draw pile a turn
+        // late — visible as the wrong hand from turn 3 in a live A8 capture.
+        Assert.All(
+            state.Enemies.Where(e => e.DefId == 26),
+            eye => Assert.Equal(0, BuffSystem.Get(eye.Buffs, BuffId.Stunned))
         );
     }
 

@@ -238,6 +238,13 @@
   An `until grep -q "<expected line>"` loop waits forever when the sweep dies early or its
   output never takes the expected shape, and it leaves an orphaned shell behind — three of
   those accumulated in one session, the oldest spinning for ten hours.
+- **A live turn that did not advance looks exactly like an emulator running a turn ahead.**
+  `wait_for_combat_ready` only asks for a combat state with a full hand, which is already
+  true the instant `end_turn` is posted — so it could return before the game acted, and
+  every later row compared the emulator's turn N against the live turn N-1. Two encounters
+  were investigated as damage bugs on the strength of that. `drive_turns` now waits for
+  `battle.round` to increase; the tell, if it ever comes back, is two consecutive live rows
+  with an identical hand.
 - Before reporting a sweep result as final, check nothing of yours is still running:
   `ps -eo pid,etime,command | grep -E "[u]ntil|[c]ombat_sweep"`.
 
@@ -271,6 +278,39 @@ bugs, and the rules are not guessable — read them there rather than inferring 
   mid-combat also rolls as it is added (`AfterCreatureAdded`), so a summon costs a draw when
   its machine starts on a branch — check this before assuming a summoning encounter has an
   intent bug.
+
+- **Eligibility can depend on the rest of the roster.** Two-Tailed Rat's `CanSummon()`
+  returns false when any OTHER rat's `NextMove` is already `CALL_FOR_BACKUP_MOVE`, so the
+  first rat to pick backup takes the option off the table for the rest of the pass. That is
+  why `SelectIntent` is handed the roster: a monster reads the moves chosen before its own.
+- **A monster that sits out turns must not walk its ring while it does.** Lagavulin
+  Matriarch's `SLEEP_MOVE` loops on itself while `AsleepPower` lasts and the branch only
+  then sends her to `SLASH`. Advancing `MoveIndex` on the sleeping turns starts the ring
+  two moves in and every later move is wrong by two.
+- **`StartStunned` is opt-in.** Wriggler sets it; Gas Bomb does not, so a bomb goes off in
+  the same enemy phase that summoned it. Adding a stun the game never asked for delays a
+  summon by exactly one turn, which reads as a damage bug.
+
+## Card Piles and Shuffling
+
+The shuffle is a bigger source of "the damage is wrong on turn five" than any monster.
+
+- **The combat-start shuffle and the mid-combat reshuffle are different operations.**
+  `CardPile.RandomizeOrderInternal` is a plain `UnstableShuffle` over the deck's own order.
+  `CardPileCmd.Shuffle` is a `StableShuffle`: it merges the discard pile and whatever is
+  left of the draw pile (discard first), **sorts**, and only then Fisher-Yates.
+- **The sort key is the model's string id, not any number.** `CardModel.CompareTo` falls
+  through to `ModelId.CompareTo`, which is an ordinal comparison of `Category` then `Entry`
+  — the slugified class name. `CardDef.Entry` carries it, written by `extract_data.py`.
+  Sorting by our own numeric ids gives the right pile *counts* and the wrong card on top,
+  which surfaces several turns later as a status card burning the player early.
+- **`CardPilePosition.Random` rolls on `Rng.Shuffle`**, as `Shuffle.NextInt(count + 1)` —
+  not the combat stream. Soul Fysh's Beckon is placed this way.
+- **Statuses with `HasTurnEndInHandEffect` burn their holder for the card's own damage
+  value** — Burn 2, Infection 3, Wither 3, Toxic 5 — and Beckon loses HP instead, ignoring
+  block. Toxic has no OnPlay at all: paying 1 to exhaust it is how the damage is dodged.
+- The per-turn hands the sweep records are what puts all of this under test; see
+  `test_every_turn_hand_matches`.
 
 ## STS2MCP
 

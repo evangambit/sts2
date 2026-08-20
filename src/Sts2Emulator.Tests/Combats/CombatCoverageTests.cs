@@ -74,7 +74,6 @@ public class CombatCoverageTests
         "Ovicopter",
         "OwlMagistrate",
         "PhantasmalGardeners",
-        "PhrogParasite",
         "PunchOff",
         "Queen",
         "RubyRaiders",

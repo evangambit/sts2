@@ -15,7 +15,7 @@ public static class EnemyAI
         var effectiveAiRng = aiRng ?? rng;
         foreach (var enemy in enemies.Where(e => e.Hp > 0))
         {
-            enemy.CurrentIntent = SelectIntent(enemy, effectiveAiRng, ascension);
+            enemy.CurrentIntent = SelectIntent(enemy, effectiveAiRng, ascension, enemies);
             enemy.SecondaryIntent = SecondaryIntentFor(enemy);
         }
     }
@@ -84,6 +84,10 @@ public static class EnemyAI
                     // bomb fits — LivingFogNormal declares five bomb slots.
                     if (state.Enemies.Count(e => e.Hp > 0 && e.DefId == KE.GasBomb) < 5)
                     {
+                        // Not stunned: LivingFog.BloatMove adds the bomb with a plain
+                        // CreatureCmd.Add, where a monster that means to sit out the
+                        // turn it arrives sets StartStunned (Wriggler does). The bomb
+                        // goes off in the enemy phase that summoned it.
                         var bloatBomb = CreateEnemy(
                             KE.GasBomb,
                             rng,
@@ -91,7 +95,7 @@ public static class EnemyAI
                                 IntentType.Attack,
                                 Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                             ),
-                            stunned: true
+                            state: state
                         );
                         BuffSystem.Apply(bloatBomb.Buffs, BuffId.Minion, 1);
                         state.Enemies.Add(Effects.RelicEffects.Spawned(state, bloatBomb));
@@ -294,6 +298,10 @@ public static class EnemyAI
                     // bomb fits — LivingFogNormal declares five bomb slots.
                     if (state.Enemies.Count(e => e.Hp > 0 && e.DefId == KE.GasBomb) < 5)
                     {
+                        // Not stunned: LivingFog.BloatMove adds the bomb with a plain
+                        // CreatureCmd.Add, where a monster that means to sit out the
+                        // turn it arrives sets StartStunned (Wriggler does). The bomb
+                        // goes off in the enemy phase that summoned it.
                         var bloatBomb = CreateEnemy(
                             KE.GasBomb,
                             rng,
@@ -301,7 +309,7 @@ public static class EnemyAI
                                 IntentType.Attack,
                                 Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                             ),
-                            stunned: true
+                            state: state
                         );
                         BuffSystem.Apply(bloatBomb.Buffs, BuffId.Minion, 1);
                         state.Enemies.Add(Effects.RelicEffects.Spawned(state, bloatBomb));
@@ -497,6 +505,11 @@ public static class EnemyAI
                     BuffSystem.Apply(enemy.Buffs, BuffId.SteamEruption, 3);
                 }
 
+                if (enemy.DefId == KE.WaterfallGiant && (enemy.MoveIndex - 1) % 5 == 0)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 1);
+                }
+
                 if (
                     enemy.DefId == KE.TestSubject
                     && BuffSystem.Get(enemy.Buffs, BuffId.Adaptable) > 0
@@ -573,6 +586,11 @@ public static class EnemyAI
         if (enemy.DefId == KE.LagavulinMatriarch && BuffSystem.Get(enemy.Buffs, BuffId.Asleep) > 0)
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.Asleep, -1);
+            // SLEEP_MOVE loops on itself for as long as AsleepPower lasts, and only then
+            // does SLEEP_BRANCH send her to SLASH. Sleeping turns are all one move, so
+            // they must not walk the four-move ring — parking the index here leaves the
+            // increment below to start that ring at SLASH on the turn she wakes.
+            enemy.MoveIndex = 0;
         }
 
         enemy.MoveIndex++;
@@ -628,7 +646,11 @@ public static class EnemyAI
     private static Intent SelectIntent(
         EnemyState enemy,
         Random rng,
-        int ascension = Ascension.DefaultLevel
+        int ascension = Ascension.DefaultLevel,
+        // The roster, for the handful of monsters whose eligibility depends on what
+        // their neighbours have already announced this pass. Rolls happen in roster
+        // order, so a monster reads the moves picked before its own.
+        List<EnemyState>? roster = null
     )
     {
         switch (enemy.DefId)
@@ -1256,13 +1278,28 @@ public static class EnemyAI
                     ? new Intent(IntentType.Unknown, 0)
                     : (enemy.MoveIndex % 4) switch
                     {
+                        // SlashDamage
                         1 => new Intent(
                             IntentType.Attack,
                             Ascension.Value(ascension, Ascension.DeadlyEnemies, 21, 19)
                         ),
-                        2 => new Intent(IntentType.Attack, 20),
-                        3 => new Intent(IntentType.Attack, 14),
-                        _ => new Intent(IntentType.Debuff, 0),
+                        // DISEMBOWEL_MOVE: DisembowelDamage twice, which has to stay two
+                        // hits rather than one of 20 — the matriarch gains Strength off
+                        // her own SOUL_SIPHON, and Strength lands on every hit.
+                        2 => new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 10, 9),
+                            Hits: 2
+                        ),
+                        // Slash2Damage. Its 14 is the DeadlyEnemies branch and A8 is
+                        // below that; the 14 that IS live at A8 is Slash2Block, applied
+                        // separately with the DefendIntent.
+                        3 => new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
+                        ),
+                        // SOUL_SIPHON_MOVE: a DebuffIntent and a BuffIntent.
+                        _ => new Intent(IntentType.Debuff, 2),
                     };
 
             case KE.Queen:
@@ -1386,29 +1423,44 @@ public static class EnemyAI
                 };
 
             case KE.WaterfallGiant:
-                return enemy.MoveIndex switch
+                // PRESSURIZE once, then the five-move ring STOMP, RAM, SIPHON,
+                // PRESSURE_GUN, PRESSURE_UP — PRESSURE_UP's FollowUpState is STOMP, so
+                // the ring never returns to PRESSURIZE.
+                if (enemy.MoveIndex == 0)
                 {
-                    0 => new Intent(
+                    return new Intent(
                         IntentType.Buff,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 20, 15)
-                    ),
-                    1 => new Intent(
+                    );
+                }
+
+                return ((enemy.MoveIndex - 1) % 5) switch
+                {
+                    // StompDamage; STOMP_MOVE is an attack plus a DebuffIntent and a
+                    // BuffIntent, and the live readout announces the attack — as it does
+                    // for RAM, PRESSURE_GUN and PRESSURE_UP. Only PRESSURIZE and SIPHON
+                    // are pure non-attacks.
+                    0 => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 15)
                     ),
-                    // RamDamage; RAM_MOVE is an attack plus a BuffIntent, and the live
-                    // readout announces the attack — as it does for STOMP, PRESSURE_GUN
-                    // and PRESSURE_UP. Only PRESSURIZE and SIPHON are pure non-attacks.
-                    2 => new Intent(
+                    // RamDamage
+                    1 => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
                     ),
                     // SIPHON_MOVE: HealIntent plus BuffIntent, no attack.
-                    3 => new Intent(IntentType.Buff, 15),
-                    // BasePressureGunDamage
-                    4 => new Intent(
+                    2 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.ToughEnemies, 15, 10)
+                    ),
+                    // PRESSURE_GUN_MOVE announces a lambda, not a constant: every firing
+                    // adds PressureGunIncrease to CurrentPressureGunDamage, so the ring
+                    // is 5 damage worse each time round.
+                    3 => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 23, 20)
+                            + (PressureGunIncrease * ((enemy.MoveIndex - 4) / 5))
                     ),
                     // PressureUpDamage; PRESSURE_UP_MOVE is an attack plus a BuffIntent.
                     _ => new Intent(
@@ -1788,9 +1840,26 @@ public static class EnemyAI
                 }
                 else
                 {
+                    // CanSummon() also refuses when any OTHER living rat has already
+                    // queued CALL_FOR_BACKUP, which is what stops a pack from all
+                    // summoning at once: the rats roll in roster order, and the first to
+                    // pick backup takes the option away from the rest of the pass.
+                    bool anotherRatIsCalling =
+                        roster?.Any(other =>
+                            other != enemy
+                            && other.Hp > 0
+                            && other.DefId == KE.TwoTailedRat
+                            && other.LastMove == backup
+                        ) ?? false;
+                    // CanSummon() also needs a free slot, and TwoTailedRatsNormal only
+                    // declares five: once the pack fills them GetNextSlot comes back
+                    // empty and backup weighs nothing, so the last rat attacks instead.
+                    bool slotIsFree = (roster?.Count(other => other.Hp > 0) ?? 0) < RatSlots;
                     bool canSummon =
                         BuffSystem.Get(enemy.Buffs, BuffId.SummonCooldown) <= 0
-                        && BuffSystem.Get(enemy.Buffs, BuffId.BackupCount) < 3;
+                        && BuffSystem.Get(enemy.Buffs, BuffId.BackupCount) < 3
+                        && slotIsFree
+                        && !anotherRatIsCalling;
                     float ordinary = canSummon ? 1f / 12f : 1f;
                     bool screechOnCooldown = enemy
                         .MoveHistory.AsEnumerable()
@@ -2220,11 +2289,17 @@ public static class EnemyAI
                 if (!state.Enemies.Any(e => e.Hp > 0 && e.DefId == KE.EyeWithTeeth))
                 {
                     state.Enemies.RemoveAll(e => e.Hp <= 0 && e.DefId == KE.EyeWithTeeth);
+                    // Fogmog's ILLUSION_MOVE adds the eye with a plain CreatureCmd.Add.
+                    // In the whole monster set only Wriggler sets StartStunned, so nothing
+                    // else arrives stunned — and the enemy phase iterates a snapshot of
+                    // the roster anyway, so a newcomer already sits out the phase that
+                    // made it. Stunning on top of that delayed the eye's three Dazed by a
+                    // turn, which a live capture shows in the player's hand.
                     var eye = CreateEnemy(
                         KE.EyeWithTeeth,
                         rng,
                         new Intent(IntentType.Debuff, 3),
-                        stunned: true
+                        state: state
                     );
                     BuffSystem.Apply(eye.Buffs, BuffId.Illusion, 1);
                     state.Enemies.Insert(
@@ -2424,7 +2499,23 @@ public static class EnemyAI
                 break;
 
             case KE.WaterfallGiant:
-                BuffSystem.Apply(enemy.Buffs, BuffId.SteamEruption, enemy.CurrentIntent.Magnitude);
+                // Two different moves announce as a buff. PRESSURIZE converts the whole
+                // announced amount into Steam Eruption; SIPHON heals for it and racks up
+                // the same flat 3 the giant's other moves do.
+                if (enemy.MoveIndex == 0)
+                {
+                    BuffSystem.Apply(
+                        enemy.Buffs,
+                        BuffId.SteamEruption,
+                        enemy.CurrentIntent.Magnitude
+                    );
+                }
+                else
+                {
+                    enemy.Hp = Math.Min(enemy.MaxHp, enemy.Hp + enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.SteamEruption, 3);
+                }
+
                 break;
 
             case KE.TwoTailedRat:
@@ -2496,6 +2587,23 @@ public static class EnemyAI
             case KE.SludgeSpinner:
                 DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 1);
+                break;
+
+            case KE.LagavulinMatriarch:
+                // SOUL_SIPHON takes the Strength and Dexterity it gives itself: the
+                // matriarch's attacks climb by 2 every fourth turn, which is the whole
+                // shape of the fight after the first cycle.
+                BuffSystem.Apply(
+                    state.PlayerBuffs,
+                    BuffId.Strength,
+                    -enemy.CurrentIntent.Magnitude
+                );
+                BuffSystem.Apply(
+                    state.PlayerBuffs,
+                    BuffId.Dexterity,
+                    -enemy.CurrentIntent.Magnitude
+                );
+                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
                 break;
 
             case KE.ShrinkerBeetle:
@@ -2779,6 +2887,12 @@ public static class EnemyAI
         state.PlayerHp = Math.Min(state.PlayerHp, state.PlayerMaxHp);
     }
 
+    /// <summary>TwoTailedRatsNormal.Slots: five, three of them taken at the start.</summary>
+    private const int RatSlots = 5;
+
+    /// <summary>WaterfallGiant.PressureGunIncrease: what each firing adds.</summary>
+    private const int PressureGunIncrease = 5;
+
     private static void AddStatus(CombatState state, int cardId, int count)
     {
         for (int i = 0; i < count; i++)
@@ -2801,11 +2915,13 @@ public static class EnemyAI
         int insertIndex = state.Enemies.IndexOf(enemy);
         for (int i = 0; i < eggsToAdd; i++)
         {
+            // Not stunned — Ovicopter adds eggs with a plain CreatureCmd.Add, and the
+            // egg's own first move is its hatch, so the delay is already modelled once.
             var egg = CreateEnemy(
                 KE.ToughEgg,
                 rng,
                 new Intent(IntentType.Unknown, 0),
-                stunned: true
+                state: state
             );
             BuffSystem.Apply(egg.Buffs, BuffId.Minion, 1);
             state.Enemies.Insert(insertIndex + i, Effects.RelicEffects.Spawned(state, egg));
@@ -2823,14 +2939,20 @@ public static class EnemyAI
         if (includeDefensive && state.Enemies.Count < 6)
         {
             int defensive = rng.Next(2) == 0 ? KE.Guardbot : KE.Noisebot;
-            var bot = CreateEnemy(defensive, rng, BotIntent(defensive), stunned: true);
+            var bot = CreateEnemy(
+                defensive,
+                rng,
+                BotIntent(defensive),
+                stunned: true,
+                state: state
+            );
             BuffSystem.Apply(bot.Buffs, BuffId.Minion, 1);
             state.Enemies.Insert(insertIndex++, Effects.RelicEffects.Spawned(state, bot));
         }
         if (state.Enemies.Count < 6)
         {
             int aggro = rng.Next(2) == 0 ? KE.Zapbot : KE.Stabbot;
-            var bot = CreateEnemy(aggro, rng, BotIntent(aggro), stunned: true);
+            var bot = CreateEnemy(aggro, rng, BotIntent(aggro), stunned: true, state: state);
             BuffSystem.Apply(bot.Buffs, BuffId.Minion, 1);
             state.Enemies.Insert(insertIndex, Effects.RelicEffects.Spawned(state, bot));
         }
@@ -2848,11 +2970,12 @@ public static class EnemyAI
 
     private static void SummonParafright(EnemyState enemy, CombatState state)
     {
+        // Not stunned: TheObscura adds it with a plain CreatureCmd.Add.
         var parafright = CreateEnemy(
             KE.Parafright,
             new Random(0),
             new Intent(IntentType.Attack, 17),
-            stunned: true
+            state: state
         );
         BuffSystem.Apply(parafright.Buffs, BuffId.Illusion, 1);
         state.Enemies.Insert(
@@ -2887,7 +3010,7 @@ public static class EnemyAI
         // TwoTailedRatsNormal declares five slots — "first".."fifth" — and starts its
         // three rats in slots 2, 3 and 4, so a summon has exactly two places to go.
         // CanSummon() fails when GetNextSlot finds none. The cap here was six.
-        if (state.Enemies.Count(e => e.DefId == KE.TwoTailedRat) >= 5)
+        if (state.Enemies.Count(e => e.DefId == KE.TwoTailedRat) >= RatSlots)
         {
             return;
         }
@@ -2895,14 +3018,22 @@ public static class EnemyAI
         // A summoned rat has StarterMoveIndex == -1, so its machine starts ON the branch
         // rather than on a move — which means its very first selection rolls, where a rat
         // that began the fight does not.
+        // Not stunned: CallForBackup adds the rat with a plain CreatureCmd.Add, and the
+        // enemy phase already iterates a snapshot of the roster — so the newcomer sits out
+        // the phase that summoned it and then fights normally. A stun on top of that costs
+        // it a second turn, which is a summoned rat's whole first attack.
         var summoned = CreateEnemy(
             KE.TwoTailedRat,
             rng,
             new Intent(IntentType.Unknown, 0),
-            stunned: true
+            state: state
         );
         summoned.StartsOnBranch = true;
-        state.Enemies.Add(Effects.RelicEffects.Spawned(state, summoned));
+        // TwoTailedRatsNormal starts its three rats in Slots[2..4] and CallForBackup takes
+        // the LAST free slot, so the first summon fills "second" and the second fills
+        // "first" — both ahead of the rats already fighting. The roster reads in slot
+        // order, so a summoned rat goes to the FRONT, shifting every other rat right.
+        state.Enemies.Insert(0, Effects.RelicEffects.Spawned(state, summoned));
 
         int nextBackupCount =
             state
@@ -2917,17 +3048,44 @@ public static class EnemyAI
         }
     }
 
+    /// <summary>
+    /// A summon's HP, rolled the way CombatState.CreateCreature rolls it:
+    /// SetUniqueMonsterHpValue on the Niche stream, over the monster's band minus the
+    /// MaxHp of the creatures ALREADY ON THAT SIDE. Note the exclusion is the roster as
+    /// it stands and not every value the combat has ever used, so a dead enemy's HP is
+    /// available again. When the band is exhausted the game rolls it flat instead.
+    /// </summary>
+    private static int RollSummonedHp(int min, int max, CombatState? state, Random rng)
+    {
+        var niche = state?.NicheHpRng;
+        if (niche == null)
+        {
+            return rng.Next(min, max + 1);
+        }
+
+        var available = Enumerable.Range(min, max - min + 1).ToHashSet();
+        available.ExceptWith(
+            state!.Enemies.Where(other => other.Hp > 0).Select(other => other.MaxHp)
+        );
+        return available.Count == 0
+            ? niche.Next(min, max + 1)
+            : available.ElementAt(niche.Next(0, available.Count));
+    }
+
     private static EnemyState CreateEnemy(
         int defId,
         Random rng,
         Intent intent,
         bool stunned = false,
-        int ascension = Ascension.DefaultLevel
+        int ascension = Ascension.DefaultLevel,
+        // The combat, for the HP roll. Without it the roll falls back to the combat
+        // stream, which is not where the game takes it from.
+        CombatState? state = null
     )
     {
         var def = GeneratedData.Enemies.Get(defId);
         var band = def.HpBand(ascension);
-        int hp = rng.Next(band.Min, band.Max + 1);
+        int hp = RollSummonedHp(band.Min, band.Max, state, rng);
         var enemy = new EnemyState
         {
             DefId = defId,

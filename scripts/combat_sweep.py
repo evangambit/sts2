@@ -31,10 +31,13 @@ Exit code 0 when every section of every capture matches.
 from __future__ import annotations
 
 import argparse
+import functools
 import importlib.util
 import json
 import random
+import re
 import sys
+import time
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -244,6 +247,58 @@ def intents_agree(live: tuple[Any, Any], emu: tuple[Any, Any]) -> bool:
     return live[1] is None or live[1] == emu[1]
 
 
+@functools.cache
+def card_slug_to_id() -> dict[str, int]:
+    """The game's ModelId.Entry for each card, mapped to our numeric id."""
+    text = (Path(__file__).parent.parent / "src" / "Sts2Emulator" / "Generated" / "Cards.g.cs").read_text()
+    return {
+        m.group(2): int(m.group(1))
+        for m in re.finditer(r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text)
+    }
+
+
+def hands_agree(live_player: dict[str, Any], emu_player: dict[str, Any]) -> bool:
+    """Same cards, same order — which is the mid-combat reshuffle under test.
+
+    Pile counts can agree turn after turn while the order coming off the top is
+    wrong: the game sorts the pile by ModelId before Fisher-Yates, so the shuffle
+    starts from the slugified card name and not from any id of ours.
+    """
+    slugs = card_slug_to_id()
+    live = [slugs.get(c.get("id"), c.get("id")) for c in (live_player.get("hand") or [])]
+    emu = [c.get("id") for c in (emu_player.get("hand") or [])]
+    return live == emu
+
+
+COMBAT_STATE_TYPES = {"monster", "elite", "boss"}
+
+
+def live_round(state: dict[str, Any]) -> int:
+    return int((state.get("battle") or {}).get("round") or 0)
+
+
+def wait_for_next_round(base_url: str, previous_round: int, timeout: float = 30.0):
+    """Wait until the live game has actually BEGUN the next round.
+
+    `wait_for_combat_ready` only asks for a combat state holding a full hand, and that
+    is already true the instant end_turn is posted — before the game has acted on it.
+    When it returns early the whole rest of the capture is off by one: every row
+    compares the emulator's turn N against the live turn N-1, which reads as an
+    emulator running a turn ahead and landing its damage early. Two encounters were
+    investigated as damage bugs on the strength of exactly that.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = start_real_game_run.get_state(base_url)
+        if state.get("state_type") not in COMBAT_STATE_TYPES:
+            return state
+        battle = state.get("battle") or {}
+        if battle.get("is_play_phase") and live_round(state) > previous_round:
+            return state
+        time.sleep(0.25)
+    raise RuntimeError(f"live game never started round {previous_round + 1}")
+
+
 def drive_turns(
     base_url: str,
     env: Any,
@@ -269,9 +324,11 @@ def drive_turns(
             break
 
         action = end_turn_action(live_state)
+        round_before = live_round(live_state)
         trace_real_game.post_action(base_url, {"action": "end_turn"})
         try:
             start_real_game_run.wait_for_combat_ready(base_url, timeout=30.0)
+            wait_for_next_round(base_url, round_before)
         except RuntimeError:
             notes.append(f"live combat did not return to play phase after turn {turn}")
             break
@@ -313,9 +370,20 @@ def drive_turns(
                 ),
                 "player_match": (live_player.get("hp"), live_player.get("max_hp"))
                 == (emu_player.get("hp"), emu_player.get("max_hp")),
+                "hand_match": hands_agree(live_player, emu_player),
                 "live_player_hp": live_player.get("hp"),
                 "live_player_max_hp": live_player.get("max_hp"),
                 "emu_player_hp": emu_player.get("hp"),
+                # The hand IN ORDER, by model slug. This is what puts the mid-combat
+                # RESHUFFLE under test: the pile counts can agree turn after turn while
+                # the order coming off the top is wrong, and a status card drawn a turn
+                # early is a turn of damage that never shows up anywhere else.
+                "live_hand": [
+                    card.get("id") for card in (live_player.get("hand") or [])
+                ],
+                "emu_hand": [
+                    card.get("id") for card in (emu_player.get("hand") or [])
+                ],
             },
         )
         if terminated or truncated:
@@ -414,7 +482,8 @@ def capture_one(
     }
     if turns:
         sections["turns"] = all(
-            row["intents_match"] and row["player_match"] for row in turn_rows
+            row["intents_match"] and row["player_match"] and row["hand_match"]
+            for row in turn_rows
         )
 
     coverage = coverage_for(turn_rows, live_summary) if turns else {}
@@ -440,6 +509,11 @@ def capture_one(
             notes.append(
                 f"turn {row['turn']} player hp: emu {row['emu_player_hp']} "
                 f"vs live {row['live_player_hp']}",
+            )
+        if not row["hand_match"]:
+            notes.append(
+                f"turn {row['turn']} hand: emu {row['emu_hand']} "
+                f"vs live {row['live_hand']}",
             )
 
     return {
@@ -568,6 +642,10 @@ def main() -> None:
                         "player_hp": row["live_player_hp"],
                         "player_max_hp": row["live_player_max_hp"],
                         "enemies": row["live_enemies"],
+                        # The hand IN ORDER, by model slug — what pins the mid-combat
+                        # reshuffle offline. Pile counts can agree every turn while the
+                        # order coming off the top is wrong.
+                        "live_hand": row["live_hand"],
                     }
                     for row in result["turns"]
                 ],

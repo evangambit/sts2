@@ -754,20 +754,63 @@ Closed in this pass, each verified against the running game: inklets, cubex-cons
 fogmog, gremlin-merc, ruby-raiders, fossil-stalker, byrdonis, skulking-colony,
 phantasmal-gardeners, ceremonial-beast, vantom, terror-eel's behaviour, and the Kin.
 
-**Standing after the follow-up pass (targeted sweeps, not one full run): 30 ALL MATCH,
-5 more correct on behaviour, 6 wrong.** Newly closed: the Kin, Vantom, jaxfruit-and-flyconid,
+✅ **Act 1 is done: a full 41-encounter sweep reports NO behavioural failure.** 32 are
+ALL MATCH and the other 9 fail only `coverage` — a property of a capture that plays no
+cards, not an emulator defect (shrinker-beetle, shrinker-and-fuzzy, slithering-strangler,
+bygone-effigy, two-tailed-rats, terror-eel, lagavulin-matriarch, waterfall-giant, and
+fogmog's own coverage). Reaching those needs a capture that fights back; three seeds of
+two-tailed-rats all end at turn 5 with the player dead and 3 of 4 moves seen.
+
+Five defects closed this pass, four of them general rather than per-monster:
+
+- **The mid-combat reshuffle sorted by the wrong key.** `CardPileCmd.Shuffle` is a
+  `StableShuffle`: merge discard + draw, **sort by ModelId**, then Fisher-Yates. ModelId
+  compares the slugified class name as an ordinal string, and the emulator sorted by its
+  own numeric ids — right pile counts, wrong card on top, from the first reshuffle of
+  every fight. `CardDef.Entry` now carries the slug, written by `extract_data.py`.
+- **Statuses with `HasTurnEndInHandEffect` were half-modelled.** Infection (3) and Wither
+  (3) burned nobody; Toxic damaged the player for *playing* it, when it has no OnPlay at
+  all and paying 1 to exhaust it is how the damage is dodged.
+- **`CardPilePosition.Random` rolls on `Rng.Shuffle`**, not the combat stream — Soul
+  Fysh's Beckon was landing in the right pile on the wrong turn.
+- **Weak, Frail and Vulnerable tick AFTER the enemy's turn**, not the player's: every one
+  of them ticks in `AfterSideTurnEnd(side == Enemy)`. Ticking first cost the last turn of
+  every such debuff — an enemy attacking into the player's final point of Vulnerable was
+  hitting for 8 where the game hits for 12. A debuff applied to the PLAYER also skips one
+  tick (`PowerCmd` sets `SkipNextDurationTick` for player-side debuffs); enemies get no
+  such grace.
+- **Only the Wriggler sets `StartStunned`.** The emulator stunned every summon, which cost
+  each one an extra turn: the Gas Bomb went off late, a summoned rat stood through its
+  first attack, and Fogmog's eye dealt its three Dazed a turn behind. The enemy phase
+  already iterates a snapshot of the roster, so a newcomer misses the phase that made it
+  without any stun at all. Summons also roll HP the way the game does now — Niche stream,
+  excluding the MaxHp of the creatures already on that side — and a rat called for backup
+  arrives at the FRONT of the roster, because the rats hold Slots[2..4] and CallForBackup
+  takes the last free slot.
+
+The sweep now compares **the hand, in order, every turn**, which is what caught the last
+three of those; `test_every_turn_hand_matches` pins it offline against four committed
+captures. All four mutations tried against it were caught.
+
+**The previous standing, before this pass: 30 ALL MATCH, 5 more correct on behaviour,
+6 wrong.** Newly closed: the Kin, Vantom, jaxfruit-and-flyconid,
 and Slithering Strangler (now `turns:ok`, coverage-only). The five behaviour-correct ones
 are shrinker-beetle, shrinker-and-fuzzy, bygone-effigy, terror-eel and
 slithering-strangler — all `turns:ok`, all failing only `coverage`, which is a property of
 a capture that plays no cards.
 
-Still wrong:
+All six of those are now closed. What they turned out to be, since none was what the
+symptom suggested:
 
-| encounter | what is wrong |
+| encounter | what it actually was |
 | --- | --- |
-| living-fog | ONE difference left: its Gas Bomb survives a turn longer than the game's, which shows a bomb appear announcing nothing and then go |
-| waterfall-giant, lagavulin-matriarch, soul-fysh | boss growth that is not modelled — the Giant stacks SteamEruptionPower(3) per move and its PRESSURE_GUN damage is a lambda climbing by PressureGunIncrease; soul-fysh announces every intent correctly and only its damage diverges, by a constant 6 from turn three |
-| phrog-parasite, slime-and-flyconid, two-tailed-rats | intents all match; only damage dealt diverges, and it grows each turn — look at what the summons do, not at the parent's moves |
+| living-fog | the bomb was stunned; the game never stuns a summon but the Wriggler |
+| waterfall-giant | its ring never returned to STOMP, SIPHON gained Steam Eruption instead of healing, STOMP dropped its Weak, and PRESSURE_GUN's climb was unmodelled |
+| lagavulin-matriarch | she walked the four-move ring while asleep, DISEMBOWEL was one hit of 20 instead of two of 10 (so her own SOUL_SIPHON Strength landed once, not twice), SLASH2 used its A9 damage, and SOUL_SIPHON did nothing at all |
+| soul-fysh | its Beckon was placed off the combat stream instead of Rng.Shuffle |
+| phrog-parasite | Infection dealt no damage at end of turn, and the reshuffle put it in hand on the wrong turn |
+| slime-and-flyconid | the player's Vulnerable expired one enemy phase early |
+| two-tailed-rats | rats all summoned at once, the newcomer went to the back of the roster with a duplicate HP and a stun, and a full pack still tried to summon |
 
 The earlier list, before that pass:
 

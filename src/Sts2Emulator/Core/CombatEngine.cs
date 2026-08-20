@@ -310,9 +310,6 @@ public static class CombatEngine
             );
         }
 
-        // Tick player debuffs at end of player turn (Vulnerable etc. tick down).
-        BuffSystem.TickEndOfTurn(state.PlayerBuffs);
-
         int temporaryStrength = BuffSystem.Get(state.PlayerBuffs, BuffId.TemporaryStrength);
         if (temporaryStrength != 0)
         {
@@ -357,14 +354,12 @@ public static class CombatEngine
                 continue;
             }
 
-            // Status card end-of-turn effects
-            if (def.Id == Effects.ST.Burn)
+            // Status card end-of-turn effects. Burn, Infection, Toxic and Wither all burn
+            // their holder for the card's own damage value, so they read it from the card
+            // rather than repeating four literals that the extractor already carries.
+            if (Effects.CardEffects.BurnsHolderAtTurnEnd(def.Id))
             {
-                Effects.CardEffects.DealDamageToPlayer(state, 2);
-            }
-            else if (def.Id == Effects.ST.Toxic)
-            {
-                Effects.CardEffects.DealDamageToPlayer(state, 5);
+                Effects.CardEffects.DealDamageToPlayer(state, def.BaseDamage);
             }
             else if (def.Id == Effects.ST.Beckon)
             {
@@ -390,12 +385,6 @@ public static class CombatEngine
         else if (retainHand > 1)
         {
             BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, -1);
-        }
-
-        // Tick enemy debuffs before enemies act (Vulnerable/Weak on enemies tick down).
-        foreach (var enemy in state.Enemies.ToArray())
-        {
-            BuffSystem.TickEndOfTurn(enemy.Buffs);
         }
 
         Effects.CardEffects.KillDoomedEnemiesForTurnEnd(state);
@@ -434,6 +423,8 @@ public static class CombatEngine
         // zero HP it kept announcing an intent every turn, so a Living Fog fight grew an
         // extra attacker per Bloat where the live game shows one bomb appear and go.
         state.Enemies.RemoveAll(e => e.Hp <= 0 && e.DefId == KE.GasBomb);
+
+        TickDurationDebuffs(state);
 
         HandleEnemyDeaths(state, enemyHpsBefore, rng);
 
@@ -968,6 +959,32 @@ public static class CombatEngine
         }
 
         return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
+    }
+
+    /// <summary>
+    /// Weak, Frail and Vulnerable count down once a round, AFTER the enemy side's turn —
+    /// every one of them ticks in `AfterSideTurnEnd(side == CombatSide.Enemy)`. That
+    /// timing is the whole point: an enemy attacking into the player's last point of
+    /// Vulnerable still hits for 1.5x, and an enemy the player made Weak still swings
+    /// weakened before the stack runs out. Ticking before the enemies act instead loses
+    /// the final turn of every one of these debuffs.
+    ///
+    /// A debuff applied to the PLAYER also skips one tick — PowerCmd.Apply sets
+    /// SkipNextDurationTick for any debuff landing on a player-side creature, which is
+    /// what lets a Vulnerable applied during the enemy's turn still be at full value on
+    /// the player's next turn. Enemies get no such grace. The skip is tracked by
+    /// remembering what the player held when the round began: a stack that grew during
+    /// the round was applied during it, so this tick is the one it skips.
+    /// </summary>
+    private static void TickDurationDebuffs(CombatState state)
+    {
+        foreach (var enemy in state.Enemies.ToArray())
+        {
+            BuffSystem.TickEndOfTurn(enemy.Buffs);
+        }
+
+        BuffSystem.TickEndOfTurn(state.PlayerBuffs, state.PlayerDebuffsAtRoundStart);
+        state.PlayerDebuffsAtRoundStart = BuffSystem.DurationDebuffSnapshot(state.PlayerBuffs);
     }
 
     private static void HandleEnemyDeaths(

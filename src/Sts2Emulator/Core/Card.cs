@@ -60,7 +60,13 @@ public readonly record struct CardDef(
     // The game's CardModel.MultiplayerConstraint. CardFactory.FilterForPlayerCount drops
     // these from every pool in a solo run, so a single-player agent must never be offered
     // one — 21 cards, and the emulator's pools were built without the filter.
-    bool MultiplayerOnly = false
+    bool MultiplayerOnly = false,
+    // The game's ModelId.Entry — the slugified class name. The mid-combat reshuffle
+    // sorts the pile by ModelId before Fisher-Yates (ListExtensions.StableShuffle), and
+    // ModelId orders by Category then Entry as ordinal strings. Our own numeric ids sort
+    // differently, and a different pre-shuffle order is a different shuffle from the
+    // same stream — so the pile order has to come from this, not from Id.
+    string Entry = ""
 );
 
 public readonly record struct CardInstance(

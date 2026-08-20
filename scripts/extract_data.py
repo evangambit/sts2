@@ -218,6 +218,28 @@ SPECIAL_CARD_IDS = {
 }
 
 
+def slugify(name: str) -> str:
+    """The game's StringHelper.Slugify, which produces a model's ModelId.Entry.
+
+    Worth having in the data rather than derived at runtime: the mid-combat reshuffle
+    sorts the pile by ModelId before shuffling (ListExtensions.StableShuffle), and
+    ModelId compares Category then Entry as ordinal *strings*. Sorting by our own
+    numeric ids instead puts the pile in a different order, and Fisher-Yates over a
+    different order is a different shuffle even from the same stream.
+
+    .NET's \G continuation has no direct Python equivalent, so the camel-case split is
+    done by hand: an underscore goes before every capital that follows an alphanumeric,
+    and before every capital in a run that started at such a boundary.
+    """
+    out: list[str] = []
+    for i, ch in enumerate(name.strip()):
+        if ch.isupper() and i > 0 and (name[i - 1].isalnum()):
+            out.append("_")
+        out.append(ch)
+    slug = re.sub(r"\s+", "_", "".join(out).upper())
+    return re.sub(r"[^A-Z0-9_]", "", slug)
+
+
 def extract_cards() -> str:
     entries: list[str] = []
 
@@ -277,6 +299,7 @@ def extract_cards() -> str:
 
         entries.append(
             f'        new CardDef(Id: {def_id}, Name: "{name}", '
+            f'Entry: "{slugify(name)}", '
             f"Cost: {cost}, BaseDamage: {base_dmg}, BaseBlock: {base_block}, "
             f"UpgradeDamage: {upg_dmg}, UpgradeBlock: {upg_block}, "
             f"UpgradeCost: {upg_cost}, "

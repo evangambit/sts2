@@ -48,6 +48,13 @@ public sealed class CombatState
     // Buffs/debuffs on the player
     public List<BuffState> PlayerBuffs = [];
 
+    /// <summary>
+    /// The player's duration debuffs as the round began, for the one-tick grace the game
+    /// gives anything applied to a player-side creature (PowerCmd sets
+    /// SkipNextDurationTick). See CombatEngine.TickDurationDebuffs.
+    /// </summary>
+    public List<BuffState> PlayerDebuffsAtRoundStart = [];
+
     // Enemies
     public List<EnemyState> Enemies = [];
     public int EncounterId;
