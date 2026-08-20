@@ -77,8 +77,12 @@ public sealed class EnemyState
     /// </summary>
     public int LastMoveRepeats;
 
-    /// <summary>A UseOnlyOnce branch, spent for the combat once taken (Mawler's ROAR).</summary>
-    public bool RoarUsed;
+    /// <summary>
+    /// A UseOnlyOnce branch, spent for the rest of the combat once taken — Mawler's ROAR
+    /// and a Two-Tailed Rat's CALL_FOR_BACKUP. Per creature, not per encounter: three rats
+    /// have three of these between them.
+    /// </summary>
+    public bool OnceOnlyMoveUsed;
 
     /// <summary>
     /// Moves taken this combat, most recent last. A RandomBranchState branch added with a
@@ -86,6 +90,13 @@ public sealed class EnemyState
     /// on cooldowns of 3 and 2 — so a single LastMove cannot answer the question.
     /// </summary>
     public List<int> MoveHistory = [];
+
+    /// <summary>
+    /// True when the machine's initialState is a RandomBranchState rather than a move, so
+    /// the very first selection rolls. A summoned Two-Tailed Rat starts this way
+    /// (StarterMoveIndex == -1) and one that began the fight does not.
+    /// </summary>
+    public bool StartsOnBranch;
     public int StolenGold;
     public int HeistGold;
 }

@@ -500,7 +500,7 @@ public static class CombatFactory
                 CreateInklet(rng, new Intent(IntentType.Attack, 4)),
             ],
 
-            ActOneEncounter.TwoTailedRats => CreateTwoTailedRatsEncounter(rng),
+            ActOneEncounter.TwoTailedRats => CreateTwoTailedRatsEncounter(rng, encounterRngSeed),
 
             ActOneEncounter.GremlinMerc => [CreateGremlinMerc(rng)],
 
@@ -1267,9 +1267,14 @@ public static class CombatFactory
         };
     }
 
-    private static List<EnemyState> CreateTwoTailedRatsEncounter(Random rng)
+    private static List<EnemyState> CreateTwoTailedRatsEncounter(Random rng, int? encounterRngSeed)
     {
-        int firstMove = rng.Next(3);
+        // TwoTailedRatsNormal.GenerateMonsters: Rng.NextInt(3) on the encounter's own
+        // stream picks the first rat's StarterMoveIndex, and the other two follow it. On
+        // the combat rng instead, all three openings were wrong together.
+        int firstMove = encounterRngSeed.HasValue
+            ? EncounterRng.Stream(encounterRngSeed.Value).NextInt(0, 3)
+            : rng.Next(3);
         return
         [
             CreateTwoTailedRat(rng, firstMove),

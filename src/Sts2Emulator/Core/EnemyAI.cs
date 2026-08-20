@@ -558,7 +558,7 @@ public static class EnemyAI
                     foreach (int candidate in (int[])[ripAndTear, roar, claw])
                     {
                         bool repeats = candidate == enemy.LastMove;
-                        bool roarSpent = candidate == roar && enemy.RoarUsed;
+                        bool roarSpent = candidate == roar && enemy.OnceOnlyMoveUsed;
                         if (!repeats && !roarSpent)
                         {
                             eligible.Add(candidate);
@@ -568,7 +568,7 @@ public static class EnemyAI
                     move = eligible[rng.Next(eligible.Count)];
                 }
 
-                enemy.RoarUsed |= move == roar;
+                enemy.OnceOnlyMoveUsed |= move == roar;
                 enemy.LastMove = move;
                 return move switch
                 {
@@ -1486,25 +1486,69 @@ public static class EnemyAI
             }
 
             case KE.TwoTailedRat:
-                if (CanRatSummon(enemy, rng))
+            {
+                // Four branches, all reached from every move, with weights that MOVE: when
+                // the rat can summon, CALL_FOR_BACKUP weighs 0.75 and the other three a
+                // twelfth each; when it cannot, backup weighs nothing and the others weigh
+                // one. SCREECH also carries a cooldown of 3 on top of CannotRepeat. The
+                // emulator summoned whenever it was able and otherwise cycled on MoveIndex.
+                const int scratch = 0;
+                const int bite = 1;
+                const int screech = 2;
+                const int backup = 3;
+
+                int move;
+                if (enemy.LastMove < 0 && !enemy.StartsOnBranch)
                 {
-                    return new Intent(IntentType.Buff, 0);
+                    // A rat that started the fight opens on its StarterMoveIndex move.
+                    move = enemy.MoveIndex % 3;
+                }
+                else
+                {
+                    bool canSummon =
+                        BuffSystem.Get(enemy.Buffs, BuffId.SummonCooldown) <= 0
+                        && BuffSystem.Get(enemy.Buffs, BuffId.BackupCount) < 3;
+                    float ordinary = canSummon ? 1f / 12f : 1f;
+                    bool screechOnCooldown = enemy
+                        .MoveHistory.AsEnumerable()
+                        .Reverse()
+                        .Take(3)
+                        .Contains(screech);
+
+                    move = PickWeightedBranch(
+                        [
+                            (scratch, enemy.LastMove == scratch ? 0f : ordinary),
+                            (bite, enemy.LastMove == bite ? 0f : ordinary),
+                            (
+                                screech,
+                                enemy.LastMove == screech || screechOnCooldown ? 0f : ordinary
+                            ),
+                            // UseOnlyOnce: a rat calls for backup once in a combat.
+                            (backup, canSummon && !enemy.OnceOnlyMoveUsed ? 0.75f : 0f),
+                        ],
+                        rng
+                    );
                 }
 
-                return (enemy.MoveIndex % 3) switch
+                enemy.OnceOnlyMoveUsed |= move == backup;
+                enemy.LastMove = move;
+                enemy.MoveHistory.Add(move);
+                return move switch
                 {
                     // ScratchDamage
-                    0 => new Intent(
+                    scratch => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                     ),
                     // DiseaseBiteDamage
-                    1 => new Intent(
+                    bite => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
                     ),
-                    _ => new Intent(IntentType.Debuff, 1),
+                    screech => new Intent(IntentType.Debuff, 1),
+                    _ => new Intent(IntentType.Buff, 0),
                 };
+            }
 
             case KE.CorpseSlug:
                 return (enemy.MoveIndex % 3) switch
@@ -1732,19 +1776,33 @@ public static class EnemyAI
     /// Next(n) — same stream, different number — so a fight only tracks the live game if
     /// the roll is taken the way the game takes it.
     /// </summary>
-    private static int PickBranch(List<int> eligible, Random rng)
+    private static int PickBranch(List<int> eligible, Random rng) =>
+        PickWeightedBranch([.. eligible.Select(move => (move, 1f))], rng);
+
+    /// <summary>
+    /// The weighted form. Weights are not always 1: a Two-Tailed Rat that can summon
+    /// weighs the summon at 0.75 and its three other moves at a twelfth each, so the roll
+    /// is over a total that is not the branch count.
+    /// </summary>
+    private static int PickWeightedBranch(List<(int Move, float Weight)> branches, Random rng)
     {
-        float roll = (float)(rng.NextDouble() * eligible.Count);
-        foreach (int candidate in eligible)
+        float total = branches.Sum(branch => branch.Weight);
+        if (total <= 0f)
         {
-            roll -= 1f;
+            return branches[^1].Move;
+        }
+
+        float roll = (float)(rng.NextDouble() * total);
+        foreach (var branch in branches)
+        {
+            roll -= branch.Weight;
             if (roll <= 0f)
             {
-                return candidate;
+                return branch.Move;
             }
         }
 
-        return eligible[^1];
+        return branches[^1].Move;
     }
 
     private static Intent? SecondaryIntentFor(EnemyState enemy)
@@ -2548,17 +2606,25 @@ public static class EnemyAI
 
     private static void SummonRatBackup(EnemyState enemy, CombatState state, Random rng)
     {
-        if (state.Enemies.Count(e => e.DefId == KE.TwoTailedRat) >= 6)
+        // TwoTailedRatsNormal declares five slots — "first".."fifth" — and starts its
+        // three rats in slots 2, 3 and 4, so a summon has exactly two places to go.
+        // CanSummon() fails when GetNextSlot finds none. The cap here was six.
+        if (state.Enemies.Count(e => e.DefId == KE.TwoTailedRat) >= 5)
         {
             return;
         }
 
-        state.Enemies.Add(
-            Effects.RelicEffects.Spawned(
-                state,
-                CreateEnemy(KE.TwoTailedRat, rng, new Intent(IntentType.Unknown, 0), stunned: true)
-            )
+        // A summoned rat has StarterMoveIndex == -1, so its machine starts ON the branch
+        // rather than on a move — which means its very first selection rolls, where a rat
+        // that began the fight does not.
+        var summoned = CreateEnemy(
+            KE.TwoTailedRat,
+            rng,
+            new Intent(IntentType.Unknown, 0),
+            stunned: true
         );
+        summoned.StartsOnBranch = true;
+        state.Enemies.Add(Effects.RelicEffects.Spawned(state, summoned));
 
         int nextBackupCount =
             state

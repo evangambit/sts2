@@ -36,6 +36,9 @@ public static class EncounterRng
             // stand with, and Slithering Strangler picks a whole secondary enemy type.
             // Rolling either on the combat rng gets the roster right by luck only.
             RunConstants.FlyconidNormalEncounterId => "FLYCONID_NORMAL",
+            // The rats roll which move the FIRST of them opens on; the other two take the
+            // next two in order, so one draw decides all three openings.
+            RunConstants.TwoTailedRatsEncounterId => "TWO_TAILED_RATS_NORMAL",
             RunConstants.SlitheringStranglerEncounterId => "SLITHERING_STRANGLER_NORMAL",
             // Both slug variants share one emulator enum id but not one entry id.
             RunConstants.CorpseSlugsEncounterId => weakVariant
