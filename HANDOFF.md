@@ -744,8 +744,23 @@ coverage. Mutation-checked the way that matters here: corrupting only the **high
 of `Ascension.Value(DeadlyEnemies, 9, 8)` fails the three `_a10_` tests and leaves every
 `_a8_` test green.
 
-✅ **Live-verified on the running game (this pass).** `combat_sweep.py --turns 6` over all
-sixteen known encounters: **11/16 ALL MATCH**, up from a baseline where Nibbit, Seapunk and
+✅ **Live-verified on the running game (this pass): 15/16.** `combat_sweep.py --turns 6`
+over all sixteen known encounters. Fixed against the live readout in this pass: Seapunk's
+SPINNING_KICK (pre-multiplied 2x4, so its four hits could not each take the Strength Bubble
+Burp grants — announced 9 where the game said 12), Sludge Spinner's RAGE (announced as a
+Buff; the game calls it an Attack, and moving it to the attack branch meant carrying its
+Strength with it) and its OIL_SPRAY (a Debuff whose number is still damage and still grows
+with Strength — hence `Intent.CarriesDamage`), Mawler's move selection (a RandomBranchState
+with CannotRepeat and a once-per-combat ROAR, modelled as `MoveIndex % 3`), and Fossil
+Stalker's (an `AddBranch(state, 2)` maxRepeats roll, modelled as a hand-written opening
+sequence). **Still failing: fossil-stalker**, whose damage now matches but whose move
+*choice* diverges from turn three — the emulator's `AiRng` is a `CountingRandom` seeded
+from `GameRng(seed, "monster_ai").RawSeed` rather than that stream itself, so a weighted
+branch roll cannot track the game draw for draw. **shrinker-beetle** reports
+`coverage:FAIL` rather than a mismatch: six turns of ending the turn never reach its third
+move.
+
+The earlier number was **11/16 ALL MATCH**, up from a baseline where Nibbit, Seapunk and
 SludgeSpinner all failed on the Strength-display gap. Nibbit now passes, which is that fix
 landing. Punch Construct, Vine Shambler and Haunted Ship — three of the encounters whose
 damage this pass corrected — match the live game through six turns, so those A8 values are
@@ -755,6 +770,13 @@ source had: **Grasping Vines announces an Attack, not a Debuff** (emu `(Debuff, 
 second, and the emulator had taken the second as primary. Still failing: mawler, seapunk,
 sludge-spinner, fossil-stalker on `turns`, and shrinker-beetle on `coverage` (its capture
 never reached one of its moves).
+
+**Operational note (bitten three times):** the FIRST encounter of a sweep run reports
+spurious turn mismatches — after launching with a run in progress, and after a dylib
+rebuild. Nibbit "regressed" in one full sweep as entry [1/16] and passed alone on a re-run
+with nothing changed. Re-run before believing any single failure. The cause is the same
+each time: the direct combat env assumes every RNG stream is at CallCount 0, which only
+holds once the sweep has embarked its own run. The old note:
 
 **Operational note:** the first sweep after launching with a run already in progress
 reports spurious turn mismatches — the direct combat env assumes every RNG stream is at

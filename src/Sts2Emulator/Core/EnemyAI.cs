@@ -60,6 +60,17 @@ public static class EnemyAI
                     BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, -2);
                 }
 
+                if (enemy.DefId == KE.SludgeSpinner && enemy.LastMove == 2)
+                {
+                    // RAGE: attack plus the BuffIntent beside it. The live readout calls
+                    // this an Attack, so it executes here rather than in the buff branch —
+                    // and the Strength has to come with it, or every later Slam and Oil
+                    // Spray announces low.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
+                    break;
+                }
+
                 if (enemy.DefId == KE.VineShambler && enemy.MoveIndex % 3 == 1)
                 {
                     // GRASPING_VINES: the attack the intent announces, plus the card
@@ -483,20 +494,53 @@ public static class EnemyAI
                     );
 
             case KE.Mawler:
-                return (enemy.MoveIndex % 3) switch
+            {
+                // A RandomBranchState, not a cycle: RIP_AND_TEAR and CLAW are CannotRepeat
+                // and ROAR is UseOnlyOnce, all weight 1, entered at CLAW. Modelling it as
+                // MoveIndex % 3 put the emulator a whole move out of phase from turn two.
+                const int ripAndTear = 0;
+                const int roar = 1;
+                const int claw = 2;
+                int move;
+                if (enemy.MoveIndex == 0)
+                {
+                    move = claw;
+                }
+                else
+                {
+                    var eligible = new List<int>();
+                    foreach (int candidate in (int[])[ripAndTear, roar, claw])
+                    {
+                        bool repeats = candidate == enemy.LastMove;
+                        bool roarSpent = candidate == roar && enemy.RoarUsed;
+                        if (!repeats && !roarSpent)
+                        {
+                            eligible.Add(candidate);
+                        }
+                    }
+
+                    move = eligible[rng.Next(eligible.Count)];
+                }
+
+                enemy.RoarUsed |= move == roar;
+                enemy.LastMove = move;
+                return move switch
                 {
                     // ClawDamage x 2
-                    0 => new Intent(
+                    claw => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4) * 2
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4),
+                        Hits: 2
                     ),
-                    1 => new Intent(IntentType.Debuff, 3),
+                    // RoarMove applies VulnerablePower(3).
+                    roar => new Intent(IntentType.Debuff, 3),
                     // RipAndTearDamage
                     _ => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
                     ),
                 };
+            }
 
             case KE.GremlinMerc:
                 return (enemy.MoveIndex % 3) switch
@@ -1166,8 +1210,10 @@ public static class EnemyAI
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
                     ),
-                    // SpinningKickDamage * SpinningKickRepeat (2 x 4), no ascension term
-                    1 => new Intent(IntentType.Attack, 2 * 4),
+                    // SpinningKickDamage x SpinningKickRepeat (2 x 4, no ascension term).
+                    // Pre-multiplied to 8, this announced 9 against the live game's 12: the
+                    // Strength from Bubble Burp lands on each of the four hits.
+                    1 => new Intent(IntentType.Attack, 2, Hits: 4),
                     _ => new Intent(IntentType.Buff, 0),
                 };
 
@@ -1350,19 +1396,22 @@ public static class EnemyAI
                 return move switch
                 {
                     // OilSprayDamage; OIL_SPRAY is attack + debuff, which the live
-                    // readout reports as a debuff carrying the attack's magnitude.
+                    // readout reports as a debuff carrying the attack's magnitude — and
+                    // that magnitude grows with Strength, 8 then 11 in a live trace.
                     0 => new Intent(
                         IntentType.Debuff,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8),
+                        CarriesDamage: true
                     ),
                     // SlamDamage
                     1 => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 12, 11)
                     ),
-                    // RageDamage; RAGE is attack + buff.
+                    // RageDamage; RAGE is attack + buff, and the live readout calls it
+                    // an Attack — unlike OIL_SPRAY two cases up, which it calls a Debuff.
                     _ => new Intent(
-                        IntentType.Buff,
+                        IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
                     ),
                 };
@@ -1386,39 +1435,58 @@ public static class EnemyAI
                 };
 
             case KE.FossilStalker:
-                return enemy.MoveIndex switch
+            {
+                // AddBranch(state, 2) is the maxRepeats overload: uniform over the three
+                // moves, weight 1, each barred only once it has come up twice running.
+                // Entered at LATCH. The emulator had a hand-written opening sequence and
+                // then a free roll, which drifted from the live game by turn two.
+                const int latch = 0;
+                const int tackle = 1;
+                const int lash = 2;
+                int move;
+                if (enemy.MoveIndex == 0)
+                {
+                    move = latch;
+                }
+                else
+                {
+                    var eligible = new List<int>();
+                    foreach (int candidate in (int[])[latch, tackle, lash])
+                    {
+                        bool spent = candidate == enemy.LastMove && enemy.LastMoveRepeats >= 2;
+                        if (!spent)
+                        {
+                            eligible.Add(candidate);
+                        }
+                    }
+
+                    move = PickBranch(eligible, rng);
+                }
+
+                enemy.LastMoveRepeats = move == enemy.LastMove ? enemy.LastMoveRepeats + 1 : 1;
+                enemy.LastMove = move;
+                return move switch
                 {
                     // LatchDamage
-                    1 => new Intent(
+                    latch => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
                     ),
-                    // LashDamage * LashRepeat (repeat is 2, no ascension term)
-                    2 => new Intent(
+                    // TackleDamage; TACKLE is attack + debuff (Frail), and a live trace
+                    // announces it as an Attack — 15 with the six Strength Suck had
+                    // handed over by then.
+                    tackle => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3) * 2
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 9)
                     ),
-                    3 => new Intent(
+                    // LashDamage x LashRepeat (repeat is 2, no ascension term)
+                    _ => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3),
+                        Hits: 2
                     ),
-                    _ => rng.Next(3) switch
-                    {
-                        // TackleDamage; TACKLE is attack + debuff.
-                        0 => new Intent(
-                            IntentType.Debuff,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 9)
-                        ),
-                        1 => new Intent(
-                            IntentType.Attack,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
-                        ),
-                        _ => new Intent(
-                            IntentType.Attack,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3) * 2
-                        ),
-                    },
                 };
+            }
 
             case KE.PunchConstruct:
                 return (enemy.MoveIndex % 3) switch
@@ -1509,6 +1577,28 @@ public static class EnemyAI
         }
     }
 
+    /// <summary>
+    /// RandomBranchState.GetNextState: roll NextFloat(total weight), then walk the branches
+    /// in the order they were added, subtracting each weight until the roll runs out. With
+    /// every weight at 1 the distribution is uniform, but the DRAW is not the same as
+    /// Next(n) — same stream, different number — so a fight only tracks the live game if
+    /// the roll is taken the way the game takes it.
+    /// </summary>
+    private static int PickBranch(List<int> eligible, Random rng)
+    {
+        float roll = (float)(rng.NextDouble() * eligible.Count);
+        foreach (int candidate in eligible)
+        {
+            roll -= 1f;
+            if (roll <= 0f)
+            {
+                return candidate;
+            }
+        }
+
+        return eligible[^1];
+    }
+
     private static Intent? SecondaryIntentFor(EnemyState enemy)
     {
         return enemy.DefId switch
@@ -1591,11 +1681,6 @@ public static class EnemyAI
                 DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
                 StealGremlinMercGold(enemy, state);
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
-                break;
-
-            case KE.SludgeSpinner:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
                 break;
 
             case KE.Seapunk:

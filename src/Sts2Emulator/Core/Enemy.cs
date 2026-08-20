@@ -36,7 +36,16 @@ public readonly record struct EnemyDef(
 /// Pre-multiplying into a total loses the distinction twice over: the display cannot add
 /// Strength per hit, and the execution cannot let block absorb per hit.
 /// </summary>
-public readonly record struct Intent(IntentType Type, int Magnitude, int Hits = 1)
+public readonly record struct Intent(
+    IntentType Type,
+    int Magnitude,
+    int Hits = 1,
+    // Some moves attack AND do something else, and the live readout does not always call
+    // them attacks: Sludge Spinner's OIL_SPRAY reports as a Debuff whose number is still
+    // damage, while Vine Shambler's GRASPING_VINES reports as an Attack. Either way the
+    // number is damage and grows with Strength, which the Type alone cannot say.
+    bool CarriesDamage = false
+)
 {
     /// <summary>
     /// What the game shows, which AttackIntent.GetTotalDamage builds from the modified
@@ -44,7 +53,7 @@ public readonly record struct Intent(IntentType Type, int Magnitude, int Hits = 
     /// not two.
     /// </summary>
     public int AnnouncedDamage(List<BuffState> attackerBuffs, List<BuffState> defenderBuffs) =>
-        Type == IntentType.Attack
+        Type == IntentType.Attack || CarriesDamage
             ? BuffSystem.IncomingDamage(Magnitude, attackerBuffs, defenderBuffs) * Hits
             : Magnitude;
 }
@@ -60,6 +69,16 @@ public sealed class EnemyState
     public List<BuffState> Buffs = [];
     public int MoveIndex;
     public int LastMove = -1; // ID of the last move chosen (to avoid repetition)
+
+    /// <summary>
+    /// How many times running the last move has been chosen. A RandomBranchState branch
+    /// added with maxRepeats stops being eligible once it has come up that many times in
+    /// a row (Fossil Stalker's three moves each cap at two).
+    /// </summary>
+    public int LastMoveRepeats;
+
+    /// <summary>A UseOnlyOnce branch, spent for the combat once taken (Mawler's ROAR).</summary>
+    public bool RoarUsed;
     public int StolenGold;
     public int HeistGold;
 }
