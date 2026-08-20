@@ -744,7 +744,26 @@ coverage. Mutation-checked the way that matters here: corrupting only the **high
 of `Ascension.Value(DeadlyEnemies, 9, 8)` fails the three `_a10_` tests and leaves every
 `_a8_` test green.
 
-✅ **Act 1 is swept end to end for the first time: 41 encounters, 26 ALL MATCH.**
+✅ **Act 1 swept end to end: 41 encounters, 28 ALL MATCH, and 4 more correct on behaviour.**
+The four — shrinker-beetle, shrinker-and-fuzzy, bygone-effigy, terror-eel — report
+`turns:ok` and fail only `coverage`, which is not an emulator defect: the sweep plays no
+cards, so the live fight ends before a declared move ever appears. Reaching those needs a
+capture that fights back. **That leaves 9 genuinely wrong**, listed below.
+
+Closed in this pass, each verified against the running game: inklets, cubex-construct,
+fogmog, gremlin-merc, ruby-raiders, fossil-stalker, byrdonis, skulking-colony,
+phantasmal-gardeners, ceremonial-beast, vantom, terror-eel's behaviour, and the Kin.
+
+Still wrong, in the order I would take them:
+
+| encounter | what is wrong |
+| --- | --- |
+| waterfall-giant | six of seven turns match; its moves stack SteamEruptionPower(3) and PRESSURE_GUN's damage is a lambda climbing by PressureGunIncrease each use — neither is modelled, so late announcements read low |
+| lagavulin-matriarch, soul-fysh | boss growth of the same kind; soul-fysh announces every intent correctly and only its damage dealt diverges, by a constant 6 from turn three |
+| phrog-parasite | a phase off from turn six, despite a machine that strictly alternates — something costs it a turn mid-fight |
+| slithering-strangler, living-fog, two-tailed-rats, slime-and-flyconid, jaxfruit-and-flyconid | one branch roll differs mid-fight; rosters, openings and rules all match |
+
+The earlier figure was **26 ALL MATCH** before the Kin and Vantom closed:
 `combat_sweep.py --turns 6` now covers every weak, normal, elite and boss encounter both
 act-1 acts declare (41 of the 42; CorpseSlugsNormal has no name-map entry yet). Elites and
 bosses had never been checked at all — they were reachable the whole time, the sweep list

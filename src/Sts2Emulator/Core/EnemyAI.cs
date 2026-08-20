@@ -1265,8 +1265,10 @@ public static class EnemyAI
             case KE.KinFollower:
                 return (enemy.MoveIndex % 3) switch
                 {
+                    // QuickSlashDamage, which does not scale with ascension
                     0 => new Intent(IntentType.Attack, 5),
-                    1 => new Intent(IntentType.Attack, 4),
+                    // BoomerangDamage x 2, pre-multiplied here into a single swing
+                    1 => new Intent(IntentType.Attack, 2, Hits: 2),
                     _ => new Intent(
                         IntentType.Buff,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
@@ -1276,9 +1278,18 @@ public static class EnemyAI
             case KE.KinPriest:
                 return (enemy.MoveIndex % 4) switch
                 {
-                    0 => new Intent(IntentType.Attack, 9),
-                    1 => new Intent(IntentType.Attack, 9),
-                    2 => new Intent(IntentType.Attack, 9),
+                    // OrbOfFrailtyDamage, then OrbOfWeaknessDamage — both attacks that
+                    // carry a DebuffIntent, and both 8 at A8 rather than the 9 pinned here.
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
+                    // BeamDamage x 3, which does not scale
+                    2 => new Intent(IntentType.Attack, 3, Hits: 3),
                     _ => new Intent(
                         IntentType.Buff,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
