@@ -81,9 +81,36 @@ WEAK_BY_ACT = {
     "overgrowth": ["nibbit", "slimes", "shrinker-beetle", "fuzzy-wurm-crawler"],
     "underdocks": ["corpse-slugs", "seapunk", "sludge-spinner", "toadpoles"],
 }
+# Every normal-pool encounter either act-1 act declares, per
+# decompiled/MegaCrit.Sts2.Core.Models.Acts/{Overgrowth,Underdocks}.cs. The list was eight
+# for a long time; the other thirteen were reachable the whole while — the debug jump names
+# the encounter model directly — and every one of them was unobserved.
 NORMAL_BY_ACT = {
-    "overgrowth": ["nibbits", "large-slimes", "mawler", "vine-shambler"],
-    "underdocks": ["sewer-clam", "punch-construct", "fossil-stalker", "haunted-ship"],
+    "overgrowth": [
+        "nibbits",
+        "large-slimes",
+        "mawler",
+        "vine-shambler",
+        "inklets",
+        "cubex-construct",
+        "slime-and-flyconid",
+        "jaxfruit-and-flyconid",
+        "shrinker-and-fuzzy",
+        "ruby-raiders",
+        "fogmog",
+        "slithering-strangler",
+    ],
+    "underdocks": [
+        "sewer-clam",
+        "punch-construct",
+        "fossil-stalker",
+        "haunted-ship",
+        "cultists",
+        "two-tailed-rats",
+        "gremlin-merc",
+        "cultist-and-seapunk",
+        "living-fog",
+    ],
 }
 ENCOUNTERS_BY_ACT = {
     act: [*WEAK_BY_ACT[act], *NORMAL_BY_ACT[act]] for act in WEAK_BY_ACT

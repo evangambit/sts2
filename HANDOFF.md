@@ -760,6 +760,41 @@ branch roll cannot track the game draw for draw. **shrinker-beetle** reports
 `coverage:FAIL` rather than a mismatch: six turns of ending the turn never reach its third
 move.
 
+**The sweep now covers 29 of the 42 act-1 encounters, up from 16.** The other thirteen were
+reachable the whole time — `debug_start_encounter` names the encounter model directly — and
+every one was unobserved. Sweeping them found that **9 of 13 disagree with the live game**,
+so the act-1 picture is: 16/16 of the originally-covered set (bar fossil-stalker and
+shrinker-beetle's coverage warning), and a fresh backlog underneath. Passing on first
+contact: **cultists** (verifying this pass's Dark Strike and Ritual fixes),
+**cultist-and-seapunk**, **shrinker-and-fuzzy**. Now fixed: **gremlin-merc** — see below.
+Still failing, with live evidence recorded:
+
+| encounter | what the live game says |
+| --- | --- |
+| inklets | the middle Inklet opens on WHIRLWIND; the emulator assigns openings differently |
+| cubex-construct | REPEATER_BLAST announces as an Attack and grows 9, 11, 13, 15 — it buffs itself |
+| slime-and-flyconid | enemy 0 HP 35 live vs 28 emu: the encounter picks a random medium slime and the emulator picks a different one |
+| jaxfruit-and-flyconid | Flyconid opens on FRAIL_SPORES (Attack 8), not VULNERABLE_SPORES; Jaxfruit's ENERGY_ORB grows 5, 10, 13 |
+| ruby-raiders | two of three raiders have the wrong HP, and all three the wrong opening intent |
+| fogmog | its summon move announces as an Attack, and Headbutt grows 9, 10, 11 rather than jumping 15, 16 |
+| slithering-strangler | **roster is wrong: 3 enemies emu vs 2 live** |
+| two-tailed-rats | opening intents are assigned to the wrong rats, and the summons diverge |
+| fossil-stalker | damage matches; the move CHOICE diverges from turn three |
+
+Two themes account for most of it: a move that attacks AND does something else is announced
+with the wrong primary type (the Grasping Vines class, now seen five more times), and a
+monster that buffs itself has an announcement that should grow and does not.
+
+**A correction worth reading before trusting this pass's other conversions.** Gremlin Merc
+was made WORSE by the blind A9→A8 sweep: its GimmeDamage, DoubleSmashDamage and HeheDamage
+all key off **ToughEnemies**, which is live at A8, so the high branch was already right and
+converting them to DeadlyEnemies made the Merc hit for 14 where the game hits for 16. The
+live sweep caught it. A per-enemy audit — each `Ascension.Value` level against that same
+monster's own declaration, not against any monster declaring the same number pair — found
+exactly these two and no others, so the remaining ten conversions stand. Run that audit
+after any future sweep of this kind; matching a `(high, low)` pair against every monster
+masks the error, because `(8, 7)` is declared at both levels somewhere.
+
 The earlier number was **11/16 ALL MATCH**, up from a baseline where Nibbit, Seapunk and
 SludgeSpinner all failed on the Strength-display gap. Nibbit now passes, which is that fix
 landing. Punch Construct, Vine Shambler and Haunted Ship — three of the encounters whose

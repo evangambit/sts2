@@ -60,6 +60,29 @@ public static class EnemyAI
                     BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, -2);
                 }
 
+                if (enemy.DefId == KE.GremlinMerc)
+                {
+                    // Every Merc move steals through ThieveryPower; DOUBLE_SMASH adds
+                    // WeakPower(2) and HEHE adds StrengthPower(2) to itself. The hits
+                    // themselves come from the intent's Hits.
+                    for (int i = 0; i < enemy.CurrentIntent.Hits; i++)
+                    {
+                        DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    }
+
+                    StealGremlinMercGold(enemy, state);
+                    if (enemy.MoveIndex % 3 == 1)
+                    {
+                        BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 2);
+                    }
+                    else if (enemy.MoveIndex % 3 == 2)
+                    {
+                        BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
+                    }
+
+                    break;
+                }
+
                 if (enemy.DefId == KE.SludgeSpinner && enemy.LastMove == 2)
                 {
                     // RAGE: attack plus the BuffIntent beside it. The live readout calls
@@ -543,22 +566,27 @@ public static class EnemyAI
             }
 
             case KE.GremlinMerc:
+                // GIMME_MOVE, DOUBLE_SMASH_MOVE and HEHE_MOVE all lead with an attack
+                // intent, and the live readout announces all three as Attacks. Every value
+                // keys off ToughEnemies, which is LIVE at A8 — converting them to
+                // DeadlyEnemies made this Merc hit for 14 where the game hits for 16.
                 return (enemy.MoveIndex % 3) switch
                 {
-                    // GimmeDamage x 2
+                    // GimmeDamage x GimmeRepeat
                     0 => new Intent(
                         IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7),
+                        Ascension.Value(ascension, Ascension.ToughEnemies, 8, 7),
                         Hits: 2
                     ),
-                    // DoubleSmashDamage x 2
+                    // DoubleSmashDamage x DoubleSmashRepeat, plus WeakPower(2)
                     1 => new Intent(
-                        IntentType.Debuff,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6) * 2
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.ToughEnemies, 7, 6),
+                        Hits: 2
                     ),
-                    // HeheDamage, which keys off ToughEnemies rather than Deadly
+                    // HeheDamage, plus StrengthPower(2) to itself
                     _ => new Intent(
-                        IntentType.Buff,
+                        IntentType.Attack,
                         Ascension.Value(ascension, Ascension.ToughEnemies, 9, 8)
                     ),
                 };
@@ -1677,12 +1705,6 @@ public static class EnemyAI
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 7);
                 break;
 
-            case KE.GremlinMerc:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                StealGremlinMercGold(enemy, state);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
-                break;
-
             case KE.Seapunk:
                 // BubbleBlock is a ToughEnemies value (live at A8); BubbleStr is a
                 // DeadlyEnemies one (not live at A8).
@@ -2021,14 +2043,6 @@ public static class EnemyAI
             case KE.TwoTailedRat:
             case KE.CorpseSlug:
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, enemy.CurrentIntent.Magnitude);
-                break;
-
-            case KE.GremlinMerc:
-                int hitDamage = enemy.CurrentIntent.Magnitude / 2;
-                DealAttackDamage(enemy, state, hitDamage);
-                DealAttackDamage(enemy, state, hitDamage);
-                StealGremlinMercGold(enemy, state);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 2);
                 break;
 
             case KE.SludgeSpinner:
