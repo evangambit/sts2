@@ -110,6 +110,8 @@ public static class RunConstants
 
     public const int SlimesWeakEncounterId = 3;
     public const int SlimesNormalEncounterId = 16;
+    public const int FlyconidNormalEncounterId = 17;
+    public const int SlitheringStranglerEncounterId = 27;
     public const int CorpseSlugsEncounterId = 9;
     public const int GremlinMercEncounterId = 7;
     public const int SeapunkEncounterId = 12;

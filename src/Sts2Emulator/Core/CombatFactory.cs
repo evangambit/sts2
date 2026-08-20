@@ -592,11 +592,7 @@ public static class CombatFactory
 
             ActOneEncounter.SlimesNormal => CreateSlimesNormalEncounter(rng, encounterRngSeed),
 
-            ActOneEncounter.FlyconidNormal =>
-            [
-                CreateSlime(rng.Next(2) == 0 ? KE.LeafSlimeM : KE.TwigSlimeM, rng),
-                CreateEnemy(KE.Flyconid, rng, FlyconidInitialIntent(rng), moveIndex: rng.Next(2)),
-            ],
+            ActOneEncounter.FlyconidNormal => CreateFlyconidNormalEncounter(rng, encounterRngSeed),
 
             ActOneEncounter.SnappingJaxfruitNormal =>
             [
@@ -653,7 +649,10 @@ public static class CombatFactory
                 CreateEnemy(KE.HauntedShip, rng, new Intent(IntentType.Debuff, 5)),
             ],
 
-            ActOneEncounter.SlitheringStrangler => CreateSlitheringStranglerEncounter(rng),
+            ActOneEncounter.SlitheringStrangler => CreateSlitheringStranglerEncounter(
+                rng,
+                encounterRngSeed
+            ),
 
             ActOneEncounter.RubyRaiders => CreateRubyRaiders(rng),
 
@@ -1279,10 +1278,34 @@ public static class CombatFactory
         ];
     }
 
-    private static List<EnemyState> CreateSlitheringStranglerEncounter(Random rng)
+    /// <summary>
+    /// FlyconidNormal.GenerateMonsters: one NextItem over the two medium slimes on the
+    /// encounter's own stream, then the Flyconid.
+    /// </summary>
+    private static List<EnemyState> CreateFlyconidNormalEncounter(Random rng, int? encounterRngSeed)
     {
+        var stream = encounterRngSeed.HasValue ? EncounterRng.Stream(encounterRngSeed.Value) : null;
+        int medium = (stream?.NextInt(0, 2) ?? rng.Next(2)) == 0 ? KE.LeafSlimeM : KE.TwigSlimeM;
+        return
+        [
+            CreateSlime(medium, rng),
+            CreateEnemy(KE.Flyconid, rng, FlyconidInitialIntent(rng), moveIndex: rng.Next(2)),
+        ];
+    }
+
+    /// <summary>
+    /// SlitheringStranglerNormal.GenerateMonsters: a NextItem over the three
+    /// SecondaryEnemyType values, then a slime NextItem for two of the three branches —
+    /// all on the encounter's own stream, so the roster size itself depends on it.
+    /// </summary>
+    private static List<EnemyState> CreateSlitheringStranglerEncounter(
+        Random rng,
+        int? encounterRngSeed
+    )
+    {
+        var stream = encounterRngSeed.HasValue ? EncounterRng.Stream(encounterRngSeed.Value) : null;
         var enemies = new List<EnemyState>();
-        switch (rng.Next(3))
+        switch (stream?.NextInt(0, 3) ?? rng.Next(3))
         {
             case 0:
                 enemies.Add(
@@ -1290,11 +1313,26 @@ public static class CombatFactory
                 );
                 break;
             case 1:
-                enemies.Add(CreateSlime(rng.Next(2) == 0 ? KE.LeafSlimeM : KE.TwigSlimeM, rng));
+                enemies.Add(
+                    CreateSlime(
+                        (stream?.NextInt(0, 2) ?? rng.Next(2)) == 0 ? KE.LeafSlimeM : KE.TwigSlimeM,
+                        rng
+                    )
+                );
                 break;
             default:
-                enemies.Add(CreateSlime(rng.Next(2) == 0 ? KE.LeafSlimeS : KE.TwigSlimeS, rng));
-                enemies.Add(CreateSlime(rng.Next(2) == 0 ? KE.LeafSlimeS : KE.TwigSlimeS, rng));
+                for (int i = 0; i < 2; i++)
+                {
+                    enemies.Add(
+                        CreateSlime(
+                            (stream?.NextInt(0, 2) ?? rng.Next(2)) == 0
+                                ? KE.LeafSlimeS
+                                : KE.TwigSlimeS,
+                            rng
+                        )
+                    );
+                }
+
                 break;
         }
         enemies.Add(CreateEnemy(KE.SlitheringStrangler, rng, new Intent(IntentType.Debuff, 3)));

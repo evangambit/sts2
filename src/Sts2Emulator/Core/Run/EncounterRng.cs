@@ -32,6 +32,11 @@ public static class EncounterRng
         {
             RunConstants.SlimesWeakEncounterId => "SLIMES_WEAK",
             RunConstants.SlimesNormalEncounterId => "SLIMES_NORMAL",
+            // Both of these roll their composition too: Flyconid picks a medium slime to
+            // stand with, and Slithering Strangler picks a whole secondary enemy type.
+            // Rolling either on the combat rng gets the roster right by luck only.
+            RunConstants.FlyconidNormalEncounterId => "FLYCONID_NORMAL",
+            RunConstants.SlitheringStranglerEncounterId => "SLITHERING_STRANGLER_NORMAL",
             // Both slug variants share one emulator enum id but not one entry id.
             RunConstants.CorpseSlugsEncounterId => weakVariant
                 ? "CORPSE_SLUGS_WEAK"

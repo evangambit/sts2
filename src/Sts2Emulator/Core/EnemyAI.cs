@@ -60,6 +60,23 @@ public static class EnemyAI
                     BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, -2);
                 }
 
+                if (enemy.DefId == KE.CubexConstruct && (enemy.MoveIndex - 1) % 3 is 0 or 1)
+                {
+                    // REPEATER_BLAST: the attack the intent announces, plus the
+                    // StrengthPower(2) its BuffIntent stands for.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
+                    break;
+                }
+
+                if (enemy.DefId == KE.Fogmog && enemy.LastMove is 1 or 2)
+                {
+                    // SWIPE: attack plus StrengthPower(1) to itself.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 1);
+                    break;
+                }
+
                 if (enemy.DefId == KE.GremlinMerc)
                 {
                     // Every Merc move steals through ThieveryPower; DOUBLE_SMASH adds
@@ -188,6 +205,23 @@ public static class EnemyAI
                         DealAttackDamage(enemy, state, 11);
                     }
 
+                    break;
+                }
+
+                if (enemy.DefId == KE.CubexConstruct && (enemy.MoveIndex - 1) % 3 is 0 or 1)
+                {
+                    // REPEATER_BLAST: the attack the intent announces, plus the
+                    // StrengthPower(2) its BuffIntent stands for.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
+                    break;
+                }
+
+                if (enemy.DefId == KE.Fogmog && enemy.LastMove is 1 or 2)
+                {
+                    // SWIPE: attack plus StrengthPower(1) to itself.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 1);
                     break;
                 }
 
@@ -1084,16 +1118,21 @@ public static class EnemyAI
                 };
 
             case KE.CubexConstruct:
-                return (enemy.MoveIndex % 4) switch
+                // CHARGE_UP happens once: EXPEL's FollowUpState is the first
+                // REPEATER_BLAST, not the charge. Cycling all four re-charged every
+                // fourth turn, where the live game blasts.
+                if (enemy.MoveIndex == 0)
                 {
-                    0 => new Intent(IntentType.Buff, 0),
-                    // BlastDamage; REPEATER_BLAST is attack + buff, twice over
-                    1 => new Intent(
-                        IntentType.Buff,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
-                    ),
-                    2 => new Intent(
-                        IntentType.Buff,
+                    return new Intent(IntentType.Buff, 0);
+                }
+
+                return ((enemy.MoveIndex - 1) % 3) switch
+                {
+                    // BlastDamage; REPEATER_BLAST is attack + buff, twice over, and the
+                    // live readout announces the attack — growing 9, 11, 13, 15 as the
+                    // construct stacks the Strength each blast hands it.
+                    0 or 1 => new Intent(
+                        IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
                     ),
                     // ExpelDamage x 2
@@ -1186,20 +1225,40 @@ public static class EnemyAI
                 };
 
             case KE.Fogmog:
-                return (enemy.MoveIndex % 3) switch
+            {
+                // ILLUSION -> SWIPE -> a RandomBranchState weighted 0.4 SWIPE_RANDOM /
+                // 0.6 HEADBUTT; SWIPE_RANDOM -> HEADBUTT -> SWIPE -> branch again. The
+                // emulator ran a flat three-cycle, which re-summoned every third turn.
+                const int illusion = 0;
+                const int swipe = 1;
+                const int swipeRandom = 2;
+                const int headbutt = 3;
+                int move = enemy.LastMove switch
                 {
-                    0 => new Intent(IntentType.Buff, 0),
-                    // SwipeDamage; the summon move announces as a buff
-                    1 => new Intent(
-                        IntentType.Buff,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
-                    ),
+                    -1 => illusion,
+                    illusion => swipe,
+                    swipeRandom => headbutt,
+                    headbutt => swipe,
+                    // After SWIPE the machine rolls: 0.4 for another swipe, 0.6 headbutt.
+                    _ => rng.NextDouble() <= 0.4 ? swipeRandom : headbutt,
+                };
+                enemy.LastMove = move;
+                return move switch
+                {
+                    illusion => new Intent(IntentType.Buff, 0),
                     // HeadbuttDamage
-                    _ => new Intent(
+                    headbutt => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
                     ),
+                    // SwipeDamage. SWIPE attacks and hands itself StrengthPower(1), and
+                    // the live readout announces the attack.
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
                 };
+            }
 
             case KE.EyeWithTeeth:
                 return new Intent(IntentType.Debuff, 3);
@@ -1729,11 +1788,7 @@ public static class EnemyAI
                 break;
 
             case KE.CubexConstruct:
-                if (enemy.CurrentIntent.Magnitude > 0)
-                {
-                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                }
-
+                // CHARGE_UP only buffs; the blasts execute in the attack branch.
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
                 break;
 
@@ -1746,12 +1801,8 @@ public static class EnemyAI
                 break;
 
             case KE.Fogmog:
-                if (enemy.CurrentIntent.Magnitude > 0)
-                {
-                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 1);
-                }
-                else if (!state.Enemies.Any(e => e.Hp > 0 && e.DefId == KE.EyeWithTeeth))
+                // SWIPE executes in the attack branch now; what is left here is ILLUSION.
+                if (!state.Enemies.Any(e => e.Hp > 0 && e.DefId == KE.EyeWithTeeth))
                 {
                     state.Enemies.RemoveAll(e => e.Hp <= 0 && e.DefId == KE.EyeWithTeeth);
                     var eye = CreateEnemy(

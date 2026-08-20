@@ -52,10 +52,11 @@ public class CubexConstructTests
             fight.EndTurn();
         }
 
-        // Blast 7 twice — not 8. Each blast also buffs the construct, so by the time
-        // Expel comes round its 5x2 is announced with that Strength on every hit.
+        // Blast 7 — not 8 — announced as an Attack and already carrying the Strength
+        // that CHARGE_UP and the previous blast handed over: 7+2 then 7+4. A live sweep
+        // reads exactly 9 and 11 here. Expel's 5x2 then carries it on every hit.
         Assert.Equal(
-            [(IntentType.Buff, 0), (IntentType.Buff, 7), (IntentType.Buff, 7)],
+            [(IntentType.Buff, 0), (IntentType.Attack, 9), (IntentType.Attack, 11)],
             announced.Take(3)
         );
         int strength = BuffSystem.Get(fight.State.Enemies[0].Buffs, BuffId.Strength);
@@ -68,7 +69,7 @@ public class CubexConstructTests
         var fight = Encounter(ascension: 9);
         fight.EndTurn();
 
-        Assert.Equal((IntentType.Buff, 8), fight.Intents.First());
+        Assert.Equal((IntentType.Attack, 10), fight.Intents.First());
         fight.EndTurn();
         fight.EndTurn();
 
