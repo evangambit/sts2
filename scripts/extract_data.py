@@ -44,10 +44,12 @@ MULTIPLAYER_ONLY = re.compile(
 UPGRADE_DMG = re.compile(r"DynamicVars\.Damage\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
 UPGRADE_BLOCK = re.compile(r"DynamicVars\.Block\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
 
-# HP: plain int or AscensionHelper (take the max-ascension value = 1st arg)
+# HP: plain int, or an AscensionHelper pair. Both branches are kept: the second is what
+# the game rolls below AscensionLevel.ToughEnemies, and taking only the first made enemy
+# HP ascension-blind while every damage number was ascension-aware.
 HP_PLAIN = re.compile(r"(?:Min|Max)InitialHp\s*=>\s*(\d+)\s*;")
 HP_ASCENSION = re.compile(
-    r"(?:Min|Max)InitialHp\s*=>.+?GetValueIfAscension\([^,]+,\s*(\d+),\s*\d+\s*\)",
+    r"(?:Min|Max)InitialHp\s*=>.+?GetValueIfAscension\([^,]+,\s*(\d+),\s*(\d+)\s*\)",
 )
 
 # Monster move intents
@@ -338,9 +340,17 @@ def extract_enemies() -> str:
             continue
 
         # HP — try AscensionHelper form first, then plain int
-        min_hps = HP_ASCENSION.findall(text) or HP_PLAIN.findall(text)
-        min_hp = int(min_hps[0]) if min_hps else 0
-        max_hp = int(min_hps[1]) if len(min_hps) > 1 else min_hp
+        ascension_hps = HP_ASCENSION.findall(text)
+        if ascension_hps:
+            high = [int(pair[0]) for pair in ascension_hps]
+            low = [int(pair[1]) for pair in ascension_hps]
+        else:
+            plain = [int(x) for x in HP_PLAIN.findall(text)]
+            high = low = plain
+        min_hp = high[0] if high else 0
+        max_hp = high[1] if len(high) > 1 else min_hp
+        min_hp_low = low[0] if low else min_hp
+        max_hp_low = low[1] if len(low) > 1 else min_hp_low
 
         # Collect attack intents (damage values) for the move list
         single_attacks = [(int(m), 1) for m in SINGLE_ATTACK.findall(text)]
@@ -356,7 +366,9 @@ def extract_enemies() -> str:
 
         entries.append(
             f'        new EnemyDef(Id: {stable_id("enemies", name)}, Name: "{name}", '
-            f"MinHp: {min_hp}, MaxHp: {max_hp}, Moves: {moves_cs}),",
+            f"MinHp: {min_hp}, MaxHp: {max_hp}, "
+            f"MinHpBelowToughEnemies: {min_hp_low}, MaxHpBelowToughEnemies: {max_hp_low}, "
+            f"Moves: {moves_cs}),",
         )
 
     if not entries:

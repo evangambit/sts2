@@ -47,7 +47,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 725 pass)
+# C# unit tests (currently 748 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -114,7 +114,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
 
 ## Current state — what's proven
 
-- **Emulator is patch-current & fully working on macOS**: builds, 725 C# + 119 Python
+- **Emulator is patch-current & fully working on macOS**: builds, 748 C# + 119 Python
   tests pass, NativeAOT dylib + ctypes bridge live.
 - ✅ **Combat starts are exact across 32 live captures** — 16 encounters (both pools,
   both acts) x 2 seeds, matching on the whole shuffled deck in order, enemy roster and
@@ -354,6 +354,19 @@ Ironclad and Colourless are both fully covered, and **Ironclad has no approximat
 left** — Rampage's per-copy growth, Battle Trance's NoDrawPower and Howl From Beyond's
 replay out of the exhaust pile are modelled, and Primal Force's IsTransformable filter
 turned out to exclude nothing in combat.
+
+- ⚠️ **Combats now have their own test suite, and the first three encounters found three
+  defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
+  setup: 87 encounters modelled, **3 tested, 84 pending**. All 42 act-1 encounters (both
+  act-1 variants) have rosters and intents; what was missing is anything checking them.
+  Walking five turns of Haunted Ship found that its move machine was transcribed as
+  `MoveIndex % 3`, so the opening HAUNT came round every third turn when the game enters it
+  once and then alternates SWIPE and STOMP forever; that its Swipe and Stomp both used the
+  A9 damage branch at A8 (13/12, not 14/15); and that STOMP landed as one hit instead of
+  three. Enemy HP was ascension-blind as well — the extractor kept only the A8+ branch, so
+  `EnemyDef.HpBand` and both branches are extracted now. **Expect more of this**: 84
+  encounters have never been walked past their opening state in C#, and the Python
+  live-fixture suite only replays the six that have committed captures.
 
 - ✅ **Multiplayer-only cards can no longer be offered.** `CardFactory.FilterForPlayerCount`
   drops every `MultiplayerOnly` card from a pool before anything is rolled from it, and

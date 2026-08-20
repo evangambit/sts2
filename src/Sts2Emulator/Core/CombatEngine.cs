@@ -975,7 +975,7 @@ public static class CombatEngine
             {
                 SpawnGremlinMercReinforcements(state, rng, state.Enemies[i].StolenGold);
             }
-            else if (TryRespawnAxebot(state.Enemies[i], rng))
+            else if (TryRespawnAxebot(state.Enemies[i], rng, state.AscensionLevel))
             {
                 continue;
             }
@@ -1020,7 +1020,7 @@ public static class CombatEngine
         }
     }
 
-    private static bool TryRespawnAxebot(EnemyState enemy, Random rng)
+    private static bool TryRespawnAxebot(EnemyState enemy, Random rng, int ascension)
     {
         if (enemy.DefId != KE.Axebot)
         {
@@ -1034,7 +1034,8 @@ public static class CombatEngine
         }
 
         var def = GeneratedData.Enemies.Get(KE.Axebot);
-        enemy.Hp = rng.Next(def.MinHp, def.MaxHp + 1);
+        var band = def.HpBand(ascension);
+        enemy.Hp = rng.Next(band.Min, band.Max + 1);
         enemy.MaxHp = enemy.Hp;
         enemy.Block = 0;
         enemy.MoveIndex = 0;
@@ -1096,10 +1097,22 @@ public static class CombatEngine
         state.Enemies.Add(
             Effects.RelicEffects.Spawned(
                 state,
-                CreateEnemy(78, rng, new Intent(IntentType.Unknown, 0), stunned: true)
+                CreateEnemy(
+                    78,
+                    rng,
+                    new Intent(IntentType.Unknown, 0),
+                    stunned: true,
+                    state.AscensionLevel
+                )
             )
         );
-        var fatGremlin = CreateEnemy(28, rng, new Intent(IntentType.Unknown, 0), stunned: true);
+        var fatGremlin = CreateEnemy(
+            28,
+            rng,
+            new Intent(IntentType.Unknown, 0),
+            stunned: true,
+            state.AscensionLevel
+        );
         fatGremlin.HeistGold = stolenGold;
         state.Enemies.Add(Effects.RelicEffects.Spawned(state, fatGremlin));
     }
@@ -1564,11 +1577,13 @@ public static class CombatEngine
         int defId,
         Random rng,
         Intent intent,
-        bool stunned = false
+        bool stunned = false,
+        int ascension = Ascension.DefaultLevel
     )
     {
         var def = GeneratedData.Enemies.Get(defId);
-        int hp = rng.Next(def.MinHp, def.MaxHp + 1);
+        var band = def.HpBand(ascension);
+        int hp = rng.Next(band.Min, band.Max + 1);
         var enemy = new EnemyState
         {
             DefId = defId,

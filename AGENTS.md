@@ -196,6 +196,31 @@
   and passes whatever the code does. Use `Fight.Encounter(3, ...)` — three enemies, none protected —
   for anything that applies a debuff. Two tests were vacuous this way.
 
+## Combat Tests
+
+- Every encounter gets its own file: `src\Sts2Emulator.Tests\Combats\<Encounter>Tests.cs` holding
+  `public class <Encounter>Tests`, named for the `ActOneEncounter` member. `CombatCoverageTests` is
+  the guard, fed by `python scripts/generate_combat_coverage.py`, and `Pending` is a burn-down list
+  exactly as `CardCoverageTests.Pending` is.
+- Build the fight with `Fight.Encounter(ActOneEncounter.Toadpoles, ascension)` and watch it with
+  `EnemyDefIds`, `Intents` and `EndTurn()`. An encounter test plays no cards: ending turns walks the
+  enemy through its move table and puts its damage under test at the same time.
+- What an encounter owes, in the order these have actually been wrong: the roster, HP at a known
+  ascension, the opening intents, and the move cycle run long enough to repeat. Read all four off
+  `decompiled\MegaCrit.Sts2.Core.Models.Encounters` (roster) and `...Models.Monsters` (HP, moves) —
+  `GenerateMonsters` is the roster, not `AllPossibleMonsters`, which lists one of each kind.
+- **The move machine is a graph, not a cycle.** `FollowUpState` wiring is what decides the order, and
+  an opening move often never comes round again — Haunted Ship's HAUNT is entered once and its two
+  attacks then point at each other. Transcribing it as `MoveIndex % 3` re-haunts every third turn,
+  which is what the emulator did until an encounter test walked five turns.
+- **Ascension is an input to HP as well as to damage.** `MinInitialHp` is usually
+  `GetValueIfAscension(ToughEnemies, high, low)`; `EnemyDef.HpBand(ascension)` picks the branch, and
+  the extractor keeps both. Taking only the first is how enemy HP stayed ascension-blind while every
+  damage number was ascension-aware.
+- **Block cannot tell a multi-hit attack from a single one** — it absorbs the same total either way.
+  Assert the hit count with Thorns (one retaliation per hit) or a per-instance effect; a block-based
+  assertion passes whether the attack lands once or three times, which a mutation check will catch.
+
 ## STS2MCP
 
 - This project uses a fork of STS2MCP, checked out beside this repo as `..\STS2MCP`

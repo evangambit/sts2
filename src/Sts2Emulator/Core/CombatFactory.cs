@@ -17,6 +17,9 @@ public static class CombatFactory
 
     private const int StartingPlayerHp = 64;
     private const int StartingPlayerMaxHp = 80;
+
+    /// <summary>The ascension of the combat currently being built; see CreateEnemy.</summary>
+    private static int _currentAscension = Ascension.DefaultLevel;
     private const int StartingEnergy = 3;
 
     // Ironclad starting deck card IDs (from Generated/Cards.g.cs).
@@ -25,7 +28,11 @@ public static class CombatFactory
     private const int BashId = IC.Bash; // 30
     private const int AscendersBaneId = IC.AscendersBane; // 10001
 
-    private enum ActOneEncounter
+    /// <summary>
+    /// The encounters the emulator can build. Internal rather than private so a combat
+    /// test can name the encounter it is about instead of passing a bare index.
+    /// </summary>
+    internal enum ActOneEncounter
     {
         Cultists,
         Chompers,
@@ -350,6 +357,7 @@ public static class CombatFactory
         state.IsEliteCombat = IsEliteEncounter(encounter);
         // Use state.NicheHpRng (set by caller) as the dedicated HP RNG matching
         // RunState.Rng.Niche.  Null falls back to the main combat rng.
+        _currentAscension = state.AscensionLevel;
         _currentNicheHpRng = state.NicheHpRng;
         _usedNicheHps = _currentNicheHpRng != null ? new HashSet<int>() : null;
         state.Enemies = CreateEncounter(
@@ -1358,14 +1366,22 @@ public static class CombatFactory
         Random rng,
         int moveIndex,
         int? fixedHp = null,
-        int ascension = Ascension.DefaultLevel
+        // Zero means "whatever the combat being built runs at". CreateEncounter has a
+        // hundred-odd CreateEnemy calls and threading the level through every one of them
+        // would be a hundred chances to miss one, so it rides the same ambient field the
+        // Niche HP stream already uses.
+        int ascension = 0
     ) => CreateCorpseSlugEnemy(rng, moveIndex, fixedHp, ascension);
 
     private static EnemyState CreateCorpseSlugEnemy(
         Random rng,
         int moveIndex,
         int? fixedHp = null,
-        int ascension = Ascension.DefaultLevel
+        // Zero means "whatever the combat being built runs at". CreateEncounter has a
+        // hundred-odd CreateEnemy calls and threading the level through every one of them
+        // would be a hundred chances to miss one, so it rides the same ambient field the
+        // Niche HP stream already uses.
+        int ascension = 0
     )
     {
         var enemy = CreateEnemy(
@@ -1399,10 +1415,16 @@ public static class CombatFactory
         Random rng,
         Intent startingIntent,
         int moveIndex = 0,
-        int? fixedHp = null
+        int? fixedHp = null,
+        // Zero means "whatever the combat being built runs at". CreateEncounter has a
+        // hundred-odd CreateEnemy calls and threading the level through every one of them
+        // would be a hundred chances to miss one, so it rides the same ambient field the
+        // Niche HP stream already uses.
+        int ascension = 0
     )
     {
         var def = GeneratedData.Enemies.Get(defId);
+        var band = def.HpBand(ascension > 0 ? ascension : _currentAscension);
         // Use the dedicated niche HP RNG when available, matching SetUniqueMonsterHpValue
         // which calls rng.NextItem(remaining_set) to avoid duplicate HP values across
         // creatures on the same side.
@@ -1412,13 +1434,13 @@ public static class CombatFactory
             hp = fixedHp.Value;
             if (_currentNicheHpRng != null)
             {
-                _currentNicheHpRng.Next(0, def.MaxHp - def.MinHp + 1);
+                _currentNicheHpRng.Next(0, band.Max - band.Min + 1);
             }
         }
         else if (_currentNicheHpRng != null)
         {
             // Build remaining set = [minHp..maxHp] minus already-used HP values.
-            var range = Enumerable.Range(def.MinHp, def.MaxHp - def.MinHp + 1).ToHashSet();
+            var range = Enumerable.Range(band.Min, band.Max - band.Min + 1).ToHashSet();
             if (_usedNicheHps != null)
             {
                 range.ExceptWith(_usedNicheHps);
@@ -1427,7 +1449,7 @@ public static class CombatFactory
             if (range.Count == 0)
             {
                 // Fallback: full range (matches game behaviour when all values are taken).
-                hp = _currentNicheHpRng.Next(def.MinHp, def.MaxHp + 1);
+                hp = _currentNicheHpRng.Next(band.Min, band.Max + 1);
             }
             else
             {
@@ -1439,7 +1461,7 @@ public static class CombatFactory
         }
         else
         {
-            hp = rng.Next(def.MinHp, def.MaxHp + 1);
+            hp = rng.Next(band.Min, band.Max + 1);
         }
         var enemy = new EnemyState
         {

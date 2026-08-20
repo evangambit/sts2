@@ -56,6 +56,51 @@ internal sealed class Fight
     public static Fight WithRelics(params int[] relicIds) => Encounter(1, relicIds);
 
     /// <summary>
+    /// A combat against a named encounter, for tests about the encounter itself rather
+    /// than about a card. Ascension is an input the roster and its damage read, so it is
+    /// explicit here: the suite's default is the highest difficulty.
+    /// </summary>
+    public static Fight Encounter(
+        CombatFactory.ActOneEncounter encounter,
+        int ascension = Ascension.DefaultLevel,
+        int seed = 0,
+        params int[] relicIds
+    )
+    {
+        var state = new CombatState { AscensionLevel = ascension };
+        CombatFactory.Reset(
+            state,
+            new Random(seed),
+            TestDeck.StarterDeckIds,
+            (int)encounter,
+            relicIds
+        );
+        state.TargetRng = new CountingRandom(seed);
+        state.CardSelectionRng = new CountingRandom(seed);
+        state.CardGenerationRng = new CountingRandom(seed);
+        state.PotionGenerationRng = new CountingRandom(seed);
+        return new Fight(state);
+    }
+
+    /// <summary>The enemies' def ids in position order — the roster, as a list to assert on.</summary>
+    public IEnumerable<int> EnemyDefIds => State.Enemies.Select(enemy => enemy.DefId);
+
+    /// <summary>Each enemy's current intent as (type, magnitude), in position order.</summary>
+    public IEnumerable<(IntentType Type, int Magnitude)> Intents =>
+        State.Enemies.Select(enemy => (enemy.CurrentIntent.Type, enemy.CurrentIntent.Magnitude));
+
+    /// <summary>Ends the turn without playing anything, the way an encounter test watches a fight.</summary>
+    public Fight Turns(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            EndTurn();
+        }
+
+        return this;
+    }
+
+    /// <summary>
     /// The same, against a chosen encounter. Encounter 1's two enemies both hold Artifact,
     /// which swallows a debuff whole — a test about applying one has to pick an encounter
     /// that can actually receive it (3 is three enemies, none protected).

@@ -70,6 +70,21 @@ public static class EnemyAI
                     break;
                 }
 
+                if (enemy.DefId == KE.HauntedShip && enemy.MoveIndex % 2 == 0)
+                {
+                    // StompDamage x StompRepeat, per hit — the intent announces the total.
+                    for (int i = 0; i < 3; i++)
+                    {
+                        DealAttackDamage(
+                            enemy,
+                            state,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
+                        );
+                    }
+
+                    break;
+                }
+
                 if (enemy.DefId == KE.Byrdonis && enemy.MoveIndex % 2 == 1)
                 {
                     // PeckDamage x PeckRepeat (repeat is 3 at every ascension).
@@ -988,12 +1003,25 @@ public static class EnemyAI
                 };
 
             case KE.HauntedShip:
-                return (enemy.MoveIndex % 3) switch
+                // HAUNT.FollowUpState is SWIPE, and SWIPE and STOMP then point at each
+                // other — so the opening debuff happens once and never comes round again.
+                // This used to cycle all three on MoveIndex % 3, re-haunting every third turn.
+                if (enemy.MoveIndex == 0)
                 {
-                    0 => new Intent(IntentType.Debuff, 5),
-                    1 => new Intent(IntentType.Attack, 14),
-                    _ => new Intent(IntentType.Attack, 15),
-                };
+                    return new Intent(IntentType.Debuff, 5);
+                }
+
+                return enemy.MoveIndex % 2 == 1
+                    // SwipeDamage
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 13)
+                    )
+                    // StompDamage x StompRepeat, announced as the total
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4) * 3
+                    );
 
             case KE.LivingFog:
                 return (enemy.MoveIndex % 3) switch
@@ -2229,11 +2257,13 @@ public static class EnemyAI
         int defId,
         Random rng,
         Intent intent,
-        bool stunned = false
+        bool stunned = false,
+        int ascension = Ascension.DefaultLevel
     )
     {
         var def = GeneratedData.Enemies.Get(defId);
-        int hp = rng.Next(def.MinHp, def.MaxHp + 1);
+        var band = def.HpBand(ascension);
+        int hp = rng.Next(band.Min, band.Max + 1);
         var enemy = new EnemyState
         {
             DefId = defId,
