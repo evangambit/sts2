@@ -27,6 +27,7 @@ public static class RelicEffects
     public const int Kusarigama = 127;
     public const int Lantern = 128;
     public const int LetterOpener = 136;
+    public const int LizardTail = 137;
     public const int MealTicket = 147;
     public const int MummifiedHand = 158;
     public const int Nunchaku = 166;
@@ -47,6 +48,7 @@ public static class RelicEffects
     public const int Sozu = 245;
     public const int SpikedGauntlets = 247;
     public const int StoneCracker = 249;
+    public const int TinyMailbox = 265;
     public const int StoneCalendar = 248;
     public const int VenerableTeaSetActive = 100282;
     public const int Vajra = 279;
@@ -88,6 +90,34 @@ public static class RelicEffects
     /// <summary>Ectoplasm's ModifyGoldGained returns 0m: the owner gains no gold, ever.</summary>
     public static int ModifyGoldGained(IEnumerable<RelicInstance> relics, int amount) =>
         relics.Any(relic => relic.DefId == Ectoplasm) ? 0 : amount;
+
+    /// <summary>
+    /// Relics whose combat counter means "spent for the rest of the run" rather than
+    /// something a fresh combat resets. The run carries these in RunState.UsedUpRelics.
+    /// </summary>
+    private static readonly int[] OncePerRunRelics = [LizardTail];
+
+    /// <summary>Marks relics the run has already spent, so a new combat cannot reuse them.</summary>
+    public static void RestoreUsedUpRelics(CombatState state, IEnumerable<int> usedUp)
+    {
+        foreach (int relicId in usedUp)
+        {
+            SetCounter(state, relicId, 1);
+        }
+    }
+
+    /// <summary>Reports which one-per-run relics this combat spent.</summary>
+    public static void CollectUsedUpRelics(CombatState state, List<int> usedUp)
+    {
+        foreach (int relicId in OncePerRunRelics)
+        {
+            int index = state.Relics.FindIndex(relic => relic.DefId == relicId);
+            if (index >= 0 && state.Relics[index].Counter > 0 && !usedUp.Contains(relicId))
+            {
+                usedUp.Add(relicId);
+            }
+        }
+    }
 
     public static void ApplyBeforeOpeningHand(CombatState state, Random rng)
     {
@@ -496,6 +526,13 @@ public static class RelicEffects
 
     public static void ApplyAfterPlayerHpChanged(CombatState state)
     {
+        // LizardTail.ShouldDieLate refuses the death once per run, then heals HealVar(50m)
+        // percent of max HP. The relic is spent, not removed, so the counter records it.
+        if (state.PlayerHp <= 0 && FiresOncePerCombat(state, LizardTail))
+        {
+            state.PlayerHp = Math.Max(1, state.PlayerMaxHp / 2);
+        }
+
         int index = state.Relics.FindIndex(relic => relic.DefId == RedSkull);
         if (index < 0)
         {

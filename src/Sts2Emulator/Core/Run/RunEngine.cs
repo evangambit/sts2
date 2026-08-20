@@ -23,7 +23,7 @@ public sealed class RunEngine
         State.Deck = [];
         foreach (int cardId in RunConstants.StarterDeckIds)
         {
-            State.Deck.Add(new CardInstance(cardId, Upgraded: false));
+            RunNonCombatEffects.AddCardToDeck(State, new CardInstance(cardId, Upgraded: false));
         }
 
         State.Relics = [new RelicInstance(RunConstants.RelicBurningBlood)];
@@ -191,6 +191,7 @@ public sealed class RunEngine
             new Random(State.Rng.MonsterAi.RawSeed),
             State.CompletedCombatRoomsBeforeCurrent
         );
+        Effects.RelicEffects.RestoreUsedUpRelics(combat, State.UsedUpRelics);
         ApplyRetainedTraceCombatOpening(combat, encounterId);
         ApplyRetainedTraceFloorFifteenOpening(combat);
         ApplyRetainedTraceVantomOpening(combat, encounterId);
@@ -1507,6 +1508,7 @@ public sealed class RunEngine
             return;
         }
 
+        Effects.RelicEffects.CollectUsedUpRelics(State.ActiveCombat, State.UsedUpRelics);
         State.PlayerHp = Math.Max(0, State.ActiveCombat.PlayerHp);
         State.PlayerMaxHp = Math.Max(1, State.ActiveCombat.PlayerMaxHp);
         State.Gold = Math.Max(0, State.ActiveCombat.PlayerGold);
@@ -1796,7 +1798,10 @@ public sealed class RunEngine
                 return -1;
             }
 
-            State.Deck.Add(new CardInstance(cardId, State.RewardUpgraded[action]));
+            RunNonCombatEffects.AddCardToDeck(
+                State,
+                new CardInstance(cardId, State.RewardUpgraded[action])
+            );
         }
         else if (action != RunConstants.RewardSkipAction)
         {
@@ -1906,7 +1911,7 @@ public sealed class RunEngine
             }
 
             State.Gold -= cost;
-            State.Deck.Add(new CardInstance(cardId, Upgraded: false));
+            RunNonCombatEffects.AddCardToDeck(State, new CardInstance(cardId, Upgraded: false));
             State.ShopCards[action] = 0;
         }
         else if (7 <= action && action < 10)
@@ -2079,6 +2084,20 @@ public sealed class RunEngine
             {
                 State.PlayerHp = 59;
             }
+            // Tiny Mailbox's TryModifyRestSiteHealRewards adds two PotionRewards to the
+            // rest. The emulator has no reward screen at a rest site, so they go straight
+            // into the belt and are dropped when it is full, as an unclaimed reward is.
+            if (Effects.RelicEffects.Has(State.Relics, Effects.RelicEffects.TinyMailbox))
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    RunRewardGenerator.AddPotion(
+                        State,
+                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
+                    );
+                }
+            }
+
             State.RestResultPending = true;
             return 0;
         }
@@ -2128,7 +2147,8 @@ public sealed class RunEngine
                 if (action == 0)
                 {
                     State.PlayerHp = State.PlayerMaxHp;
-                    State.Deck.Add(
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
                         new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                     );
                 }
@@ -2280,7 +2300,8 @@ public sealed class RunEngine
             case RunConstants.EventBrainLeech:
                 if (action == 0)
                 {
-                    State.Deck.Add(
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
                         new CardInstance(
                             State.Rng.UpFront.NextItem(
                                 RunRewardGenerator.IroncladRewardPool.ToArray()
@@ -2328,7 +2349,10 @@ public sealed class RunEngine
             case RunConstants.EventTheLegendsWereTrue:
                 if (action == 0)
                 {
-                    State.Deck.Add(new CardInstance(RunConstants.SpoilsMapCard, Upgraded: false));
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunConstants.SpoilsMapCard, Upgraded: false)
+                    );
                 }
                 else if (action == 1)
                 {
@@ -2372,7 +2396,8 @@ public sealed class RunEngine
                 {
                     RunNonCombatEffects.RemoveLowestPriorityCard(State);
                     RunNonCombatEffects.RemoveLowestPriorityCard(State);
-                    State.Deck.Add(
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
                         new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                     );
                 }
@@ -2460,7 +2485,8 @@ public sealed class RunEngine
                 else if (action == 1)
                 {
                     RunNonCombatEffects.RemoveLowestPriorityCard(State);
-                    State.Deck.Add(
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
                         new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                     );
                 }
@@ -2661,7 +2687,8 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Deck.Add(
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
                         new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                     );
                 }
@@ -2973,7 +3000,8 @@ public sealed class RunEngine
                         State,
                         RunRewardGenerator.NextRelic(State)
                     );
-                    State.Deck.Add(
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
                         new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                     );
                 }
@@ -3201,7 +3229,10 @@ public sealed class RunEngine
             case RunConstants.EventTheLanternKey:
                 if (action == 0)
                 {
-                    State.Deck.Add(new CardInstance(RunConstants.CursePlaceholderCard, false));
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunConstants.CursePlaceholderCard, false)
+                    );
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
                         RunRewardGenerator.NextRelic(State)
@@ -3268,7 +3299,10 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Deck.Add(new CardInstance(RunConstants.CursePlaceholderCard, false));
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunConstants.CursePlaceholderCard, false)
+                    );
                     State.Gold += Effects.RelicEffects.ModifyGoldGained(
                         State.Relics,
                         EventGoldAmount(150)
@@ -3403,7 +3437,8 @@ public sealed class RunEngine
                 }
                 else if (action == 2)
                 {
-                    State.Deck.Add(
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
                         new CardInstance(
                             State.Rng.UpFront.NextItem(
                                 RunRewardGenerator.IroncladRewardPool.ToArray()
@@ -3532,7 +3567,8 @@ public sealed class RunEngine
 
     private void AddEventRewardCard(bool upgraded = false)
     {
-        State.Deck.Add(
+        RunNonCombatEffects.AddCardToDeck(
+            State,
             new CardInstance(
                 State.Rng.UpFront.NextItem(RunRewardGenerator.IroncladRewardPool.ToArray()),
                 upgraded

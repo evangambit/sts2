@@ -798,7 +798,13 @@ public static class RunRewardGenerator
             state.RewardCards[i] = cardId;
             blacklist.Add(cardId);
             state.RewardUpgraded[i] =
-                silverCrucibleUpgrade || RollCardUpgrade(state, cardId, state.PlayerRng.Rewards);
+                silverCrucibleUpgrade
+                || RollCardUpgrade(state, cardId, state.PlayerRng.Rewards)
+                // TryModifyCardRewardOptionsLate: an egg upgrades the option on the screen,
+                // not just the copy that reaches the deck.
+                || RunNonCombatEffects
+                    .UpgradedByEggs(state, new CardInstance(cardId, Upgraded: false))
+                    .Upgraded;
         }
         ApplyRetainedTraceCardReward(state, silverCrucibleUpgrade);
     }
@@ -992,6 +998,16 @@ public static class RunRewardGenerator
             state.ShopCosts[10 + i] = ShopPotionCost(potion, state.PlayerRng.Shops);
         }
         state.ShopCosts[RunConstants.ShopRemoveAction] = 100 + 50 * state.ShopRemovalsUsed;
+
+        // Membership Card's ModifyMerchantPrice: DynamicVar("Discount", 50m) as a
+        // percentage of the original, applied to every entry the merchant quotes.
+        if (HasRelic(state, RunConstants.RelicMembershipCard))
+        {
+            for (int i = 0; i < state.ShopCosts.Length; i++)
+            {
+                state.ShopCosts[i] /= 2;
+            }
+        }
         ApplyRetainedTraceShop(state);
     }
 
@@ -1148,8 +1164,16 @@ public static class RunRewardGenerator
 
     private static bool CheckPotionRoll(RunState state, double roll)
     {
+        // PotionRewardOdds.Roll draws its float whether or not the hook forces the reward,
+        // so White Beast Statue must not skip the roll — only override the answer.
+        bool forced =
+            HasRelic(state, RunConstants.RelicWhiteBeastStatue)
+            && state.CurrentNodeType
+                is RunConstants.NodeNormal
+                    or RunConstants.NodeElite
+                    or RunConstants.NodeBoss;
         double eliteBonus = state.CurrentNodeType == RunConstants.NodeElite ? 0.25 * 0.5 : 0.0;
-        if (roll < state.PotionRewardOdds + eliteBonus)
+        if (forced || roll < state.PotionRewardOdds + eliteBonus)
         {
             state.PotionRewardOdds -= PotionRewardStep;
             return true;

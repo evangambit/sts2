@@ -144,6 +144,15 @@ public static class RunConstants
     public static ReadOnlySpan<int> UnderdocksBossEncounters => [77, 79, 84];
 
     public const int RelicBurningBlood = 36;
+    public const int RelicFrozenEgg = 93;
+    public const int RelicLizardTail = 137;
+    public const int RelicMembershipCard = 150;
+    public const int RelicMoltenEgg = 156;
+    public const int RelicTinyMailbox = 265;
+    public const int RelicToxicEgg = 270;
+    public const int RelicWarPaint = 287;
+    public const int RelicWhetstone = 288;
+    public const int RelicWhiteBeastStatue = 290;
     public const int RelicBlackBlood = 19;
     public const int RelicMeatOnTheBone = 149;
     public const int RelicArcaneScroll = 5;

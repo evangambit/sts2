@@ -15,6 +15,13 @@ public sealed class RunState
     public RunPhase Phase;
     public List<CardInstance> Deck = [];
     public List<RelicInstance> Relics = [];
+
+    /// <summary>
+    /// Relics spent for the rest of the run (the game's RelicModel.IsUsedUp). A combat
+    /// rebuilds its relic list from ids, so anything one-shot per run has to be carried
+    /// across the boundary rather than living on the combat's RelicInstance.
+    /// </summary>
+    public List<int> UsedUpRelics = [];
     public int[] PotionSlots = new int[3];
     public int CurrentNodeType;
     public int[] NeowOptions = new int[3];

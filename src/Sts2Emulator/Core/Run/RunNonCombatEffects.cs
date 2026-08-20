@@ -40,6 +40,66 @@ public static class RunNonCombatEffects
         525,
     ];
 
+    /// <summary>
+    /// The game's Hook.TryModifyCardBeingAddedToDeck, which the egg relics answer: a card
+    /// of their type joins the deck already upgraded. Every deck addition goes through
+    /// here so an event, a shop and a card reward all agree.
+    /// </summary>
+    public static void AddCardToDeck(RunState state, CardInstance card)
+    {
+        state.Deck.Add(UpgradedByEggs(state, card));
+    }
+
+    public static CardInstance UpgradedByEggs(RunState state, CardInstance card)
+    {
+        if (!RunConstants.IsRunCardUpgradable(card))
+        {
+            return card;
+        }
+
+        int eggForType = GeneratedData.Cards.Get(card.DefId).Type switch
+        {
+            CardType.Power => RunConstants.RelicFrozenEgg,
+            CardType.Attack => RunConstants.RelicMoltenEgg,
+            CardType.Skill => RunConstants.RelicToxicEgg,
+            _ => 0,
+        };
+
+        return eggForType != 0 && HasRelic(state, eggForType)
+            ? card with
+            {
+                Upgraded = true,
+            }
+            : card;
+    }
+
+    /// <summary>
+    /// War Paint and Whetstone: CardsVar(2) upgraded off the deck on pickup, taken from
+    /// Deck.Where(type and IsUpgradable).StableShuffle(Rng.Niche).Take(2).
+    /// </summary>
+    private static void UpgradeRandomDeckCards(RunState state, CardType type, int count)
+    {
+        var candidates = Enumerable
+            .Range(0, state.Deck.Count)
+            .Where(index =>
+                GeneratedData.Cards.Get(state.Deck[index].DefId).Type == type
+                && RunConstants.IsRunCardUpgradable(state.Deck[index])
+            )
+            .ToList();
+
+        // StableShuffle sorts before shuffling so the order does not depend on deck order.
+        candidates.Sort((left, right) => state.Deck[left].DefId.CompareTo(state.Deck[right].DefId));
+        state.Rng.Niche.Shuffle(candidates);
+
+        foreach (int index in candidates.Take(count))
+        {
+            state.Deck[index] = state.Deck[index] with { Upgraded = true };
+        }
+    }
+
+    private static bool HasRelic(RunState state, int relicId) =>
+        state.Relics.Any(relic => relic.DefId == relicId);
+
     public static RunFollowUp ApplyRelicPickup(RunState state, int relicId)
     {
         if (state.Relics.All(relic => relic.DefId != relicId))
@@ -49,11 +109,17 @@ public static class RunNonCombatEffects
 
         switch (relicId)
         {
+            case RunConstants.RelicWarPaint:
+                UpgradeRandomDeckCards(state, CardType.Skill, 2);
+                break;
+            case RunConstants.RelicWhetstone:
+                UpgradeRandomDeckCards(state, CardType.Attack, 2);
+                break;
             case RunConstants.RelicGoldenPearl:
                 state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 150);
                 break;
             case RunConstants.RelicNeowsTorment:
-                state.Deck.Add(new CardInstance(RunConstants.NeowsFuryCard, Upgraded: false));
+                AddCardToDeck(state, new CardInstance(RunConstants.NeowsFuryCard, Upgraded: false));
                 break;
             case RunConstants.RelicNeowsBones:
                 for (int i = 0; i < 2; i++)
@@ -64,7 +130,8 @@ public static class RunNonCombatEffects
                     );
                 }
 
-                state.Deck.Add(
+                AddCardToDeck(
+                    state,
                     new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                 );
                 break;
@@ -93,8 +160,8 @@ public static class RunNonCombatEffects
             case RunConstants.RelicLargeCapsule:
                 ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
                 ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
-                state.Deck.Add(new CardInstance(472, Upgraded: false));
-                state.Deck.Add(new CardInstance(131, Upgraded: false));
+                AddCardToDeck(state, new CardInstance(472, Upgraded: false));
+                AddCardToDeck(state, new CardInstance(131, Upgraded: false));
                 break;
             case RunConstants.RelicPomander:
                 UpgradeFirstCard(state);
@@ -104,14 +171,16 @@ public static class RunNonCombatEffects
                 UpgradeLastCardMatching(state, 131);
                 break;
             case RunConstants.RelicCursedPearl:
-                state.Deck.Add(
+                AddCardToDeck(
+                    state,
                     new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                 );
                 state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 333);
                 break;
             case RunConstants.RelicHeftyTablet:
                 AddRandomRewardCard(state, state.Rng.UpFront);
-                state.Deck.Add(
+                AddCardToDeck(
+                    state,
                     new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                 );
                 break;
@@ -120,7 +189,8 @@ public static class RunNonCombatEffects
                 AddRandomRewardCard(state, state.Rng.UpFront);
                 break;
             case RunConstants.RelicArcaneScroll:
-                state.Deck.Add(
+                AddCardToDeck(
+                    state,
                     new CardInstance(
                         state.PlayerRng.Rewards.NextItem(RareIroncladSingleplayerPool),
                         Upgraded: false
@@ -167,7 +237,8 @@ public static class RunNonCombatEffects
                 TransformAllMatching(state, 131);
                 break;
             case RunConstants.RelicCallingBell:
-                state.Deck.Add(
+                AddCardToDeck(
+                    state,
                     new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
                 );
                 ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
@@ -175,7 +246,8 @@ public static class RunNonCombatEffects
                 ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
                 break;
             case RunConstants.RelicDustyTome:
-                state.Deck.Add(
+                AddCardToDeck(
+                    state,
                     new CardInstance(RandomRewardCard(state.Rng.UpFront), Upgraded: true)
                 );
                 break;
@@ -575,7 +647,7 @@ public static class RunNonCombatEffects
         }
 
         state.Deck.RemoveAt(deckIndex);
-        state.Deck.Add(new CardInstance(rng.NextItem(pool), Upgraded: false));
+        AddCardToDeck(state, new CardInstance(rng.NextItem(pool), Upgraded: false));
     }
 
     public static void TransformFirstCard(RunState state) =>
@@ -620,6 +692,6 @@ public static class RunNonCombatEffects
 
     private static void AddRandomRewardCard(RunState state, GameRng rng)
     {
-        state.Deck.Add(new CardInstance(RandomRewardCard(rng), Upgraded: false));
+        AddCardToDeck(state, new CardInstance(RandomRewardCard(rng), Upgraded: false));
     }
 }
