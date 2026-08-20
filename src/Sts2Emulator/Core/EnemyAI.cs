@@ -1292,7 +1292,13 @@ public static class EnemyAI
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
                     ),
-                    1 => new Intent(IntentType.Attack, 14),
+                    // InkyLanceDamage x 2, which was pre-multiplied to its A9 total
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6),
+                        Hits: 2
+                    ),
+                    // DismemberDamage; DISMEMBER also carries a StatusIntent(3)
                     2 => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 30, 26)
@@ -1311,17 +1317,23 @@ public static class EnemyAI
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 15)
                     ),
+                    // RamDamage; RAM_MOVE is an attack plus a BuffIntent, and the live
+                    // readout announces the attack — as it does for STOMP, PRESSURE_GUN
+                    // and PRESSURE_UP. Only PRESSURIZE and SIPHON are pure non-attacks.
                     2 => new Intent(
-                        IntentType.Buff,
+                        IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
                     ),
+                    // SIPHON_MOVE: HealIntent plus BuffIntent, no attack.
                     3 => new Intent(IntentType.Buff, 15),
+                    // BasePressureGunDamage
                     4 => new Intent(
-                        IntentType.Buff,
+                        IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 23, 20)
                     ),
+                    // PressureUpDamage; PRESSURE_UP_MOVE is an attack plus a BuffIntent.
                     _ => new Intent(
-                        IntentType.Buff,
+                        IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 13)
                     ),
                 };
