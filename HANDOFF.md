@@ -767,7 +767,19 @@ so the act-1 picture is: 16/16 of the originally-covered set (bar fossil-stalker
 shrinker-beetle's coverage warning), and a fresh backlog underneath. Passing on first
 contact: **cultists** (verifying this pass's Dark Strike and Ritual fixes),
 **cultist-and-seapunk**, **shrinker-and-fuzzy**. Now fixed: **gremlin-merc** — see below.
-Still failing, with live evidence recorded:
+**Where the nine stand after a fixing pass: 2 fully closed, 5 partly, 2 untouched.**
+`cubex-construct` and `fogmog` are ALL MATCH. `slithering-strangler` and `slime-and-flyconid`
+have correct rosters now (the first was building three enemies where the game builds two),
+`inklets` has correct opening intents, and `gremlin-merc` was closed earlier. What remains
+on all of them is one thing: **which move a RandomBranchState rolls mid-fight**. Fogmog's
+branch lands where the live game's does, so the AI stream is not globally misaligned — but
+encounters with several rolling enemies (three Inklets, three rats) desync, which points at
+draw ORDER or COUNT across enemies rather than the stream itself. That is the single
+question to answer next; it likely closes inklets, two-tailed-rats, fossil-stalker and the
+tail of the Flyconid pair together. `ruby-raiders` is separate and still untouched: two of
+three raiders have the wrong HP, which is a roster/data problem, not a branch one.
+
+The original evidence, for reference:
 
 | encounter | what the live game says |
 | --- | --- |
