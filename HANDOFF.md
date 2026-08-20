@@ -767,7 +767,30 @@ so the act-1 picture is: 16/16 of the originally-covered set (bar fossil-stalker
 shrinker-beetle's coverage warning), and a fresh backlog underneath. Passing on first
 contact: **cultists** (verifying this pass's Dark Strike and Ritual fixes),
 **cultist-and-seapunk**, **shrinker-and-fuzzy**. Now fixed: **gremlin-merc** — see below.
-**Where the nine stand after a fixing pass: 2 fully closed, 5 partly, 2 untouched.**
+**Where the nine stand: 4 fully closed (inklets, fossil-stalker, cubex-construct, fogmog),
+plus gremlin-merc earlier; 4 partly; 1 untouched.** The blocking question turned out to be
+eligibility and draw COUNT, never stream alignment — see the Monster Move Machines section
+of AGENTS.md, which is where the rules now live. What closed each of the four:
+
+- **inklets** — `CannotRepeat` is scored against the last logged move, and their branch is
+  only ever entered from JAB, so nothing is ever excluded and the roll is always over two.
+  Excluding an older move made it a roll over ONE on half the turns: a different number
+  from the same stream.
+- **fossil-stalker** — its "first move" test read `MoveIndex`, but the encounter builds it
+  with `moveIndex: 1`, so the test never fired and the machine rolled at combat setup: one
+  draw the game never makes. Under that sat a special case firing on whichever turn
+  `MoveIndex == 2`, dealing a two-hit Lash at A9 damage whatever the machine had chosen —
+  which also doubled its Suck Strength, since Suck triggers per hit.
+- **cubex-construct** — `CHARGE_UP` happens once; `EXPEL` returns to the first blast.
+- **fogmog** — `ILLUSION → SWIPE → weighted branch`, not a flat three-cycle.
+
+Still open, all with the structure now right and one detail wrong:
+`two-tailed-rats` (roster size, openings and once-per-rat summoning all match; one weighted
+roll mid-fight differs), `slithering-strangler` and both Flyconid encounters (rosters and
+openings match; late-fight rolls differ), and `ruby-raiders`, which is untouched and is a
+different problem — two of three raiders have the wrong HP, which is roster data.
+
+The earlier state, for reference: **2 fully closed, 5 partly, 2 untouched.**
 `cubex-construct` and `fogmog` are ALL MATCH. `slithering-strangler` and `slime-and-flyconid`
 have correct rosters now (the first was building three enemies where the game builds two),
 `inklets` has correct opening intents, and `gremlin-merc` was closed earlier. What remains
