@@ -747,57 +747,6 @@ public sealed class RunEngine
                     )
                     : CombatEngine.Step(State.ActiveCombat, action, State.ActiveCombatRng);
             reward = result.Reward;
-            if (
-                State.Floor == 9
-                && State.ActiveCombat.EncounterId == 29
-                && State.ActiveCombat.PlayerHp <= 6
-            )
-            {
-                State.ActiveCombat.PlayerHp = 0;
-                result = result with { Terminal = true, PlayerWon = false };
-            }
-            if (
-                State.Floor == 9
-                && State.ActiveCombat.EncounterId == 62
-                && State.ActiveCombat.Enemies.Any(enemy => enemy.DefId == 11 && enemy.Hp <= 8)
-            )
-            {
-                State.ActiveCombat.PlayerHp = 50;
-                State.ActiveCombat.PlayerGold = 168;
-                foreach (var enemy in State.ActiveCombat.Enemies)
-                {
-                    enemy.Hp = 0;
-                }
-
-                result = result with { Terminal = true, PlayerWon = true };
-            }
-            if (
-                State.Floor == 6
-                && State.ActiveCombat.EncounterId == RunConstants.PunchConstructEncounterId
-            )
-            {
-                if (result.Terminal && result.PlayerWon)
-                {
-                    State.ActiveCombat.PlayerHp = 10;
-                    State.ActiveCombat.PlayerGold = 132;
-                }
-                else if (action == 4 && targetEnemyIndex >= 0)
-                {
-                    State.ActiveCombat.PlayerHp = 10;
-                    State.ActiveCombat.PlayerGold = 132;
-                    foreach (var enemy in State.ActiveCombat.Enemies)
-                    {
-                        enemy.Hp = 0;
-                    }
-
-                    result = result with { Terminal = true, PlayerWon = true };
-                }
-                else if (result.Terminal && !result.PlayerWon)
-                {
-                    State.ActiveCombat.PlayerHp = Math.Max(1, State.ActiveCombat.PlayerHp);
-                    result = result with { Terminal = false, PlayerWon = false };
-                }
-            }
             terminal = result.Terminal;
             State.LastPlayerWon = result.Terminal && result.PlayerWon;
             if (result.Terminal)
