@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "TabletOfTruth",
+  "event_id": "TABLET_OF_TRUTH",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,29 +12,17 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
+      "title": "Decipher",
+      "description": "Lose 3 Max HP. Upgrade a random card.",
       "is_locked": false,
       "is_proceed": false,
-      "keywords": [
-        "Sharp"
-      ]
+      "keywords": []
     },
     {
       "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
+      "title": "Smash",
+      "description": "Heal 20 HP.",
       "is_locked": false,
-      "is_proceed": false,
-      "keywords": [
-        "Nimble"
-      ]
-    },
-    {
-      "index": 2,
-      "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
-      "is_locked": true,
       "is_proceed": false,
       "keywords": []
     }
@@ -196,45 +184,26 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "TABLET_OF_TRUTH",
+      "event_name": "Tablet of Truth",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
+          "title": "Decipher",
+          "description": "Lose 3 Max HP. Upgrade a random card.",
           "is_locked": false,
           "is_proceed": false,
           "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
-            }
-          ]
+          "keywords": []
         },
         {
           "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
+          "title": "Smash",
+          "description": "Heal 20 HP.",
           "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 2,
-          "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
-          "is_locked": true,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": []
@@ -253,9 +222,9 @@
     "options": null
   },
   "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen_title": "Decipher",
   "after": {
-    "state_type": "card_select",
+    "state_type": "event",
     "run": {
       "act": 1,
       "floor": 1,
@@ -264,7 +233,7 @@
     "player": {
       "character": "The Ironclad",
       "hp": 64,
-      "max_hp": 80,
+      "max_hp": 77,
       "block": 0,
       "energy": null,
       "max_energy": null,
@@ -284,13 +253,13 @@
         {
           "index": 1,
           "id": "STRIKE_IRONCLAD",
-          "name": "Strike",
+          "name": "Strike+",
           "type": "Attack",
           "cost": "1",
-          "description": "Deal 6 damage.",
+          "description": "Deal 9 damage.",
           "can_play": null,
           "target_type": null,
-          "is_upgraded": false
+          "is_upgraded": true
         },
         {
           "index": 2,
@@ -410,7 +379,33 @@
       "exhaust_pile": []
     },
     "battle": null,
-    "event": {},
+    "event": {
+      "event_id": "TABLET_OF_TRUTH",
+      "event_name": "Tablet of Truth",
+      "is_ancient": false,
+      "in_dialogue": false,
+      "body": null,
+      "options": [
+        {
+          "index": 0,
+          "title": "Continue Deciphering",
+          "description": "Lose 6 Max HP. Upgrade a random card.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "title": "Give Up",
+          "description": "Stop reading the text and leave.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": []
+        }
+      ]
+    },
     "rewards": {},
     "card_reward": {},
     "map": {},
@@ -422,5 +417,5 @@
     "menu_screen": null,
     "options": null
   },
-  "after_state_type": "card_select"
+  "after_state_type": "event"
 }

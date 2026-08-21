@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "TeaMaster",
+  "event_id": "TEA_MASTER",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,31 +12,32 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
+      "title": "Bone Tea",
+      "description": "Pay 50 Gold. At the start of the next combat, Upgrade your starting hand.",
       "is_locked": false,
       "is_proceed": false,
-      "keywords": [
-        "Sharp"
-      ]
+      "keywords": []
     },
     {
       "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
-      "is_locked": false,
-      "is_proceed": false,
-      "keywords": [
-        "Nimble"
-      ]
-    },
-    {
-      "index": 2,
       "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
+      "description": "Requires 150 Gold.",
       "is_locked": true,
       "is_proceed": false,
       "keywords": []
+    },
+    {
+      "index": 2,
+      "title": "Tea of Discourtesy",
+      "description": "At the start of the next combat, shuffle 2 Dazed into your Draw Pile.",
+      "is_locked": false,
+      "is_proceed": false,
+      "keywords": [
+        "Dazed",
+        "Ethereal",
+        "Exhaust",
+        "Unplayable"
+      ]
     }
   ],
   "before": {
@@ -196,48 +197,55 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "TEA_MASTER",
+      "event_name": "Tea Master",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
+          "title": "Bone Tea",
+          "description": "Pay 50 Gold. At the start of the next combat, Upgrade your starting hand.",
           "is_locked": false,
           "is_proceed": false,
           "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
-            }
-          ]
+          "keywords": []
         },
         {
           "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
-          "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 2,
           "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
+          "description": "Requires 150 Gold.",
           "is_locked": true,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": []
+        },
+        {
+          "index": 2,
+          "title": "Tea of Discourtesy",
+          "description": "At the start of the next combat, shuffle 2 Dazed into your Draw Pile.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": [
+            {
+              "name": "Dazed",
+              "description": "Unplayable. Ethereal."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            },
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
+            }
+          ]
         }
       ]
     },
@@ -253,9 +261,9 @@
     "options": null
   },
   "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen_title": "Bone Tea",
   "after": {
-    "state_type": "card_select",
+    "state_type": "event",
     "run": {
       "act": 1,
       "floor": 1,
@@ -268,7 +276,7 @@
       "block": 0,
       "energy": null,
       "max_energy": null,
-      "gold": 99,
+      "gold": 49,
       "deck": [
         {
           "index": 0,
@@ -399,6 +407,12 @@
           "name": "Burning Blood",
           "slot": null,
           "counter": null
+        },
+        {
+          "id": "BONE_TEA",
+          "name": "Bone Tea",
+          "slot": null,
+          "counter": null
         }
       ],
       "potions": [],
@@ -410,7 +424,24 @@
       "exhaust_pile": []
     },
     "battle": null,
-    "event": {},
+    "event": {
+      "event_id": "TEA_MASTER",
+      "event_name": "Tea Master",
+      "is_ancient": false,
+      "in_dialogue": false,
+      "body": null,
+      "options": [
+        {
+          "index": 0,
+          "title": "Proceed",
+          "description": "",
+          "is_locked": false,
+          "is_proceed": true,
+          "was_chosen": false,
+          "keywords": []
+        }
+      ]
+    },
     "rewards": {},
     "card_reward": {},
     "map": {},
@@ -422,5 +453,5 @@
     "menu_screen": null,
     "options": null
   },
-  "after_state_type": "card_select"
+  "after_state_type": "event"
 }

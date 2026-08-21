@@ -252,8 +252,8 @@
     "menu_screen": null,
     "options": null
   },
-  "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen": 1,
+  "chosen_title": "Read a Random Passage",
   "after": {
     "state_type": "card_select",
     "run": {

@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "WarHistorianRepy",
+  "event_id": "WAR_HISTORIAN_REPY",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,31 +12,26 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
+      "title": "Unlock the Cage",
+      "description": "Lose Lantern Key. Obtain History Course.",
       "is_locked": false,
       "is_proceed": false,
       "keywords": [
-        "Sharp"
+        "History Course",
+        "Lantern Key",
+        "Unplayable"
       ]
     },
     {
       "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
+      "title": "Unlock the Chest",
+      "description": "Lose Lantern Key. Procure 2 random Potions. Obtain 2 random Relics.",
       "is_locked": false,
       "is_proceed": false,
       "keywords": [
-        "Nimble"
+        "Lantern Key",
+        "Unplayable"
       ]
-    },
-    {
-      "index": 2,
-      "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
-      "is_locked": true,
-      "is_proceed": false,
-      "keywords": []
     }
   ],
   "before": {
@@ -196,48 +191,51 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "WAR_HISTORIAN_REPY",
+      "event_name": "War Historian, Repy",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
+          "title": "Unlock the Cage",
+          "description": "Lose Lantern Key. Obtain History Course.",
           "is_locked": false,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": [
             {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
+              "name": "History Course",
+              "description": "At the start of your turn, play a copy of your last played Attack or Skill."
+            },
+            {
+              "name": "Lantern Key",
+              "description": "Unplayable. Unlocks a special event in the next Act."
+            },
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
             }
           ]
         },
         {
           "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
+          "title": "Unlock the Chest",
+          "description": "Lose Lantern Key. Procure 2 random Potions. Obtain 2 random Relics.",
           "is_locked": false,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": [
             {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
+              "name": "Lantern Key",
+              "description": "Unplayable. Unlocks a special event in the next Act."
+            },
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
             }
           ]
-        },
-        {
-          "index": 2,
-          "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
-          "is_locked": true,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": []
         }
       ]
     },
@@ -253,9 +251,9 @@
     "options": null
   },
   "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen_title": "Unlock the Cage",
   "after": {
-    "state_type": "card_select",
+    "state_type": "event",
     "run": {
       "act": 1,
       "floor": 1,
@@ -399,6 +397,12 @@
           "name": "Burning Blood",
           "slot": null,
           "counter": null
+        },
+        {
+          "id": "HISTORY_COURSE",
+          "name": "History Course",
+          "slot": null,
+          "counter": null
         }
       ],
       "potions": [],
@@ -410,7 +414,24 @@
       "exhaust_pile": []
     },
     "battle": null,
-    "event": {},
+    "event": {
+      "event_id": "WAR_HISTORIAN_REPY",
+      "event_name": "War Historian, Repy",
+      "is_ancient": false,
+      "in_dialogue": false,
+      "body": null,
+      "options": [
+        {
+          "index": 0,
+          "title": "Proceed",
+          "description": "",
+          "is_locked": false,
+          "is_proceed": true,
+          "was_chosen": false,
+          "keywords": []
+        }
+      ]
+    },
     "rewards": {},
     "card_reward": {},
     "map": {},
@@ -422,5 +443,5 @@
     "menu_screen": null,
     "options": null
   },
-  "after_state_type": "card_select"
+  "after_state_type": "event"
 }

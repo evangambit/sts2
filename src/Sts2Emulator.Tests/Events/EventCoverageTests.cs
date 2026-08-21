@@ -47,6 +47,9 @@ public class EventCoverageTests
         "DoorsOfLightAndDark",
         "DrowningBeacon",
         "EndlessConveyor",
+        // No option-list capture exists for this one: it presents as its own
+        // "fake_merchant" state with a shop of fake relics rather than a list of
+        // options, so it needs a shop-shaped capture. See scripts/capture_event.py.
         "FakeMerchant",
         "FieldOfManSizedHoles",
         "GraveOfTheForgotten",

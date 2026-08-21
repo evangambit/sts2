@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "SpiralingWhirlpool",
+  "event_id": "SPIRALING_WHIRLPOOL",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,29 +12,20 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
+      "title": "Observe",
+      "description": "Enchant a Basic Strike or Defend with Spiral.",
       "is_locked": false,
       "is_proceed": false,
       "keywords": [
-        "Sharp"
+        "Spiral",
+        "Replay"
       ]
     },
     {
       "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
+      "title": "Drink",
+      "description": "Heal 26 HP.",
       "is_locked": false,
-      "is_proceed": false,
-      "keywords": [
-        "Nimble"
-      ]
-    },
-    {
-      "index": 2,
-      "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
-      "is_locked": true,
       "is_proceed": false,
       "keywords": []
     }
@@ -196,45 +187,35 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "SPIRALING_WHIRLPOOL",
+      "event_name": "Spiraling Whirlpool",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
+          "title": "Observe",
+          "description": "Enchant a Basic Strike or Defend with Spiral.",
           "is_locked": false,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": [
             {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
+              "name": "Spiral",
+              "description": "This card gains Replay 1."
+            },
+            {
+              "name": "Replay",
+              "description": "Plays this card an additional time."
             }
           ]
         },
         {
           "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
+          "title": "Drink",
+          "description": "Heal 26 HP.",
           "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 2,
-          "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
-          "is_locked": true,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": []
@@ -253,7 +234,7 @@
     "options": null
   },
   "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen_title": "Observe",
   "after": {
     "state_type": "card_select",
     "run": {

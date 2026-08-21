@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "CrystalSphere",
+  "event_id": "CRYSTAL_SPHERE",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,31 +12,22 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
+      "title": "Uncover Future",
+      "description": "Pay 79 Gold. Divine 3 times.",
       "is_locked": false,
       "is_proceed": false,
-      "keywords": [
-        "Sharp"
-      ]
+      "keywords": []
     },
     {
       "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
+      "title": "Payment Plan",
+      "description": "Gain a Debt. Divine 6 times.",
       "is_locked": false,
       "is_proceed": false,
       "keywords": [
-        "Nimble"
+        "Debt",
+        "Unplayable"
       ]
-    },
-    {
-      "index": 2,
-      "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
-      "is_locked": true,
-      "is_proceed": false,
-      "keywords": []
     }
   ],
   "before": {
@@ -196,48 +187,38 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "CRYSTAL_SPHERE",
+      "event_name": "Crystal Sphere",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
+          "title": "Uncover Future",
+          "description": "Pay 79 Gold. Divine 3 times.",
           "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
-          "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 2,
-          "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
-          "is_locked": true,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": []
+        },
+        {
+          "index": 1,
+          "title": "Payment Plan",
+          "description": "Gain a Debt. Divine 6 times.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": [
+            {
+              "name": "Debt",
+              "description": "Unplayable. At the end of your turn, if this is in your Hand, lose 10 Gold."
+            },
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
+            }
+          ]
         }
       ]
     },
@@ -252,10 +233,10 @@
     "menu_screen": null,
     "options": null
   },
-  "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen": 1,
+  "chosen_title": "Payment Plan",
   "after": {
-    "state_type": "card_select",
+    "state_type": "crystal_sphere",
     "run": {
       "act": 1,
       "floor": 1,
@@ -390,9 +371,20 @@
           "can_play": null,
           "target_type": null,
           "is_upgraded": false
+        },
+        {
+          "index": 11,
+          "id": "DEBT",
+          "name": "Debt",
+          "type": "Curse",
+          "cost": "0",
+          "description": "Unplayable. At the end of your turn, if this is in your Hand, lose 10 Gold.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
         }
       ],
-      "deck_size": 11,
+      "deck_size": 12,
       "relics": [
         {
           "id": "BURNING_BLOOD",
@@ -422,5 +414,5 @@
     "menu_screen": null,
     "options": null
   },
-  "after_state_type": "card_select"
+  "after_state_type": "crystal_sphere"
 }

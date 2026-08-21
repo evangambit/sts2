@@ -20,6 +20,12 @@ The run state the event was entered in is recorded alongside, because it decides
 `EventModel` seeds its own Rng from the run seed, the current floor and a hash of the
 event's id, so the same event at a different floor is a different roll.
 
+One Act 1 event is out of reach here: Fake Merchant does not present an option list at
+all. It reports as `state_type: "fake_merchant"` with a shop of fake relics -- Mango???,
+Strike Dummy??? -- priced like a merchant's, and the choice is which one to buy. It needs
+a shop-shaped capture rather than this one, so it has no `-options.json` fixture and is
+the one Act 1 event `EventOptionGatingTests` does not cover.
+
 Needs the game running with STS2MCP, and a mod new enough to have `debug_start_event`
 (see FORK_NOTES.md in the STS2MCP fork).
 """
@@ -56,6 +62,9 @@ def _load(name: str) -> ModuleType:
 
 capture_card = _load("capture_card")
 capture_sweep = _load("capture_sweep")
+# The full-run tracer's summariser, not trace_real_game's: that one is combat-shaped and
+# carries no deck, relics or potions, which is most of what an event actually changes.
+trace_run = _load("trace_real_game_run")
 
 
 def enter_event(base_url: str, event: str, timeout: float = 20.0) -> dict[str, Any]:
@@ -174,7 +183,7 @@ def capture(
         )
 
     before_state = enter_event(base_url, event)
-    before = trace_real_game.summarize_state(before_state)
+    before = trace_run.compact_state(before_state)
     options = offered_options(before_state)
 
     fixture: dict[str, Any] = {
@@ -210,7 +219,7 @@ def capture(
         after_state = choose(base_url, option)
         fixture["chosen"] = option
         fixture["chosen_title"] = options[option].get("title")
-        fixture["after"] = trace_real_game.summarize_state(after_state)
+        fixture["after"] = trace_run.compact_state(after_state)
         fixture["after_state_type"] = after_state.get("state_type")
 
     return fixture

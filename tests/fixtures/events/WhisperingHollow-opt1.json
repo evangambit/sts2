@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "WhisperingHollow",
+  "event_id": "WHISPERING_HOLLOW",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,31 +12,21 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
+      "title": "Exchange Gold",
+      "description": "Lose 43 Gold. Procure 2 random Potions.",
       "is_locked": false,
       "is_proceed": false,
-      "keywords": [
-        "Sharp"
-      ]
+      "keywords": []
     },
     {
       "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
+      "title": "Hug the Tree",
+      "description": "Lose 9 HP. Choose a card to Transform.",
       "is_locked": false,
       "is_proceed": false,
       "keywords": [
-        "Nimble"
+        "Transform"
       ]
-    },
-    {
-      "index": 2,
-      "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
-      "is_locked": true,
-      "is_proceed": false,
-      "keywords": []
     }
   ],
   "before": {
@@ -196,48 +186,34 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "WHISPERING_HOLLOW",
+      "event_name": "Whispering Hollow",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
+          "title": "Exchange Gold",
+          "description": "Lose 43 Gold. Procure 2 random Potions.",
           "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
-          "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 2,
-          "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
-          "is_locked": true,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": []
+        },
+        {
+          "index": 1,
+          "title": "Hug the Tree",
+          "description": "Lose 9 HP. Choose a card to Transform.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": [
+            {
+              "name": "Transform",
+              "description": "Transformed cards become a random card of any rarity."
+            }
+          ]
         }
       ]
     },
@@ -252,8 +228,8 @@
     "menu_screen": null,
     "options": null
   },
-  "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen": 1,
+  "chosen_title": "Hug the Tree",
   "after": {
     "state_type": "card_select",
     "run": {

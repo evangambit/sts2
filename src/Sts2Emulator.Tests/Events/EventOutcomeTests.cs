@@ -1,0 +1,229 @@
+using System.Reflection;
+using System.Text.Json;
+using Sts2Emulator.Core.Run;
+using Xunit;
+
+namespace Sts2Emulator.Tests;
+
+/// <summary>
+/// What taking an event's option actually does, checked against what it did in the game.
+///
+/// The companion to <c>EventOptionGatingTests</c>, which only covers what an event
+/// offers. Each fixture was captured by entering the event on a fresh run, taking one
+/// option, and recording the run either side of it -- so what is asserted here is the
+/// game's own before and after, never the emulator's.
+///
+/// Three things are compared, being the three an event can move that the game reports
+/// outside combat: the player's hp and max hp, their gold, and their deck. The screen the
+/// choice leads to is compared as well, because half of these options do their work by
+/// opening one -- a card select to transform, a reward to claim -- and routing to the
+/// wrong screen is as wrong as the wrong number.
+/// </summary>
+public class EventOutcomeTests
+{
+    private static readonly string FixtureDir = Path.Combine(
+        AppContext.BaseDirectory,
+        "..",
+        "..",
+        "..",
+        "..",
+        "..",
+        "tests",
+        "fixtures",
+        "events"
+    );
+
+    /// <summary>The emulator's phase, named the way the mod names its screens.</summary>
+    private static string ScreenFor(RunPhase phase) =>
+        phase switch
+        {
+            RunPhase.CardReward => "card_reward",
+            RunPhase.Complete => "game_over",
+            RunPhase.Event or RunPhase.Ancient => "event",
+            RunPhase.Map => "map",
+            RunPhase.RelicReward => "rewards",
+            RunPhase.Rest => "rest_site",
+            RunPhase.Shop => "shop",
+            RunPhase.Treasure => "treasure",
+            RunPhase.TransformSelect => "card_select",
+            _ => "unknown",
+        };
+
+    /// <summary>
+    /// Options whose outcome does not yet match the game. Every entry is an event the
+    /// emulator will resolve wrongly in silence -- the wrong hp, the wrong gold, the
+    /// wrong card, or the wrong screen next.
+    ///
+    /// A burn-down list, not a config knob: 53 of the 74 takeable Act 1 options were
+    /// wrong the first time they were ever compared, which is what forty events written
+    /// without a way to check them against the game looks like. Delete an entry when its
+    /// event is fixed; <see cref="PendingListHasNoOptionThatNowMatches"/> fails if one
+    /// lingers.
+    /// </summary>
+    private static readonly HashSet<string> Pending =
+    [
+        "AbyssalBaths-opt0.json",
+        "AromaOfChaos-opt0.json",
+        "AromaOfChaos-opt1.json",
+        "BrainLeech-opt0.json",
+        "ByrdonisNest-opt1.json",
+        "CrystalSphere-opt0.json",
+        "CrystalSphere-opt1.json",
+        "DenseVegetation-opt0.json",
+        "DoorsOfLightAndDark-opt1.json",
+        "DrowningBeacon-opt0.json",
+        "DrowningBeacon-opt1.json",
+        "EndlessConveyor-opt0.json",
+        "EndlessConveyor-opt1.json",
+        "JungleMazeAdventure-opt0.json",
+        "JungleMazeAdventure-opt1.json",
+        "LuminousChoir-opt0.json",
+        "MorphicGrove-opt0.json",
+        "PotionCourier-opt0.json",
+        "PotionCourier-opt1.json",
+        "PunchOff-opt0.json",
+        "PunchOff-opt1.json",
+        "RanwidTheElder-opt1.json",
+        "RelicTrader-opt0.json",
+        "RoomFullOfCheese-opt0.json",
+        "SapphireSeed-opt0.json",
+        "SapphireSeed-opt1.json",
+        "SlipperyBridge-opt0.json",
+        "SlipperyBridge-opt1.json",
+        "SpiralingWhirlpool-opt0.json",
+        "SpiralingWhirlpool-opt1.json",
+        "StoneOfAllTime-opt1.json",
+        "SunkenStatue-opt1.json",
+        "SunkenTreasury-opt1.json",
+        "Symbiote-opt0.json",
+        "Symbiote-opt1.json",
+        "TeaMaster-opt0.json",
+        "TheLegendsWereTrue-opt1.json",
+        "ThisOrThat-opt0.json",
+        "ThisOrThat-opt1.json",
+        "TrashHeap-opt0.json",
+        "TrashHeap-opt1.json",
+        "UnrestSite-opt0.json",
+        "WarHistorianRepy-opt1.json",
+        "WaterloggedScriptorium-opt0.json",
+        "WaterloggedScriptorium-opt1.json",
+        "WaterloggedScriptorium-opt2.json",
+        "Wellspring-opt0.json",
+        "Wellspring-opt1.json",
+        "WhisperingHollow-opt0.json",
+        "WhisperingHollow-opt1.json",
+        "WoodCarvings-opt0.json",
+        "WoodCarvings-opt1.json",
+        "WoodCarvings-opt2.json",
+    ];
+
+    // "-opt0.json" and friends, but not "-options.json": one character after "opt".
+    private static IEnumerable<string> AllFixtures() =>
+        Directory
+            .GetFiles(FixtureDir, "*-opt?.json")
+            .Select(path => Path.GetFileName(path))
+            .Order();
+
+    public static TheoryData<string> Fixtures()
+    {
+        var data = new TheoryData<string>();
+        foreach (string name in AllFixtures().Where(name => !Pending.Contains(name)))
+        {
+            data.Add(name);
+        }
+
+        return data;
+    }
+
+    [Fact]
+    public void PendingListHasNoOptionThatNowMatches()
+    {
+        var matching = new List<string>();
+        foreach (string name in AllFixtures().Where(Pending.Contains))
+        {
+            try
+            {
+                TakingTheOptionMovesTheRunTheWayTheGameDid(name);
+                matching.Add(name);
+            }
+            catch (Exception)
+            {
+                // Still diverging, which is what the list says.
+            }
+        }
+
+        Assert.True(
+            matching.Count == 0,
+            $"Now matching, so remove from EventOutcomeTests.Pending: {string.Join(", ", matching)}."
+        );
+    }
+
+    [Fact]
+    public void PendingListHasNoFixtureThatIsGone()
+    {
+        var unknown = Pending.Except(AllFixtures()).Order().ToList();
+
+        Assert.True(
+            unknown.Count == 0,
+            $"No such fixture: {string.Join(", ", unknown)}. Re-capture it or drop the entry."
+        );
+    }
+
+    private static Dictionary<string, int> EventIds() =>
+        typeof(RunConstants)
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(field => field.Name.StartsWith("Event") && field.FieldType == typeof(int))
+            .ToDictionary(
+                field => field.Name["Event".Length..],
+                field => (int)field.GetValue(null)!
+            );
+
+    private static List<string> DeckSlugs(JsonElement player) =>
+        player.TryGetProperty("deck", out var deck)
+            ? deck.EnumerateArray()
+                .Select(card => card.GetProperty("id").GetString() ?? "")
+                .OrderBy(slug => slug, StringComparer.Ordinal)
+                .ToList()
+            : [];
+
+    private static List<string> DeckSlugs(RunState state) =>
+        state
+            .Deck.Select(card => GeneratedData.Cards.Get(card.DefId).Entry)
+            .OrderBy(slug => slug, StringComparer.Ordinal)
+            .ToList();
+
+    [Theory]
+    [MemberData(nameof(Fixtures))]
+    public void TakingTheOptionMovesTheRunTheWayTheGameDid(string fixtureName)
+    {
+        using var document = JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(FixtureDir, fixtureName))
+        );
+        var root = document.RootElement;
+        string name = root.GetProperty("event").GetString()!;
+        int chosen = root.GetProperty("chosen").GetInt32();
+
+        var engine = new RunEngine();
+        engine.Reset(root.GetProperty("seed").GetString()!);
+
+        var before = root.GetProperty("before").GetProperty("player");
+        Assert.Equal(before.GetProperty("gold").GetInt32(), engine.State.Gold);
+        Assert.Equal(before.GetProperty("hp").GetInt32(), engine.State.PlayerHp);
+        Assert.Equal(DeckSlugs(before), DeckSlugs(engine.State));
+
+        engine.State.EventId = EventIds()[name];
+        engine.State.Phase = RunPhase.Event;
+        int status = engine.Step(chosen, -1, out _, out _, out _);
+        Assert.True(status == 0, $"{name} refused option {chosen}, which the game accepted");
+
+        var after = root.GetProperty("after").GetProperty("player");
+        Assert.Equal(after.GetProperty("hp").GetInt32(), engine.State.PlayerHp);
+        Assert.Equal(after.GetProperty("max_hp").GetInt32(), engine.State.PlayerMaxHp);
+        Assert.Equal(after.GetProperty("gold").GetInt32(), engine.State.Gold);
+        Assert.Equal(DeckSlugs(after), DeckSlugs(engine.State));
+        Assert.Equal(
+            root.GetProperty("after_state_type").GetString(),
+            ScreenFor(engine.State.Phase)
+        );
+    }
+}

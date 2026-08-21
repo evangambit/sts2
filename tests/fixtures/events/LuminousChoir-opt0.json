@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "LuminousChoir",
+  "event_id": "LUMINOUS_CHOIR",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,28 +12,19 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
+      "title": "Reach into the Flesh",
+      "description": "Remove 2 cards from your Deck. Add Spore Mind to your Deck.",
       "is_locked": false,
       "is_proceed": false,
       "keywords": [
-        "Sharp"
+        "Spore Mind",
+        "Exhaust"
       ]
     },
     {
       "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
-      "is_locked": false,
-      "is_proceed": false,
-      "keywords": [
-        "Nimble"
-      ]
-    },
-    {
-      "index": 2,
       "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
+      "description": "Requires 147 Gold.",
       "is_locked": true,
       "is_proceed": false,
       "keywords": []
@@ -196,44 +187,34 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "LUMINOUS_CHOIR",
+      "event_name": "Luminous Choir",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
+          "title": "Reach into the Flesh",
+          "description": "Remove 2 cards from your Deck. Add Spore Mind to your Deck.",
           "is_locked": false,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": [
             {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
+              "name": "Spore Mind",
+              "description": "Exhaust."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
             }
           ]
         },
         {
           "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
-          "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 2,
           "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
+          "description": "Requires 147 Gold.",
           "is_locked": true,
           "is_proceed": false,
           "was_chosen": false,
@@ -253,7 +234,7 @@
     "options": null
   },
   "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen_title": "Reach into the Flesh",
   "after": {
     "state_type": "card_select",
     "run": {

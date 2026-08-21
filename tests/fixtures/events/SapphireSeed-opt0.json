@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "SapphireSeed",
+  "event_id": "SAPPHIRE_SEED",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,31 +12,21 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
+      "title": "Consume",
+      "description": "Heal 9 HP. Upgrade a card in your Deck.",
       "is_locked": false,
       "is_proceed": false,
-      "keywords": [
-        "Sharp"
-      ]
+      "keywords": []
     },
     {
       "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
+      "title": "Plant and Nourish",
+      "description": "Enchant a card with Sown.",
       "is_locked": false,
       "is_proceed": false,
       "keywords": [
-        "Nimble"
+        "Sown"
       ]
-    },
-    {
-      "index": 2,
-      "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
-      "is_locked": true,
-      "is_proceed": false,
-      "keywords": []
     }
   ],
   "before": {
@@ -196,48 +186,34 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "SAPPHIRE_SEED",
+      "event_name": "Sapphire Seed",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
+          "title": "Consume",
+          "description": "Heal 9 HP. Upgrade a card in your Deck.",
           "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
-          "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 2,
-          "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
-          "is_locked": true,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": []
+        },
+        {
+          "index": 1,
+          "title": "Plant and Nourish",
+          "description": "Enchant a card with Sown.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": [
+            {
+              "name": "Sown",
+              "description": "The first time you play this card each combat, gain [ironclad_energy_icon.png]."
+            }
+          ]
         }
       ]
     },
@@ -253,7 +229,7 @@
     "options": null
   },
   "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen_title": "Consume",
   "after": {
     "state_type": "card_select",
     "run": {
@@ -263,7 +239,7 @@
     },
     "player": {
       "character": "The Ironclad",
-      "hp": 64,
+      "hp": 73,
       "max_hp": 80,
       "block": 0,
       "energy": null,

@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "ThisOrThat",
+  "event_id": "THIS_OR_THAT",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,31 +12,24 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
+      "title": "This",
+      "description": "Lose 6 HP. Gain 62 Gold.",
       "is_locked": false,
       "is_proceed": false,
-      "keywords": [
-        "Sharp"
-      ]
+      "keywords": []
     },
     {
       "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
+      "title": "That",
+      "description": "Add Clumsy to your Deck. Obtain a random Relic.",
       "is_locked": false,
       "is_proceed": false,
       "keywords": [
-        "Nimble"
+        "Clumsy",
+        "Unplayable",
+        "Ethereal",
+        "Exhaust"
       ]
-    },
-    {
-      "index": 2,
-      "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
-      "is_locked": true,
-      "is_proceed": false,
-      "keywords": []
     }
   ],
   "before": {
@@ -196,48 +189,46 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "THIS_OR_THAT",
+      "event_name": "This or That?",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
+          "title": "This",
+          "description": "Lose 6 HP. Gain 62 Gold.",
           "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
-          "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 2,
-          "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
-          "is_locked": true,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": []
+        },
+        {
+          "index": 1,
+          "title": "That",
+          "description": "Add Clumsy to your Deck. Obtain a random Relic.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": [
+            {
+              "name": "Clumsy",
+              "description": "Unplayable. Ethereal."
+            },
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
         }
       ]
     },
@@ -253,9 +244,9 @@
     "options": null
   },
   "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen_title": "This",
   "after": {
-    "state_type": "card_select",
+    "state_type": "event",
     "run": {
       "act": 1,
       "floor": 1,
@@ -263,12 +254,12 @@
     },
     "player": {
       "character": "The Ironclad",
-      "hp": 64,
+      "hp": 58,
       "max_hp": 80,
       "block": 0,
       "energy": null,
       "max_energy": null,
-      "gold": 99,
+      "gold": 161,
       "deck": [
         {
           "index": 0,
@@ -410,7 +401,24 @@
       "exhaust_pile": []
     },
     "battle": null,
-    "event": {},
+    "event": {
+      "event_id": "THIS_OR_THAT",
+      "event_name": "This or That?",
+      "is_ancient": false,
+      "in_dialogue": false,
+      "body": null,
+      "options": [
+        {
+          "index": 0,
+          "title": "Proceed",
+          "description": "",
+          "is_locked": false,
+          "is_proceed": true,
+          "was_chosen": false,
+          "keywords": []
+        }
+      ]
+    },
     "rewards": {},
     "card_reward": {},
     "map": {},
@@ -422,5 +430,5 @@
     "menu_screen": null,
     "options": null
   },
-  "after_state_type": "card_select"
+  "after_state_type": "event"
 }

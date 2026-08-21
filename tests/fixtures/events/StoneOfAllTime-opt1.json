@@ -1,7 +1,7 @@
 {
   "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "event": "SelfHelpBook",
-  "event_id": "SELF_HELP_BOOK",
+  "event": "StoneOfAllTime",
+  "event_id": "STONE_OF_ALL_TIME",
   "seed": "ABCDEF",
   "ascension": 8,
   "floor": 1,
@@ -12,31 +12,21 @@
   "options": [
     {
       "index": 0,
-      "title": "Read the Back",
-      "description": "Choose an Attack to Enchant with Sharp 2.",
-      "is_locked": false,
-      "is_proceed": false,
-      "keywords": [
-        "Sharp"
-      ]
-    },
-    {
-      "index": 1,
-      "title": "Read a Random Passage",
-      "description": "Choose a Skill to Enchant with Nimble 2.",
-      "is_locked": false,
-      "is_proceed": false,
-      "keywords": [
-        "Nimble"
-      ]
-    },
-    {
-      "index": 2,
       "title": "Locked",
-      "description": "You don't have any Powers that can be Enchanted.",
+      "description": "Requires a Potion.",
       "is_locked": true,
       "is_proceed": false,
       "keywords": []
+    },
+    {
+      "index": 1,
+      "title": "Push",
+      "description": "Lose 6 HP. Enchant an Attack with Vigorous 8.",
+      "is_locked": false,
+      "is_proceed": false,
+      "keywords": [
+        "Vigorous"
+      ]
     }
   ],
   "before": {
@@ -196,48 +186,34 @@
     },
     "battle": null,
     "event": {
-      "event_id": "SELF_HELP_BOOK",
-      "event_name": "Self-Help Book",
+      "event_id": "STONE_OF_ALL_TIME",
+      "event_name": "Stone of All Time",
       "is_ancient": false,
       "in_dialogue": false,
       "body": null,
       "options": [
         {
           "index": 0,
-          "title": "Read the Back",
-          "description": "Choose an Attack to Enchant with Sharp 2.",
-          "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Sharp",
-              "description": "Increases damage on this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 1,
-          "title": "Read a Random Passage",
-          "description": "Choose a Skill to Enchant with Nimble 2.",
-          "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": false,
-          "keywords": [
-            {
-              "name": "Nimble",
-              "description": "Increases Block gained from this card by 2."
-            }
-          ]
-        },
-        {
-          "index": 2,
           "title": "Locked",
-          "description": "You don't have any Powers that can be Enchanted.",
+          "description": "Requires a Potion.",
           "is_locked": true,
           "is_proceed": false,
           "was_chosen": false,
           "keywords": []
+        },
+        {
+          "index": 1,
+          "title": "Push",
+          "description": "Lose 6 HP. Enchant an Attack with Vigorous 8.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": [
+            {
+              "name": "Vigorous",
+              "description": "The first time this card is played, it deals 8 additional damage."
+            }
+          ]
         }
       ]
     },
@@ -252,8 +228,8 @@
     "menu_screen": null,
     "options": null
   },
-  "chosen": 0,
-  "chosen_title": "Read the Back",
+  "chosen": 1,
+  "chosen_title": "Push",
   "after": {
     "state_type": "card_select",
     "run": {
@@ -263,7 +239,7 @@
     },
     "player": {
       "character": "The Ironclad",
-      "hp": 64,
+      "hp": 58,
       "max_hp": 80,
       "block": 0,
       "energy": null,
