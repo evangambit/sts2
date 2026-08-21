@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import game_version
 import start_real_game_run
 import trace_real_game
 
@@ -154,6 +155,7 @@ def wait_for_state_to_change(
     timeout: float = 25.0,
     *,
     min_combat_hand: int = 1,
+    require_new_state_type: bool = False,
 ) -> dict[str, Any]:
     """Wait until the game has actually ACTED on what was just posted.
 
@@ -173,9 +175,18 @@ def wait_for_state_to_change(
     deadline = time.monotonic() + timeout
     state = start_real_game_run.get_state(base_url)
     while time.monotonic() < deadline:
-        if compact_state(state) != before and is_actionable_state(
-            state,
-            min_combat_hand=min_combat_hand,
+        # Travelling mutates the map screen before it leaves it, so "the snapshot
+        # changed" comes true while the state is still a map — and the next action is
+        # then a second choose_map_node, which the game rejects. A move between rooms is
+        # only done when the phase itself has changed.
+        left_old_phase = (
+            not require_new_state_type
+            or state.get("state_type") != before.get("state_type")
+        )
+        if (
+            left_old_phase
+            and compact_state(state) != before
+            and is_actionable_state(state, min_combat_hand=min_combat_hand)
         ):
             return state
         time.sleep(0.2)
@@ -687,12 +698,14 @@ def capture_run(
     max_steps: int,
     map_index: int,
     delay: float,
+    ascension: int = 0,
 ) -> dict[str, Any]:
     state = start_real_game_run.start_seeded_run(
         base_url,
         seed,
         character,
         abandon_existing,
+        ascension=ascension,
     )
     state = wait_for_actionable_state(base_url)
     trace: list[dict[str, Any]] = []
@@ -715,6 +728,7 @@ def capture_run(
             before,
             delay,
             min_combat_hand=min_hand,
+            require_new_state_type=payload["action"] == "choose_map_node",
         )
         append_snapshot(trace, step, payload, result, state)
 
@@ -742,6 +756,10 @@ def capture_run(
         "kind": "full_run",
         "base_url": base_url,
         "seed": seed,
+        # The build this came from. A trace outlives the patch that produced it, and
+        # comparing one across patches is how a "regression" turns out to be a game
+        # update; tests/python/test_live_fixtures.py enforces that every fixture says.
+        "game": game_version.detect(),
         "character": character,
         "captured_at": datetime.now(UTC).isoformat(),
         "trace": trace,
@@ -786,6 +804,16 @@ def main() -> None:
     parser.add_argument("--delay", type=float, default=0.25)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--abandon-existing", action="store_true")
+    parser.add_argument(
+        "--ascension",
+        type=int,
+        default=0,
+        help=(
+            "ascension to capture at (default 0). The run layer is mostly "
+            "ascension-independent, and an auto-player at A8 may die on floor 3 and buy "
+            "a shallow trace."
+        ),
+    )
     parser.add_argument("--format", choices=["pretty", "compact"], default="pretty")
     args = parser.parse_args()
 
@@ -797,6 +825,7 @@ def main() -> None:
         args.max_steps,
         args.map_index,
         args.delay,
+        args.ascension,
     )
     text = json.dumps(trace, indent=None if args.format == "compact" else 2)
     if args.output is not None:

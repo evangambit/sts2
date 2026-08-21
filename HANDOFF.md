@@ -346,9 +346,40 @@ What that means, stated plainly:
   40 runs simply never matched one.
 
 So the run layer's end-to-end status went from "green, dishonestly" to "unmeasured,
-honestly". The next step is to take a **fresh** full-run trace from the live game and
-replay it with `scripts/replay_full_run_trace.py`, which can no longer cheat. Whatever it
-reports is the first real number for the run layer.
+honestly".
+
+### The first honest measurement
+
+Two fresh traces are committed under `tests/fixtures/run_trace/` (A0 and A8, seed
+QS2GYXRKWN, ~115 steps each, floors 1-10, covering monster, rewards, map, event,
+card_reward, shop, rest_site, treasure and card_select). Replayed through the cheat-free
+engine, the A8 one reports:
+
+    step 23 field state_type: reference='rewards' emulator='monster'
+    step 23 field player.hp: reference=59 emulator=53
+    step 28: emulator trace ended before reference boundary
+
+**Steps 0-22 match exactly** — deck, HP, gold, enemies, intents and phases through a Neow
+event, a floor-1 combat, its rewards, a map move and most of a floor-2 combat. The single
+divergence: the player's card at step 22 kills the Fuzzy Wurm Crawler live (7 HP left) and
+the run moves to `rewards` with HP 53 -> 59, which is Burning Blood's end-of-combat heal.
+The emulator is still in `monster` at 53, so it never reaches the reward path. Burning
+Blood's heal IS modelled (`RunRewardGenerator.cs:363`), so the question is why that combat
+did not end — reproduce at steps 22-23 of `QS2GYXRKWN-a8.json`.
+
+Worth noting what this catches that the combat sweep cannot: the sweep enters a combat
+directly with `debug_start_encounter` and a starter deck, while here the combat is reached
+through the run, with the deck, relics and stream positions the run actually produced.
+
+Two things the capture turned up on the way:
+
+- **The run layer has no ascension.** `RunEngine.Reset` hardcodes `PlayerHp = 64`, so an
+  A0 capture diverges at step 0 on starting HP and every combat after it. The A0 trace is
+  committed anyway — it is ground truth and costs a run to re-take — but it cannot be
+  replayed until the run layer takes an ascension the way the combat layer does.
+- **The auto-player stops at floor 10** with "No proceed button available or enabled" on a
+  treasure screen. Not an emulator issue; the tracer's proceed handling for that screen
+  needs the same treatment the map move just got.
 
 ## Next work (prioritized, with pointers)
 
