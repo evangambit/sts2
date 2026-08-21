@@ -462,10 +462,9 @@ class CommittedRunTraceTests(unittest.TestCase):
     """The full-run capture replays end to end against the emulator.
 
     This is the only test that exercises a whole act the way the game played it:
-    159 live actions from Neow to a natural game over, every one of them replayed
-    against the emulator and compared field by field. It is deliberately strict --
-    the two tolerated divergences below are capture artifacts, and any new one is
-    a real behavioural difference.
+    every live action from Neow to a natural game over, replayed against the
+    emulator and compared field by field at every step. Nothing is tolerated, so
+    any divergence at all is a real behavioural difference.
     """
 
     FIXTURE = (
@@ -498,7 +497,7 @@ class CommittedRunTraceTests(unittest.TestCase):
         )
         self.assertEqual(diffs, [])
 
-    def test_only_the_known_capture_artifacts_diverge(self):
+    def test_nothing_diverges_at_any_step(self):
         payload, result = self._replay()
         reference = compare_traces.load_trace_from_payload(payload)
         divergences = replay_full_run_trace.first_divergences(
@@ -506,17 +505,8 @@ class CommittedRunTraceTests(unittest.TestCase):
             result.payload["trace"],
             replay_full_run_trace.DEFAULT_PER_STEP_FIELDS,
         )
-        steps = sorted(
-            int(line.split(" at step ")[1].split(":")[0]) for line in divergences
-        )
-        # step 88 is the one flaw left in this capture, and it is in the capture, not
-        # the emulator: it was taken before scripts/trace_real_game_run.py learned to
-        # wait for the state to settle, so this snapshot is a frame from the middle of
-        # resolving the PREVIOUS card -- Cubex Construct's Artifact already spent, the
-        # Strike that spent it not yet applied. It reports against two fields, hand and
-        # enemies. Re-running the capture with --replay-trace regenerates the same run
-        # with settled snapshots and this drops to nothing.
-        self.assertEqual(steps, [88, 88])
+
+        self.assertEqual(divergences, [])
 
 
 if __name__ == "__main__":

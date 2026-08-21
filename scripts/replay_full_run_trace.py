@@ -136,10 +136,14 @@ def normalise_for_compare(field: str, value: Any) -> Any:
     if field == "player.hand":
         return [card.get("id") if isinstance(card, dict) else card for card in value or []]
     if field == "battle.enemies":
+        # The emulator keeps a dead enemy in the roster at 0 HP so an agent's
+        # observation has stable slots; the game removes the creature outright. Compare
+        # the living ones, the same way combat_sweep.living_emu_enemies does, or every
+        # fight where something dies reads as an extra attacker.
         return [
             (enemy.get("hp"), enemy.get("block"))
             for enemy in value or []
-            if isinstance(enemy, dict)
+            if isinstance(enemy, dict) and (enemy.get("hp") or 0) > 0
         ]
     return value
 

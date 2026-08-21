@@ -733,6 +733,7 @@ def capture_run(
     )
     state = wait_for_actionable_state(base_url)
     trace: list[dict[str, Any]] = []
+    skipped = 0
     append_snapshot(trace, 0, None, None, state)
 
     for step in range(1, max_steps + 1):
@@ -742,7 +743,7 @@ def capture_run(
             else next_scripted_action(scripted_actions, step)
         )
         if payload is None:
-            append_snapshot(trace, step, None, None, state, note="no_auto_action")
+            append_snapshot(trace, len(trace), None, None, state, note="no_auto_action")
             break
 
         before = compact_state(state)
@@ -769,6 +770,16 @@ def capture_run(
             before = compact_state(state)
             result = trace_real_game.post_action(base_url, payload)
 
+        if scripted_actions is not None and result.get("status") == "error":
+            # The game refused this one every time it was offered, which means the
+            # trace being replayed recorded an action the game never performed --
+            # exactly what the settle fix stops happening. Skip it rather than
+            # recording it or giving up: the next scripted action is the one the run
+            # actually made next.
+            skipped += 1
+            state = start_real_game_run.get_state(base_url)
+            continue
+
         # A new turn deals a full hand, so an end_turn is not done until five cards are
         # there; every other action only has to move the state at all.
         min_hand = 5 if payload["action"] == "end_turn" else 1
@@ -781,7 +792,7 @@ def capture_run(
         )
         append_snapshot(
             trace,
-            step,
+            len(trace),
             payload,
             result,
             state,
@@ -789,7 +800,7 @@ def capture_run(
         )
 
         if result.get("status") == "error":
-            append_snapshot(trace, step + 1, None, None, state, note="post_error")
+            append_snapshot(trace, len(trace), None, None, state, note="post_error")
             break
 
         if is_terminal_state(state):
@@ -806,6 +817,9 @@ def capture_run(
         "game": game_version.detect(),
         "character": character,
         "captured_at": datetime.now(UTC).isoformat(),
+        # Actions a replayed trace listed that the game refused outright. Non-zero
+        # means the trace being replayed had recorded something the game never did.
+        "skipped_refused_actions": skipped,
         "trace": trace,
     }
 
