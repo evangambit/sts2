@@ -501,9 +501,21 @@ def extract_relics() -> str:
         if name == "DeprecatedRelic":
             continue
 
-        entries.append(
-            f'        new RelicDef(Id: {stable_id("relics", name)}, Name: "{name}"),',
-        )
+        # RelicModel.IsTradable decides whether a relic can be handed over -- Ranwid
+        # the Elder's third option, and the relic trader's stock -- and it reads three
+        # things off the model: the rarity, whether picking it up did something that
+        # cannot be given back, and whether it spawns a pet.
+        rarity = re.search(r"RelicRarity Rarity => RelicRarity\.(\w+)", text)
+        fields = [
+            f'Id: {stable_id("relics", name)}',
+            f'Name: "{name}"',
+            f"Rarity: RelicRarity.{rarity.group(1) if rarity else 'None'}",
+        ]
+        if "HasUponPickupEffect => true" in text:
+            fields.append("HasUponPickupEffect: true")
+        if "SpawnsPets => true" in text:
+            fields.append("SpawnsPets: true")
+        entries.append(f"        new RelicDef({', '.join(fields)}),")
 
     if not entries:
         entries = ["        // No relics extracted — check RELICS_DIR path."]

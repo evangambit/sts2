@@ -65,6 +65,20 @@ def enter_event(base_url: str, event: str, timeout: float = 20.0) -> dict[str, A
         RuntimeError: if the mod rejects the action or the event never opens.
 
     """
+    # What is on screen before the jump, so the wait can insist on seeing something
+    # else. Without this a stale option list that simply has not changed yet reads as
+    # settled, and the capture commits the previous event's options under this event's
+    # name -- which is how Tea Master came back holding Tablet of Truth's.
+    #
+    # Tolerant of a failing read on purpose: at least one event (Fake Merchant) makes
+    # the mod's state endpoint throw, and a batch that cannot read the state it is
+    # leaving must still be able to jump out of it. Losing the comparison costs this one
+    # capture its staleness check; refusing to post would strand every capture after it.
+    try:
+        was_showing = offered_options(start_real_game_run.get_state(base_url))
+    except Exception:  # noqa: BLE001 - any read failure means "nothing to compare with"
+        was_showing = None
+
     result = trace_real_game.post_action(
         base_url,
         {"action": "debug_start_event", "event": event},
@@ -93,6 +107,7 @@ def enter_event(base_url: str, event: str, timeout: float = 20.0) -> dict[str, A
             state.get("state_type") == "event"
             and same_event(opened.get("event_id"), event)
             and settled
+            and (was_showing is None or options != was_showing)
         ):
             return state
         time.sleep(0.25)
@@ -209,7 +224,9 @@ def default_out(event: str, option: int | None) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--event", required=True, help="event class name, e.g. SelfHelpBook",
+        "--event",
+        required=True,
+        help="event class name, e.g. SelfHelpBook",
     )
     parser.add_argument("--base-url", default="http://localhost:15526")
     parser.add_argument("--seed", default=DEFAULT_SEED)

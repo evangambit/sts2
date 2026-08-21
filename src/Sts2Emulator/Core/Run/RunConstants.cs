@@ -199,6 +199,15 @@ public static class RunConstants
     public const int RelicPandorasBox = 1510;
 
     /// <summary>Normal rooms drawn from the act's weak pool before the normal one.</summary>
+    /// <summary>Tea Master's prices, from the event's own DynamicVars.</summary>
+    public const int BoneTeaCost = 50;
+    public const int EmberTeaCost = 150;
+
+    /// <summary>Welcome to Wongos' price tags, from the event's own DynamicVars.</summary>
+    public const int WongosBargainBinCost = 100;
+    public const int WongosFeaturedItemCost = 200;
+    public const int WongosMysteryBoxCost = 300;
+
     public const int WeakEncountersPerAct = 3;
 
     public const int CursePlaceholderCard = 10001;

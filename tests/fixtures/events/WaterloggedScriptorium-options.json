@@ -1,0 +1,70 @@
+{
+  "_comment": "Captured from the live game by scripts/capture_event.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
+  "event": "WaterloggedScriptorium",
+  "event_id": "WATERLOGGED_SCRIPTORIUM",
+  "seed": "ABCDEF",
+  "ascension": 8,
+  "floor": 1,
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1"
+  },
+  "options": [
+    {
+      "index": 0,
+      "title": "Bloody Ink",
+      "description": "Gain 6 Max HP.",
+      "is_locked": false,
+      "is_proceed": false,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "title": "Tentacle Quill",
+      "description": "Pay 55 Gold. Enchant a card with Steady.",
+      "is_locked": false,
+      "is_proceed": false,
+      "keywords": [
+        "Steady",
+        "Retain"
+      ]
+    },
+    {
+      "index": 2,
+      "title": "Prickly Sponge",
+      "description": "Pay 99 Gold. Enchant 2 cards with Steady.",
+      "is_locked": false,
+      "is_proceed": false,
+      "keywords": [
+        "Steady",
+        "Retain"
+      ]
+    }
+  ],
+  "before": {
+    "state_type": "event",
+    "run": {
+      "act": 1,
+      "floor": 1,
+      "ascension": 8
+    },
+    "player": {
+      "character": "The Ironclad",
+      "hp": 64,
+      "max_hp": 80,
+      "block": 0,
+      "energy": null,
+      "max_energy": null,
+      "draw_pile_count": null,
+      "discard_pile_count": null,
+      "exhaust_pile_count": null,
+      "gold": 99,
+      "hand": [],
+      "status": []
+    },
+    "battle": null,
+    "enemies": [],
+    "menu_screen": null,
+    "menu_options": null
+  }
+}

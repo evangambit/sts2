@@ -70,7 +70,6 @@ public class EventCoverageTests
         "SpiritGrafter",
         "StoneOfAllTime",
         "SunkenStatue",
-        "SunkenTreasury",
         "Symbiote",
         "TabletOfTruth",
         "TeaMaster",

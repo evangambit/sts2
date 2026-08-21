@@ -2884,18 +2884,159 @@ public sealed class RunEngine
                 SetMask(mask, 0);
                 SetMask(mask, 1);
                 break;
+            case RunConstants.EventSymbiote:
+                // Approach needs a card Corrupted can enchant, which it limits to
+                // Attacks. Kill with Fire is always on the table.
+                if (
+                    State.Deck.Any(card =>
+                        GeneratedData.Cards.Get(card.DefId).Type == CardType.Attack
+                    )
+                )
+                {
+                    SetMask(mask, 0);
+                }
+
+                SetMask(mask, 1);
+                break;
+            case RunConstants.EventTeaMaster:
+                if (State.Gold >= RunConstants.BoneTeaCost)
+                {
+                    SetMask(mask, 0);
+                }
+
+                if (State.Gold >= RunConstants.EmberTeaCost)
+                {
+                    SetMask(mask, 1);
+                }
+
+                // Tea of Discourtesy is free.
+                SetMask(mask, 2);
+                break;
+            case RunConstants.EventRelicTrader:
+                SetTradeMask(mask, State.Relics.Count(relic => IsTradableRelic(relic)));
+                break;
+            case RunConstants.EventTheFutureOfPotions:
+                SetTradeMask(mask, State.PotionSlots.Count(potion => potion != 0));
+                break;
+            case RunConstants.EventLuminousChoir:
+                SetMask(mask, 0);
+                if (State.Gold >= RunNonCombatEffects.LuminousChoirTributeCost(State))
+                {
+                    SetMask(mask, 1);
+                }
+
+                break;
+            case RunConstants.EventStoneOfAllTime:
+                // Lift needs a potion to drink; Push needs a card Vigorous can enchant,
+                // which Vigorous.CanEnchantCardType limits to Attacks. The emulator does
+                // not model Vigorous itself, so "already enchanted" is not checked --
+                // pinned approximation, and it only ever over-offers a card the game
+                // would have skipped past.
+                if (State.PotionSlots.Any(potion => potion != 0))
+                {
+                    SetMask(mask, 0);
+                }
+
+                if (
+                    State.Deck.Any(card =>
+                        GeneratedData.Cards.Get(card.DefId).Type == CardType.Attack
+                    )
+                )
+                {
+                    SetMask(mask, 1);
+                }
+
+                break;
+            case RunConstants.EventRanwidTheElder:
+                // Give a potion, give gold, give a relic. Gold is always on the table;
+                // the other two need something to give, and the relic has to be one the
+                // game will take -- Burning Blood is a Starter relic, so a fresh run can
+                // only ever pick the gold.
+                if (State.PotionSlots.Any(potion => potion != 0))
+                {
+                    SetMask(mask, 0);
+                }
+
+                SetMask(mask, 1);
+                if (State.Relics.Any(relic => IsTradableRelic(relic)))
+                {
+                    SetMask(mask, 2);
+                }
+
+                break;
+            case RunConstants.EventWelcomeToWongos:
+                // A shop with three price tags and a door. The costs are the event's own
+                // DynamicVars, not the shop's pricing.
+                if (State.Gold >= RunConstants.WongosBargainBinCost)
+                {
+                    SetMask(mask, 0);
+                }
+
+                if (State.Gold >= RunConstants.WongosFeaturedItemCost)
+                {
+                    SetMask(mask, 1);
+                }
+
+                if (State.Gold >= RunConstants.WongosMysteryBoxCost)
+                {
+                    SetMask(mask, 2);
+                }
+
+                // Leave, which is action 3 and therefore already set above.
+                SetMask(mask, 3);
+                break;
             case RunConstants.EventResultPending:
                 SetMask(mask, 0);
                 break;
             default:
-                for (int i = 0; i <= RunConstants.EventSkipAction; i++)
+            {
+                // An event with no bespoke case above has no option gating either, so
+                // every option it offers is takeable. What it must not do is offer
+                // options the event does not have: the old fallback set a flat 0..3,
+                // which let an agent choose a third option at the many Act 1 events
+                // that only have two, and a fourth at every event that is not Welcome
+                // to Wongos.
+                int optionCount = GeneratedData.EventOptions.CountFor(State.EventId);
+                for (
+                    int i = 0;
+                    i < (optionCount > 0 ? optionCount : RunConstants.EventSkipAction);
+                    i++
+                )
                 {
                     SetMask(mask, i);
                 }
 
                 break;
+            }
         }
     }
+
+    /// <summary>
+    /// The game's <c>RelicModel.IsTradable</c> for a relic actually in the run: the
+    /// definition's own answer, plus the two run-state exclusions it also applies.
+    /// </summary>
+    /// <summary>
+    /// Both trading events offer one option per thing they can take, capped at three,
+    /// and fall back to a single Proceed when there is nothing to trade.
+    /// </summary>
+    private static void SetTradeMask(Span<int> mask, int tradableCount)
+    {
+        int offered = Math.Min(3, tradableCount);
+        if (offered == 0)
+        {
+            SetMask(mask, 0);
+            return;
+        }
+
+        for (int i = 0; i < offered; i++)
+        {
+            SetMask(mask, i);
+        }
+    }
+
+    private bool IsTradableRelic(RelicInstance relic) =>
+        GeneratedData.Relics.Get(relic.DefId).IsTradable
+        && !State.UsedUpRelics.Contains(relic.DefId);
 
     private void SetSelfHelpBookMask(Span<int> mask, int enchantType, int action)
     {

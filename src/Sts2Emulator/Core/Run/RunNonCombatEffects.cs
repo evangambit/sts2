@@ -477,6 +477,14 @@ public static class RunNonCombatEffects
         }
     }
 
+    /// <summary>
+    /// What Luminous Choir asks for its tribute. The event starts from a GoldVar of 149
+    /// and, on generate, takes off <c>Rng.NextInt(0, 50)</c> from its own stream -- so
+    /// the price is somewhere in 100..149 and the option is locked below it.
+    /// </summary>
+    public static int LuminousChoirTributeCost(RunState state) =>
+        149 - EventRng(state, "LUMINOUS_CHOIR").NextInt(0, 50);
+
     public static int SunkenTreasurySmallChestGold(RunState state)
     {
         EnsureSunkenTreasuryVars(state);
@@ -512,10 +520,18 @@ public static class RunNonCombatEffects
         state.EventValue1 = 333 + rng.NextInt(61) - 30;
     }
 
+    /// <summary>
+    /// An event's own stream. EventModel seeds it with
+    /// <c>Rng.Seed + (IsShared ? 0 : GetPlayerSlotIndex(Owner)) + hash(Id.Entry)</c>,
+    /// and a solo run's only player is slot 0 either way -- so the term is zero, not
+    /// one. It was one here, which is the same off-by-one that had Neow offering the
+    /// wrong relics and the player rng set reading the wrong stream. Sunken Treasury's
+    /// chests paid 67 and 343 where the game pays 63 and 340.
+    /// </summary>
     private static GameRng EventRng(RunState state, string eventEntry)
     {
         uint eventSeed = unchecked(
-            state.Rng.Seed + 1u + (uint)DeterministicHash.GetDeterministicHashCode(eventEntry)
+            state.Rng.Seed + (uint)DeterministicHash.GetDeterministicHashCode(eventEntry)
         );
         return new GameRng(eventSeed);
     }
