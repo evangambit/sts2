@@ -87,6 +87,44 @@ class Sts2RunEnv(gym.Env):
             raise RuntimeError(f"Sts2Run_Reset failed with status {status}.")
         return self._obs(), self._info()
 
+    def clone(self, *, resample_hidden: bool = True, seed: int | None = None):
+        """Fork this run into an independent env, for search.
+
+        By default everything the agent has not been shown is resampled: the rewards,
+        shop stock and encounter compositions still to come, and the part of the draw
+        pile it has not seen placed. That is what makes a fork safe to search with --
+        every run-level stream derives from the run seed, so a faithful copy lets a
+        rollout read the real future rather than a plausible one.
+
+        Pass resample_hidden=False only to reproduce this exact run, never to search.
+        See docs/agent-interface.md.
+
+        Raises:
+            RuntimeError: If the environment has not been reset yet.
+
+        """
+        if self._run_handle is None:
+            raise RuntimeError("Call reset() before clone().")
+
+        resample_seed = (
+            int(seed)
+            if seed is not None
+            else int(self.np_random.integers(0, 2**31 - 1))
+        )
+        copy = Sts2RunEnv(
+            seed=self._seed,
+            max_episode_steps=self._max_episode_steps,
+            max_floors=self._max_floors,
+        )
+        copy._run_handle = native.run_clone(
+            self._run_handle,
+            resample_hidden,
+            resample_seed,
+            copy._run_obs_buf,
+        )
+        copy._elapsed_steps = self._elapsed_steps
+        return copy
+
     def step(self, action: int, target: int = -1):
         self._elapsed_steps += 1
         if self._run_handle is None:

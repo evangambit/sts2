@@ -12,7 +12,7 @@ _LIB_NAMES = {
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
 _REQUIRED_NATIVE_API_VERSION = 18
-_REQUIRED_RUN_NATIVE_API_VERSION = 10
+_REQUIRED_RUN_NATIVE_API_VERSION = 11
 
 
 def _repo_root() -> Path:
@@ -264,6 +264,13 @@ _lib.Sts2Run_InfoSize.argtypes = []
 
 _lib.Sts2Run_Create.restype = ctypes.c_int
 _lib.Sts2Run_Create.argtypes = []
+_lib.Sts2Run_Clone.restype = ctypes.c_int
+_lib.Sts2Run_Clone.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
 
 _lib.Sts2Run_Reset.restype = ctypes.c_int
 _lib.Sts2Run_Reset.argtypes = [
@@ -566,6 +573,31 @@ def destroy(handle: int) -> None:
 
 def run_create() -> int:
     return int(_lib.Sts2Run_Create())
+
+
+def run_clone(
+    handle: int,
+    resample_hidden: bool,
+    resample_seed: int,
+    obs_buf: ctypes.Array,
+) -> int:
+    """Fork a run into a new handle.
+
+    With resample_hidden, everything the agent has not been shown is resampled off
+    resample_seed: future rewards, shop stock, encounter composition, and the unseen
+    part of the draw pile. Without it the copy is faithful, which for a tree search
+    is an oracle -- see docs/agent-interface.md.
+
+    Raises:
+        RuntimeError: If the source handle is unknown or the handle pool is full.
+
+    """
+    handle_out = int(
+        _lib.Sts2Run_Clone(handle, 1 if resample_hidden else 0, resample_seed, obs_buf),
+    )
+    if handle_out < 0:
+        raise RuntimeError("Sts2Run_Clone failed: unknown handle or the pool is full.")
+    return handle_out
 
 
 def run_reset(handle: int, seed: str, obs_buf: ctypes.Array) -> int:

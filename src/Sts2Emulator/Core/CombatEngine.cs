@@ -215,8 +215,7 @@ public static class CombatEngine
         }
         else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
         {
-            state.DrawPile.Insert(
-                0,
+            state.TopDeck(
                 card with
                 {
                     FreeThisTurn = false,
@@ -884,7 +883,7 @@ public static class CombatEngine
                 {
                     var card = state.DiscardPile[index];
                     state.DiscardPile.RemoveAt(index);
-                    state.DrawPile.Insert(0, card);
+                    state.TopDeck(card);
                 }
 
                 break;
@@ -927,7 +926,7 @@ public static class CombatEngine
                 )
                 {
                     var card = state.DrawPile[index];
-                    state.DrawPile.RemoveAt(index);
+                    state.RemoveFromDrawPileAt(index);
                     state.Hand.Add(card);
                 }
 
@@ -955,7 +954,7 @@ public static class CombatEngine
                 {
                     var card = state.Hand[index];
                     state.Hand.RemoveAt(index);
-                    state.DrawPile.Insert(0, card);
+                    state.TopDeck(card);
                 }
 
                 break;
@@ -1213,7 +1212,7 @@ public static class CombatEngine
         for (int i = 0; i < mayhem && state.DrawPile.Count > 0; i++)
         {
             var card = state.DrawPile[0];
-            state.DrawPile.RemoveAt(0);
+            state.RemoveFromDrawPileAt(0);
             AutoPlay(state, card, rng);
         }
     }
@@ -1340,7 +1339,7 @@ public static class CombatEngine
         }
         else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
         {
-            state.DrawPile.Insert(0, card with { FreeThisTurn = false });
+            state.TopDeck(card with { FreeThisTurn = false });
         }
         else
         {
@@ -1559,7 +1558,7 @@ public static class CombatEngine
         }
         else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
         {
-            state.DrawPile.Insert(0, card with { FreeThisTurn = false });
+            state.TopDeck(card with { FreeThisTurn = false });
         }
         else
         {

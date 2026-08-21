@@ -15,6 +15,9 @@ public sealed class CountingRandom : Random
 {
     private readonly MegaRandom _rng;
 
+    /// <summary>The stream's raw seed, kept so the stream can be cloned.</summary>
+    public int Seed { get; }
+
     public int CallCount { get; private set; }
 
     /// <summary>
@@ -23,6 +26,7 @@ public sealed class CountingRandom : Random
     /// </summary>
     public CountingRandom(int seed)
     {
+        Seed = seed;
         _rng = new MegaRandom(unchecked((uint)seed));
     }
 

@@ -18,7 +18,7 @@ trace_real_game_run = importlib.import_module("trace_real_game_run")
 
 
 def combat(hp: int, enemy_hp: int, hand: int = 3) -> dict:
-    """A state the capture would call actionable, distinguished by its hp values."""
+    """Build a state the capture calls actionable, distinguished by its hp values."""
     return {
         "state_type": "monster",
         "battle": {
@@ -37,7 +37,8 @@ def combat(hp: int, enemy_hp: int, hand: int = 3) -> dict:
 
 
 class WaitForStateToChangeTests(unittest.TestCase):
-    def drive(self, states: list[dict], **kwargs) -> dict:
+    @staticmethod
+    def drive(states: list[dict], **kwargs: object) -> dict:
         """Run the wait against a scripted sequence of poll results."""
         remaining = list(states)
         served: list[dict] = []

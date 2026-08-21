@@ -723,6 +723,14 @@ public static class NativeExports
         return RunNativeExports.Sts2Run_GetNicheRngCallCount(handle);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "Sts2Run_Clone")]
+    public static unsafe int Sts2Run_Clone(
+        int handle,
+        int resampleHidden,
+        int resampleSeed,
+        int* obsBuf
+    ) => RunNativeExports.Sts2Run_Clone(handle, resampleHidden, resampleSeed, obsBuf);
+
     [UnmanagedCallersOnly(EntryPoint = "Sts2Run_Destroy")]
     public static void Sts2Run_Destroy(int handle)
     {

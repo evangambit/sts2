@@ -7,8 +7,8 @@ namespace Sts2Emulator.Interop;
 
 public static class RunNativeExports
 {
-    // v10: the embedded combat observation carries an open card selection.
-    public const int RUN_NATIVE_API_VERSION = 10;
+    // v11: Sts2Run_Clone forks a run, optionally resampling what the agent has not seen.
+    public const int RUN_NATIVE_API_VERSION = 11;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -27,6 +27,40 @@ public static class RunNativeExports
             if (_pool[i] is null)
             {
                 _pool[i] = run;
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Fork a run into a new handle. <paramref name="resampleHidden" /> non-zero
+    /// resamples everything the agent has not been shown -- future rewards, shop stock,
+    /// encounter composition, and the unseen part of the draw pile -- off
+    /// <paramref name="resampleSeed" />. A clone taken without it is a faithful copy,
+    /// which for a tree search is an oracle. See docs/agent-interface.md.
+    /// </summary>
+    /// <returns>The new handle, or -1 if the source is unknown or the pool is full.</returns>
+    public static unsafe int Sts2Run_Clone(
+        int handle,
+        int resampleHidden,
+        int resampleSeed,
+        int* obsBuf
+    )
+    {
+        if (!TryGet(handle, out var run))
+        {
+            return -1;
+        }
+
+        var copy = run.Clone(resampleHidden != 0 ? resampleSeed : null);
+        for (int i = 0; i < _pool.Length; i++)
+        {
+            if (_pool[i] is null)
+            {
+                _pool[i] = copy;
+                copy.WriteObservation(new Span<int>(obsBuf, RunConstants.RunObsSize));
                 return i;
             }
         }

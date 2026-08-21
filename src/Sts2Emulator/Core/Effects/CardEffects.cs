@@ -549,7 +549,7 @@ public static class CardEffects
                 if (state.DrawPile.Count > 0)
                 {
                     var top = state.DrawPile[0];
-                    state.DrawPile.RemoveAt(0);
+                    state.RemoveFromDrawPileAt(0);
                     var topDef = GeneratedData.Cards.Get(top.DefId);
                     PlayNestedCard(topDef, top.Upgraded, state, rng);
                     ExhaustCard(state, top, rng: rng);
@@ -1803,7 +1803,7 @@ public static class CardEffects
             }
 
             state.Hand.Add(item.Card with { Retain = retain });
-            state.DrawPile.RemoveAt(item.Index);
+            state.RemoveFromDrawPileAt(item.Index);
         }
     }
 
@@ -1854,7 +1854,7 @@ public static class CardEffects
             }
 
             var card = state.DrawPile[0];
-            state.DrawPile.RemoveAt(0);
+            state.RemoveFromDrawPileAt(0);
             CountDrawnCardForAutomation(state);
 
             if (
@@ -1918,6 +1918,7 @@ public static class CardEffects
             .ThenBy(c => c.Upgraded ? 1 : 0)
             .ToList();
         ShufflePile(state.DrawPile, state.ShuffleRng ?? rng);
+        state.ForgetDrawOrder();
         state.DiscardPile.Clear();
         MoveStratagemCardsToHandAfterShuffle(state);
     }
@@ -2026,7 +2027,8 @@ public static class CardEffects
         var placementRng = state.ShuffleRng ?? rng;
         for (int i = 0; i < count; i++)
         {
-            state.DrawPile.Insert(
+            // A shuffle-in, not a placement: the player does not see where it went.
+            state.InsertIntoDrawPile(
                 placementRng.Next(state.DrawPile.Count + 1),
                 new CardInstance(cardId, false)
             );
@@ -2249,7 +2251,7 @@ public static class CardEffects
             {
                 var card = state.DiscardPile[index];
                 state.DiscardPile.RemoveAt(index);
-                state.DrawPile.Insert(0, card);
+                state.TopDeck(card);
                 break;
             }
 
@@ -2266,7 +2268,7 @@ public static class CardEffects
             case CardSelectionKind.DrawPileToHand when index < state.DrawPile.Count:
             {
                 var card = state.DrawPile[index];
-                state.DrawPile.RemoveAt(index);
+                state.RemoveFromDrawPileAt(index);
                 state.Hand.Add(card);
                 break;
             }
@@ -2275,7 +2277,7 @@ public static class CardEffects
             {
                 var card = state.Hand[index];
                 state.Hand.RemoveAt(index);
-                state.DrawPile.Insert(0, card);
+                state.TopDeck(card);
                 break;
             }
         }
@@ -2393,7 +2395,7 @@ public static class CardEffects
             int personalHive = BuffSystem.Get(target.Buffs, BuffId.PersonalHive);
             for (int i = 0; i < personalHive; i++)
             {
-                state.DrawPile.Add(new CardInstance(ST.Dazed, false));
+                state.BottomDeck(new CardInstance(ST.Dazed, false));
             }
 
             int curlUp = BuffSystem.Get(target.Buffs, BuffId.CurlUp);
@@ -4525,7 +4527,7 @@ public static class CardEffects
         }
 
         var card = state.DrawPile[index];
-        state.DrawPile.RemoveAt(index);
+        state.RemoveFromDrawPileAt(index);
         var def = GeneratedData.Cards.Get(card.DefId);
         PlayNestedCard(def, card.Upgraded, state, rng, card);
         if (def.Exhaust)
@@ -4581,7 +4583,7 @@ public static class CardEffects
         }
 
         var card = state.DrawPile[0];
-        state.DrawPile.RemoveAt(0);
+        state.RemoveFromDrawPileAt(0);
         ExhaustCard(state, card, rng: rng);
     }
 
@@ -4602,7 +4604,7 @@ public static class CardEffects
     {
         for (int i = 0; i < count; i++)
         {
-            state.DrawPile.Add(new CardInstance(446, upgraded));
+            state.BottomDeck(new CardInstance(446, upgraded));
         }
     }
 
@@ -5157,7 +5159,7 @@ public static class CardEffects
         }
 
         var drawCard = state.DrawPile[index];
-        state.DrawPile.RemoveAt(index);
+        state.RemoveFromDrawPileAt(index);
         state.Hand.Add(drawCard with { FreeThisTurn = false });
     }
 
@@ -5170,7 +5172,7 @@ public static class CardEffects
 
         var handCard = state.Hand[0];
         state.Hand.RemoveAt(0);
-        state.DrawPile.Insert(0, handCard with { FreeThisTurn = false });
+        state.TopDeck(handCard with { FreeThisTurn = false });
     }
 
     private static void MoveStratagemCardsToHandAfterShuffle(CombatState state)
@@ -5184,7 +5186,7 @@ public static class CardEffects
             }
 
             var drawCard = state.DrawPile[0];
-            state.DrawPile.RemoveAt(0);
+            state.RemoveFromDrawPileAt(0);
             state.Hand.Add(drawCard with { FreeThisTurn = false });
         }
     }

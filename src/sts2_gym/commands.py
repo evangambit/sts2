@@ -602,7 +602,7 @@ def set_deferred_selection(env: Any, action: int) -> None:
 
 
 def peek_deferred_selection(env: Any | None) -> int | None:
-    """The held-back action, without consuming it.
+    """Return the held-back action, without consuming it.
 
     Callers translate the same command more than once -- the replay asks whether a
     command is supported before executing it -- so reading this must not change it.

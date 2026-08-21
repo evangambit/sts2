@@ -323,6 +323,7 @@ public static class CombatFactory
         state.PendingSelection = null;
         state.AutoPlaying = false;
         state.PlayerBuffs = [];
+        state.ForgetDrawOrder();
         state.Hand = [];
         state.DiscardPile = [];
         state.ExhaustPile = [];
@@ -387,7 +388,7 @@ public static class CombatFactory
         for (int i = 0; i < handDraw && state.DrawPile.Count > 0; i++)
         {
             state.Hand.Add(state.DrawPile[0]);
-            state.DrawPile.RemoveAt(0);
+            state.RemoveFromDrawPileAt(0);
         }
 
         RelicEffects.ApplyCombatStart(state, rng);

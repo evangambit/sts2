@@ -509,5 +509,97 @@ class CommittedRunTraceTests(unittest.TestCase):
         self.assertEqual(divergences, [])
 
 
+class RunEnvCloneTests(unittest.TestCase):
+    """Forking a run for search.
+
+    A faithful fork is a copy of the world; a resampled one is a world the agent
+    cannot tell apart from it. Search needs the second, because every run-level
+    stream derives from the run seed -- a faithful fork lets a rollout read the real
+    rewards and shop stock rather than plausible ones. See docs/agent-interface.md.
+    """
+
+    @staticmethod
+    def _env_in_combat() -> "sts2_gym.Sts2RunEnv":
+        env = sts2_gym.Sts2RunEnv(seed="QS2GYXRKWN")
+        env.reset()
+        rng = np.random.default_rng(0)
+        for _ in range(40):
+            legal = np.flatnonzero(env.action_masks())
+            if not len(legal):
+                break
+            _, _, terminated, truncated, info = env.step(
+                int(rng.choice(legal)),
+                target=0,
+            )
+            if terminated or truncated or int(info["phase"]) == run_env.PHASE_COMBAT:
+                break
+        return env
+
+    @staticmethod
+    def _rollout(env, steps: int = 20) -> list[tuple[int, int, int]]:
+        seen = []
+        for _ in range(steps):
+            legal = np.flatnonzero(env.action_masks())
+            if not len(legal):
+                break
+            _, _, terminated, truncated, info = env.step(int(legal[0]), target=0)
+            seen.append((int(info["player_hp"]), int(info["gold"]), int(info["floor"])))
+            if terminated or truncated:
+                break
+        return seen
+
+    def test_clone_before_reset_is_refused(self):
+        env = sts2_gym.Sts2RunEnv(seed="QS2GYXRKWN")
+        with self.assertRaises(RuntimeError):
+            env.clone()
+
+    def test_a_fork_starts_from_the_same_observation(self):
+        env = self._env_in_combat()
+        try:
+            for resample in (False, True):
+                fork = env.clone(resample_hidden=resample, seed=11)
+                try:
+                    np.testing.assert_array_equal(fork._obs(), env._obs())
+                finally:
+                    fork.close()
+        finally:
+            env.close()
+
+    def test_stepping_a_fork_leaves_the_original_where_it_was(self):
+        env = self._env_in_combat()
+        fork = env.clone()
+        try:
+            before = env._obs().copy()
+            legal = np.flatnonzero(fork.action_masks())
+            fork.step(int(legal[0]), target=0)
+
+            np.testing.assert_array_equal(env._obs(), before)
+        finally:
+            fork.close()
+            env.close()
+
+    def test_two_faithful_forks_play_out_identically(self):
+        env = self._env_in_combat()
+        first = env.clone(resample_hidden=False)
+        second = env.clone(resample_hidden=False)
+        try:
+            self.assertEqual(self._rollout(first), self._rollout(second))
+        finally:
+            first.close()
+            second.close()
+            env.close()
+
+    def test_a_resampled_fork_plays_out_differently(self):
+        env = self._env_in_combat()
+        faithful = env.clone(resample_hidden=False)
+        resampled = env.clone(resample_hidden=True, seed=99)
+        try:
+            self.assertNotEqual(self._rollout(faithful), self._rollout(resampled))
+        finally:
+            faithful.close()
+            resampled.close()
+            env.close()
+
+
 if __name__ == "__main__":
     unittest.main()

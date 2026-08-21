@@ -129,4 +129,91 @@ public sealed class CombatState
     public int EtherealExhaustCount; // number of cards exhausted by Ethereal this turn (Dark Embrace)
     public int UnblockedDamageHitCount; // times player took unblocked damage this combat (TearAsunder)
     public int TargetEnemyIndex = -1; // -1 = auto (first living enemy), >=0 = specific index
+
+    // ── What the player knows about draw-pile order ──────────────────────────
+    // The pile is one ordered list, but the player is not entitled to all of it.
+    // They know its composition, and they know where a card they deliberately
+    // placed went -- and nothing else, until the next shuffle takes even that away.
+    // These two counters carry that distinction so an observation can expose the
+    // known part without leaking the rest, and so a determinization knows which
+    // region it is allowed to resample. See docs/agent-interface.md.
+
+    /// <summary>The first N cards of <see cref="DrawPile" /> are known, in order.</summary>
+    public int KnownTopCount;
+
+    /// <summary>The last M cards of <see cref="DrawPile" /> are known, in order.</summary>
+    public int KnownBottomCount;
+
+    /// <summary>Every shuffle takes the whole order away.</summary>
+    public void ForgetDrawOrder()
+    {
+        KnownTopCount = 0;
+        KnownBottomCount = 0;
+    }
+
+    /// <summary>Place a card on top of the draw pile, where the player can see it.</summary>
+    public void TopDeck(CardInstance card)
+    {
+        DrawPile.Insert(0, card);
+        KnownTopCount++;
+        ClampKnownOrder();
+    }
+
+    /// <summary>Place a card on the bottom of the draw pile.</summary>
+    public void BottomDeck(CardInstance card)
+    {
+        DrawPile.Add(card);
+        KnownBottomCount++;
+        ClampKnownOrder();
+    }
+
+    /// <summary>
+    /// Put a card somewhere the player does not get to see -- a shuffle-in. Anything
+    /// it lands inside stops being known, because an unknown card now sits in it.
+    /// </summary>
+    public void InsertIntoDrawPile(int index, CardInstance card)
+    {
+        DrawPile.Insert(index, card);
+        if (index < KnownTopCount)
+        {
+            KnownTopCount = index;
+        }
+
+        int indexFromBottom = DrawPile.Count - 1 - index;
+        if (indexFromBottom < KnownBottomCount)
+        {
+            KnownBottomCount = indexFromBottom;
+        }
+
+        ClampKnownOrder();
+    }
+
+    /// <summary>
+    /// Take a card out of the draw pile, shrinking whichever known region held it.
+    /// Drawing is this with index 0.
+    /// </summary>
+    public CardInstance RemoveFromDrawPileAt(int index)
+    {
+        int before = DrawPile.Count;
+        var card = DrawPile[index];
+        DrawPile.RemoveAt(index);
+        if (index < KnownTopCount)
+        {
+            KnownTopCount--;
+        }
+        else if (index >= before - KnownBottomCount)
+        {
+            KnownBottomCount--;
+        }
+
+        ClampKnownOrder();
+        return card;
+    }
+
+    /// <summary>Neither region may run past the pile, and they may not overlap.</summary>
+    private void ClampKnownOrder()
+    {
+        KnownTopCount = Math.Clamp(KnownTopCount, 0, DrawPile.Count);
+        KnownBottomCount = Math.Clamp(KnownBottomCount, 0, DrawPile.Count - KnownTopCount);
+    }
 }

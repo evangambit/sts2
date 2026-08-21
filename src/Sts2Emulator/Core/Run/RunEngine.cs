@@ -5,7 +5,7 @@ namespace Sts2Emulator.Core.Run;
 
 public sealed class RunEngine
 {
-    public RunState State { get; } = new();
+    public RunState State { get; private init; } = new();
 
     public void Reset(string seed)
     {
@@ -556,6 +556,104 @@ public sealed class RunEngine
             case RunPhase.Treasure:
                 SetMask(mask, RunConstants.RewardSkipAction);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// A deep copy of this run, for a search that wants to fork a position instead of
+    /// replaying to reach it.
+    /// </summary>
+    /// <param name="resampleSeed">
+    /// When given, everything the run has not yet paid out is resampled off this seed:
+    /// future rewards, shop stock, encounter composition, shuffles, and the part of the
+    /// draw pile the player has not been shown. What has already happened is untouched.
+    /// Omit it for a faithful copy -- which is an oracle, and must not be searched with.
+    /// See docs/agent-interface.md.
+    /// </param>
+    public RunEngine Clone(int? resampleSeed = null)
+    {
+        var copy = new RunEngine
+        {
+            State = State.Clone(
+                resampleSeed is null ? null : ResampledSeedString(resampleSeed.Value)
+            ),
+        };
+        if (resampleSeed is not null)
+        {
+            copy.ResampleHiddenState(new Random(resampleSeed.Value));
+        }
+
+        return copy;
+    }
+
+    /// <summary>The resampled run's seed, distinct from any seed a player could type.</summary>
+    private static string ResampledSeedString(int resampleSeed) =>
+        $"RESAMPLE{unchecked((uint)resampleSeed):X8}";
+
+    /// <summary>
+    /// Point the in-combat streams at the resampled run's streams, and reshuffle the
+    /// region of the draw pile the player has not seen.
+    /// </summary>
+    /// <remarks>
+    /// The combat streams keep their call counts: SyncAfterCombat hands those counts
+    /// back to the run streams when the fight ends, so the two have to stay in step
+    /// even though the values behind them have changed.
+    /// </remarks>
+    private void ResampleHiddenState(Random rng)
+    {
+        var combat = State.ActiveCombat;
+        if (combat is null)
+        {
+            return;
+        }
+
+        combat.ShuffleRng = Restream(combat.ShuffleRng, State.Rng.Shuffle);
+        combat.NicheHpRng = Restream(combat.NicheHpRng, State.Rng.Niche);
+        combat.TargetRng = Restream(combat.TargetRng, State.Rng.CombatTargets);
+        combat.CardSelectionRng = Restream(combat.CardSelectionRng, State.Rng.CombatCardSelection);
+        combat.CardGenerationRng = Restream(
+            combat.CardGenerationRng,
+            State.Rng.CombatCardGeneration
+        );
+        combat.PotionGenerationRng = Restream(
+            combat.PotionGenerationRng,
+            State.Rng.CombatPotionGeneration
+        );
+        combat.AiRng = Restream(combat.AiRng as CountingRandom, State.Rng.MonsterAi);
+        State.ActiveCombatRng = Restream(State.ActiveCombatRng, State.Rng.Niche);
+
+        ReshuffleUnknownDrawPile(combat, rng);
+    }
+
+    private static CountingRandom? Restream(CountingRandom? current, GameRng stream)
+    {
+        if (current is null)
+        {
+            return null;
+        }
+
+        var replacement = new CountingRandom(stream.RawSeed);
+        for (int i = 0; i < current.CallCount; i++)
+        {
+            replacement.Next();
+        }
+
+        return replacement;
+    }
+
+    /// <summary>
+    /// Shuffle the part of the draw pile between the known top and the known bottom.
+    /// Deliberately a plain uniform shuffle, not the game's StableShuffle: the point is
+    /// to sample a world the player cannot rule out, not to reproduce the game's order.
+    /// </summary>
+    private static void ReshuffleUnknownDrawPile(CombatState combat, Random rng)
+    {
+        int start = combat.KnownTopCount;
+        int end = combat.DrawPile.Count - combat.KnownBottomCount;
+        for (int i = end - 1; i > start; i--)
+        {
+            int j = start + rng.Next(i - start + 1);
+            (combat.DrawPile[i], combat.DrawPile[j]) = (combat.DrawPile[j], combat.DrawPile[i]);
         }
     }
 

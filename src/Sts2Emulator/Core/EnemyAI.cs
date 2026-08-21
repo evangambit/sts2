@@ -2892,7 +2892,7 @@ public static class EnemyAI
     {
         if (state.DrawPile.Count > 0)
         {
-            state.DrawPile.RemoveAt(0);
+            state.RemoveFromDrawPileAt(0);
         }
         else if (state.DiscardPile.Count > 0)
         {
