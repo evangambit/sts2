@@ -494,6 +494,10 @@ public sealed class RunEngine
                 WriteEventActionMask(mask);
                 break;
 
+            case RunPhase.Ancient when State.NeowAwaitingProceed:
+                SetMask(mask, 0);
+                break;
+
             case RunPhase.Ancient:
                 for (int i = 0; i < State.NeowOptions.Length; i++)
                 {
@@ -636,6 +640,18 @@ public sealed class RunEngine
 
         if (State.Phase == RunPhase.Ancient)
         {
+            if (State.NeowAwaitingProceed)
+            {
+                if (action != 0)
+                {
+                    return -1;
+                }
+
+                State.NeowAwaitingProceed = false;
+                EnterMapPhase();
+                return 0;
+            }
+
             if (action is < 0 or >= 3 || State.NeowOptions[action] == 0)
             {
                 return -1;
@@ -920,29 +936,15 @@ public sealed class RunEngine
         }
         if (relicId == RunConstants.RelicKaleidoscope)
         {
-            // "Obtain 2 card rewards from other characters" — two screens the player
-            // answers one after the other, not two cards appearing in the deck.
+            // "Obtain 2 card rewards from other characters". RewardsCmd.OfferCustom puts
+            // both on the rewards screen at once; the player claims one, picks a card,
+            // lands back on the screen and claims the other.
             State.PendingOtherCharacterCardRewards = 2;
-            EnterNextOtherCharacterCardReward();
+            State.NeowAwaitingProceed = true;
+            State.Phase = RunPhase.RelicReward;
             return;
         }
         AdvanceRewardRngForNeowRelic(relicId);
-    }
-
-    /// <summary>
-    /// Offers the next Kaleidoscope card reward, if one is still owed. Returns false
-    /// when they are all answered, which is the caller's cue to carry on to the map.
-    /// </summary>
-    private bool EnterNextOtherCharacterCardReward()
-    {
-        if (State.PendingOtherCharacterCardRewards <= 0)
-        {
-            return false;
-        }
-
-        State.PendingOtherCharacterCardRewards--;
-        RunRewardGenerator.EnterOtherCharacterCardReward(State);
-        return true;
     }
 
     private void AdvanceRewardRngForNeowRelic(int relicId)
@@ -1092,19 +1094,18 @@ public sealed class RunEngine
 
         Array.Clear(State.RewardCards);
         Array.Clear(State.RewardUpgraded);
-        if (State.PendingOtherCharacterCardRewards > 0 && EnterNextOtherCharacterCardReward())
-        {
-            return 0;
-        }
-
         if (State.ReturnToRewardScreenAfterCardReward)
         {
             State.ReturnToRewardScreenAfterCardReward = false;
-            if (!RunRewardGenerator.HasPendingRewards(State))
+            if (State.NeowAwaitingProceed && !RunRewardGenerator.HasPendingRewards(State))
             {
-                return AdvanceAfterNode(out terminal);
+                State.Phase = RunPhase.Ancient;
+                return 0;
             }
 
+            // Back to the rewards screen even when nothing is left on it. The game keeps
+            // it open and waits to be dismissed — the player still has to proceed — so
+            // advancing straight to the map skips an action the run actually takes.
             State.Phase = RunPhase.RelicReward;
             return 0;
         }
@@ -2898,7 +2899,12 @@ public sealed class RunEngine
 
         if (State.RewardCardPending)
         {
-            SetMask(mask, action);
+            SetMask(mask, action++);
+        }
+
+        for (int i = 0; i < State.PendingOtherCharacterCardRewards; i++)
+        {
+            SetMask(mask, action++);
         }
     }
 }

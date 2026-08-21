@@ -470,7 +470,8 @@ public static class RunRewardGenerator
         return state.RewardGold != 0
             || state.RewardPotion != 0
             || state.RelicReward != 0
-            || state.RewardCardPending;
+            || state.RewardCardPending
+            || state.PendingOtherCharacterCardRewards > 0;
     }
 
     public static bool ClaimNextReward(RunState state)
@@ -522,6 +523,26 @@ public static class RunRewardGenerator
             state.RewardCardPending = false;
             state.ReturnToRewardScreenAfterCardReward = true;
             state.Phase = RunPhase.CardReward;
+            return true;
+        }
+
+        if (state.RewardCardPending)
+        {
+            itemIndex--;
+        }
+
+        // Kaleidoscope's rewards sit on the same screen as any other, one item each:
+        // RewardsCmd.OfferCustom offers BOTH at once and the player answers them one at
+        // a time, coming back to the screen in between.
+        if (
+            state.PendingOtherCharacterCardRewards > 0
+            && itemIndex >= 0
+            && itemIndex < state.PendingOtherCharacterCardRewards
+        )
+        {
+            state.PendingOtherCharacterCardRewards--;
+            state.ReturnToRewardScreenAfterCardReward = true;
+            EnterOtherCharacterCardReward(state);
             return true;
         }
 

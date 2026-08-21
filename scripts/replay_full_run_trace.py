@@ -564,7 +564,8 @@ def summarize_relic_reward(info: dict[str, Any]) -> dict[str, Any]:
         items.append({"index": len(items), "type": "potion", "potion_id": potion_id})
     if relic_id != 0:
         items.append({"index": len(items), "type": "relic", "id": relic_id})
-    if card_pending:
+    # card_pending is a COUNT — Kaleidoscope offers two card rewards on one screen.
+    for _ in range(card_pending):
         items.append({"index": len(items), "type": "card"})
     return {"items": items}
 

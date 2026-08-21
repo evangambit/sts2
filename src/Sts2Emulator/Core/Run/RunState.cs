@@ -43,6 +43,13 @@ public sealed class RunState
     /// other, so the second has to survive the first being resolved.
     /// </summary>
     public int PendingOtherCharacterCardRewards;
+
+    /// <summary>
+    /// Neow is still on screen with nothing left but "Proceed". The game returns to the
+    /// ancient after its rewards are answered and waits for one more input before the
+    /// map; going straight to the map skips a decision the player actually makes.
+    /// </summary>
+    public bool NeowAwaitingProceed;
     public bool ReturnToRewardScreenAfterCardReward;
     public int[] MapNodeTypes = new int[RunConstants.MapChoices];
     public int[] MapChoices = new int[RunConstants.MapChoices];

@@ -474,10 +474,29 @@ and every combat fought with it now track the live run through floor 6. What rem
     first divergence in player.gold at step 60: reference=126 emulator=178
     Replay stopped: step 61: unsupported action 'select_card' while emulator phase is 7
 
-`state_type` at step 1 is the `RewardsCmd.OfferCustom` wrapper screen — live lists the two
-card rewards on a rewards screen first, and the emulator goes straight into the first one.
-The gold gap at step 60 is 52 in the emulator's favour, and the stop is an event asking
-for a card the emulator's Event phase does not accept.
+#### Screens the emulator was skipping
+
+`state_type` at step 1 was the `RewardsCmd.OfferCustom` wrapper screen, and chasing it
+turned up three places where the emulator resolved a screen the player actually answers:
+
+- **Kaleidoscope's two rewards go on the rewards screen at once.** The player claims one,
+  picks a card, lands back on the screen, claims the other. The emulator opened the first
+  card reward directly. Pending card rewards are now a count rather than a bool, all the
+  way out through the observation, so the screen can hold two.
+- **Neow stays on screen afterwards.** Its rewards answered, the game returns to the
+  ancient with nothing but "Proceed" and waits for it. The emulator went to the map.
+- **A rewards screen stays open even when empty.** After the last item is claimed the game
+  keeps it up until the player proceeds; the emulator advanced on its own. That one is
+  per-combat, not per-run.
+
+The first `state_type` divergence is now **step 29**, and the sequence from Neow through
+floor 2's combat, its rewards and the map move matches exactly.
+
+Left at the end of the run: the gold gap at step 60 is 52 in the emulator's favour, the
+stop is an event asking for a card the Event phase does not accept, and at step 29 the
+live capture takes TWO `proceed` actions to leave a shop where the emulator takes one —
+worth checking against the game before modelling, since it may be the tracer rather than
+the shop.
 
 Two things the capture turned up on the way:
 

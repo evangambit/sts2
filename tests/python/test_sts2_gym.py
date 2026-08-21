@@ -21,6 +21,7 @@ PHASE_ANCIENT = run_env.PHASE_ANCIENT
 PHASE_CARD_REWARD = run_env.PHASE_CARD_REWARD
 PHASE_COMBAT = run_env.PHASE_COMBAT
 PHASE_MAP = run_env.PHASE_MAP
+PHASE_RELIC_REWARD = run_env.PHASE_RELIC_REWARD
 
 HAND_ID_INDICES = range(8, 28, 2)
 ENEMY_INTENT_INDICES = (47, 87, 127)
@@ -128,7 +129,9 @@ class Sts2GymTests(unittest.TestCase):
             )
 
             next_obs, reward, terminated, truncated, _ = env.step(0)
-            self.assertEqual(int(next_obs[native.OBS_SIZE]), PHASE_CARD_REWARD)
+            # Seed 0 opens on Kaleidoscope, whose two card rewards are offered on the
+            # rewards screen and claimed one at a time — the card reward is a claim away.
+            self.assertEqual(int(next_obs[native.OBS_SIZE]), PHASE_RELIC_REWARD)
             self.assertEqual(reward, 0.0)
             self.assertFalse(terminated)
             self.assertFalse(truncated)
@@ -146,8 +149,10 @@ class Sts2GymTests(unittest.TestCase):
                 {"action": "choose_event_option", "index": 0},
             )
 
-            self.assertEqual(int(obs[native.OBS_SIZE]), PHASE_CARD_REWARD)
-            self.assertEqual(info["phase"], PHASE_CARD_REWARD)
+            # The rewards screen first: seed 0's Neow option 0 is Kaleidoscope, which
+            # offers two card rewards there rather than opening one directly.
+            self.assertEqual(int(obs[native.OBS_SIZE]), PHASE_RELIC_REWARD)
+            self.assertEqual(info["phase"], PHASE_RELIC_REWARD)
             self.assertEqual(reward, 0.0)
             self.assertFalse(terminated)
             self.assertFalse(truncated)

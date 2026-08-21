@@ -312,9 +312,11 @@ public class RunEngineTests
         engine.Reset("QS2GYXRKWN");
 
         engine.Step(0, -1, out _, out _, out _); // take Kaleidoscope
+        engine.Step(0, -1, out _, out _, out _); // claim the first reward
         Assert.Equal(new[] { "Calcify", "Prepared", "Skim" }, OfferedNames(engine));
 
-        engine.Step(0, -1, out _, out _, out _); // take Calcify, opening the second offer
+        engine.Step(0, -1, out _, out _, out _); // take Calcify
+        engine.Step(0, -1, out _, out _, out _); // claim the second reward
         Assert.Equal(new[] { "Acrobatics", "CollisionCourse", "BoostAway" }, OfferedNames(engine));
     }
 
@@ -335,24 +337,35 @@ public class RunEngineTests
 
         engine.Step(0, -1, out _, out _, out _); // take Kaleidoscope
 
-        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
+        // Both rewards land on the rewards screen at once and are answered one at a time,
+        // which is the sequence the capture shows: rewards, card, rewards, card, back to
+        // Neow, proceed, map.
+        Assert.Equal(RunPhase.RelicReward, engine.State.Phase);
+        Assert.Equal(2, engine.State.PendingOtherCharacterCardRewards);
         Assert.Equal(deckBefore, engine.State.Deck.Count);
+
+        engine.Step(0, -1, out _, out _, out _); // claim the first
+        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
         // Every offered card comes from a character the Ironclad is not.
         Assert.All(
             engine.State.RewardCards,
             cardId => Assert.DoesNotContain(cardId, GeneratedData.CardPools.Ironclad.ToArray())
         );
 
-        engine.Step(0, -1, out _, out _, out _); // take the first card
-
-        // The second reward, not the map.
-        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
+        engine.Step(0, -1, out _, out _, out _); // take a card
+        Assert.Equal(RunPhase.RelicReward, engine.State.Phase);
         Assert.Equal(deckBefore + 1, engine.State.Deck.Count);
 
-        engine.Step(0, -1, out _, out _, out _); // take the second card
+        engine.Step(0, -1, out _, out _, out _); // claim the second
+        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
 
+        engine.Step(0, -1, out _, out _, out _); // take a card
         Assert.Equal(deckBefore + 2, engine.State.Deck.Count);
-        Assert.NotEqual(RunPhase.CardReward, engine.State.Phase);
+
+        // Neow is still there, waiting to be dismissed.
+        Assert.Equal(RunPhase.Ancient, engine.State.Phase);
+        engine.Step(0, -1, out _, out _, out _);
+        Assert.Equal(RunPhase.Map, engine.State.Phase);
     }
 
     [Fact]
