@@ -37,68 +37,77 @@ STARTER_AGGRESSIVE_PRIORITY = (
 
 
 def compact_state(state: dict[str, Any]) -> dict[str, Any]:
+    """The live state, recorded in full rather than summarised.
+
+    Deliberately maximal. A trace is a permanent artefact and re-capturing one costs a
+    whole run against the live game, so the rule is **record everything, compare what we
+    can today**: the replay only checks the fields the emulator can currently produce,
+    and deepening that check later must never require going back to the game. An act is
+    under a thousand decisions, so the cost of the detail is nothing.
+
+    It doubles as the shape an agent observation wants, which is the other reason not to
+    thin it out: deck contents, both sides' buffs and the ordered piles are exactly what
+    a policy needs and what a summary drops.
+    """
     player = state.get("player") or {}
-    run = state.get("run") or {}
     battle = state.get("battle") or {}
-    rewards = state.get("rewards") or {}
-    card_reward = state.get("card_reward") or {}
-    event = state.get("event") or {}
-    map_state = state.get("map") or {}
-    shop = state.get("shop") or {}
-    rest = state.get("rest") or {}
-    rest_site = state.get("rest_site") or {}
-    treasure = state.get("treasure") or {}
-    bundle_select = state.get("bundle_select") or {}
+
+    def pile(*names: str) -> Any:
+        """Prefer the ordered form of a pile; the unordered one loses draw order."""
+        for name in names:
+            if player.get(name) is not None:
+                return simplify_cards(player[name])
+        return []
 
     return {
         "state_type": state.get("state_type"),
-        "run": run,
+        "run": state.get("run") or {},
         "player": {
             "character": player.get("character"),
             "hp": player.get("hp"),
             "max_hp": player.get("max_hp"),
             "block": player.get("block"),
             "energy": player.get("energy"),
+            "max_energy": player.get("max_energy"),
             "gold": player.get("gold"),
+            # The deck IN ORDER, not just its size: it is what card rewards, shop
+            # purchases, removals and transforms all change, and a size alone cannot
+            # tell a wrong card from a right one.
+            "deck": simplify_cards(player.get("deck") or []),
             "deck_size": len(player.get("deck") or []),
             "relics": simplify_named_list(player.get("relics") or []),
             "potions": simplify_named_list(player.get("potions") or []),
-            "hand": simplify_cards(player.get("hand") or []),
+            "max_potion_slots": player.get("max_potion_slots"),
+            # The player's own buffs. The old summary recorded the enemies' status and
+            # not the player's, which is half of every combat interaction.
+            "status": player.get("status"),
+            "hand": pile("hand_ordered", "hand"),
+            "draw_pile": pile("draw_pile_ordered", "draw_pile"),
+            "discard_pile": pile("discard_pile_ordered", "discard_pile"),
+            "exhaust_pile": pile("exhaust_pile"),
         },
         "battle": (
             {
                 "round": battle.get("round"),
                 "turn": battle.get("turn"),
                 "is_play_phase": battle.get("is_play_phase"),
-                "enemies": [
-                    {
-                        "entity_id": enemy.get("entity_id"),
-                        "name": enemy.get("name"),
-                        "hp": enemy.get("hp"),
-                        "max_hp": enemy.get("max_hp"),
-                        "block": enemy.get("block"),
-                        "intents": enemy.get("intents"),
-                        "status": enemy.get("status"),
-                    }
-                    for enemy in battle.get("enemies") or []
-                ],
+                "enemies": battle.get("enemies"),
             }
             if battle
             else None
         ),
-        "event": event,
-        "rewards": rewards,
-        "card_reward": card_reward,
-        "map": map_state,
-        "shop": shop,
-        "rest": rest,
-        "rest_site": rest_site,
-        "treasure": treasure,
-        "bundle_select": bundle_select,
+        "event": state.get("event") or {},
+        "rewards": state.get("rewards") or {},
+        "card_reward": state.get("card_reward") or {},
+        "map": state.get("map") or {},
+        "shop": state.get("shop") or {},
+        "rest": state.get("rest") or {},
+        "rest_site": state.get("rest_site") or {},
+        "treasure": state.get("treasure") or {},
+        "bundle_select": state.get("bundle_select") or {},
         "menu_screen": state.get("menu_screen"),
         "options": state.get("options"),
     }
-
 
 def simplify_named_list(items: list[Any]) -> list[dict[str, Any]]:
     simplified = []
@@ -134,42 +143,46 @@ def simplify_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def wait_after_action(base_url: str, delay: float) -> dict[str, Any]:
-    return wait_after_action_with_min_hand(base_url, delay, min_combat_hand=1)
 
 
-def wait_after_action_with_min_hand(
+
+
+def wait_for_state_to_change(
     base_url: str,
+    before: dict[str, Any],
     delay: float,
+    timeout: float = 25.0,
     *,
-    min_combat_hand: int,
+    min_combat_hand: int = 1,
 ) -> dict[str, Any]:
+    """Wait until the game has actually ACTED on what was just posted.
+
+    Waiting for the state to be "actionable" is not enough and was the bug under two
+    days of false divergences: right after an action is posted the state is still a
+    combat with cards in hand, so the predicate is already true and the snapshot
+    recorded is the one from BEFORE the action. Every later step then compares the
+    emulator's step N against the game's step N-1.
+
+    Comparing the whole recorded snapshot is the strictest available signal — stricter
+    than any hand-picked identity, and free, because the snapshot is being taken anyway.
+    Falls through on timeout so a genuinely idempotent action (one the game ignores)
+    reports as a stuck step rather than hanging the capture.
+    """
     if delay > 0:
         time.sleep(delay)
+    deadline = time.monotonic() + timeout
     state = start_real_game_run.get_state(base_url)
-    deadline = time.monotonic() + 15.0
     while time.monotonic() < deadline:
-        if is_actionable_state(state, min_combat_hand=min_combat_hand):
-            return state
-        time.sleep(0.25)
-        state = start_real_game_run.get_state(base_url)
-    return state
-
-
-def wait_after_map_choice(base_url: str, delay: float) -> dict[str, Any]:
-    if delay > 0:
-        time.sleep(delay)
-    state = start_real_game_run.get_state(base_url)
-    deadline = time.monotonic() + 20.0
-    while time.monotonic() < deadline:
-        if state.get("state_type") != "map" and is_actionable_state(
+        if compact_state(state) != before and is_actionable_state(
             state,
-            min_combat_hand=5,
+            min_combat_hand=min_combat_hand,
         ):
             return state
-        time.sleep(0.25)
+        time.sleep(0.2)
         state = start_real_game_run.get_state(base_url)
     return state
+
+
 
 
 def wait_for_actionable_state(
@@ -692,16 +705,17 @@ def capture_run(
             break
 
         previous_state_type = state.get("state_type")
+        before = compact_state(state)
         result = trace_real_game.post_action(base_url, payload)
-        if payload["action"] == "choose_map_node":
-            state = wait_after_map_choice(base_url, delay)
-        else:
-            min_hand = 5 if payload["action"] == "end_turn" else 1
-            state = wait_after_action_with_min_hand(
-                base_url,
-                delay,
-                min_combat_hand=min_hand,
-            )
+        # A new turn deals a full hand, so an end_turn is not done until five cards are
+        # there; every other action only has to move the state at all.
+        min_hand = 5 if payload["action"] == "end_turn" else 1
+        state = wait_for_state_to_change(
+            base_url,
+            before,
+            delay,
+            min_combat_hand=min_hand,
+        )
         append_snapshot(trace, step, payload, result, state)
 
         tolerated_retry_error = (

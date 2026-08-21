@@ -397,6 +397,26 @@ kill a Phrog Parasite by turn five, which is how its Wrigglers were finally seen
   cards back in the same slots, walk the action list. Both the Wrigglers and the eel's
   Shriek phase are pinned that way; all four mutations tried against them were caught.
 
+## Capturing a Full-Run Trace
+
+`trace_real_game_run.py` auto-plays a run against the live game and records it;
+`replay_full_run_trace.py` replays that recording against `Sts2RunEnv` with no game
+running. Two rules make the recording worth having:
+
+- **Record maximally, compare incrementally.** The snapshot keeps the deck in order, both
+  sides' buffs, every pile in order, and each phase's own screen — not a summary. A trace
+  costs a whole run against the game to re-take, so the replay should be able to deepen
+  what it checks without anyone going back to the game. It is also the shape an agent
+  observation wants.
+- **A wait must prove the game ACTED**, not that it is ready to act. Waiting for an
+  "actionable" state returns immediately after an action is posted, so the snapshot
+  recorded is the one from before it. `wait_for_state_to_change` compares the whole
+  snapshot, which is both the strictest signal available and free, since the snapshot is
+  being taken anyway.
+
+Capture at a low ascension first: the run layer is mostly ascension-independent and an A8
+auto-player may die on floor 3, which buys a shallow trace.
+
 ## Driving the Live Game
 
 Both harness bugs found here have the same shape — **posting an action and reading the
