@@ -420,11 +420,38 @@ The replay moved accordingly — it used to stop dead at step 24, and now runs p
 | `player.hp` | step 23 | step 46 |
 | `player.gold` | — | step 24 |
 
-What is left at each: the hand still differs in one card, so Kaleidoscope picks the right
-*pools* but not yet the right *cards* — `CardFactory.CreateForReward`'s rarity roll is not
-modelled, only the emulator's own reward-rarity logic. `state_type` at step 1 is the
-`RewardsCmd.OfferCustom` wrapper screen, which the emulator skips by going straight into
-the first card reward.
+#### Chasing the offered cards
+
+The pools were right from the start — both rewards pick Necrobinder/Silent/Defect then
+Silent/Regent/Defect, exactly as the capture does, so the Niche shuffle is correct. The
+cards within them were not, and two real defects came out of it:
+
+- **`CardRarityById` was a hand-written table of 144 ids that defaulted to Common.** Built
+  from the Ironclad pool, it agreed with the extracted data on every id it carried — but
+  **249 Uncommon and Rare cards were missing from it** and so read as Common, which let a
+  Common roll hand back a Rare. Kaleidoscope draws from other characters' pools and hit it
+  on nearly every card. `CardDef` has carried the real rarity since the extractor was
+  written; `RarityOf` now reads it.
+- **A non-encounter card rolls its rarity differently.** `CardFactory.RollForRarity` only
+  takes `Roll` — which reads and grows the running rare-chance offset — when the source is
+  an ENCOUNTER. Everything else takes `RollWithBaseOdds`, which ignores the offset AND
+  compares against the *flat* uncommon odds rather than rare + uncommon, so its uncommon
+  band is narrower. Kaleidoscope creates with `CardCreationSource.Other`.
+
+The second reward's rarities now match the capture exactly (Uncommon, Common, Common); the
+first still differs on its opening roll, so one card of six is still wrong. With the
+thresholds now understood, equal stream values could not produce that — so the remaining
+suspect is stream position, not odds.
+
+**The game logs every offset-based rarity roll** —
+`Card rarity: Rolled 0.4538, need < -0.02 for rare (offset = -0.05)` in
+`~/Library/Application Support/SlayTheSpire2/logs/godot.log` — which is the fastest way to
+settle a rarity question. It logs nothing for `RollWithBaseOdds`, and one log holds runs at
+several ascensions: the 0.03 rare / 0.01 growth lines are an A0 run, while A8 shows
+0.0149 / 0.005, which is what the emulator uses.
+
+`state_type` at step 1 is the `RewardsCmd.OfferCustom` wrapper screen, which the emulator
+skips by going straight into the first card reward.
 
 Two things the capture turned up on the way:
 
