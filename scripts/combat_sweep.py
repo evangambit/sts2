@@ -826,7 +826,11 @@ def main() -> None:
             # different fights (every DeadlyEnemies value flips), and both are worth
             # pinning — A8 is what most captures use, A10 is the only thing that
             # exercises the other branch of every Ascension.Value pair.
-            path = fixtures / f"{seed}-{encounter}-a{args.ascension}.json"
+            # A capture that fights back is a different fight from a passive one and
+            # both are worth keeping: the passive one walks the enemy's move table, the
+            # playing one reaches what only happens when the player is winning.
+            variant = "-play" if args.play else ""
+            path = fixtures / f"{seed}-{encounter}-a{args.ascension}{variant}.json"
             path.parent.mkdir(parents=True, exist_ok=True)
             # The live state verbatim (it is already the shape compare_draw_pile and
             # trace_real_game read), plus the inputs needed to rebuild the emulator side
@@ -846,6 +850,10 @@ def main() -> None:
                     "ascension": args.ascension,
                     "turns": args.turns,
                     "play": args.play,
+                    # The cards stacked on top of the hand before turn one. Recorded so
+                    # the offline replay can put the same ones in the same slots; without
+                    # them the fight it replays is a different fight.
+                    "add_cards": list(args.add_card),
                 },
                 # The turn-by-turn live readout, when turns were driven: enough to
                 # replay the fight offline and check every intent an enemy showed, not
@@ -855,6 +863,9 @@ def main() -> None:
                     {
                         "turn": row["turn"],
                         "action": row["action"],
+                        # Every action the turn took, in order, ending with end turn.
+                        # `action` alone describes only a turn that played nothing.
+                        "actions": row["actions"],
                         "player_hp": row["live_player_hp"],
                         "player_max_hp": row["live_player_max_hp"],
                         "enemies": row["live_enemies"],

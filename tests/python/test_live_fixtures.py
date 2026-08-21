@@ -461,9 +461,27 @@ class FightChecks(_TestCaseIfChecking):
             ascension=capture["ascension"],
         )
         obs, _info = cls.env.reset()
+
+        # Cards the capture stacked on top of the hand, put back in the same slots. A
+        # capture that reaches a Phrog Parasite's Wrigglers only does so because it could
+        # kill the parasite, and replaying it with a starter deck replays a different
+        # fight that never gets there.
+        slugs = _card_slug_to_id()
+        for card in capture.get("add_cards") or []:
+            entry, _, flag = card.partition(":")
+            cls.env.unwrapped.debug_add_card_to_hand(
+                slugs[entry.upper()],
+                flag.lower() in {"u", "upgraded", "+"},
+            )
+
         cls.emu_turns = []
         for row in cls.trace:
-            obs, _reward, terminated, truncated, _info = cls.env.step(row["action"])
+            # Every action the turn took, in order. `action` alone describes only a turn
+            # that played nothing, which is every capture taken before --play existed.
+            for action in row.get("actions") or [row["action"]]:
+                obs, _reward, terminated, truncated, _info = cls.env.step(action)
+                if terminated or truncated:
+                    break
             cls.emu_turns.append(
                 validate_real_game_trace.emulator_trace.summarize_observation(obs),
             )
@@ -498,7 +516,11 @@ class FightChecks(_TestCaseIfChecking):
         self.assertEqual(len(self.trace), len(self.emu_turns), "fight ended early")
         for row, emu in zip(self.trace, self.emu_turns):
             live_enemies = row["enemies"]
-            emu_enemies = emu.get("enemies") or []
+            # Only the living. The emulator keeps a dead enemy in the roster at 0 HP so
+            # an agent's observation has stable slots; the game removes the creature. Any
+            # fight the player wins part of — which is every --play capture — otherwise
+            # looks like the emulator inventing an extra attacker.
+            emu_enemies = combat_sweep.living_emu_enemies(emu)
             self.assertEqual(
                 len(live_enemies),
                 len(emu_enemies),

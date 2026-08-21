@@ -366,6 +366,12 @@ kill a Phrog Parasite by turn five, which is how its Wrigglers were finally seen
 - **Watch for star costs.** Devastate is 1 energy and 30 damage but costs 4 stars, so the
   live game reports `can_play: false` with `StarCostTooHigh` and never plays it. Bludgeon
   (3 energy, 32 damage, no star cost) is the reliable choice for an Ironclad capture.
+- **These captures are committable.** `--save-fixtures` writes a `--play` run to
+  `<SEED>-<encounter>-a8-play.json`, kept separate from the passive capture of the same
+  fight because they prove different things. The fixture records the cards it stacked and
+  every action each turn took, so `FightChecks` replays the same fight offline — put the
+  cards back in the same slots, walk the action list. Both the Wrigglers and the eel's
+  Shriek phase are pinned that way; all four mutations tried against them were caught.
 
 ## Driving the Live Game
 

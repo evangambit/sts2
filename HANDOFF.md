@@ -858,6 +858,16 @@ game's ten-card hand instead of silently dropping the overflow.
 Watch for **star costs** when picking a card to stack: Devastate is 1 energy for 30
 damage but costs 4 stars, so live reports `can_play: false` and never plays it.
 
+Both fights are committed as fixtures and checked with no game running:
+`QS2GYXRKWN-phrog-parasite-a8-play.json` and `QS2GYXRKWN-terror-eel-a8-play.json`. A
+`--play` capture is saved under its own `-play` name rather than replacing the passive
+capture of the same fight, because the two prove different things — the passive one walks
+the enemy's move table, the playing one reaches what only happens when the player is
+winning. The fixture records the stacked cards and every action each turn took, and
+`FightChecks` puts the cards back in the same slots and walks the action list. Four
+mutations were tried against them — the Wrigglers' alternation, Wriggle's Infection, the
+eel's TERROR move and its Shriek threshold — and all four were caught.
+
 **The previous standing, before this pass: 30 ALL MATCH, 5 more correct on behaviour,
 6 wrong.** Newly closed: the Kin, Vantom, jaxfruit-and-flyconid,
 and Slithering Strangler (now `turns:ok`, coverage-only). The five behaviour-correct ones
