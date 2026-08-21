@@ -192,24 +192,9 @@ public sealed class RunEngine
             State.CompletedCombatRoomsBeforeCurrent
         );
         Effects.RelicEffects.RestoreUsedUpRelics(combat, State.UsedUpRelics);
-        ApplyRetainedTraceCombatOpening(combat, encounterId);
-        ApplyRetainedTraceFloorFifteenOpening(combat);
-        ApplyRetainedTraceVantomOpening(combat, encounterId);
-        ApplyRetainedTraceActTwoOpening(combat);
 
         State.ActiveCombat = combat;
         State.ActiveCombatRng = combatRng;
-        if (
-            State.Floor == 7
-            && State.CurrentNodeType == RunConstants.NodeElite
-            && State.PlayerHp == 16
-            && State.Gold == 139
-            && combat.Enemies.Count == 1
-        )
-        {
-            combat.Enemies[0].Hp = 80;
-            combat.Enemies[0].MaxHp = 80;
-        }
         State.LastPlayerWon = false;
         State.Phase = RunPhase.Combat;
         SyncNicheRngFromCombat();
@@ -287,16 +272,6 @@ public sealed class RunEngine
         }
 
         RunNonCombatEffects.EnterEvent(State);
-        if (
-            State.StringSeed is "FKSYQMYRRV" or "7MS1YN8NWB"
-            && State.Floor == 13
-            && State.EventId == RunConstants.EventAromaOfChaos
-        )
-        {
-            State.PlayerHp = 59;
-            State.Gold = 125;
-            State.Phase = RunPhase.TransformSelect;
-        }
 
         return 0;
     }
@@ -314,19 +289,6 @@ public sealed class RunEngine
         if (IsUnknownShopBlacklisted())
         {
             allowedRoomTypes.Remove(RunConstants.NodeShop);
-        }
-
-        if (
-            State.StringSeed == "7MS1YN8NWB"
-            && State.Floor == 11
-            && State.PlayerHp == 56
-            && State.PlayerMaxHp == 80
-            && State.Gold == 201
-            && allowedRoomTypes.Contains(RunConstants.NodeEvent)
-        )
-        {
-            UpdateUnknownMapPointOdds(RunConstants.NodeEvent, allowedRoomTypes);
-            return RunConstants.NodeEvent;
         }
 
         int roomType = allowedRoomTypes.Contains(RunConstants.NodeEvent)
@@ -434,268 +396,6 @@ public sealed class RunEngine
         else if (allowedRoomTypes.Contains(roomType))
         {
             setOdds(getOdds() + baseOdds);
-        }
-    }
-
-    private void ApplyRetainedTraceCombatOpening(CombatState combat, int encounterId)
-    {
-        if (
-            State.StringSeed != "7MS1YN8NWB"
-            || State.Floor != 8
-            || State.CurrentNodeType != RunConstants.NodeElite
-            || encounterId != 68
-            || State.PlayerHp != 71
-            || State.Gold != 8
-        )
-        {
-            return;
-        }
-
-        combat.Hand =
-        [
-            new CardInstance(Effects.IC.Stampede, Upgraded: true),
-            new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.DefendIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.DefendIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.HowlFromBeyond, Upgraded: false),
-            new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.DefendIronclad, Upgraded: false),
-        ];
-        combat.DrawPile =
-        [
-            new CardInstance(Effects.IC.Bash, Upgraded: false),
-            new CardInstance(Effects.IC.DefendIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.Anger, Upgraded: false),
-            new CardInstance(Effects.IC.Cinder, Upgraded: false),
-            new CardInstance(Effects.IC.ShrugItOff, Upgraded: false),
-            new CardInstance(Effects.IC.AscendersBane, Upgraded: false),
-        ];
-        combat.DiscardPile.Clear();
-        combat.ExhaustPile.Clear();
-    }
-
-    private void ApplyRetainedTraceFloorFifteenOpening(CombatState combat)
-    {
-        if (State.StringSeed != "7MS1YN8NWB" || State.Floor != 15)
-        {
-            return;
-        }
-
-        if (combat.Enemies.Count >= 2)
-        {
-            combat.Enemies[0].Hp = 28;
-            combat.Enemies[0].MaxHp = 28;
-            combat.Enemies[1].Hp = 53;
-            combat.Enemies[1].MaxHp = 53;
-        }
-    }
-
-    private void ApplyRetainedTraceVantomOpening(CombatState combat, int encounterId)
-    {
-        if (
-            State.StringSeed != "7MS1YN8NWB"
-            || State.Floor != 17
-            || State.CurrentNodeType != RunConstants.NodeBoss
-            || encounterId != 83
-            || State.PlayerHp != 59
-            || State.Gold != 174
-        )
-        {
-            return;
-        }
-
-        combat.Hand =
-        [
-            new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.Bludgeon, Upgraded: false),
-            new CardInstance(Effects.IC.Bloodletting, Upgraded: false),
-            new CardInstance(Effects.IC.DefendIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.AscendersBane, Upgraded: false),
-        ];
-        combat.DrawPile =
-        [
-            new CardInstance(Effects.IC.Stampede, Upgraded: true),
-            new CardInstance(Effects.IC.Havoc, Upgraded: true),
-            new CardInstance(Effects.IC.DefendIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.Bash, Upgraded: false),
-            new CardInstance(Effects.IC.Cinder, Upgraded: false),
-            new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.DefendIronclad, Upgraded: false),
-            new CardInstance(Effects.IC.ShrugItOff, Upgraded: false),
-            new CardInstance(Effects.IC.HowlFromBeyond, Upgraded: false),
-        ];
-        combat.DiscardPile.Clear();
-        combat.ExhaustPile.Clear();
-    }
-
-    private void ApplyRetainedTraceActTwoOpening(CombatState combat)
-    {
-        if (State.StringSeed != "7MS1YN8NWB" || State.Act != RunConstants.ActUnderdocks)
-        {
-            return;
-        }
-
-        if (State.Floor == 19 && combat.Enemies.Count == 1)
-        {
-            combat.Enemies[0].Hp = 92;
-            combat.Enemies[0].MaxHp = 92;
-        }
-
-        if (State.Floor == 20 && combat.Enemies.Count == 1)
-        {
-            combat.Enemies[0].Hp = 76;
-            combat.Enemies[0].MaxHp = 84;
-        }
-
-        if (State.Floor == 21 && combat.Enemies.Count >= 3)
-        {
-            combat.Enemies[0].Hp = 49;
-            combat.Enemies[0].MaxHp = 49;
-            combat.Enemies[1].Hp = 43;
-            combat.Enemies[1].MaxHp = 43;
-            combat.Enemies[2].Hp = 89;
-            combat.Enemies[2].MaxHp = 89;
-            combat.Enemies[2].Block = 18;
-        }
-
-        if (State.Floor == 22 && combat.Enemies.Count >= 4)
-        {
-            combat.Enemies[0].Hp = 26;
-            combat.Enemies[0].MaxHp = 26;
-            combat.Enemies[1].Hp = 27;
-            combat.Enemies[1].MaxHp = 27;
-            combat.Enemies[2].Hp = 25;
-            combat.Enemies[2].MaxHp = 25;
-            combat.Enemies[3].Hp = 29;
-            combat.Enemies[3].MaxHp = 29;
-        }
-    }
-
-    private void ApplyRetainedTraceByrdonisPostStep(int action, StepResult result)
-    {
-        if (
-            result.Terminal
-            || State.StringSeed != "7MS1YN8NWB"
-            || State.Floor != 8
-            || State.ActiveCombat is null
-        )
-        {
-            return;
-        }
-
-        var combat = State.ActiveCombat;
-        if (combat.PlayerHp == 57 && combat.Enemies[0].Hp == 62)
-        {
-            combat.Hand =
-            [
-                new CardInstance(Effects.IC.Anger, Upgraded: false),
-                new CardInstance(Effects.IC.Bash, Upgraded: false),
-                new CardInstance(Effects.IC.ShrugItOff, Upgraded: false),
-                new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-                new CardInstance(Effects.IC.DefendIronclad, Upgraded: false),
-            ];
-            combat.DrawPile =
-            [
-                new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-                new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-                new CardInstance(Effects.IC.Cinder, Upgraded: false),
-                new CardInstance(Effects.IC.AscendersBane, Upgraded: false),
-            ];
-            return;
-        }
-
-        if (combat.PlayerHp == 50 && combat.Enemies[0].Hp == 45)
-        {
-            combat.PlayerHp = 50;
-            combat.Enemies[0].Hp = 36;
-            combat.Hand =
-            [
-                new CardInstance(Effects.IC.AscendersBane, Upgraded: false),
-                new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-                new CardInstance(Effects.IC.Cinder, Upgraded: false),
-                new CardInstance(Effects.IC.StrikeIronclad, Upgraded: false),
-                new CardInstance(Effects.IC.DefendIronclad, Upgraded: false),
-            ];
-            combat.DrawPile.Clear();
-        }
-    }
-
-    private void ApplyRetainedTraceVantomPostStep(ref StepResult result)
-    {
-        if (
-            State.StringSeed != "7MS1YN8NWB"
-            || State.Floor != 17
-            || State.CurrentNodeType != RunConstants.NodeBoss
-            || State.ActiveCombat is not { } combat
-            || combat.Enemies.Count != 1
-            || combat.Enemies[0].MaxHp != 183
-        )
-        {
-            return;
-        }
-
-        var enemy = combat.Enemies[0];
-        if (combat.Turn == 3 && enemy.CurrentIntent.Magnitude == 30)
-        {
-            combat.PlayerHp = 50;
-            enemy.Hp = 178;
-            return;
-        }
-
-        if (combat.Turn == 4 && enemy.CurrentIntent.Type == IntentType.Buff)
-        {
-            combat.PlayerHp = 40;
-            enemy.Hp = 175;
-            return;
-        }
-
-        if (combat.Turn == 5 && enemy.CurrentIntent.Magnitude == 8)
-        {
-            combat.PlayerHp = 40;
-            enemy.Hp = 159;
-            return;
-        }
-
-        if (combat.Turn == 6 && enemy.CurrentIntent.Magnitude == 14)
-        {
-            combat.PlayerHp = 35;
-            enemy.Hp = 111;
-            return;
-        }
-
-        if (combat.Turn == 7 && enemy.CurrentIntent.Magnitude == 30)
-        {
-            combat.PlayerHp = 26;
-            enemy.Hp = 87;
-            return;
-        }
-
-        if (combat.Turn >= 7 && result.Terminal && !result.PlayerWon)
-        {
-            combat.PlayerHp = 6;
-            enemy.Hp = 43;
-            enemy.CurrentIntent = new Intent(IntentType.Buff, 2);
-            result = result with { Terminal = false, PlayerWon = false };
-            return;
-        }
-
-        if (combat.Turn == 8 && enemy.CurrentIntent.Type == IntentType.Buff)
-        {
-            combat.PlayerHp = 6;
-            enemy.Hp = 43;
-            return;
-        }
-
-        if (combat.Turn >= 9 && enemy.Hp <= 5)
-        {
-            combat.PlayerHp = 6;
-            combat.PlayerGold = 267;
-            enemy.Hp = 0;
-            result = result with { Terminal = true, PlayerWon = true };
         }
     }
 
@@ -952,51 +652,6 @@ public sealed class RunEngine
 
         if (State.Phase == RunPhase.Map)
         {
-            if (
-                State.StringSeed == "FKSYQMYRRV"
-                && State.Floor is 10 or 11
-                && State.PlayerHp == 56
-                && State.PlayerMaxHp == 80
-                && State.Gold == 201
-            )
-            {
-                State.CurrentMapCoord = (3, 10);
-                State.CurrentNodeType = RunConstants.NodeEvent;
-                if (State.Floor == 10)
-                {
-                    State.Floor++;
-                }
-                State.LastResolvedRoomType = RunConstants.NodeEvent;
-                return EnterEventRoom();
-            }
-
-            if (TryEnterRetainedTraceActTwoAncient(action))
-            {
-                return 0;
-            }
-            if (
-                TryChooseRetainedTraceActTwoPath(
-                    action,
-                    out int actTwoNodeType,
-                    out int actTwoEncounterId
-                )
-            )
-            {
-                State.Phase = RunPhase.Combat;
-                int completedRooms =
-                    State.NormalEncountersVisited + State.EliteEncountersVisited - 1;
-                return StartCombatWithDeck(
-                    State.Deck,
-                    actTwoEncounterId,
-                    State.Relics,
-                    State.PlayerHp,
-                    State.PlayerMaxHp,
-                    State.PotionSlots,
-                    State.Gold,
-                    Math.Max(0, completedRooms)
-                );
-            }
-
             if (!TryChooseRarity1RetainedShopPath(action, out int nodeType, out int encounterId))
             {
                 if (
@@ -1030,16 +685,6 @@ public sealed class RunEngine
                 case RunConstants.NodeRest:
                     State.LastResolvedRoomType = RunConstants.NodeRest;
                     State.Phase = RunPhase.Rest;
-                    if (State.StringSeed == "7MS1YN8NWB" && State.Floor == 11)
-                    {
-                        State.PlayerHp = 63;
-                        State.Gold = 93;
-                    }
-                    if (State.StringSeed == "7MS1YN8NWB" && State.Floor == 16)
-                    {
-                        State.PlayerHp = 59;
-                        State.Gold = 174;
-                    }
                     break;
                 case RunConstants.NodeShop:
                     State.LastResolvedRoomType = RunConstants.NodeShop;
@@ -1050,17 +695,6 @@ public sealed class RunEngine
                     RunRewardGenerator.EnterTreasureRoom(State);
                     break;
                 case RunConstants.NodeEvent:
-                    if (
-                        State.StringSeed == "FKSYQMYRRV"
-                        && State.Floor == 11
-                        && State.PlayerHp == 56
-                        && State.PlayerMaxHp == 80
-                        && State.Gold == 201
-                    )
-                    {
-                        State.LastResolvedRoomType = RunConstants.NodeEvent;
-                        return EnterEventRoom();
-                    }
 
                     return EnterUnknownMapPoint();
                 default:
@@ -1095,35 +729,6 @@ public sealed class RunEngine
             {
                 State.ActiveCombat.PlayerHp = 0;
                 result = result with { Terminal = true, PlayerWon = false };
-            }
-            if (
-                State.Floor == 9
-                && State.ActiveCombat.PlayerHp == 36
-                && State.ActiveCombat.Enemies.Any(enemy => enemy.DefId == 30 && enemy.Hp <= 16)
-            )
-            {
-                State.ActiveCombat.PlayerHp = 13;
-                State.ActiveCombat.PlayerGold = 126;
-                foreach (var enemy in State.ActiveCombat.Enemies)
-                {
-                    enemy.Hp = 0;
-                }
-
-                result = result with { Terminal = true, PlayerWon = true };
-            }
-            if (
-                State.StringSeed == "7MS1YN8NWB"
-                && State.Floor == 9
-                && State.CurrentNodeType == RunConstants.NodeNormal
-                && State.ActiveCombat.Enemies.Count == 1
-                && State.ActiveCombat.Enemies[0].MaxHp == 64
-                && State.ActiveCombat.Enemies[0].Hp <= 36
-            )
-            {
-                State.ActiveCombat.PlayerHp = 33;
-                State.ActiveCombat.PlayerGold = 37;
-                State.ActiveCombat.Enemies[0].Hp = 0;
-                result = result with { Terminal = true, PlayerWon = true };
             }
             if (
                 State.Floor == 9
@@ -1167,154 +772,6 @@ public sealed class RunEngine
                     result = result with { Terminal = false, PlayerWon = false };
                 }
             }
-            if (
-                result.Terminal
-                && result.PlayerWon
-                && State.StringSeed == "7MS1YN8NWB"
-                && State.Floor == 17
-            )
-            {
-                State.ActiveCombat.PlayerHp = 6;
-                State.ActiveCombat.PlayerGold = 267;
-            }
-            if (
-                result.Terminal
-                && result.PlayerWon
-                && State.StringSeed == "7MS1YN8NWB"
-                && State.Floor == 8
-            )
-            {
-                State.ActiveCombat.PlayerHp = 50;
-            }
-            if (
-                result.Terminal
-                && result.PlayerWon
-                && State.StringSeed == "7MS1YN8NWB"
-                && State.Floor == 9
-            )
-            {
-                State.ActiveCombat.PlayerHp = 33;
-                State.ActiveCombat.PlayerGold = 37;
-            }
-            if (
-                result.Terminal
-                && result.PlayerWon
-                && State.StringSeed == "7MS1YN8NWB"
-                && State.Floor == 12
-            )
-            {
-                State.ActiveCombat.PlayerHp = 53;
-                State.ActiveCombat.PlayerGold = 125;
-            }
-            if (
-                State.StringSeed == "7MS1YN8NWB"
-                && State.Floor == 12
-                && State.CurrentNodeType == RunConstants.NodeElite
-                && (
-                    State.ActiveCombat.Enemies.Any(enemy => enemy.DefId == 86)
-                    || State.ActiveCombat.Enemies.Any(enemy => enemy.MaxHp == 67 && enemy.Hp <= 13)
-                )
-            )
-            {
-                State.ActiveCombat.PlayerHp = 53;
-                State.ActiveCombat.PlayerGold = 125;
-                foreach (var enemy in State.ActiveCombat.Enemies)
-                {
-                    enemy.Hp = 0;
-                }
-
-                result = result with { Terminal = true, PlayerWon = true };
-            }
-            if (
-                State.StringSeed == "7MS1YN8NWB"
-                && State.Floor == 14
-                && State.ActiveCombat.Enemies.Any(enemy => enemy.MaxHp == 132)
-                && State.ActiveCombat.Turn >= 2
-            )
-            {
-                State.ActiveCombat.PlayerHp = 53;
-                State.ActiveCombat.PlayerGold = 157;
-                foreach (var enemy in State.ActiveCombat.Enemies)
-                {
-                    enemy.Hp = 0;
-                }
-
-                result = result with { Terminal = true, PlayerWon = true };
-            }
-            if (
-                State.StringSeed == "7MS1YN8NWB"
-                && State.Floor == 15
-                && State.ActiveCombat.Enemies.Any(enemy => enemy.MaxHp == 53)
-                && State.ActiveCombat.Turn >= 3
-            )
-            {
-                State.ActiveCombat.PlayerHp = 29;
-                State.ActiveCombat.PlayerGold = 174;
-                foreach (var enemy in State.ActiveCombat.Enemies)
-                {
-                    enemy.Hp = 0;
-                }
-
-                result = result with { Terminal = true, PlayerWon = true };
-            }
-            if (
-                State.StringSeed == "7MS1YN8NWB"
-                && State.Act == RunConstants.ActUnderdocks
-                && State.Floor == 19
-                && State.ActiveCombat.Enemies.Count == 1
-                && State.ActiveCombat.Enemies[0].MaxHp == 92
-                && State.ActiveCombat.Turn >= 4
-            )
-            {
-                State.ActiveCombat.PlayerHp = 31;
-                State.ActiveCombat.PlayerGold = 285;
-                State.ActiveCombat.Enemies[0].Hp = 0;
-                result = result with { Terminal = true, PlayerWon = true };
-            }
-            if (
-                State.StringSeed == "7MS1YN8NWB"
-                && State.Act == RunConstants.ActUnderdocks
-                && State.Floor == 20
-                && State.ActiveCombat.Enemies.Count == 1
-                && State.ActiveCombat.Enemies[0].MaxHp == 84
-                && State.ActiveCombat.Turn >= 3
-            )
-            {
-                State.ActiveCombat.PlayerHp = 15;
-                State.ActiveCombat.PlayerGold = 285;
-                State.ActiveCombat.Enemies[0].Hp = 0;
-                result = result with { Terminal = true, PlayerWon = true };
-            }
-            if (
-                State.StringSeed == "7MS1YN8NWB"
-                && State.Act == RunConstants.ActUnderdocks
-                && State.Floor == 21
-                && result.Terminal
-                && !result.PlayerWon
-            )
-            {
-                State.ActiveCombat.PlayerHp = 10;
-                result = result with { Terminal = false, PlayerWon = false };
-            }
-            if (
-                State.StringSeed == "7MS1YN8NWB"
-                && State.Act == RunConstants.ActUnderdocks
-                && State.Floor == 21
-                && State.ActiveCombat.Enemies.Count >= 3
-                && State.ActiveCombat.Turn >= 3
-            )
-            {
-                State.ActiveCombat.PlayerHp = 8;
-                State.ActiveCombat.PlayerGold = 314;
-                foreach (var enemy in State.ActiveCombat.Enemies)
-                {
-                    enemy.Hp = 0;
-                }
-
-                result = result with { Terminal = true, PlayerWon = true };
-            }
-            ApplyRetainedTraceByrdonisPostStep(action, result);
-            ApplyRetainedTraceVantomPostStep(ref result);
             terminal = result.Terminal;
             State.LastPlayerWon = result.Terminal && result.PlayerWon;
             if (result.Terminal)
@@ -1371,11 +828,6 @@ public sealed class RunEngine
             }
 
             int status = AdvanceAfterNode(out terminal);
-            if (State.StringSeed == "7MS1YN8NWB" && State.Floor == 11)
-            {
-                State.PlayerHp = 39;
-                State.Gold = 93;
-            }
             return status;
         }
 
@@ -1567,38 +1019,6 @@ public sealed class RunEngine
     {
         nodeType = RunConstants.NodeNone;
         encounterId = 0;
-        if (
-            action == 1
-            && State.Floor == 5
-            && State.PlayerHp == 74
-            && State.PlayerMaxHp == 80
-            && State.Gold == 129
-        )
-        {
-            State.CurrentMapCoord = (1, 6);
-            State.CurrentNodeType = RunConstants.NodeNormal;
-            State.Floor++;
-            State.NormalEncountersVisited++;
-            nodeType = RunConstants.NodeNormal;
-            encounterId = 14; // Mawler
-            return true;
-        }
-
-        if (
-            State.Floor == 8
-            && State.PlayerHp == 60
-            && State.PlayerMaxHp == 80
-            && State.Gold == 168
-        )
-        {
-            State.CurrentMapCoord = (3, 9);
-            State.CurrentNodeType = RunConstants.NodeElite;
-            State.Floor++;
-            State.EliteEncountersVisited++;
-            nodeType = RunConstants.NodeElite;
-            encounterId = 62; // Bygone Effigy
-            return true;
-        }
 
         if (action != 1 || State.Floor != 4 || State.PlayerHp != 38 || State.Gold != 128)
         {
@@ -1622,167 +1042,6 @@ public sealed class RunEngine
     {
         nodeType = RunConstants.NodeNone;
         encounterId = 0;
-        if (
-            action == 1
-            && State.Floor == 5
-            && State.PlayerHp == 74
-            && State.PlayerMaxHp == 80
-            && State.Gold == 129
-        )
-        {
-            State.CurrentMapCoord = (1, 6);
-            State.CurrentNodeType = RunConstants.NodeNormal;
-            State.Floor++;
-            State.NormalEncountersVisited++;
-            nodeType = RunConstants.NodeNormal;
-            encounterId = 14; // Mawler
-            return true;
-        }
-
-        if (
-            State.Floor == 6
-            && State.PlayerHp == 80
-            && State.PlayerMaxHp == 80
-            && State.Gold == 138
-        )
-        {
-            State.CurrentMapCoord = (2, 7);
-            State.CurrentNodeType = RunConstants.NodeElite;
-            State.Floor++;
-            State.EliteEncountersVisited++;
-            nodeType = RunConstants.NodeElite;
-            encounterId = 68; // Byrdonis
-            return true;
-        }
-
-        if (
-            State.Floor == 7
-            && State.PlayerHp == 60
-            && State.PlayerMaxHp == 80
-            && State.Gold == 168
-        )
-        {
-            State.CurrentMapCoord = (2, 8);
-            State.CurrentNodeType = RunConstants.NodeRest;
-            State.Floor++;
-            nodeType = RunConstants.NodeRest;
-            return true;
-        }
-
-        if (
-            State.Floor == 9
-            && State.PlayerHp == 56
-            && State.PlayerMaxHp == 80
-            && State.Gold == 201
-        )
-        {
-            State.CurrentMapCoord = (4, 10);
-            State.CurrentNodeType = RunConstants.NodeRelic;
-            State.Floor++;
-            nodeType = RunConstants.NodeRelic;
-            return true;
-        }
-
-        if (
-            State.Floor == 10
-            && State.PlayerHp == 56
-            && State.PlayerMaxHp == 80
-            && State.Gold == 201
-        )
-        {
-            State.CurrentMapCoord = (3, 11);
-            State.CurrentNodeType = RunConstants.NodeEvent;
-            State.Floor++;
-            nodeType = RunConstants.NodeEvent;
-            return true;
-        }
-
-        if (
-            State.Floor == 11
-            && State.PlayerHp == 38
-            && State.PlayerMaxHp == 80
-            && State.Gold == 344
-        )
-        {
-            State.CurrentMapCoord = (2, 12);
-            State.CurrentNodeType = RunConstants.NodeElite;
-            State.Floor++;
-            State.EliteEncountersVisited++;
-            nodeType = RunConstants.NodeElite;
-            encounterId = 65; // Phrog Parasite
-            return true;
-        }
-
-        if (State.PlayerHp == 69 && State.Gold == 108 && State.Floor == 2 && action == 0)
-        {
-            State.CurrentMapCoord = (4, 2);
-            State.CurrentNodeType = RunConstants.NodeShop;
-            State.Floor++;
-            nodeType = RunConstants.NodeShop;
-            return true;
-        }
-
-        if (State.PlayerHp == 69 && State.Gold == 108 && State.Floor == 3 && action == 1)
-        {
-            State.CurrentMapCoord = (5, 3);
-            State.CurrentNodeType = RunConstants.NodeEvent;
-            State.Floor++;
-            nodeType = RunConstants.NodeEvent;
-            return true;
-        }
-
-        if (
-            State.PlayerHp == 74
-            && State.PlayerMaxHp == 96
-            && State.Gold == 108
-            && State.Floor == 4
-            && action == 1
-        )
-        {
-            State.CurrentMapCoord = (6, 4);
-            State.CurrentNodeType = RunConstants.NodeShop;
-            State.Floor++;
-            nodeType = RunConstants.NodeShop;
-            return true;
-        }
-
-        if (
-            State.PlayerHp == 74
-            && State.PlayerMaxHp == 96
-            && State.Gold == 108
-            && State.Floor == 5
-            && action == 1
-        )
-        {
-            State.CurrentMapCoord = (5, 5);
-            State.CurrentNodeType = RunConstants.NodeNormal;
-            State.Floor++;
-            State.NormalEncountersVisited++;
-            nodeType = RunConstants.NodeNormal;
-            encounterId = State.NormalEncounterSequence[
-                (State.NormalEncountersVisited - 1) % State.NormalEncounterSequence.Length
-            ];
-            return true;
-        }
-
-        if (
-            State.PlayerHp == 54
-            && State.PlayerMaxHp == 103
-            && State.Gold == 179
-            && State.Floor == 14
-            && action == 1
-        )
-        {
-            State.CurrentMapCoord = (5, 14);
-            State.CurrentNodeType = RunConstants.NodeNormal;
-            State.Floor++;
-            State.NormalEncountersVisited++;
-            nodeType = RunConstants.NodeNormal;
-            encounterId = State.NormalEncounterSequence[
-                (State.NormalEncountersVisited - 1) % State.NormalEncounterSequence.Length
-            ];
-            return true;
-        }
 
         return false;
     }
@@ -1813,34 +1072,8 @@ public sealed class RunEngine
         if (State.ReturnToRewardScreenAfterCardReward)
         {
             State.ReturnToRewardScreenAfterCardReward = false;
-            if (
-                !RunRewardGenerator.HasPendingRewards(State)
-                && !(State.StringSeed == "7MS1YN8NWB" && State.Floor == 17)
-            )
+            if (!RunRewardGenerator.HasPendingRewards(State))
             {
-                if (
-                    TryChooseRetainedTraceActTwoPath(
-                        0,
-                        out int actTwoNodeType,
-                        out int actTwoEncounterId
-                    )
-                )
-                {
-                    State.Phase = RunPhase.Combat;
-                    int completedRooms =
-                        State.NormalEncountersVisited + State.EliteEncountersVisited - 1;
-                    return StartCombatWithDeck(
-                        State.Deck,
-                        actTwoEncounterId,
-                        State.Relics,
-                        State.PlayerHp,
-                        State.PlayerMaxHp,
-                        State.PotionSlots,
-                        State.Gold,
-                        Math.Max(0, completedRooms)
-                    );
-                }
-
                 return AdvanceAfterNode(out terminal);
             }
 
@@ -1993,78 +1226,11 @@ public sealed class RunEngine
     {
         if (State.CurrentNodeType == RunConstants.NodeBoss)
         {
-            if (State.StringSeed == "7MS1YN8NWB" && State.Floor == 17)
-            {
-                State.Act = RunConstants.ActUnderdocks;
-                State.Floor = 17;
-                State.CurrentNodeType = RunConstants.NodeNone;
-                State.Phase = RunPhase.Map;
-                RunMapGenerator.SelectActAndGenerateRooms(State);
-                State.Act = RunConstants.ActUnderdocks;
-                RunMapGenerator.GenerateActMap(State);
-                terminal = false;
-                return 0;
-            }
-
             State.Phase = RunPhase.Complete;
             terminal = true;
             return 0;
         }
         return AdvanceAfterNode(out terminal);
-    }
-
-    private bool TryEnterRetainedTraceActTwoAncient(int action)
-    {
-        if (
-            State.StringSeed != "7MS1YN8NWB"
-            || State.Act != RunConstants.ActUnderdocks
-            || State.Floor != 17
-            || action != 0
-        )
-        {
-            return false;
-        }
-
-        State.Floor = 18;
-        State.CurrentNodeType = RunConstants.NodeEvent;
-        State.EventId = RunConstants.EventResultPending;
-        State.PlayerHp = 66;
-        if (State.Relics.All(relic => relic.DefId != 184))
-        {
-            State.Relics.Add(new RelicInstance(184, Counter: 0));
-        }
-        State.Phase = RunPhase.Event;
-        return true;
-    }
-
-    private bool TryChooseRetainedTraceActTwoPath(int action, out int nodeType, out int encounterId)
-    {
-        nodeType = RunConstants.NodeNone;
-        encounterId = 0;
-        if (State.StringSeed != "7MS1YN8NWB" || State.Act != RunConstants.ActUnderdocks)
-        {
-            return false;
-        }
-
-        encounterId = State.Floor switch
-        {
-            18 => 33, // Tunneler
-            19 => 35, // Thieving Hopper
-            20 => 37, // Bowlbug Rock, Bowlbug Silk, Slumbering Beetle
-            21 => 4, // Exoskeletons
-            _ => 0,
-        };
-        if (encounterId == 0)
-        {
-            return false;
-        }
-
-        State.CurrentMapCoord = (3, State.Floor - 17);
-        State.CurrentNodeType = RunConstants.NodeNormal;
-        State.Floor++;
-        State.NormalEncountersVisited++;
-        nodeType = RunConstants.NodeNormal;
-        return true;
     }
 
     private int AdvanceAfterNode(out bool terminal)
@@ -2096,14 +1262,6 @@ public sealed class RunEngine
         if (action == RunConstants.RestHealAction)
         {
             State.PlayerHp = Math.Min(State.PlayerMaxHp, State.PlayerHp + RestHealAmount());
-            if (State.StringSeed == "7MS1YN8NWB" && State.Floor == 11)
-            {
-                State.PlayerHp = 63;
-            }
-            if (State.StringSeed == "7MS1YN8NWB" && State.Floor == 16)
-            {
-                State.PlayerHp = 59;
-            }
             // Tiny Mailbox's TryModifyRestSiteHealRewards adds two PotionRewards to the
             // rest, and a reward is offered rather than given: the player chooses whether
             // to take it, and may drop a held potion to make room.
@@ -2142,18 +1300,6 @@ public sealed class RunEngine
         terminal = false;
         if (State.EventId == RunConstants.EventResultPending)
         {
-            if (
-                State.StringSeed == "7MS1YN8NWB"
-                && State.Act == RunConstants.ActUnderdocks
-                && State.Floor == 18
-            )
-            {
-                State.EventId = 0;
-                State.Phase = RunPhase.Map;
-                RunMapGenerator.RefreshMapOptions(State);
-                return 0;
-            }
-
             State.EventId = 0;
             return AdvanceAfterNode(out terminal);
         }
@@ -2190,14 +1336,6 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    if (State.StringSeed == "7MS1YN8NWB" && State.Floor == 13)
-                    {
-                        State.PlayerHp = 59;
-                        State.Gold = 125;
-                        State.Phase = RunPhase.TransformSelect;
-                        return 0;
-                    }
-
                     if (!RunNonCombatEffects.UpgradeFirstCard(State))
                     {
                         return -1;
@@ -3569,16 +2707,6 @@ public sealed class RunEngine
 
     private int EventGoldAmount(int baseAmount)
     {
-        if (baseAmount == 150 && State.Floor == 11 && State.PlayerHp == 38 && State.Gold == 201)
-        {
-            return 143;
-        }
-
-        if (baseAmount == 150 && State.Floor == 5 && State.PlayerHp == 20 && State.Gold == 128)
-        {
-            return 135;
-        }
-
         return Math.Max(0, baseAmount + State.Rng.UpFront.NextInt(-15, 16));
     }
 

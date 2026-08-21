@@ -321,6 +321,35 @@ debug_start_encounter` cycling triggers an error popup (`report_bug`, needs rest
 - `start_replay` (for clean full-run capture) is **not built** — investigated; it's a
   self-contained mod action to add (see docs/replay-verification.md), NOT a RunReplays dep.
 
+## The run layer is now honestly unverified
+
+Act-1 combat is verified end to end. The run layer around it was not — it was *fitted*.
+Removed in one pass: **1,530 lines** across `RunEngine`, `RunMapGenerator`,
+`RunRewardGenerator` and `RunNonCombatEffects` whose only job was to make two captured
+runs replay cleanly. `ApplyRetainedTrace*`, `TryGenerateRetainedTraceCombatRewards`,
+`ApplyRetainedTraceCardReward`, `ApplyRetainedTraceShop`, `TryEnterRetainedInstant5Event`,
+plus 36 seed-keyed and 19 state-fingerprint inline blocks. They forced player HP and gold,
+enemy HP, map coordinates, act transitions, treasure gold and the three offered cards; five
+of them declared a combat won outright, and one converted a loss into a non-loss.
+
+What that means, stated plainly:
+
+- **The suites never covered any of it.** All 841 C# and 195 Python tests pass with every
+  line removed, and the two seeds it keyed on (`7MS1YN8NWB`, `FKSYQMYRRV`) appear nowhere
+  in `scripts/`, `tests/` or the docs — the traces they were fitted to are not in the repo.
+- **Some of it fired in ordinary runs.** The seed-gated blocks were inert for everyone
+  else, but the fingerprint ones — `Floor == 5 && PlayerHp == 74 && Gold == 120` — key on
+  state alone. Random play reaches floors 2-8, so a trained agent sits squarely in range.
+- **Behaviour is otherwise unchanged.** 40 random-but-legal act-1 runs give byte-identical
+  results before and after: same endings, same median length, same per-phase step counts.
+  That is evidence the removal was safe, NOT evidence the fingerprints never fired — those
+  40 runs simply never matched one.
+
+So the run layer's end-to-end status went from "green, dishonestly" to "unmeasured,
+honestly". The next step is to take a **fresh** full-run trace from the live game and
+replay it with `scripts/replay_full_run_trace.py`, which can no longer cheat. Whatever it
+reports is the first real number for the run layer.
+
 ## Next work (prioritized, with pointers)
 
 **Combat start and run generation are both bit-exact** (see "what's proven"). The open

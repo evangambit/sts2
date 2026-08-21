@@ -291,6 +291,30 @@ bugs, and the rules are not guessable — read them there rather than inferring 
   the same enemy phase that summoned it. Adding a stun the game never asked for delays a
   summon by exactly one turn, which reads as a damage bug.
 
+## Never Fit the Engine to a Capture
+
+The run layer accumulated ~1,500 lines that made a replay pass by *being told the answer*:
+methods named `ApplyRetainedTrace*`, `TryGenerateRetainedTraceCombatRewards`,
+`TryEnterRetainedInstant5Event`, and inline blocks that forced HP, gold, enemy HP, map
+coordinates, act transitions and offered cards to the values of two captured runs. Several
+even declared combat victories outright (`result with { Terminal = true, PlayerWon = true }`)
+or turned a loss into a non-loss. All of it is gone; if something like it reappears, delete
+it rather than extending it.
+
+Two things make this worth a rule of its own:
+
+- **It is invisible to the test suite.** Removing every line of it left 841 C# and 195
+  Python tests passing, because nothing ever covered it. A green suite is not evidence
+  that the engine is not cheating.
+- **Not all of it was seed-gated.** The worst keyed on a *state fingerprint* —
+  `Floor == 5 && PlayerHp == 74 && Gold == 120` — so it fires in ANY run that happens to
+  match, handing that run a captured trace's card reward. Random play reaches floors 2-8,
+  and a competent agent lives in exactly that range.
+
+When a replay diverges, the fix is in the model or in the harness. If neither can be
+found yet, leave the divergence reported and unfixed: a known-wrong number is worth more
+than a green light that was hand-written.
+
 ## Card Piles and Shuffling
 
 The shuffle is a bigger source of "the damage is wrong on turn five" than any monster.
