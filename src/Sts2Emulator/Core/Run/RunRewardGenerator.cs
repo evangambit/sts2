@@ -427,7 +427,16 @@ public static class RunRewardGenerator
         var blacklist = new List<int>();
         for (int i = 0; i < state.RewardCards.Length && i < pools.Count; i++)
         {
-            int rarity = RollRewardCardRarity(state);
+            // Base odds, and the running offset neither read nor grown: Kaleidoscope
+            // creates with CardCreationSource.Other, which CardFactory.RollForRarity
+            // sends down RollWithBaseOdds.
+            int rarity = RollCardRarity(
+                state,
+                RegularEncounterCardOdds,
+                mutateOffset: false,
+                state.PlayerRng.Rewards,
+                useOffset: false
+            );
             int cardId = ChooseCardWithRarity(pools[i], rarity, blacklist, state.PlayerRng.Rewards);
             state.RewardCards[i] = cardId;
             blacklist.Add(cardId);
@@ -736,6 +745,12 @@ public static class RunRewardGenerator
         return state.PlayerRng.Rewards.NextInt(7, 16);
     }
 
+    /// <summary>The RegularEncounter rarity odds: rare, then uncommon.</summary>
+    private static readonly (double Rare, double Uncommon) RegularEncounterCardOdds = (
+        0.0149,
+        0.37
+    );
+
     private static int RollRewardCardRarity(RunState state)
     {
         return state.CurrentNodeType switch
@@ -752,23 +767,43 @@ public static class RunRewardGenerator
                 mutateOffset: true,
                 state.PlayerRng.Rewards
             ),
-            _ => RollCardRarity(state, (0.0149, 0.37), mutateOffset: true, state.PlayerRng.Rewards),
+            _ => RollCardRarity(
+                state,
+                RegularEncounterCardOdds,
+                mutateOffset: true,
+                state.PlayerRng.Rewards
+            ),
         };
     }
 
+    /// <param name="useOffset">
+    /// Whether the running rare-chance offset applies. CardFactory.RollForRarity picks
+    /// <c>Roll</c> — which reads and grows the offset — only when the card is made for an
+    /// ENCOUNTER; everything else takes <c>RollWithBaseOdds</c>, which uses the flat odds
+    /// and leaves the offset alone. Kaleidoscope creates with CardCreationSource.Other,
+    /// so applying the offset there skewed its rarities rare AND spent the pity timer the
+    /// next real combat reward was owed.
+    /// </param>
     private static int RollCardRarity(
         RunState state,
         (double Rare, double Uncommon) odds,
         bool mutateOffset,
-        GameRng rng
+        GameRng rng,
+        bool useOffset = true
     )
     {
-        double offset = odds.Rare >= 1.0 ? 0.0 : state.CardRarityOffset;
+        double offset = !useOffset || odds.Rare >= 1.0 ? 0.0 : state.CardRarityOffset;
         double roll = rng.NextDouble();
         double rareThreshold = odds.Rare + offset;
+        // The two roll shapes differ in more than the offset. RollWithoutChangingFutureOdds
+        // compares against rare + uncommon, so the uncommon band sits ON TOP of the rare
+        // one; RollWithBaseOdds — the path a non-encounter card takes — compares against
+        // the flat uncommon odds instead, which makes its uncommon band that much
+        // narrower.
+        double uncommonThreshold = useOffset ? rareThreshold + odds.Uncommon : odds.Uncommon;
         int rarity =
             roll < rareThreshold ? RarityRare
-            : roll < rareThreshold + odds.Uncommon ? RarityUncommon
+            : roll < uncommonThreshold ? RarityUncommon
             : RarityCommon;
 
         if (mutateOffset)
@@ -796,7 +831,7 @@ public static class RunRewardGenerator
         foreach (int allowedRarity in RarityFallbacks(rarity))
         {
             var available = allowed
-                .Where(cardId => !blacklist.Contains(cardId) && CardRarity(cardId) == allowedRarity)
+                .Where(cardId => !blacklist.Contains(cardId) && RarityOf(cardId) == allowedRarity)
                 .ToArray();
             if (available.Length > 0)
             {
@@ -881,7 +916,7 @@ public static class RunRewardGenerator
 
     private static int ShopCardCost(int cardId, bool colorless, GameRng rng)
     {
-        int baseCost = CardRarity(cardId) switch
+        int baseCost = RarityOf(cardId) switch
         {
             RarityRare => 150,
             RarityUncommon => 75,
@@ -920,8 +955,22 @@ public static class RunRewardGenerator
     private static bool HasRelic(RunState state, int relicId) =>
         state.Relics.Any(relic => relic.DefId == relicId);
 
-    private static int CardRarity(int cardId) =>
-        CardRarityById.GetValueOrDefault(cardId, RarityCommon);
+    /// <summary>
+    /// A card's rarity, read from the extracted card data.
+    ///
+    /// This used to be a hand-written table of 144 ids that defaulted to Common — fine
+    /// for the Ironclad pool it was built from, wrong for everything else: 249 Uncommon
+    /// and Rare cards were absent from it and so read as Common, which let a Common roll
+    /// hand back a Rare. Kaleidoscope draws from the other characters' pools and hit it
+    /// on nearly every card. The table agreed with the extracted data on every id it did
+    /// carry, so nothing is lost by reading the data instead.
+    /// </summary>
+    private static int RarityOf(int cardId)
+    {
+        var rarity = GeneratedData.Cards.Get(cardId).Rarity;
+        // Basic cards are never offered as rewards; the old table called them Common.
+        return rarity == Core.CardRarity.Basic ? RarityCommon : (int)rarity;
+    }
 
     private static int PotionRarity(int potionId) =>
         PotionRarityById.GetValueOrDefault(potionId, RarityCommon);
@@ -933,154 +982,6 @@ public static class RunRewardGenerator
             RarityUncommon => [RarityUncommon, RarityRare, RarityCommon],
             _ => [RarityRare, RarityCommon, RarityUncommon],
         };
-
-    private static readonly Dictionary<int, int> CardRarityById = new()
-    {
-        [9] = 3,
-        [10] = 3,
-        [13] = 1,
-        [14] = 3,
-        [18] = 1,
-        [20] = 2,
-        [23] = 2,
-        [29] = 3,
-        [31] = 2,
-        [32] = 3,
-        [34] = 3,
-        [38] = 2,
-        [45] = 1,
-        [46] = 1,
-        [47] = 2,
-        [50] = 1,
-        [51] = 3,
-        [58] = 3,
-        [60] = 1,
-        [66] = 2,
-        [69] = 2,
-        [73] = 3,
-        [80] = 2,
-        [87] = 1,
-        [95] = 2,
-        [99] = 3,
-        [113] = 3,
-        [114] = 3,
-        [119] = 3,
-        [121] = 2,
-        [141] = 3,
-        [142] = 2,
-        [146] = 2,
-        [147] = 2,
-        [150] = 2,
-        [153] = 2,
-        [155] = 2,
-        [168] = 3,
-        [170] = 2,
-        [173] = 3,
-        [174] = 2,
-        [175] = 2,
-        [181] = 2,
-        [183] = 3,
-        [185] = 2,
-        [188] = 3,
-        [189] = 2,
-        [191] = 2,
-        [193] = 2,
-        [195] = 2,
-        [197] = 2,
-        [205] = 2,
-        [213] = 2,
-        [225] = 3,
-        [234] = 3,
-        [238] = 1,
-        [240] = 1,
-        [246] = 3,
-        [247] = 2,
-        [250] = 3,
-        [254] = 2,
-        [255] = 2,
-        [260] = 2,
-        [261] = 3,
-        [262] = 2,
-        [263] = 2,
-        [265] = 2,
-        [266] = 2,
-        [268] = 1,
-        [270] = 2,
-        [271] = 3,
-        [272] = 3,
-        [273] = 2,
-        [277] = 3,
-        [286] = 2,
-        [295] = 3,
-        [297] = 3,
-        [300] = 3,
-        [306] = 3,
-        [307] = 2,
-        [313] = 1,
-        [327] = 3,
-        [328] = 3,
-        [332] = 3,
-        [333] = 2,
-        [334] = 3,
-        [339] = 3,
-        [342] = 2,
-        [343] = 2,
-        [349] = 1,
-        [353] = 2,
-        [358] = 1,
-        [363] = 2,
-        [364] = 3,
-        [365] = 2,
-        [366] = 2,
-        [369] = 2,
-        [372] = 2,
-        [374] = 3,
-        [378] = 2,
-        [380] = 3,
-        [381] = 2,
-        [394] = 3,
-        [396] = 2,
-        [401] = 3,
-        [404] = 2,
-        [406] = 3,
-        [411] = 3,
-        [414] = 2,
-        [415] = 3,
-        [416] = 3,
-        [417] = 2,
-        [421] = 1,
-        [431] = 2,
-        [433] = 1,
-        [454] = 2,
-        [455] = 2,
-        [462] = 2,
-        [464] = 3,
-        [465] = 2,
-        [466] = 2,
-        [470] = 2,
-        [486] = 1,
-        [491] = 2,
-        [492] = 3,
-        [493] = 2,
-        [494] = 3,
-        [498] = 2,
-        [499] = 3,
-        [504] = 2,
-        [505] = 3,
-        [506] = 2,
-        [508] = 1,
-        [516] = 1,
-        [517] = 1,
-        [519] = 1,
-        [521] = 2,
-        [522] = 2,
-        [525] = 3,
-        [526] = 2,
-        [529] = 2,
-        [533] = 2,
-        [535] = 2,
-        [538] = 2,
-    };
 
     private static readonly Dictionary<int, int> PotionRarityById = new()
     {
