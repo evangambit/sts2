@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -108,6 +110,80 @@ def is_boundary_transition(
     previous_state = previous_summary.get("state_type")
     current_state = current_summary.get("state_type")
     return (previous_state in COMBAT_STATES) != (current_state in COMBAT_STATES)
+
+
+# Compared at EVERY step, not just at phase boundaries, and reported as "the first step
+# where this field parted company". Five boundary fields hid the real story once already:
+# a Neow bonus the emulator never offered showed up 20 steps later as a floor-2 combat
+# that would not end, and the first four fields agreed the whole way there. The deck is
+# absent because the mod does not report it — see the note in HANDOFF.md.
+DEFAULT_PER_STEP_FIELDS = [
+    "state_type",
+    "player.hp",
+    "player.gold",
+    "player.hand",
+    "battle.enemies",
+]
+
+
+def normalise_for_compare(field: str, value: Any) -> Any:
+    """Reduce a field to what both sides can actually express.
+
+    The live game names cards and the emulator numbers them, and the live enemy list
+    carries display names and intent prose. Comparing the parts that mean the same thing
+    on both sides is what makes a wide comparison usable rather than all-noise.
+    """
+    if field == "player.hand":
+        return [card.get("id") if isinstance(card, dict) else card for card in value or []]
+    if field == "battle.enemies":
+        return [
+            (enemy.get("hp"), enemy.get("block"))
+            for enemy in value or []
+            if isinstance(enemy, dict)
+        ]
+    return value
+
+
+def first_divergences(
+    reference: list[dict[str, Any]],
+    emulator: list[dict[str, Any]],
+    fields: list[str],
+) -> list[str]:
+    """The first step at which each field diverges, one line per field."""
+    first: dict[str, str] = {}
+    slugs = card_slug_to_id()
+    for index in range(min(len(reference), len(emulator))):
+        ref = compare_traces.summary(reference[index])
+        emu = compare_traces.summary(emulator[index])
+        for field in fields:
+            if field in first:
+                continue
+            ref_value = normalise_for_compare(field, compare_traces.get_path(ref, field))
+            emu_value = normalise_for_compare(field, compare_traces.get_path(emu, field))
+            if field == "player.hand":
+                ref_value = [slugs.get(card, card) for card in ref_value]
+            if ref_value != emu_value:
+                first[field] = (
+                    f"first divergence in {field} at step {index}: "
+                    f"reference={ref_value!r} emulator={emu_value!r}"
+                )
+    return [first[field] for field in fields if field in first]
+
+
+@functools.cache
+def card_slug_to_id() -> dict[str, int]:
+    """The game's card entry ids mapped to ours, so hands can be compared."""
+    text = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "Sts2Emulator"
+        / "Generated"
+        / "Cards.g.cs"
+    ).read_text()
+    return {
+        match.group(2): int(match.group(1))
+        for match in re.finditer(r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text)
+    }
 
 
 def compare_boundary_snapshots(
@@ -533,6 +609,16 @@ def main() -> None:
         compare_traces.load_trace_from_payload(result.payload),
         [*DEFAULT_BOUNDARY_FIELDS, *args.field],
     )
+    early = first_divergences(
+        compare_traces.load_trace_from_payload(reference_payload),
+        compare_traces.load_trace_from_payload(result.payload),
+        DEFAULT_PER_STEP_FIELDS,
+    )
+    if early:
+        print("Per-step field divergences (earliest first):")
+        for line in early:
+            print(f"  {line}")
+
     if diffs:
         print(f"Full-run boundary mismatch: {len(diffs)} difference(s)")
         for diff in diffs[: args.max_diffs]:
@@ -540,10 +626,10 @@ def main() -> None:
     if result.unsupported_action is not None:
         print(f"Replay stopped: {result.unsupported_action}")
         raise SystemExit(1)
-    if diffs:
+    if diffs or early:
         raise SystemExit(1)
 
-    print("Full-run boundary snapshots match on configured fields.")
+    print("Full-run snapshots match on every configured field.")
 
 
 if __name__ == "__main__":

@@ -371,6 +371,28 @@ Worth noting what this catches that the combat sweep cannot: the sweep enters a 
 directly with `debug_start_encounter` and a starter deck, while here the combat is reached
 through the run, with the deck, relics and stream positions the run actually produced.
 
+**That reading was too generous, and the cause is 22 steps earlier.** "Steps 0-22 match"
+described the replay's five boundary fields — `state_type`, `run.floor`, `player.hp`,
+`player.max_hp`, `player.gold`, compared only at phase transitions. The trace records far
+more than that, so the replay now also reports the first step at which each of a wider
+set parts company:
+
+    first divergence in state_type at step 1:  reference='rewards'  emulator='map'
+    first divergence in player.hand at step 7: reference=[…, ASCENDERS_BANE, …, COLLISION_COURSE]
+                                               emulator=[…, DEFEND, …, PILLAGE]
+    first divergence in battle.enemies at 12:  reference=[(33, 0)]  emulator=[(41, 0)]
+
+The real defect is at step 1: **Neow's Kaleidoscope bonus is not modelled as card
+rewards.** The live game answers "obtain 2 card rewards from other characters" with two
+card-reward screens — Calcify/Prepared/Skim, then Acrobatics/Collision Course/Boost Away —
+and the player picks one from each. The emulator goes straight to the map, having added
+three cards silently: its deck is 14 where the run took 11 + 2, and it holds a Pillage the
+game never offered. Everything after is downstream — a different deck draws different
+hands, so the floor-2 combat plays out differently and does not end when the game's does.
+
+This is also the first bug the answer-key removal exposed: `ApplyRetainedTraceCardReward`
+used to overwrite `RewardCards` with fixed ids, which is exactly the screen involved.
+
 Two things the capture turned up on the way:
 
 - **The run layer has no ascension.** `RunEngine.Reset` hardcodes `PlayerHp = 64`, so an
