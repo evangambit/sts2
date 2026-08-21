@@ -114,6 +114,11 @@ ENCOUNTER_IDS.update(
         "nibbit": ENCOUNTER_IDS["nibbits-weak"],
         "nibbits": ENCOUNTER_IDS["nibbits-normal"],
         "slimes": ENCOUNTER_IDS["slimes-weak"],
+        # Corpse Slugs is ONE encounter with two rosters — 2 slugs weak, 3 normal — and
+        # which one it builds comes from completed_combat_rooms, not from the id. The
+        # alias exists so a sweep can name the normal variant; the harness's
+        # emulator_completed_combat_rooms is what actually selects it.
+        "corpse-slugs-normal": ENCOUNTER_IDS["corpse-slugs"],
     },
 )
 

@@ -898,8 +898,12 @@ The earlier list, before that pass:
 | slithering-strangler, living-fog, two-tailed-rats, slime-and-flyconid, jaxfruit-and-flyconid | one branch roll differs mid-fight; rosters, openings and rules all match |
 
 The earlier figure was **26 ALL MATCH** before the Kin and Vantom closed:
-`combat_sweep.py --turns 6` now covers every weak, normal, elite and boss encounter both
-act-1 acts declare (41 of the 42; CorpseSlugsNormal has no name-map entry yet). Elites and
+`combat_sweep.py --turns 6` now covers **all 42** encounters both act-1 acts declare —
+checked against `GenerateAllEncounters()` in the decompiled act models (Overgrowth 22,
+Underdocks 20), not against the sweep's own list. CorpseSlugsNormal was the last gap and
+was never an emulator one: Corpse Slugs is a single encounter whose roster (2 slugs weak,
+3 normal) comes from `completed_combat_rooms`, so the normal variant only needed a name
+to be swept under. It matched on both seeds first time. Elites and
 bosses had never been checked at all — they were reachable the whole time, the sweep list
 simply stopped at the normal pool.
 

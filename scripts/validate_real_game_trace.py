@@ -40,6 +40,7 @@ CARD_IDS = {
 
 ENCOUNTER_BY_ENEMY = {
     ("Corpse Slug", "Corpse Slug"): "corpse-slugs",
+    ("Corpse Slug", "Corpse Slug", "Corpse Slug"): "corpse-slugs-normal",
     ("Fuzzy Wurm Crawler",): "fuzzy-wurm-crawler",
     ("Nibbit",): "nibbit",
     ("Seapunk",): "seapunk",
@@ -59,6 +60,7 @@ LIVE_ENCOUNTER_BY_EMULATOR = {
     "gremlin-merc": "GremlinMercNormal",
     "fuzzy-wurm-crawler": "FuzzyWurmCrawlerWeak",
     "corpse-slugs": "CorpseSlugsWeak",
+    "corpse-slugs-normal": "CorpseSlugsNormal",
     "sludge-spinner": "SludgeSpinnerWeak",
     "shrinker-beetle": "ShrinkerBeetleWeak",
     "seapunk": "SeapunkWeak",

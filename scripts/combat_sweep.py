@@ -109,6 +109,7 @@ NORMAL_BY_ACT = {
         "fossil-stalker",
         "haunted-ship",
         "cultists",
+        "corpse-slugs-normal",
         "two-tailed-rats",
         "gremlin-merc",
         "cultist-and-seapunk",
