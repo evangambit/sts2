@@ -180,7 +180,7 @@ public class RunEngineTests
             Enumerable.Range(0, 5).Select(_ => actMap.NextInt(1000)).ToArray()
         );
         Assert.Equal(
-            new[] { 422, 952, 934, 172, 499 },
+            new[] { 965, 246, 0, 824, 687 },
             Enumerable.Range(0, 5).Select(_ => neow.NextInt(1000)).ToArray()
         );
         Assert.Equal(1821698096, player.Rewards.NextInt(int.MaxValue));
@@ -261,7 +261,69 @@ public class RunEngineTests
         Assert.Equal(80, engine.State.PlayerMaxHp);
         Assert.Equal(99, engine.State.Gold);
         Assert.Equal(11, engine.State.Deck.Count);
-        Assert.Equal(new[] { 140, 242, 134 }, engine.State.NeowOptions);
+        // Locked to catch drift, not ground truth — the live-derived anchor is
+        // NeowOptions_MatchTheLiveGame below.
+        Assert.Equal(new[] { 124, 231, 240 }, engine.State.NeowOptions);
+    }
+
+    /// <summary>
+    /// Ground truth: a live A8 capture on seed QS2GYXRKWN offers Kaleidoscope,
+    /// Nutritious Oyster and Neow's Bones, in that order.
+    ///
+    /// EventModel seeds each event with Seed + the owner's player slot + hash(Id.Entry),
+    /// and a solo run's only player is slot 0. Seeding with 1 gave a different stream and
+    /// therefore three different relics — in EVERY run, since Neow opens all of them.
+    /// </summary>
+    [Fact]
+    public void NeowOptions_MatchTheLiveGame()
+    {
+        var engine = new RunEngine();
+
+        engine.Reset("QS2GYXRKWN");
+
+        Assert.Equal(
+            new[]
+            {
+                RunConstants.RelicKaleidoscope,
+                RunConstants.RelicNutritiousOyster,
+                RunConstants.RelicNeowsBones,
+            },
+            engine.State.NeowOptions
+        );
+    }
+
+    /// <summary>
+    /// Kaleidoscope offers "2 card rewards from other characters" — two screens the
+    /// player answers one after the other, not two cards appended to the deck. Confirmed
+    /// live: the capture shows two card-reward screens between Neow and the map.
+    /// </summary>
+    [Fact]
+    public void Kaleidoscope_OffersTwoCardRewardsFromOtherCharacters()
+    {
+        var engine = new RunEngine();
+        engine.Reset("QS2GYXRKWN");
+        int deckBefore = engine.State.Deck.Count;
+
+        engine.Step(0, -1, out _, out _, out _); // take Kaleidoscope
+
+        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
+        Assert.Equal(deckBefore, engine.State.Deck.Count);
+        // Every offered card comes from a character the Ironclad is not.
+        Assert.All(
+            engine.State.RewardCards,
+            cardId => Assert.DoesNotContain(cardId, GeneratedData.CardPools.Ironclad.ToArray())
+        );
+
+        engine.Step(0, -1, out _, out _, out _); // take the first card
+
+        // The second reward, not the map.
+        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
+        Assert.Equal(deckBefore + 1, engine.State.Deck.Count);
+
+        engine.Step(0, -1, out _, out _, out _); // take the second card
+
+        Assert.Equal(deckBefore + 2, engine.State.Deck.Count);
+        Assert.NotEqual(RunPhase.CardReward, engine.State.Phase);
     }
 
     [Fact]
@@ -816,6 +878,9 @@ public class RunEngineTests
         engine.Reset("0");
         engine.Step(0, -1, out _, out _, out _);
         int deckSize = engine.State.Deck.Count;
+        // Seed "0" now offers Kaleidoscope at index 0, which owes two card rewards; this
+        // test is about what one card reward does, so answer them first.
+        engine.State.PendingOtherCharacterCardRewards = 0;
         engine.State.Phase = RunPhase.CardReward;
         engine.State.RewardCards = [13, 20, 50];
         engine.State.RewardUpgraded = [false, true, false];

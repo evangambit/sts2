@@ -591,6 +591,58 @@ internal static class Potions
 # ── main ──────────────────────────────────────────────────────────────────────
 
 
+CARD_POOLS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Models.CardPools"
+
+# The pools a run can draw from. Deprecated/Mock are the game's own test scaffolding,
+# and Curse/Status/Token/Event/Quest are not character pools.
+PLAYABLE_POOLS = ("Ironclad", "Silent", "Defect", "Necrobinder", "Regent", "Colorless")
+
+
+def extract_card_pools(card_ids: dict[str, int]) -> str:
+    """Each character's card pool, in the order the pool declares it.
+
+    Kaleidoscope needs this and nothing else could supply it: it offers cards from the
+    pools of characters the player is NOT, and a CardDef carries no character. Order is
+    preserved because the game shuffles the pool list itself (StableShuffle on Niche) and
+    a differently-ordered list shuffles differently.
+    """
+    entries: list[str] = []
+    for pool in PLAYABLE_POOLS:
+        path = CARD_POOLS_DIR / f"{pool}CardPool.cs"
+        if not path.exists():
+            print(f"  Card pools: {pool} not found, skipping.")
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        body = re.search(r"GenerateAllCards\(\)[\s\S]*?\{([\s\S]*?)\n\t\}", text)
+        if body is None:
+            print(f"  Card pools: could not parse {pool}.")
+            continue
+        names = re.findall(r"ModelDb\.Card<(\w+)>\(\)", body.group(1))
+        ids = [card_ids[name] for name in names if name in card_ids]
+        missing = [name for name in names if name not in card_ids]
+        if missing:
+            print(f"  Card pools: {pool} skipped {len(missing)} unextracted cards.")
+        entries.append(
+            f"    /// <summary>{pool}: {len(ids)} cards, in pool order.</summary>\n"
+            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];"
+        )
+        print(f"  Card pools: {pool} {len(ids)} cards.")
+
+    joined = "\n\n".join(entries)
+    return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
+
+/// <summary>
+/// The character card pools, extracted from the game's CardPoolModel declarations.
+/// A CardDef says nothing about which character owns it, so anything that draws from
+/// another character's pool — Kaleidoscope at Neow — has to read it from here.
+/// </summary>
+internal static class CardPools
+{{
+{joined}
+}}
+"""
+
+
 def main() -> None:
     load_id_map()
     if not DECOMPILED.exists():
@@ -621,6 +673,7 @@ def main() -> None:
         ("Powers.g.cs", extract_powers()),
         ("Relics.g.cs", extract_relics()),
         ("Potions.g.cs", extract_potions()),
+        ("CardPools.g.cs", extract_card_pools(card_ids)),
     ]:
         out = GENERATED / filename
         out.write_text(content, encoding="utf-8")

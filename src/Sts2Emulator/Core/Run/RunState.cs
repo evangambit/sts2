@@ -36,6 +36,13 @@ public sealed class RunState
     public int RewardGold;
     public int RewardPotion;
     public bool RewardCardPending;
+
+    /// <summary>
+    /// Card rewards still owed from Kaleidoscope, each drawn from other characters'
+    /// pools. The relic offers two at once and the player answers them one after the
+    /// other, so the second has to survive the first being resolved.
+    /// </summary>
+    public int PendingOtherCharacterCardRewards;
     public bool ReturnToRewardScreenAfterCardReward;
     public int[] MapNodeTypes = new int[RunConstants.MapChoices];
     public int[] MapChoices = new int[RunConstants.MapChoices];

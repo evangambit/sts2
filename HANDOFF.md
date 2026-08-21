@@ -393,6 +393,39 @@ hands, so the floor-2 combat plays out differently and does not end when the gam
 This is also the first bug the answer-key removal exposed: `ApplyRetainedTraceCardReward`
 used to overwrite `RewardCards` with fixed ids, which is exactly the screen involved.
 
+### And the cause of THAT was one character
+
+Kaleidoscope was never reached, because **Neow offered the wrong three relics — in every
+run ever generated**. `EventModel` seeds each event with
+`Seed + (IsShared ? 0 : GetPlayerSlotIndex(Owner)) + hash(Id.Entry)`, and a solo run's
+only player is slot 0; `RunRngSet.NeowRng` defaulted that term to 1. A different stream
+gives a different first roll, so every option was wrong from the very first decision of
+the run. With `netId = 0`, seed QS2GYXRKWN offers Kaleidoscope, Nutritious Oyster and
+Neow's Bones — matching the capture exactly.
+
+Kaleidoscope itself is now modelled as what it is: **two card rewards from other
+characters**, each offering three cards drawn one per other-character pool, the pools
+shuffled on the Niche stream. It used to add two random *Ironclad* cards straight to the
+deck and burn 18 Rewards RNG calls to keep the stream roughly aligned. That needed the
+character card pools, which nothing had: a `CardDef` says nothing about whose card it is,
+so `extract_data.py` now emits `CardPools.g.cs` (Ironclad 87, Silent 88, Defect 87,
+Necrobinder 88, Regent 88, Colorless 64) from the game's `CardPoolModel` declarations.
+
+The replay moved accordingly — it used to stop dead at step 24, and now runs past step 50:
+
+| field | first divergence before | after |
+| --- | --- | --- |
+| `player.hand` | step 7 (no Ascender's Bane, a Pillage the game never offered) | step 7, one card of three |
+| `battle.enemies` | step 12 | step 32 |
+| `player.hp` | step 23 | step 46 |
+| `player.gold` | — | step 24 |
+
+What is left at each: the hand still differs in one card, so Kaleidoscope picks the right
+*pools* but not yet the right *cards* — `CardFactory.CreateForReward`'s rarity roll is not
+modelled, only the emulator's own reward-rarity logic. `state_type` at step 1 is the
+`RewardsCmd.OfferCustom` wrapper screen, which the emulator skips by going straight into
+the first card reward.
+
 Two things the capture turned up on the way:
 
 - **The run layer has no ascension.** `RunEngine.Reset` hardcodes `PlayerHp = 64`, so an

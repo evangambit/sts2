@@ -918,7 +918,31 @@ public sealed class RunEngine
             RunRewardGenerator.EnterCardReward(State);
             return;
         }
+        if (relicId == RunConstants.RelicKaleidoscope)
+        {
+            // "Obtain 2 card rewards from other characters" — two screens the player
+            // answers one after the other, not two cards appearing in the deck.
+            State.PendingOtherCharacterCardRewards = 2;
+            EnterNextOtherCharacterCardReward();
+            return;
+        }
         AdvanceRewardRngForNeowRelic(relicId);
+    }
+
+    /// <summary>
+    /// Offers the next Kaleidoscope card reward, if one is still owed. Returns false
+    /// when they are all answered, which is the caller's cue to carry on to the map.
+    /// </summary>
+    private bool EnterNextOtherCharacterCardReward()
+    {
+        if (State.PendingOtherCharacterCardRewards <= 0)
+        {
+            return false;
+        }
+
+        State.PendingOtherCharacterCardRewards--;
+        RunRewardGenerator.EnterOtherCharacterCardReward(State);
+        return true;
     }
 
     private void AdvanceRewardRngForNeowRelic(int relicId)
@@ -928,7 +952,6 @@ public sealed class RunEngine
             RunConstants.RelicPhialHolster => 4,
             RunConstants.RelicHeftyTablet => 3,
             RunConstants.RelicLeadPaperweight => 6,
-            RunConstants.RelicKaleidoscope => 18,
             _ => 0,
         };
         for (int i = 0; i < advances; i++)
@@ -1069,6 +1092,11 @@ public sealed class RunEngine
 
         Array.Clear(State.RewardCards);
         Array.Clear(State.RewardUpgraded);
+        if (State.PendingOtherCharacterCardRewards > 0 && EnterNextOtherCharacterCardReward())
+        {
+            return 0;
+        }
+
         if (State.ReturnToRewardScreenAfterCardReward)
         {
             State.ReturnToRewardScreenAfterCardReward = false;

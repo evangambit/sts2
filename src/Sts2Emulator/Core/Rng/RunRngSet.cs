@@ -40,7 +40,13 @@ public sealed class RunRngSet
 
     public GameRng ActMapRng(int actIndex = 0) => new(Seed, $"act_{actIndex + 1}_map");
 
-    public GameRng NeowRng(int netId = 1)
+    /// <summary>
+    /// Neow's own stream. EventModel seeds every event with
+    /// <c>Seed + (IsShared ? 0 : GetPlayerSlotIndex(Owner)) + hash(Id.Entry)</c>, and a
+    /// solo run's only player is slot 0 — the 1 this used to default to seeded a
+    /// different stream, so every Neow offer in every run was the wrong three relics.
+    /// </summary>
+    public GameRng NeowRng(int netId = 0)
     {
         uint neowHash = unchecked((uint)DeterministicHash.GetDeterministicHashCode("NEOW"));
         uint seed = unchecked(Seed + (uint)netId + neowHash);

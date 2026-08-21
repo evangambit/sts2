@@ -185,8 +185,8 @@ public static class RunNonCombatEffects
                 );
                 break;
             case RunConstants.RelicKaleidoscope:
-                AddRandomRewardCard(state, state.Rng.UpFront);
-                AddRandomRewardCard(state, state.Rng.UpFront);
+                // Handled as two card rewards in RunEngine.ApplyAncientChoice; the relic
+                // offers screens to choose from, it does not put cards in the deck.
                 break;
             case RunConstants.RelicArcaneScroll:
                 AddCardToDeck(

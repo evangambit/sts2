@@ -404,6 +404,54 @@ public static class RunRewardGenerator
         PopulateCardReward(state);
     }
 
+    /// <summary>
+    /// Kaleidoscope's card reward: three cards, each from a DIFFERENT character the
+    /// player is not.
+    ///
+    /// Kaleidoscope.AfterObtained takes the pools of the other characters, StableShuffles
+    /// them on the Niche stream, keeps three, and creates one card from each — then does
+    /// the whole thing again for the second reward. Modelling it as "add two random
+    /// Ironclad cards" got the deck size roughly right and everything else wrong: the
+    /// cards came from the player's own pool, and the two reward screens the player is
+    /// supposed to choose from never appeared at all.
+    /// </summary>
+    public static void EnterOtherCharacterCardReward(RunState state)
+    {
+        state.Phase = RunPhase.CardReward;
+        Array.Clear(state.RewardCards);
+        Array.Clear(state.RewardUpgraded);
+
+        var pools = OtherCharacterPools(state);
+        state.Rng.Niche.Shuffle(pools);
+
+        var blacklist = new List<int>();
+        for (int i = 0; i < state.RewardCards.Length && i < pools.Count; i++)
+        {
+            int rarity = RollRewardCardRarity(state);
+            int cardId = ChooseCardWithRarity(pools[i], rarity, blacklist, state.PlayerRng.Rewards);
+            state.RewardCards[i] = cardId;
+            blacklist.Add(cardId);
+        }
+    }
+
+    /// <summary>
+    /// The character pools the player is not, sorted the way StableShuffle sorts them —
+    /// by ModelId, which for these is the slugified class name, so alphabetical by
+    /// character. The sort is what makes the shuffle reproducible.
+    /// </summary>
+    private static List<int[]> OtherCharacterPools(RunState state)
+    {
+        // Ironclad is the only playable character the emulator runs, so "the others" is
+        // fixed; when a second character is playable this reads the player's own pool.
+        return
+        [
+            GeneratedData.CardPools.Defect.ToArray(),
+            GeneratedData.CardPools.Necrobinder.ToArray(),
+            GeneratedData.CardPools.Regent.ToArray(),
+            GeneratedData.CardPools.Silent.ToArray(),
+        ];
+    }
+
     public static bool HasPendingRewards(RunState state)
     {
         return state.RewardGold != 0

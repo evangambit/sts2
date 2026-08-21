@@ -71,7 +71,9 @@ class Sts2GymTests(unittest.TestCase):
             )
             self.assertEqual(native.run_state_list(handle, 1, 8), (36,))
             self.assertEqual(native.run_state_list(handle, 2, 3), (0, 0, 0))
-            self.assertEqual(native.run_state_list(handle, 3, 3), (140, 242, 134))
+            # Neow's three offers. Locked to catch drift; the live-derived anchor is
+            # RunEngineTests.NeowOptions_MatchTheLiveGame.
+            self.assertEqual(native.run_state_list(handle, 3, 3), (124, 231, 240))
         finally:
             native.run_destroy(handle)
 
@@ -420,7 +422,11 @@ class Sts2GymTests(unittest.TestCase):
             ],
         }
 
-        result = replay_full_run_trace.replay_trace(payload, emulator_seed=0)
+        # Seed 3, not 0: this test is about the replay coalescing live reward
+        # substeps, and seed 0 now opens on Kaleidoscope, whose TWO card rewards would
+        # change the phase sequence for a reason unrelated to coalescing. Seed 3 offers
+        # Lost Coffer, which grants exactly one.
+        result = replay_full_run_trace.replay_trace(payload, emulator_seed=3)
 
         self.assertIsNone(result.unsupported_action)
         self.assertEqual(
