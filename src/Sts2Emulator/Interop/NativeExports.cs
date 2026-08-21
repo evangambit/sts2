@@ -36,7 +36,7 @@ public static class NativeExports
     public const int MAX_ENEMY_BUFFS = 5;
 
     // v17: observation carries an open card selection (kind, count, candidates).
-    public const int NATIVE_API_VERSION = 17;
+    public const int NATIVE_API_VERSION = 18;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -399,6 +399,56 @@ public static class NativeExports
             totalFloor,
             ascension
         );
+        WriteObs(combat.State, obsBuf);
+    }
+
+    // Sts2_ResetEncounterAtFloor with the deck spelled out, for a capture that stacks
+    // it. Some states can only be reached by winning — Phrog Parasite's Wrigglers spawn
+    // when it dies, Terror Eel's second phase when an unblocked hit drops it to its
+    // threshold — and a starter deck cannot get there before the player is dead. The
+    // live side adds the same cards with debug_add_card, so both decks must be built the
+    // same way: appended in the same order, then shuffled.
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ResetEncounterAtFloorWithExtraCards")]
+    public static unsafe void Sts2_ResetEncounterAtFloorWithExtraCards(
+        int handle,
+        int* extraCardIds,
+        int extraLen,
+        int encounterId,
+        int completedCombatRooms,
+        int totalFloor,
+        int ascension,
+        int* obsBuf
+    )
+    {
+        // Appended to the starter deck rather than replacing it, and appended HERE so
+        // the starter deck keeps one definition: the live side adds the same cards to
+        // the same run deck, and both sides have to shuffle the same list.
+        var deck = new int[StarterDeckIds.Length + extraLen];
+        StarterDeckIds.CopyTo(deck);
+        new ReadOnlySpan<int>(extraCardIds, extraLen).CopyTo(deck.AsSpan(StarterDeckIds.Length));
+
+        var combat = _pool[handle]!;
+        combat.ResetAtFloor(deck, encounterId, completedCombatRooms, totalFloor, ascension);
+        WriteObs(combat.State, obsBuf);
+    }
+
+    // The mod's debug_add_card, mirrored: put a card on top of the hand mid-combat.
+    // A differential capture needs this to reach states the starter deck cannot — the
+    // Phrog Parasite's Wrigglers only spawn when it dies, and Terror Eel's second phase
+    // only when an unblocked hit drops it to its threshold. Adding to the HAND rather
+    // than the deck keeps it deterministic: no shuffle is involved, so both sides can
+    // place the same card in the same slot without having to agree on a reshuffle.
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_DebugAddCardToHand")]
+    public static unsafe void Sts2_DebugAddCardToHand(
+        int handle,
+        int cardId,
+        int upgraded,
+        int* obsBuf
+    )
+    {
+        var combat = _pool[handle]!;
+        // CardPilePosition.Top, which for the hand is index 0.
+        combat.State.Hand.Insert(0, new CardInstance(cardId, upgraded != 0));
         WriteObs(combat.State, obsBuf);
     }
 

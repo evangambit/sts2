@@ -2374,6 +2374,11 @@ public static class CardEffects
         target.Hp = Math.Max(0, target.Hp - hpLoss);
         if (hpLoss > 0)
         {
+            EnemyAI.TriggerShriekIfWounded(target);
+        }
+
+        if (hpLoss > 0)
+        {
             int envenom = BuffSystem.Get(state.PlayerBuffs, BuffId.Envenom);
             if (envenom > 0)
             {

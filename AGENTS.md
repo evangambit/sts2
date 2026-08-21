@@ -350,6 +350,23 @@ fraction have been wrong in ways that read as an emulator defect:
   `--play` plays the first card the LIVE game says is playable, which is what closed the
   Waterfall Giant and Lagavulin Matriarch.
 
+## Reaching States a Starter Deck Cannot
+
+Some behaviour only happens once the player is winning, and a capture that passes every
+turn — or plays a starter deck — is dead long before it gets there. `combat_sweep.py
+--add-card ENTRY[:u]` puts a card on top of BOTH hands before turn one: live through the
+mod's `debug_add_card`, the emulator through `Sts2_DebugAddCardToHand`. Four Bludgeons
+kill a Phrog Parasite by turn five, which is how its Wrigglers were finally seen.
+
+- **The HAND, not the deck.** `debug_add_card` needs combat in progress and adds at
+  `CardPilePosition.Top`, so a deck-stacking approach would have to agree about a shuffle;
+  a hand-stacking one places the same card in the same slot on both sides with no RNG.
+- **Ten cards is the limit.** Asking for more silently drops the overflow live, and the
+  two hands stop agreeing.
+- **Watch for star costs.** Devastate is 1 energy and 30 damage but costs 4 stars, so the
+  live game reports `can_play: false` with `StarCostTooHigh` and never plays it. Bludgeon
+  (3 energy, 32 damage, no star cost) is the reliable choice for an Ironclad capture.
+
 ## Driving the Live Game
 
 Both harness bugs found here have the same shape — **posting an action and reading the

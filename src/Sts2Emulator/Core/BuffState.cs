@@ -94,6 +94,8 @@ public enum BuffId
     Slippery, // enemy: each unblocked hit loses at most 1 HP, then decrements
     Surprise, // Gremlin Merc: spawn reinforcements on death
     SummonCooldown, // Two-Tailed Rat: turns until Call for Backup is available
+    Shriek, // Terror Eel: HP threshold; an unblocked hit at or below it triggers Terror
+    TerrorQueued, // Terror Eel: Shriek has fired, so TERROR_MOVE follows the stunned turn
     BackupCount, // Two-Tailed Rat: number of successful backup calls
     Plating, // Sewer Clam: recurring block that decays each turn
     Suck, // Fossil Stalker: gain Strength after each unblocked attack command

@@ -11,7 +11,7 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 17
+_REQUIRED_NATIVE_API_VERSION = 18
 _REQUIRED_RUN_NATIVE_API_VERSION = 10
 
 
@@ -152,6 +152,26 @@ _lib.Sts2_ResetEncounterWeak.argtypes = [
 
 _lib.Sts2_ResetEncounterAtFloor.restype = None
 _lib.Sts2_ResetEncounterAtFloor.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
+
+_lib.Sts2_DebugAddCardToHand.restype = None
+_lib.Sts2_DebugAddCardToHand.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
+
+_lib.Sts2_ResetEncounterAtFloorWithExtraCards.restype = None
+_lib.Sts2_ResetEncounterAtFloorWithExtraCards.argtypes = [
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
     ctypes.c_int,
     ctypes.c_int,
     ctypes.c_int,
@@ -380,6 +400,48 @@ def reset_encounter(
             completed_combat_rooms,
             obs_buf,
         )
+
+
+def debug_add_card_to_hand(
+    handle: int,
+    card_id: int,
+    obs_buf: ctypes.Array,
+    upgraded: bool = False,
+) -> None:
+    """Put a card on top of the hand, mirroring the mod's debug_add_card.
+
+    For differential captures that must reach a state the starter deck cannot. The hand
+    rather than the deck, so no shuffle has to agree between the two sides.
+    """
+    _lib.Sts2_DebugAddCardToHand(handle, card_id, 1 if upgraded else 0, obs_buf)
+
+
+def reset_encounter_with_extra_cards(
+    handle: int,
+    extra_card_ids: list[int],
+    encounter_id: int,
+    obs_buf: ctypes.Array,
+    completed_combat_rooms: int = -1,
+    total_floor: int = 0,
+    ascension: int = 8,
+) -> None:
+    """reset_encounter with extra cards appended to the starter deck.
+
+    For captures that must reach a state the starter deck cannot: a Phrog Parasite's
+    Wrigglers only spawn when it dies. The live side adds the same cards with
+    debug_add_card, and both sides append before shuffling.
+    """
+    extra_buf = (ctypes.c_int * len(extra_card_ids))(*extra_card_ids)
+    _lib.Sts2_ResetEncounterAtFloorWithExtraCards(
+        handle,
+        extra_buf,
+        len(extra_card_ids),
+        encounter_id,
+        completed_combat_rooms,
+        total_floor,
+        ascension,
+        obs_buf,
+    )
 
 
 def reset_with_deck(handle: int, deck_ids: list[int], obs_buf: ctypes.Array) -> None:

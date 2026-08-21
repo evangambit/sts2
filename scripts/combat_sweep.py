@@ -223,6 +223,59 @@ def end_turn_action(live_state: dict[str, Any]) -> int:
     return len(hand)
 
 
+def add_cards_to_both_hands(base_url: str, env: Any, cards: list[str]) -> list[str]:
+    """Put the same cards on top of both hands, live and emulated.
+
+    Deck-stacking is how a capture reaches a state a starter deck never will: the Phrog
+    Parasite's Wrigglers only spawn when it dies, and Terror Eel's second phase only when
+    an unblocked hit drops it to its threshold — neither happens before a passive player
+    is dead. The HAND is the place to do it, because no shuffle has to agree: the mod
+    adds at CardPilePosition.Top and so does the emulator.
+
+    Returns any notes worth reporting; the caller decides whether they are fatal.
+    """
+    notes: list[str] = []
+    slugs = card_slug_to_id()
+    # The game holds at most ten cards; asking for more silently drops the overflow and
+    # the two sides stop agreeing about the hand.
+    room = MAX_HAND_SIZE - len(
+        ((start_real_game_run.get_state(base_url).get("player") or {}).get("hand") or [])
+    )
+    if len(cards) > room:
+        notes.append(f"only {room} of {len(cards)} cards fit in the hand; the rest were skipped")
+        cards = cards[:room]
+
+    for card in cards:
+        entry, _, flag = card.partition(":")
+        entry = entry.upper()
+        upgraded = flag.lower() in {"u", "upgraded", "+"}
+        card_id = slugs.get(entry)
+        if card_id is None:
+            notes.append(f"unknown card {entry}; the harness knows it by its model entry")
+            continue
+
+        result = trace_real_game.post_action(
+            base_url,
+            {"action": "debug_add_card", "card": entry, "upgraded": upgraded, "pile": "hand"},
+        )
+        if result.get("status") != "ok":
+            notes.append(f"live refused {entry}: {result}")
+            continue
+        env.unwrapped.debug_add_card_to_hand(card_id, upgraded)
+    return notes
+
+
+def wait_for_hand_to_reach(base_url: str, size: int, timeout: float = 20.0) -> dict[str, Any]:
+    """Wait for the live hand to grow to `size` — debug_add_card is fire-and-forget."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = start_real_game_run.get_state(base_url)
+        if len(((state.get("player") or {}).get("hand") or [])) >= size:
+            return state
+        time.sleep(0.2)
+    raise RuntimeError("live game never added the debug cards")
+
+
 def play_action(live_state: dict[str, Any]) -> int:
     """The first card the live game says is playable, or end turn if none is.
 
@@ -349,6 +402,9 @@ COMBAT_STATE_TYPES = {"monster", "elite", "boss"}
 # A turn can play at most this many cards before the sweep gives up and ends it.
 MAX_PLAYS_PER_TURN = 12
 
+# The game's hand limit; debug-added cards past it are dropped.
+MAX_HAND_SIZE = 10
+
 
 def live_round(state: dict[str, Any]) -> int:
     return int((state.get("battle") or {}).get("round") or 0)
@@ -381,6 +437,7 @@ def drive_turns(
     env: Any,
     turns: int,
     play: bool = False,
+    add_cards: list[str] | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """End turn on both sides in lockstep, comparing what the enemies announce.
 
@@ -395,6 +452,12 @@ def drive_turns(
     """
     rows: list[dict[str, Any]] = []
     notes: list[str] = []
+    if add_cards:
+        opening = start_real_game_run.get_state(base_url)
+        before = len(((opening.get("player") or {}).get("hand") or []))
+        notes += add_cards_to_both_hands(base_url, env, add_cards)
+        wait_for_hand_to_reach(base_url, before + len(add_cards))
+
     for turn in range(1, turns + 1):
         live_state = start_real_game_run.get_state(base_url)
         if live_state.get("state_type") not in {"monster", "elite", "boss"}:
@@ -552,6 +615,7 @@ def capture_one(
     ascension: int,
     turns: int = 0,
     play: bool = False,
+    add_cards: list[str] | None = None,
 ) -> dict[str, Any]:
     live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(encounter)
     if live_encounter is None:
@@ -583,7 +647,7 @@ def capture_one(
         obs, _info = env.reset()
         emu_summary = validate.emulator_trace.summarize_observation(obs)
         turn_rows, turn_notes = (
-            drive_turns(base_url, env, turns, play) if turns else ([], [])
+            drive_turns(base_url, env, turns, play, add_cards) if turns else ([], [])
         )
     finally:
         env.close()
@@ -691,6 +755,18 @@ def main() -> None:
             "which is the only way the coverage-only encounters can be closed."
         ),
     )
+    parser.add_argument(
+        "--add-card",
+        action="append",
+        default=[],
+        metavar="ENTRY[:u]",
+        help=(
+            "put this card on top of BOTH hands before turn one, by model entry "
+            "(DEVASTATE, DEVASTATE:u). Repeatable. How a capture reaches a state the "
+            "starter deck cannot, such as a Phrog Parasite dead early enough for its "
+            "Wrigglers to spawn."
+        ),
+    )
     parser.add_argument("--random-seed", type=int, default=0)
     parser.add_argument(
         "--save-fixtures",
@@ -729,6 +805,7 @@ def main() -> None:
                 args.ascension,
                 turns=args.turns,
                 play=args.play,
+                add_cards=args.add_card,
             )
         except Exception as exc:  # noqa: BLE001 - one bad job must not end the sweep
             print(f"  CAPTURE FAILED: {exc}", flush=True)

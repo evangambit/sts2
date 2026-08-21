@@ -1110,11 +1110,21 @@ public static class CombatEngine
         int insertIndex = state.Enemies.IndexOf(phrog) + 1;
         for (int i = 0; i < 4 && state.Enemies.Count < 6; i++)
         {
+            // The four do NOT act in step. Wriggler's INIT_MOVE is a conditional branch
+            // on the creature's slot — wriggler1 and wriggler3 start on NASTY_BITE,
+            // wriggler2 and wriggler4 on WRIGGLE — and they alternate from there, so the
+            // pack always has half biting while the other half buys Strength. Spawning
+            // them all on the same move made four bites land at once and then nothing.
             var wriggler = CreateEnemy(
                 KE.Wriggler,
                 rng,
                 new Intent(IntentType.Unknown, 0),
-                stunned: true
+                stunned: true,
+                // SPAWNED_MOVE burns an index before INIT_MOVE reads the slot, so the
+                // parity is inverted here: a wriggler that must OPEN on the bite starts
+                // odd and lands on the bite once its stunned turn has ticked it over.
+                moveIndex: (i + 1) % 2,
+                state: state
             );
             state.Enemies.Insert(insertIndex + i, Effects.RelicEffects.Spawned(state, wriggler));
         }
@@ -1610,12 +1620,16 @@ public static class CombatEngine
         Random rng,
         Intent intent,
         bool stunned = false,
-        int ascension = Ascension.DefaultLevel
+        int ascension = Ascension.DefaultLevel,
+        int moveIndex = 0,
+        // The combat, so the HP roll uses the stream the game uses. Without it the roll
+        // falls back to the combat rng with no unique-HP rule.
+        CombatState? state = null
     )
     {
         var def = GeneratedData.Enemies.Get(defId);
         var band = def.HpBand(ascension);
-        int hp = rng.Next(band.Min, band.Max + 1);
+        int hp = EnemyAI.RollSummonedHp(band.Min, band.Max, state, rng);
         var enemy = new EnemyState
         {
             DefId = defId,
@@ -1623,6 +1637,7 @@ public static class CombatEngine
             MaxHp = hp,
             CurrentIntent = intent,
             Buffs = [],
+            MoveIndex = moveIndex,
         };
         if (stunned)
         {

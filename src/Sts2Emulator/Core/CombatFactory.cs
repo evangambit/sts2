@@ -1546,6 +1546,18 @@ public static class CombatFactory
             BuffSystem.Apply(enemy.Buffs, BuffId.Stock, 2);
         }
 
+        if (enemy.DefId == KE.TerrorEel)
+        {
+            // TerrorEel.AfterAddedToRoom applies ShriekPower(ShriekAmount) — 75 at A8,
+            // where ToughEnemies is live. It is the HP at or below which an unblocked hit
+            // stuns it into TERROR.
+            BuffSystem.Apply(
+                enemy.Buffs,
+                BuffId.Shriek,
+                Ascension.Value(_currentAscension, Ascension.ToughEnemies, 75, 70)
+            );
+        }
+
         if (enemy.DefId == KE.BygoneEffigy)
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.Slow, 1);

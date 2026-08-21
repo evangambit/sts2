@@ -1144,6 +1144,17 @@ public static class EnemyAI
                 };
 
             case KE.TerrorEel:
+                if (BuffSystem.Get(enemy.Buffs, BuffId.Stunned) > 0)
+                {
+                    return new Intent(IntentType.Unknown, 0);
+                }
+
+                // TERROR_MOVE, the turn after the stun: VulnerablePower(99).
+                if (BuffSystem.Get(enemy.Buffs, BuffId.TerrorQueued) > 0)
+                {
+                    return new Intent(IntentType.Debuff, 99);
+                }
+
                 // CrashDamage, then THRASH_MOVE: ThrashDamage x ThrashRepeat plus a
                 // BuffIntent, which the live readout announces as the attack.
                 return (enemy.MoveIndex % 2) == 0
@@ -2400,7 +2411,9 @@ public static class EnemyAI
                 break;
 
             case KE.Wriggler:
-                AddStatus(state, ST.Dazed, enemy.CurrentIntent.Magnitude);
+                // WRIGGLE_MOVE adds an Infection, not a Dazed — the same status its
+                // parent deals three of, and one that burns for 3 in hand at end of turn.
+                AddStatus(state, ST.Infection, enemy.CurrentIntent.Magnitude);
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
                 break;
 
@@ -2587,6 +2600,18 @@ public static class EnemyAI
             case KE.SludgeSpinner:
                 DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 1);
+                break;
+
+            case KE.TerrorEel:
+                BuffSystem.Apply(
+                    state.PlayerBuffs,
+                    BuffId.Vulnerable,
+                    enemy.CurrentIntent.Magnitude
+                );
+                BuffSystem.Remove(enemy.Buffs, BuffId.TerrorQueued);
+                // TERROR_MOVE's FollowUpState is CRASH, and the increment at the end of
+                // this turn is what carries the index there.
+                enemy.MoveIndex = -1;
                 break;
 
             case KE.LagavulinMatriarch:
@@ -2887,6 +2912,30 @@ public static class EnemyAI
         state.PlayerHp = Math.Min(state.PlayerHp, state.PlayerMaxHp);
     }
 
+    /// <summary>
+    /// ShriekPower.AfterDamageReceived: an unblocked hit that leaves the Terror Eel at or
+    /// below its threshold stuns it, and the turn after the stun it performs TERROR —
+    /// which lands Vulnerable 99 on the player. The power is removed as it fires, so this
+    /// happens once a combat. Nothing else in act 1 can be reached only by hurting a
+    /// monster, which is why this went unmodelled: a capture that plays no cards never
+    /// scratches a 150 HP elite.
+    /// </summary>
+    internal static void TriggerShriekIfWounded(EnemyState enemy)
+    {
+        int threshold = BuffSystem.Get(enemy.Buffs, BuffId.Shriek);
+        if (threshold <= 0 || enemy.Hp > threshold || enemy.Hp <= 0)
+        {
+            return;
+        }
+
+        BuffSystem.Remove(enemy.Buffs, BuffId.Shriek);
+        BuffSystem.Apply(enemy.Buffs, BuffId.TerrorQueued, 1);
+        BuffSystem.Apply(enemy.Buffs, BuffId.Stunned, 1);
+        // CreatureCmd.Stun changes the move immediately, so the intent the player is
+        // looking at becomes the stun rather than whatever was announced.
+        enemy.CurrentIntent = new Intent(IntentType.Unknown, 0);
+    }
+
     /// <summary>TwoTailedRatsNormal.Slots: five, three of them taken at the start.</summary>
     private const int RatSlots = 5;
 
@@ -3055,7 +3104,7 @@ public static class EnemyAI
     /// it stands and not every value the combat has ever used, so a dead enemy's HP is
     /// available again. When the band is exhausted the game rolls it flat instead.
     /// </summary>
-    private static int RollSummonedHp(int min, int max, CombatState? state, Random rng)
+    internal static int RollSummonedHp(int min, int max, CombatState? state, Random rng)
     {
         var niche = state?.NicheHpRng;
         if (niche == null)

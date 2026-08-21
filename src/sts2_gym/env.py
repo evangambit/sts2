@@ -129,8 +129,14 @@ class Sts2CombatEnv(gym.Env):
         completed_combat_rooms: int = -1,
         total_floor: int | None = None,
         ascension: int = 8,
+        # Card ids appended to the starter deck, for a capture that has to reach a state
+        # the starter deck cannot: a Phrog Parasite's Wrigglers only spawn when it dies.
+        # The live side adds the same cards with debug_add_card, and both sides append in
+        # this order before shuffling, so the decks stay identical.
+        extra_cards: list[int] | None = None,
     ):
         super().__init__()
+        self._extra_cards = list(extra_cards or [])
         self._seed = seed
         self._max_episode_steps = max_episode_steps
         self._forced_encounter = self._normalize_encounter(encounter)
@@ -187,14 +193,30 @@ class Sts2CombatEnv(gym.Env):
                 if options is not None and "ascension" in options
                 else self._ascension
             )
-            native.reset_encounter(
-                self._handle,
-                encounter_id,
-                self._obs_buf,
-                completed,
-                total_floor,
-                ascension,
+            extra = (
+                options.get("extra_cards")
+                if options is not None and "extra_cards" in options
+                else self._extra_cards
             )
+            if extra:
+                native.reset_encounter_with_extra_cards(
+                    self._handle,
+                    list(extra),
+                    encounter_id,
+                    self._obs_buf,
+                    completed,
+                    total_floor or 0,
+                    ascension,
+                )
+            else:
+                native.reset_encounter(
+                    self._handle,
+                    encounter_id,
+                    self._obs_buf,
+                    completed,
+                    total_floor,
+                    ascension,
+                )
         return self._obs(), self._info()
 
     def step(self, action: int):
@@ -204,6 +226,17 @@ class Sts2CombatEnv(gym.Env):
         truncated = not terminal and self._elapsed_steps >= self._max_episode_steps
         reward = float(self._rew_buf[0])
         return self._obs(), reward, terminal, truncated, self._info()
+
+    def debug_add_card_to_hand(self, card_id: int, upgraded: bool = False) -> np.ndarray:
+        """Put a card on top of the hand, as the mod's debug_add_card does live.
+
+        Only for differential captures: it is how a fight reaches a state the starter
+        deck cannot, such as a Phrog Parasite dead early enough for its Wrigglers to
+        spawn while the capture is still running.
+        """
+        assert self._handle is not None, "Call reset() before debug_add_card_to_hand()"
+        native.debug_add_card_to_hand(self._handle, card_id, self._obs_buf, upgraded)
+        return self._obs()
 
     def action_masks(self) -> np.ndarray:
         """Return a boolean mask of valid actions (for MaskablePPO)."""

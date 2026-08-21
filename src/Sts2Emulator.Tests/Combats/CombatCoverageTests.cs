@@ -91,7 +91,6 @@ public class CombatCoverageTests
         "SoulFysh",
         "SoulNexus",
         "SpinyToad",
-        "TerrorEel",
         "TestSubject",
         "TheInsatiable",
         "TheKin",

@@ -823,14 +823,40 @@ belongs to the POWER, so it applies to a debuff newly created on the player and 
 one added to a stack already there. The rats screech nearly every turn and live's Frail
 sits at 1; the emulator's was climbing, costing a point of block a turn.
 
-Still open, and both only reachable by killing things — which is new ground, since no
-capture used to get that far:
+### Reaching what only happens when the player is winning
 
-| what | detail |
-| --- | --- |
-| phrog-parasite's Wrigglers | after the parasite dies its four Wrigglers spawn, and their bite/wriggle alternation runs out of phase with live's |
-| terror-eel's second phase | `ShriekPower` stuns it into TERROR when an unblocked hit drops it to its threshold; the emulator models only CRASH and THRASH |
-| a card the live game will not play | one capture aborted with "live game never played the card" — the play policy needs to handle a card that does not leave the hand |
+Both of those are closed now, by stacking the deck: `combat_sweep.py --add-card BLUDGEON`
+puts a card on top of BOTH hands before turn one — live through the mod's
+`debug_add_card`, the emulator through a new `Sts2_DebugAddCardToHand` (native API v18).
+Four Bludgeons kill a Phrog Parasite by turn five. The hand rather than the deck, because
+`debug_add_card` needs combat in progress and adds at the top of a pile: hand-stacking
+places the same card in the same slot on both sides with no shuffle to agree about.
+
+Three defects fell out, none of which any passive capture could have reached:
+
+- **The four Wrigglers do not act in step.** `INIT_MOVE` is a conditional branch on the
+  creature's SLOT — wriggler1 and wriggler3 open on NASTY_BITE, wriggler2 and wriggler4
+  on WRIGGLE — so half the pack always bites while the other half buys Strength. The
+  emulator spawned them all on the same move. Note the parity is inverted at spawn:
+  SPAWNED_MOVE burns an index before the branch is read.
+- **WRIGGLE adds an Infection, not a Dazed** — the same status the parasite deals three
+  of, and one that burns for 3 in hand at end of turn.
+- **Terror Eel's second phase was not modelled at all.** `ShriekPower(75 at A8)` watches
+  for an unblocked hit that leaves the eel at or below its threshold, then stuns it for a
+  turn and queues TERROR_MOVE, which lands **Vulnerable 99** on the player before the eel
+  returns to CRASH. Verified in lockstep: at 74 HP both sides stun, both then show the
+  debuff, and both come back to CRASH announcing 24 (16 x 1.5).
+
+Mid-combat spawns also rolled HP off the combat rng in `CombatEngine`'s own copy of
+`CreateEnemy`; they now use the Niche stream with the roster exclusion, as `EnemyAI`'s
+already did.
+
+Two harness gaps closed alongside: the play policy waits for a posted play to register
+(the earlier "live game never played the card"), and card-adding refuses to exceed the
+game's ten-card hand instead of silently dropping the overflow.
+
+Watch for **star costs** when picking a card to stack: Devastate is 1 energy for 30
+damage but costs 4 stars, so live reports `can_play: false` and never plays it.
 
 **The previous standing, before this pass: 30 ALL MATCH, 5 more correct on behaviour,
 6 wrong.** Newly closed: the Kin, Vantom, jaxfruit-and-flyconid,
