@@ -30,6 +30,9 @@ ACTIONABLE_STATES = {
     "treasure",
 }
 DEFAULT_BASE_URL = "http://localhost:15526"
+
+# How many times to re-post an action the game refused before giving up on the capture.
+MAX_ACTION_ATTEMPTS = 6
 STARTER_AGGRESSIVE_PRIORITY = (
     "bash",
     "strike",
@@ -717,9 +720,25 @@ def capture_run(
             append_snapshot(trace, step, None, None, state, note="no_auto_action")
             break
 
-        previous_state_type = state.get("state_type")
         before = compact_state(state)
+        # A room's screen is not ready the moment it opens: a proceed posted too early
+        # comes back "No proceed button available or enabled", and a rest site answers
+        # "room is not open". The game DID NOT take that action, so it must not be
+        # recorded as a step — the emulator would replay an action the run never made and
+        # be a move ahead from then on. Retry until it lands, and record only what did.
         result = trace_real_game.post_action(base_url, payload)
+        rejections = 0
+        while result.get("status") == "error" and rejections < MAX_ACTION_ATTEMPTS:
+            rejections += 1
+            time.sleep(max(delay, 0.5))
+            state = start_real_game_run.get_state(base_url)
+            retry = choose_action(state, map_index)
+            if retry is None:
+                break
+            payload = retry
+            before = compact_state(state)
+            result = trace_real_game.post_action(base_url, payload)
+
         # A new turn deals a full hand, so an end_turn is not done until five cards are
         # there; every other action only has to move the state at all.
         min_hand = 5 if payload["action"] == "end_turn" else 1
@@ -730,19 +749,14 @@ def capture_run(
             min_combat_hand=min_hand,
             require_new_state_type=payload["action"] == "choose_map_node",
         )
-        append_snapshot(trace, step, payload, result, state)
-
-        tolerated_retry_error = (
-            previous_state_type == "shop" and payload.get("action") == "proceed"
-        ) or (
-            previous_state_type == "rest_site"
-            and payload.get("action") == "choose_rest_option"
-            and "not open" in str(result.get("error") or "").lower()
+        append_snapshot(
+            trace,
+            step,
+            payload,
+            result,
+            state,
+            note=f"retried_{rejections}" if rejections else None,
         )
-        if result.get("status") == "error" and tolerated_retry_error:
-            time.sleep(max(delay, 1.0))
-            state = start_real_game_run.get_state(base_url)
-            continue
 
         if result.get("status") == "error":
             append_snapshot(trace, step + 1, None, None, state, note="post_error")

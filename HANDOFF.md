@@ -492,11 +492,35 @@ turned up three places where the emulator resolved a screen the player actually 
 The first `state_type` divergence is now **step 29**, and the sequence from Neow through
 floor 2's combat, its rewards and the map move matches exactly.
 
-Left at the end of the run: the gold gap at step 60 is 52 in the emulator's favour, the
-stop is an event asking for a card the Event phase does not accept, and at step 29 the
-live capture takes TWO `proceed` actions to leave a shop where the emulator takes one —
-worth checking against the game before modelling, since it may be the tracer rather than
-the shop.
+#### The trace had four steps the run never took
+
+The shop's "two proceeds" was the tracer, not the game, and the check took one diff: the
+two shop snapshots were byte-identical and the post came back
+`No proceed button available or enabled`. A room's screen is not ready the instant it
+opens, and the tracer recorded the refusal as a step — so the emulator replayed an action
+the run never made and was a move ahead from there. Four steps in the old capture were
+like that (two shop proceeds, a rest site, one more proceed).
+
+`trace_real_game_run.py` now retries a refused action instead of recording it, and notes
+on the step how many attempts it took. The recapture is a **complete run**: 159 steps to
+floor 13 and a natural game over, up from 115 truncated at floor 10, with no refusals in
+it and three steps that needed a retry.
+
+Everything downstream of that went away. The replay is now clean through **step 57** —
+Neow, five combats, their rewards, two shops, a rest site and the map moves between them
+all match — and what is left is a single, well-defined defect:
+
+**Event selection picks the wrong event.** At floor 6 the game runs `SELF_HELP_BOOK`; the
+emulator runs `THIS_OR_THAT`. The live run's events are NEOW, SELF_HELP_BOOK (floor 6),
+THE_LEGENDS_WERE_TRUE (floor 12); the emulator's `EventSequence` for this seed starts
+`[32, 39, 38, 34, ...]` and `EnterEvent` walks it taking the first `IsEventAllowed`, which
+gives 39. Self Help Book is id 11, twenty-sixth in that sequence.
+
+This is exactly what `TryEnterRetainedInstant5Event` was hiding — the deleted hardcode
+forced `EventSelfHelpBook` whenever it saw floor 3 with 66 HP and 111 gold. Somebody hit
+this, wrote down the answer and moved on. The sequence itself is verified against live
+saves by the run-generation fixtures, so the fault is more likely in how the game picks
+FROM the sequence than in the sequence.
 
 Two things the capture turned up on the way:
 
