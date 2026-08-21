@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 
 replay_full_run_trace = importlib.import_module("replay_full_run_trace")
+compare_traces = importlib.import_module("compare_traces")
 sts2_gym = importlib.import_module("sts2_gym")
 native = importlib.import_module("sts2_gym.native")
 run_env = importlib.import_module("sts2_gym.run_env")
@@ -455,6 +456,66 @@ class Sts2GymTests(unittest.TestCase):
                 {"phase": PHASE_CARD_REWARD},
             ),
         )
+
+
+class CommittedRunTraceTests(unittest.TestCase):
+    """The full-run capture replays end to end against the emulator.
+
+    This is the only test that exercises a whole act the way the game played it:
+    159 live actions from Neow to a natural game over, every one of them replayed
+    against the emulator and compared field by field. It is deliberately strict --
+    the two tolerated divergences below are capture artifacts, and any new one is
+    a real behavioural difference.
+    """
+
+    FIXTURE = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "run_trace"
+        / "QS2GYXRKWN-a8.json"
+    )
+
+    def _replay(self):
+        payload = replay_full_run_trace.load_payload(self.FIXTURE)
+        result = replay_full_run_trace.replay_trace(
+            payload,
+            emulator_seed=payload["seed"],
+        )
+        return payload, result
+
+    def test_replay_runs_to_the_end_of_the_capture(self):
+        _, result = self._replay()
+        self.assertIsNone(result.unsupported_action)
+
+    def test_replay_matches_at_every_boundary(self):
+        payload, result = self._replay()
+        reference = compare_traces.load_trace_from_payload(payload)
+        emulator = result.payload["trace"]
+        diffs = replay_full_run_trace.compare_boundary_snapshots(
+            reference,
+            emulator,
+            replay_full_run_trace.DEFAULT_BOUNDARY_FIELDS,
+        )
+        self.assertEqual(diffs, [])
+
+    def test_only_the_known_capture_artifacts_diverge(self):
+        payload, result = self._replay()
+        reference = compare_traces.load_trace_from_payload(payload)
+        divergences = replay_full_run_trace.first_divergences(
+            reference,
+            result.payload["trace"],
+            replay_full_run_trace.DEFAULT_PER_STEP_FIELDS,
+        )
+        steps = sorted(
+            int(line.split(" at step ")[1].split(":")[0]) for line in divergences
+        )
+        # step 59: the game splits Self-Help Book's enchant into select-then-confirm
+        # while the emulator applies it in one action, so the emulator is a step
+        # ahead of the capture on that screen only.
+        # step 88: the tracer polled mid-resolution -- the snapshot has Cubex
+        # Construct's Artifact already spent but the Strike that spent it not yet
+        # applied -- so the capture attributes a lagging state to that action.
+        self.assertEqual(steps, [59, 88, 88])
 
 
 if __name__ == "__main__":

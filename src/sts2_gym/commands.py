@@ -255,7 +255,21 @@ def translate_command(
             )
         return None
     if action_name == "select_card" and phase == PHASE_TRANSFORM_SELECT:
-        return int(command.get("index", 0))
+        # The game's card-select screen lists only the cards the effect can
+        # legally target, so its index counts eligible cards. The emulator's
+        # action is the deck index itself, masked to the same eligible set, so
+        # the live index selects the n-th legal action.
+        index = int(command.get("index", 0))
+        if env is None:
+            return index
+        # The mask for this phase holds deck indices only -- no skip action -- so
+        # every legal action is a selectable card.
+        legal = valid_actions(env)
+        if index >= len(legal):
+            raise UnsupportedCommandError(
+                f"select_card index {index} but only {len(legal)} eligible cards",
+            )
+        return legal[index]
     if action_name == "confirm_selection":
         if phase == PHASE_TRANSFORM_SELECT:
             return REWARD_SKIP_ACTION

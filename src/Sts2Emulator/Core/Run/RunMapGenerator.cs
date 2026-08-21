@@ -4,6 +4,13 @@ namespace Sts2Emulator.Core.Run;
 
 public static class RunMapGenerator
 {
+    /// <summary>
+    /// UpFront draws RunManager.GenerateRooms makes before the first act's rooms
+    /// are generated: the shared-ancient shuffle plus one subset-size draw per act
+    /// after the first. Pinned to the mature profile the captures are taken on.
+    /// </summary>
+    private const int SharedAncientPrefixDraws = 232;
+
     public static void SelectActAndGenerateRooms(RunState state)
     {
         // Act 1 is picked by StartRunLobby.BeginRunLocally from the *unlocked* acts for
@@ -19,19 +26,26 @@ public static class RunMapGenerator
         var actRng = new GameRng(state.Rng.Seed, "act_selection");
         bool underdocks = actRng.NextInt(0, 2) == 1;
         state.Act = underdocks ? RunConstants.ActUnderdocks : RunConstants.ActOvergrowth;
-        state.EventSequence = GenerateEventSequence(state, underdocks);
-        state.EventSequenceIndex = 0;
-
+        // RunManager.GenerateRooms drives one UpFront stream in a fixed order:
+        // it shuffles the shared ancients, draws one subset size per act after the
+        // first, and only then calls ActModel.GenerateRooms for each act. That
+        // prefix is SharedAncientPrefixDraws draws; it depends on how many shared
+        // ancients the profile has unlocked, so it is pinned to the mature profile
+        // the differential captures are taken on rather than derived.
+        //
+        // ActModel.GenerateRooms then shuffles the act's event pool -- one draw
+        // short of the pool size -- before rolling that act's encounters. That is
+        // the whole reason the prefix ahead of the encounters is act-dependent:
+        // 232 + 30 = 262 for Overgrowth's 31 events, 232 + 27 = 259 for
+        // Underdocks' 28.
         var upFront = state.Rng.UpFront;
-        for (int i = 0; i < 202; i++)
+        for (int i = 0; i < SharedAncientPrefixDraws; i++)
         {
             upFront.NextDouble();
         }
 
-        for (int i = 0; i < (underdocks ? 57 : 60); i++)
-        {
-            upFront.NextInt((underdocks ? 57 : 60) + 1);
-        }
+        state.EventSequence = GenerateEventSequence(underdocks, upFront);
+        state.EventSequenceIndex = 0;
 
         int[] weakPool = (
             underdocks
@@ -99,7 +113,19 @@ public static class RunMapGenerator
         state.BossEncounterId = bossPool[(int)(upFront.NextDouble() * bossPool.Length)];
     }
 
-    private static int[] GenerateEventSequence(RunState state, bool underdocks)
+    /// <summary>
+    /// The events a run can draw, in the order ActModel.GenerateRooms builds them:
+    /// the act's own AllEvents, then ModelDb.AllSharedEvents, then one UnstableShuffle.
+    ///
+    /// The order before the shuffle is the whole ballgame. UnstableShuffle is documented
+    /// as order-dependent — two lists holding the same events in different orders shuffle
+    /// to different results from the same stream — and this list used to be one
+    /// alphabetical run of act and shared events mixed together, three of them missing
+    /// entirely. It consumed a plausible number of draws and produced the wrong events
+    /// all run, which is what the deleted TryEnterRetainedInstant5Event hardcode was
+    /// papering over.
+    /// </summary>
+    private static int[] GenerateEventSequence(bool underdocks, GameRng rng)
     {
         int[] eventPool = underdocks
             ?
@@ -114,6 +140,7 @@ public static class RunMapGenerator
                 RunConstants.EventDoorsOfLightAndDark,
                 RunConstants.EventTrashHeap,
                 RunConstants.EventWaterloggedScriptorium,
+                RunConstants.EventBrainLeech,
                 RunConstants.EventCrystalSphere,
                 RunConstants.EventDollRoom,
                 RunConstants.EventFakeMerchant,
@@ -121,11 +148,13 @@ public static class RunMapGenerator
                 RunConstants.EventRanwidTheElder,
                 RunConstants.EventRelicTrader,
                 RunConstants.EventRoomFullOfCheese,
+                RunConstants.EventSelfHelpBook,
                 RunConstants.EventSlipperyBridge,
                 RunConstants.EventStoneOfAllTime,
                 RunConstants.EventSymbiote,
                 RunConstants.EventTeaMaster,
                 RunConstants.EventTheFutureOfPotions,
+                RunConstants.EventTheLegendsWereTrue,
                 RunConstants.EventThisOrThat,
                 RunConstants.EventWarHistorianRepy,
                 RunConstants.EventWelcomeToWongos,
@@ -137,7 +166,7 @@ public static class RunMapGenerator
                 RunConstants.EventDenseVegetation,
                 RunConstants.EventJungleMazeAdventure,
                 RunConstants.EventLuminousChoir,
-                RunConstants.EventSelfHelpBook,
+                RunConstants.EventMorphicGrove,
                 RunConstants.EventSapphireSeed,
                 RunConstants.EventSunkenStatue,
                 RunConstants.EventTabletOfTruth,
@@ -145,6 +174,7 @@ public static class RunMapGenerator
                 RunConstants.EventWellspring,
                 RunConstants.EventWhisperingHollow,
                 RunConstants.EventWoodCarvings,
+                RunConstants.EventBrainLeech,
                 RunConstants.EventCrystalSphere,
                 RunConstants.EventDollRoom,
                 RunConstants.EventFakeMerchant,
@@ -152,17 +182,18 @@ public static class RunMapGenerator
                 RunConstants.EventRanwidTheElder,
                 RunConstants.EventRelicTrader,
                 RunConstants.EventRoomFullOfCheese,
+                RunConstants.EventSelfHelpBook,
                 RunConstants.EventSlipperyBridge,
                 RunConstants.EventStoneOfAllTime,
                 RunConstants.EventSymbiote,
                 RunConstants.EventTeaMaster,
                 RunConstants.EventTheFutureOfPotions,
+                RunConstants.EventTheLegendsWereTrue,
                 RunConstants.EventThisOrThat,
                 RunConstants.EventWarHistorianRepy,
                 RunConstants.EventWelcomeToWongos,
             ];
 
-        var rng = new GameRng(state.Rng.Seed, "up_front");
         rng.Shuffle(eventPool);
         return eventPool.Where(eventId => eventId != 0).ToArray();
     }

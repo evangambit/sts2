@@ -7,98 +7,20 @@ public static class RunRewardGenerator
     private const int RarityCommon = 1;
     private const int RarityUncommon = 2;
     private const int RarityRare = 3;
-    private const double CardRarityBaseOffset = -0.05;
+    public const double CardRarityBaseOffset = -0.05;
     private const double CardRarityMaxOffset = 0.4;
     private const double CardRarityGrowth = 0.005;
     private const double PotionRewardStep = 0.1;
 
-    public static ReadOnlySpan<int> IroncladRewardPool =>
-        [
-            9,
-            13,
-            18,
-            20,
-            29,
-            31,
-            46,
-            45,
-            47,
-            50,
-            58,
-            60,
-            66,
-            69,
-            87,
-            95,
-            99,
-            113,
-            114,
-            119,
-            141,
-            142,
-            147,
-            150,
-            155,
-            174,
-            175,
-            183,
-            185,
-            188,
-            189,
-            195,
-            205,
-            238,
-            240,
-            246,
-            247,
-            254,
-            261,
-            262,
-            263,
-            265,
-            268,
-            272,
-            273,
-            295,
-            313,
-            328,
-            332,
-            334,
-            339,
-            349,
-            353,
-            358,
-            364,
-            374,
-            378,
-            381,
-            396,
-            404,
-            414,
-            421,
-            433,
-            454,
-            455,
-            462,
-            464,
-            465,
-            466,
-            486,
-            492,
-            493,
-            494,
-            505,
-            508,
-            516,
-            517,
-            519,
-            521,
-            525,
-            526,
-            529,
-            533,
-            538,
-        ];
+    /// <summary>
+    /// The Ironclad card pool, straight from the game's own IroncladCardPool
+    /// declaration. A hand-written copy of it used to live here, and it was wrong in
+    /// both directions: it carried three Colorless cards (Restlessness, Splash,
+    /// Ultimate Defend) and was missing six Ironclad ones. Every extra entry shifts
+    /// the index NextItem lands on, so a reward roll that agreed with the game on
+    /// rarity still handed back the neighbouring card.
+    /// </summary>
+    public static ReadOnlySpan<int> IroncladRewardPool => GeneratedData.CardPools.Ironclad;
 
     public static ReadOnlySpan<int> IroncladTransformPool =>
         [

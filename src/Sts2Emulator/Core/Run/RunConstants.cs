@@ -198,6 +198,9 @@ public static class RunConstants
     public const int RelicEmptyCage = 1399;
     public const int RelicPandorasBox = 1510;
 
+    /// <summary>Normal rooms drawn from the act's weak pool before the normal one.</summary>
+    public const int WeakEncountersPerAct = 3;
+
     public const int CursePlaceholderCard = 10001;
     public const int SpoilsMapCard = 10020;
     public const int NeowsFuryCard = 321;

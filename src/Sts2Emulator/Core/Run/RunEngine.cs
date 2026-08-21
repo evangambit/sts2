@@ -44,7 +44,11 @@ public sealed class RunEngine
         Array.Clear(State.ShopCosts);
         State.RelicReward = 0;
         State.EventId = 0;
-        State.CardRarityOffset = 0.0;
+        // CardRarityOdds starts at -0.05, not zero: `CardRarityOdds(Rng rng) : base(-0.05f, rng)`,
+        // the same value a Rare roll resets it to. Starting at zero made every early
+        // reward roll read 0.05 too generous, so cards the game rolled Common came
+        // back Uncommon until the offset had grown past the gap.
+        State.CardRarityOffset = RunRewardGenerator.CardRarityBaseOffset;
         State.PotionRewardOdds = 0.4;
         State.PendingRelicReward = false;
         State.ShopRemovalsUsed = 0;
@@ -140,6 +144,16 @@ public sealed class RunEngine
 
         combat.NicheHpRng = nicheHpRng;
 
+        // Monster move selection reads the run's "monster_ai" stream -- FlutterPower
+        // reaches for Monster.RunRng.MonsterAi by name -- so it spans the whole run.
+        // Restarting it each combat put every branching monster on the wrong draw:
+        // Mawler's third choice came up Rip and Tear where the game rolled Claw.
+        var aiRng = new CountingRandom(State.Rng.MonsterAi.RawSeed);
+        for (int i = 0; i < State.Rng.MonsterAi.CallCount; i++)
+        {
+            aiRng.Next();
+        }
+
         // Target choice draws from the run's "combat_targets" stream, so combat picks up
         // where the run left off and hands the call count back when it ends.
         var targetRng = new CountingRandom(State.Rng.CombatTargets.RawSeed);
@@ -188,7 +202,7 @@ public sealed class RunEngine
             shuffleRng,
             EncounterRngSeed(encounterId),
             nicheSkipCount: 0,
-            new Random(State.Rng.MonsterAi.RawSeed),
+            aiRng,
             State.CompletedCombatRoomsBeforeCurrent
         );
         Effects.RelicEffects.RestoreUsedUpRelics(combat, State.UsedUpRelics);
@@ -668,15 +682,11 @@ public sealed class RunEngine
 
         if (State.Phase == RunPhase.Map)
         {
-            if (!TryChooseRarity1RetainedShopPath(action, out int nodeType, out int encounterId))
+            if (
+                !RunMapGenerator.ChooseMapNode(State, action, out int nodeType, out int encounterId)
+            )
             {
-                if (
-                    !RunMapGenerator.ChooseMapNode(State, action, out nodeType, out encounterId)
-                    && !TryChooseInstant5RetainedUnknownPath(action, out nodeType, out encounterId)
-                )
-                {
-                    return -1;
-                }
+                return -1;
             }
 
             switch (nodeType)
@@ -962,20 +972,23 @@ public sealed class RunEngine
         }
     }
 
-    private int EncounterRngSeed(int encounterId)
+    /// <summary>
+    /// Seed for the encounter's own stream, the one EncounterModel builds from the run
+    /// seed, TotalFloor and a hash of the encounter's entry id. Every encounter that
+    /// rolls its own roster reads it, so handing back a seed for Slimes alone left the
+    /// rest -- Slithering Strangler's secondary enemy, Flyconid's slime, the raiders --
+    /// rolling off a constant.
+    /// </summary>
+    private int? EncounterRngSeed(int encounterId)
     {
-        if (encounterId != RunConstants.SlimesWeakEncounterId)
-        {
-            return 0;
-        }
+        // The first three normal rooms of an act draw from the weak pool, so a shared
+        // encounter id is the weak variant exactly that long. Only Corpse Slugs cares,
+        // and it never appears as an elite or boss.
+        bool weakVariant =
+            State.CurrentNodeType == RunConstants.NodeNormal
+            && State.NormalEncountersVisited <= RunConstants.WeakEncountersPerAct;
 
-        return unchecked(
-            (int)(
-                State.Rng.Seed
-                + (uint)State.CompletedCombatRoomsBeforeCurrent
-                + (uint)DeterministicHash.GetDeterministicHashCode("SLIMES_WEAK")
-            )
-        );
+        return EncounterRng.SeedFor((int)State.Rng.Seed, State.Floor, encounterId, weakVariant);
     }
 
     private void SyncAfterCombat()
@@ -1002,6 +1015,11 @@ public sealed class RunEngine
         if (State.ActiveCombat.TargetRng is not null)
         {
             State.Rng.CombatTargets.AdvanceToCallCount(State.ActiveCombat.TargetRng.CallCount);
+        }
+
+        if (State.ActiveCombat.AiRng is CountingRandom aiRng)
+        {
+            State.Rng.MonsterAi.AdvanceToCallCount(aiRng.CallCount);
         }
 
         if (State.ActiveCombat.CardSelectionRng is not null)
@@ -1034,41 +1052,6 @@ public sealed class RunEngine
         {
             State.Rng.Niche.AdvanceToCallCount(State.ActiveCombat.NicheHpRng.CallCount);
         }
-    }
-
-    private bool TryChooseInstant5RetainedUnknownPath(
-        int action,
-        out int nodeType,
-        out int encounterId
-    )
-    {
-        nodeType = RunConstants.NodeNone;
-        encounterId = 0;
-
-        if (action != 1 || State.Floor != 4 || State.PlayerHp != 38 || State.Gold != 128)
-        {
-            return false;
-        }
-
-        var coord = (Col: 2, Row: 4);
-        if (!State.MapNodes.ContainsKey(coord))
-        {
-            return false;
-        }
-
-        State.CurrentMapCoord = coord;
-        State.CurrentNodeType = RunConstants.NodeEvent;
-        State.Floor++;
-        nodeType = RunConstants.NodeEvent;
-        return true;
-    }
-
-    private bool TryChooseRarity1RetainedShopPath(int action, out int nodeType, out int encounterId)
-    {
-        nodeType = RunConstants.NodeNone;
-        encounterId = 0;
-
-        return false;
     }
 
     private int StepCardReward(int action, out bool terminal)
