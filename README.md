@@ -16,7 +16,7 @@ This repository contains a high-performance emulator for a subset of Slay the Sp
 - `src\Sts2Emulator\Generated`: generated card, enemy, potion, power, and relic definitions.
 - `src\Sts2Emulator\Interop`: native exports used by Python.
 - `src\sts2_gym`: Python `ctypes` bindings plus Gymnasium wrappers for single-combat and full-run training.
-- `scripts`: build, data extraction, patch update, trace validation, full-run trace capture, live per-card capture (`capture_card.py`), and MaskablePPO training scripts.
+- `scripts`: build, data extraction, patch update, trace validation, full-run trace capture, live per-card capture (`capture_card.py`), live per-event capture (`capture_event.py`), and MaskablePPO training scripts.
 - `src\Sts2Emulator.Tests`: xUnit tests for combat and run behavior.
 - `src\Sts2Emulator.Tests\Cards`: one test file per card, the tests generated from live card
   captures, and the coverage guard that fails the build when an implemented card has no tests.

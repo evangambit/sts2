@@ -1,0 +1,70 @@
+// AUTO-GENERATED — do not edit. Re-run scripts/generate_event_coverage.py to update.
+namespace Sts2Emulator.Tests;
+
+/// <summary>
+/// Every event <c>RunEngine.StepEvent</c> can run, which is what "modelled" means
+/// for an event. Consumed by <c>EventCoverageTests</c>.
+/// </summary>
+internal static class ImplementedEvents
+{
+    public static readonly string[] Names =
+    [
+        "AbyssalBaths",
+        "Amalgamator",
+        "AromaOfChaos",
+        "BattlewornDummy",
+        "BrainLeech",
+        "Bugslayer",
+        "ByrdonisNest",
+        "ColorfulPhilosophers",
+        "ColossalFlower",
+        "CrystalSphere",
+        "DenseVegetation",
+        "DollRoom",
+        "DoorsOfLightAndDark",
+        "DrowningBeacon",
+        "EndlessConveyor",
+        "FakeMerchant",
+        "FieldOfManSizedHoles",
+        "GraveOfTheForgotten",
+        "HungryForMushrooms",
+        "InfestedAutomaton",
+        "JungleMazeAdventure",
+        "LostWisp",
+        "LuminousChoir",
+        "MorphicGrove",
+        "PotionCourier",
+        "PunchOff",
+        "RanwidTheElder",
+        "Reflections",
+        "RelicTrader",
+        "RoomFullOfCheese",
+        "RoundTeaParty",
+        "SapphireSeed",
+        "SelfHelpBook",
+        "SlipperyBridge",
+        "SpiralingWhirlpool",
+        "SpiritGrafter",
+        "StoneOfAllTime",
+        "SunkenStatue",
+        "SunkenTreasury",
+        "Symbiote",
+        "TabletOfTruth",
+        "TeaMaster",
+        "TheFutureOfPotions",
+        "TheLanternKey",
+        "TheLegendsWereTrue",
+        "ThisOrThat",
+        "TinkerTime",
+        "TrashHeap",
+        "Trial",
+        "UnrestSite",
+        "WarHistorianRepy",
+        "WaterloggedScriptorium",
+        "WelcomeToWongos",
+        "Wellspring",
+        "WhisperingHollow",
+        "WoodCarvings",
+        "ZenWeaver",
+    ];
+}

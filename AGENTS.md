@@ -133,6 +133,21 @@
   python scripts/generate_card_capture_tests.py               # -> Cards/CardCaptures.g.cs
   ```
 
+- Events are captured the same way, through the mod's `debug_start_event`:
+
+  ```
+  python scripts/capture_event.py --event SelfHelpBook       # what it offers
+  python scripts/capture_event.py --event SelfHelpBook --choose 0   # and what that did
+  ```
+
+  Which options an event offers is state-dependent — most events hide or lock the ones
+  the run cannot afford — so the offered list is worth pinning on its own, separately
+  from what any option does. The event seeds its own Rng from the run seed, the current
+  floor and a hash of its id, so the floor is part of what a capture pins. The game
+  updates the reported event id before its option list, so the capture waits for the
+  readout to settle; a capture that reads the first state naming the right event comes
+  back holding the previous event's options.
+
 - `capture_card.py` stages the card with `debug_add_card`, guarantees it is affordable
   with `debug_set_energy`, plays it, and commits the before/after under
   `tests\fixtures\cards`. The fixture is self-contained — it records the state the card
@@ -267,8 +282,8 @@ bugs, and the rules are not guessable — read them there rather than inferring 
   which is a DIFFERENT draw from the same stream: this is what made three Inklets desync
   from the live game while the damage was already right.
 - **A cooldown is a different rule from `CannotRepeat`**: `AddBranch(state, 2)` is the
-  *maxRepeats* overload (barred after coming up twice running), while
-  `AddBranch(state, 3, MoveRepeatType.CannotRepeat)` is a *cooldown* of 3. `EnemyState`
+  _maxRepeats_ overload (barred after coming up twice running), while
+  `AddBranch(state, 3, MoveRepeatType.CannotRepeat)` is a _cooldown_ of 3. `EnemyState`
   carries `MoveHistory` because one `LastMove` cannot answer either question.
 - The roll itself is `NextFloat(total weight)` then a walk over the branches in the order
   they were added — `EnemyAI.PickBranch`. `Next(n)` is a different number from the same
@@ -293,7 +308,7 @@ bugs, and the rules are not guessable — read them there rather than inferring 
 
 ## Never Fit the Engine to a Capture
 
-The run layer accumulated ~1,500 lines that made a replay pass by *being told the answer*:
+The run layer accumulated ~1,500 lines that made a replay pass by _being told the answer_:
 methods named `ApplyRetainedTrace*`, `TryGenerateRetainedTraceCombatRewards`,
 `TryEnterRetainedInstant5Event`, and inline blocks that forced HP, gold, enemy HP, map
 coordinates, act transitions and offered cards to the values of two captured runs. Several
@@ -306,7 +321,7 @@ Two things make this worth a rule of its own:
 - **It is invisible to the test suite.** Removing every line of it left 841 C# and 195
   Python tests passing, because nothing ever covered it. A green suite is not evidence
   that the engine is not cheating.
-- **Not all of it was seed-gated.** The worst keyed on a *state fingerprint* —
+- **Not all of it was seed-gated.** The worst keyed on a _state fingerprint_ —
   `Floor == 5 && PlayerHp == 74 && Gold == 120` — so it fires in ANY run that happens to
   match, handing that run a captured trace's card reward. Random play reaches floors 2-8,
   and a competent agent lives in exactly that range.
@@ -326,7 +341,7 @@ The shuffle is a bigger source of "the damage is wrong on turn five" than any mo
 - **The sort key is the model's string id, not any number.** `CardModel.CompareTo` falls
   through to `ModelId.CompareTo`, which is an ordinal comparison of `Category` then `Entry`
   — the slugified class name. `CardDef.Entry` carries it, written by `extract_data.py`.
-  Sorting by our own numeric ids gives the right pile *counts* and the wrong card on top,
+  Sorting by our own numeric ids gives the right pile _counts_ and the wrong card on top,
   which surfaces several turns later as a status card burning the player early.
 - **`CardPilePosition.Random` rolls on `Rng.Shuffle`**, as `Shuffle.NextInt(count + 1)` —
   not the combat stream. Soul Fysh's Beckon is placed this way.

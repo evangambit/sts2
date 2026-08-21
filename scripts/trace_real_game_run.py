@@ -845,7 +845,7 @@ def append_snapshot(
 
 
 def next_scripted_action(actions: list[dict[str, Any]], step: int) -> dict[str, Any] | None:
-    """The recorded action for this step, or None once the script runs out."""
+    """Return the recorded action for this step, or None once the script runs out."""
     index = step - 1
     return actions[index] if index < len(actions) else None
 
