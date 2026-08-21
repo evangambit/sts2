@@ -509,13 +509,14 @@ class CommittedRunTraceTests(unittest.TestCase):
         steps = sorted(
             int(line.split(" at step ")[1].split(":")[0]) for line in divergences
         )
-        # step 59: the game splits Self-Help Book's enchant into select-then-confirm
-        # while the emulator applies it in one action, so the emulator is a step
-        # ahead of the capture on that screen only.
-        # step 88: the tracer polled mid-resolution -- the snapshot has Cubex
-        # Construct's Artifact already spent but the Strike that spent it not yet
-        # applied -- so the capture attributes a lagging state to that action.
-        self.assertEqual(steps, [59, 88, 88])
+        # step 88 is the one flaw left in this capture, and it is in the capture, not
+        # the emulator: it was taken before scripts/trace_real_game_run.py learned to
+        # wait for the state to settle, so this snapshot is a frame from the middle of
+        # resolving the PREVIOUS card -- Cubex Construct's Artifact already spent, the
+        # Strike that spent it not yet applied. It reports against two fields, hand and
+        # enemies. Re-running the capture with --replay-trace regenerates the same run
+        # with settled snapshots and this drops to nothing.
+        self.assertEqual(steps, [88, 88])
 
 
 if __name__ == "__main__":

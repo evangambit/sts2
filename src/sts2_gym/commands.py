@@ -98,6 +98,9 @@ def translate_command(
     if action_name == "ChooseRestSiteOption":
         action_name = "choose_rest_site_option"
     phase = int(info["phase"])
+    if phase != PHASE_TRANSFORM_SELECT:
+        # The card-select screen is behind us, so nothing it held back is still live.
+        clear_deferred_selection(env)
     if action_name in {"play_card", "end_turn", "use_potion"} and phase != PHASE_COMBAT:
         return None
     if action_name == "play_card":
@@ -269,10 +272,17 @@ def translate_command(
             raise UnsupportedCommandError(
                 f"select_card index {index} but only {len(legal)} eligible cards",
             )
-        return legal[index]
+        # The game toggles a selection here and resolves it on the confirm that
+        # follows; the emulator resolves the moment the card is chosen. Hold the
+        # translated action back so both sides leave the screen on the same step
+        # -- otherwise the emulator is a step ahead for the whole card-select
+        # screen. A later toggle replaces an earlier one, the way re-clicking does.
+        set_deferred_selection(env, legal[index])
+        return None
     if action_name == "confirm_selection":
         if phase == PHASE_TRANSFORM_SELECT:
-            return REWARD_SKIP_ACTION
+            deferred = peek_deferred_selection(env)
+            return REWARD_SKIP_ACTION if deferred is None else deferred
         return None
 
     raise UnsupportedCommandError(
@@ -580,6 +590,32 @@ def hand_count(obs: np.ndarray) -> int:
 
 def valid_actions(env: Any) -> list[int]:
     return [int(i) for i in np.flatnonzero(env.action_masks())]
+
+
+# The card-select screen's held-back action, kept on the env so a replay driving
+# several environments cannot mix them up.
+_DEFERRED_SELECTION_ATTR = "_sts2_deferred_card_selection"
+
+
+def set_deferred_selection(env: Any, action: int) -> None:
+    setattr(env, _DEFERRED_SELECTION_ATTR, int(action))
+
+
+def peek_deferred_selection(env: Any | None) -> int | None:
+    """The held-back action, without consuming it.
+
+    Callers translate the same command more than once -- the replay asks whether a
+    command is supported before executing it -- so reading this must not change it.
+    It is cleared instead when the emulator leaves the card-select screen.
+    """
+    if env is None:
+        return None
+    return getattr(env, _DEFERRED_SELECTION_ATTR, None)
+
+
+def clear_deferred_selection(env: Any | None) -> None:
+    if env is not None and getattr(env, _DEFERRED_SELECTION_ATTR, None) is not None:
+        setattr(env, _DEFERRED_SELECTION_ATTR, None)
 
 
 # Backwards-compatible aliases while trace tooling migrates to command terminology.

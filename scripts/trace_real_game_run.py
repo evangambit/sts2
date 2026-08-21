@@ -33,6 +33,11 @@ DEFAULT_BASE_URL = "http://localhost:15526"
 
 # How many times to re-post an action the game refused before giving up on the capture.
 MAX_ACTION_ATTEMPTS = 6
+
+# How long the snapshot has to hold still before it counts as the result of the action
+# that was just posted, rather than a frame from the middle of resolving it.
+POLL_INTERVAL = 0.2
+SETTLE_POLLS = 3
 STARTER_AGGRESSIVE_PRIORITY = (
     "bash",
     "strike",
@@ -159,6 +164,7 @@ def wait_for_state_to_change(
     *,
     min_combat_hand: int = 1,
     require_new_state_type: bool = False,
+    settle_polls: int = SETTLE_POLLS,
 ) -> dict[str, Any]:
     """Wait until the game has actually ACTED on what was just posted.
 
@@ -172,12 +178,25 @@ def wait_for_state_to_change(
     than any hand-picked identity, and free, because the snapshot is being taken anyway.
     Falls through on timeout so a genuinely idempotent action (one the game ignores)
     reports as a stuck step rather than hanging the capture.
+
+    "Changed" is still not the same as "done", which was the second bug here: an action
+    resolves in pieces, and the first piece is visible long before the last. A Strike
+    into a Cubex Construct showed up as the Artifact being spent — a real change, and an
+    actionable state — while the damage had not landed yet, so the snapshot recorded
+    against that Strike was the one from the middle of the PREVIOUS card. The state must
+    therefore also hold still: it is only taken once it has stopped changing for
+    settle_polls consecutive reads.
     """
     if delay > 0:
         time.sleep(delay)
     deadline = time.monotonic() + timeout
     state = start_real_game_run.get_state(base_url)
+    previous: dict[str, Any] | None = None
+    still_for = 0
     while time.monotonic() < deadline:
+        current = compact_state(state)
+        still_for = still_for + 1 if current == previous else 0
+        previous = current
         # Travelling mutates the map screen before it leaves it, so "the snapshot
         # changed" comes true while the state is still a map — and the next action is
         # then a second choose_map_node, which the game rejects. A move between rooms is
@@ -188,11 +207,12 @@ def wait_for_state_to_change(
         )
         if (
             left_old_phase
-            and compact_state(state) != before
+            and current != before
+            and still_for >= settle_polls
             and is_actionable_state(state, min_combat_hand=min_combat_hand)
         ):
             return state
-        time.sleep(0.2)
+        time.sleep(POLL_INTERVAL)
         state = start_real_game_run.get_state(base_url)
     return state
 
@@ -702,6 +722,7 @@ def capture_run(
     map_index: int,
     delay: float,
     ascension: int = 0,
+    scripted_actions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     state = start_real_game_run.start_seeded_run(
         base_url,
@@ -715,7 +736,11 @@ def capture_run(
     append_snapshot(trace, 0, None, None, state)
 
     for step in range(1, max_steps + 1):
-        payload = choose_action(state, map_index)
+        payload = (
+            choose_action(state, map_index)
+            if scripted_actions is None
+            else next_scripted_action(scripted_actions, step)
+        )
         if payload is None:
             append_snapshot(trace, step, None, None, state, note="no_auto_action")
             break
@@ -732,7 +757,12 @@ def capture_run(
             rejections += 1
             time.sleep(max(delay, 0.5))
             state = start_real_game_run.get_state(base_url)
-            retry = choose_action(state, map_index)
+            # A rejection here means the screen was not ready yet, not that the choice
+            # was wrong, so a scripted run re-posts the same action rather than picking
+            # a new one -- picking again would walk a different run.
+            retry = (
+                choose_action(state, map_index) if scripted_actions is None else payload
+            )
             if retry is None:
                 break
             payload = retry
@@ -800,6 +830,25 @@ def append_snapshot(
     )
 
 
+def next_scripted_action(actions: list[dict[str, Any]], step: int) -> dict[str, Any] | None:
+    """The recorded action for this step, or None once the script runs out."""
+    index = step - 1
+    return actions[index] if index < len(actions) else None
+
+
+def recorded_actions(path: Path) -> list[dict[str, Any]]:
+    """Every action a captured trace recorded, in order.
+
+    Re-posting these against the same seed walks the same run again, which is how a
+    fixture taken with a buggy capture gets regenerated rather than merely annotated:
+    the run is identical, only the snapshots are read correctly this time.
+    """
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return [
+        step["action"] for step in payload.get("trace", []) if step.get("action") is not None
+    ]
+
+
 def is_terminal_state(state: dict[str, Any]) -> bool:
     state_type = state.get("state_type")
     if state_type in {"menu", "game_over"}:
@@ -829,7 +878,17 @@ def main() -> None:
         ),
     )
     parser.add_argument("--format", choices=["pretty", "compact"], default="pretty")
+    parser.add_argument(
+        "--replay-trace",
+        type=Path,
+        help=(
+            "re-post the actions recorded in this trace instead of choosing new ones, "
+            "walking the same run again so its snapshots can be recaptured"
+        ),
+    )
     args = parser.parse_args()
+
+    scripted = recorded_actions(args.replay_trace) if args.replay_trace else None
 
     trace = capture_run(
         args.base_url,
@@ -840,6 +899,7 @@ def main() -> None:
         args.map_index,
         args.delay,
         args.ascension,
+        scripted_actions=scripted,
     )
     text = json.dumps(trace, indent=None if args.format == "compact" else 2)
     if args.output is not None:
