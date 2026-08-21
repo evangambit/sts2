@@ -440,6 +440,10 @@ public static class RunRewardGenerator
             int cardId = ChooseCardWithRarity(pools[i], rarity, blacklist, state.PlayerRng.Rewards);
             state.RewardCards[i] = cardId;
             blacklist.Add(cardId);
+            // Three Rewards draws per card, not two: rarity, the card itself, then the
+            // upgrade roll. Skipping the third left the stream a call short per card and
+            // every reward after this one read the wrong values.
+            state.RewardUpgraded[i] = RollCardUpgrade(state, cardId, state.PlayerRng.Rewards);
         }
     }
 
@@ -965,12 +969,7 @@ public static class RunRewardGenerator
     /// on nearly every card. The table agreed with the extracted data on every id it did
     /// carry, so nothing is lost by reading the data instead.
     /// </summary>
-    private static int RarityOf(int cardId)
-    {
-        var rarity = GeneratedData.Cards.Get(cardId).Rarity;
-        // Basic cards are never offered as rewards; the old table called them Common.
-        return rarity == Core.CardRarity.Basic ? RarityCommon : (int)rarity;
-    }
+    private static int RarityOf(int cardId) => (int)GeneratedData.Cards.Get(cardId).Rarity;
 
     private static int PotionRarity(int potionId) =>
         PotionRarityById.GetValueOrDefault(potionId, RarityCommon);

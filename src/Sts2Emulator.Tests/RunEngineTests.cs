@@ -183,9 +183,11 @@ public class RunEngineTests
             new[] { 965, 246, 0, 824, 687 },
             Enumerable.Range(0, 5).Select(_ => neow.NextInt(1000)).ToArray()
         );
-        Assert.Equal(1821698096, player.Rewards.NextInt(int.MaxValue));
-        Assert.Equal(1625900047, player.Shops.NextInt(int.MaxValue));
-        Assert.Equal(1805565444, player.Transformations.NextInt(int.MaxValue));
+        // Locked to catch drift. These moved when PlayerRngSet stopped adding 1 to the
+        // run seed: Player.cs seeds it with hash(seed) + the owner's player slot, and a
+        // solo run's only player is slot 0. The live-derived anchor for that is
+        // Kaleidoscope_OffersTheCardsTheGameOffers.
+        Assert.Equal(1246982107, player.Rewards.NextInt(int.MaxValue));
     }
 
     [Fact]
@@ -291,6 +293,33 @@ public class RunEngineTests
             engine.State.NeowOptions
         );
     }
+
+    /// <summary>
+    /// Ground truth: the live A8 capture on seed QS2GYXRKWN is offered Calcify, Prepared
+    /// and Skim, then Acrobatics, Collision Course and Boost Away — one card from each of
+    /// three other characters' pools, twice.
+    ///
+    /// Four things have to be right at once for this to land, and each was wrong:
+    /// the Rewards stream's seed (the player slot again), three draws per card rather
+    /// than two (rarity, card, upgrade), rarity read from the card data rather than a
+    /// 144-id table that defaulted to Common, and Basic cards excluded from a Common
+    /// reward list instead of counted into it.
+    /// </summary>
+    [Fact]
+    public void Kaleidoscope_OffersTheCardsTheGameOffers()
+    {
+        var engine = new RunEngine();
+        engine.Reset("QS2GYXRKWN");
+
+        engine.Step(0, -1, out _, out _, out _); // take Kaleidoscope
+        Assert.Equal(new[] { "Calcify", "Prepared", "Skim" }, OfferedNames(engine));
+
+        engine.Step(0, -1, out _, out _, out _); // take Calcify, opening the second offer
+        Assert.Equal(new[] { "Acrobatics", "CollisionCourse", "BoostAway" }, OfferedNames(engine));
+    }
+
+    private static string[] OfferedNames(RunEngine engine) =>
+        [.. engine.State.RewardCards.Select(id => GeneratedData.Cards.Get(id).Name)];
 
     /// <summary>
     /// Kaleidoscope offers "2 card rewards from other characters" — two screens the

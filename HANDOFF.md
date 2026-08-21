@@ -438,10 +438,25 @@ cards within them were not, and two real defects came out of it:
   compares against the *flat* uncommon odds rather than rare + uncommon, so its uncommon
   band is narrower. Kaleidoscope creates with `CardCreationSource.Other`.
 
-The second reward's rarities now match the capture exactly (Uncommon, Common, Common); the
-first still differs on its opening roll, so one card of six is still wrong. With the
-thresholds now understood, equal stream values could not produce that — so the remaining
-suspect is stream position, not odds.
+**Both rewards now match the capture card for card** — Calcify, Prepared, Skim, then
+Acrobatics, Collision Course, Boost Away. Two more defects had to go first, and the way in
+was to stop reasoning about it: compute what stream values the live picks REQUIRE (a card
+at index 14 of 20 needs a draw in [0.70, 0.75)), then search the emulator's stream for an
+alignment that satisfies all twelve constraints at once. Six near-binary rarities can
+agree by luck; six pick indices cannot.
+
+- **The Rewards stream was seeded off by one, exactly as Neow was.** `Player.cs` seeds
+  `PlayerRngSet` with `hash(seed) + RunState.GetPlayerSlotIndex(this)`, and a solo run's
+  only player is slot 0; `PlayerRngSet` defaulted it to 1. That is every card reward,
+  every shop and every transformation in the run, off the wrong stream.
+- **A card costs THREE draws, not two.** Rarity, the card, and an upgrade roll — the
+  alignment only matched at stride 3. The Kaleidoscope path was not rolling the upgrade,
+  so it left the stream a call short per card and everything after read the wrong values.
+- **Basic cards were being counted into the Common list.** `RarityOf` mapped Basic to
+  Common to preserve the old table's default, which put each pool's starter Strike and
+  Defend into every Common reward list — 21 candidates where the game has 20, so the same
+  draw landed one card further along. The game compares the true rarity, and Basic simply
+  never matches.
 
 **The game logs every offset-based rarity roll** —
 `Card rarity: Rolled 0.4538, need < -0.02 for rare (offset = -0.05)` in
@@ -450,8 +465,19 @@ settle a rarity question. It logs nothing for `RollWithBaseOdds`, and one log ho
 several ascensions: the 0.03 rare / 0.01 growth lines are an A0 run, while A8 shows
 0.0149 / 0.005, which is what the emulator uses.
 
-`state_type` at step 1 is the `RewardsCmd.OfferCustom` wrapper screen, which the emulator
-skips by going straight into the first card reward.
+With that, the replay runs to **step 61** — it stopped at 24 this morning — and `player.hand`
+and `battle.enemies` no longer diverge anywhere in it. The deck, every hand dealt from it
+and every combat fought with it now track the live run through floor 6. What remains:
+
+    first divergence in state_type at step 1:  reference='rewards' emulator='card_reward'
+    first divergence in player.hp   at step 60: reference=55  emulator=48
+    first divergence in player.gold at step 60: reference=126 emulator=178
+    Replay stopped: step 61: unsupported action 'select_card' while emulator phase is 7
+
+`state_type` at step 1 is the `RewardsCmd.OfferCustom` wrapper screen — live lists the two
+card rewards on a rewards screen first, and the emulator goes straight into the first one.
+The gold gap at step 60 is 52 in the emulator's favour, and the stop is an event asking
+for a card the emulator's Event phase does not accept.
 
 Two things the capture turned up on the way:
 

@@ -8,7 +8,13 @@ public sealed class PlayerRngSet
     public GameRng Shops { get; }
     public GameRng Transformations { get; }
 
-    public PlayerRngSet(RunRngSet runRngSet, int netId = 1)
+    /// <param name="netId">
+    /// The owner's player slot. Player.cs seeds this set with
+    /// <c>hash(seed) + RunState.GetPlayerSlotIndex(this)</c>, and a solo run's only
+    /// player is slot 0 — the same off-by-one that had Neow offering the wrong relics.
+    /// Every reward, shop and transformation in the run comes off these streams.
+    /// </param>
+    public PlayerRngSet(RunRngSet runRngSet, int netId = 0)
     {
         Seed = unchecked(runRngSet.Seed + (uint)netId);
         Rewards = new GameRng(Seed, "rewards");
