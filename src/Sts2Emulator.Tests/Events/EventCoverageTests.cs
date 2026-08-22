@@ -40,7 +40,6 @@ public class EventCoverageTests
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
-        "AbyssalBaths",
         "Amalgamator",
         "BattlewornDummy",
         "BrainLeech",
@@ -49,7 +48,6 @@ public class EventCoverageTests
         "ColorfulPhilosophers",
         "ColossalFlower",
         "DenseVegetation",
-        "DollRoom",
         "EndlessConveyor",
         // No option-list capture exists for this one: it presents as its own
         // "fake_merchant" state with a shop of fake relics rather than a list of
@@ -67,7 +65,6 @@ public class EventCoverageTests
         "RoundTeaParty",
         "SapphireSeed",
         "SelfHelpBook",
-        "SlipperyBridge",
         "SpiritGrafter",
         "Symbiote",
         "TabletOfTruth",
@@ -76,7 +73,6 @@ public class EventCoverageTests
         "TinkerTime",
         "Trial",
         "UnrestSite",
-        "WarHistorianRepy",
         "WelcomeToWongos",
         "ZenWeaver",
     ];

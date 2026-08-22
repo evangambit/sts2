@@ -915,6 +915,28 @@ public static class RunNonCombatEffects
     }
 
     /// <summary>
+    /// What one immersion in the Abyssal Baths costs. <c>OnImmerse</c> gains MaxHpVar(2),
+    /// takes DamageVar and then raises that damage by one, so the sequence is 3, 4, 5 and
+    /// on -- and the Max HP arrives first, carrying current HP up with it, which is why
+    /// the first dip is a net loss of only one.
+    /// </summary>
+    public static void Immerse(RunState state)
+    {
+        GainMaxHp(state, 2);
+        state.PlayerHp = Math.Max(0, state.PlayerHp - AbyssalBathsDamage(state));
+        state.EventPage++;
+    }
+
+    /// <summary>The damage the NEXT immersion will do: DamageVar(3), plus one per dip.</summary>
+    public static int AbyssalBathsDamage(RunState state) => 3 + state.EventPage;
+
+    /// <summary>
+    /// What the next Hold On costs: <c>CurrentHpLoss => 3 + NumberOfHoldOns</c>, read
+    /// before the counter moves.
+    /// </summary>
+    public static int SlipperyBridgeHpLoss(RunState state) => 3 + state.EventPage;
+
+    /// <summary>
     /// The card the Slippery Bridge is holding over the player. It prefers a non-Basic
     /// card and falls back to any removable one, which on a starter deck is the whole
     /// deck bar Ascender's Bane -- so it is a roll, not a fixed pick.
@@ -934,7 +956,21 @@ public static class RunNonCombatEffects
                 .ToList();
         }
 
-        return candidates.Count == 0 ? -1 : EventRng(state, "SLIPPERY_BRIDGE").NextItem(candidates);
+        if (candidates.Count == 0)
+        {
+            return -1;
+        }
+
+        // GetNewRandomCard runs again on every Hold On, so the threatened card moves with
+        // the counter rather than staying whatever the first roll picked.
+        var rng = EventRng(state, "SLIPPERY_BRIDGE");
+        int index = rng.NextItem(candidates);
+        for (int i = 0; i < state.EventPage; i++)
+        {
+            index = rng.NextItem(candidates);
+        }
+
+        return index;
     }
 
     /// <summary>
@@ -981,6 +1017,44 @@ public static class RunNonCombatEffects
 
     public static int DollRoomRandomDoll(RunState state) =>
         ResolveRelic(EventRng(state, "DOLL_ROOM").NextItem(DollRoomDolls));
+
+    /// <summary>
+    /// The dolls the second page puts in front of the player: the three shuffled, then
+    /// two of them for Take Some Time and all three for Examine. StableShuffle sorts by
+    /// ModelId -- Category then Entry as ordinal strings -- before Fisher-Yates, which is
+    /// what RelicDef.Entry is for.
+    /// </summary>
+    public static List<int> DollRoomOffer(RunState state, int count)
+    {
+        var dolls = DollRoomDolls
+            .Select(ResolveRelic)
+            .OrderBy(id => GeneratedData.Relics.Get(id).Entry, StringComparer.Ordinal)
+            .ToList();
+        EventRng(state, "DOLL_ROOM").Shuffle(dolls);
+        return dolls.Take(count).ToList();
+    }
+
+    /// <summary>The Lantern Key card, which War Historian Repy spends to open anything.</summary>
+    public static int LanternKeyCard => ResolveCard("LanternKey");
+
+    /// <summary>
+    /// Repy gives a SECOND reward when the run still holds a Lantern Key after the first
+    /// is spent -- <c>ShouldGetSecondReward</c> -- which for a solo run means it arrived
+    /// holding two. The first choice spends one key; the page that follows offers only
+    /// the door the player did not take.
+    /// </summary>
+    public static bool RepyOwesASecondReward(RunState state) =>
+        state.Deck.Any(card => card.DefId == LanternKeyCard);
+
+    /// <summary>Spends one Lantern Key, if the run has one to spend.</summary>
+    public static void SpendLanternKey(RunState state)
+    {
+        int index = state.Deck.FindIndex(card => card.DefId == LanternKeyCard);
+        if (index >= 0)
+        {
+            state.Deck.RemoveAt(index);
+        }
+    }
 
     private static int ResolveRelic(string name) =>
         GeneratedData.Relics.FindId(name)

@@ -2013,19 +2013,31 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventAbyssalBaths:
+                // Immersing is not one choice but the first of a series. OnImmerse gains
+                // MaxHpVar(2), takes DamageVar and then raises that damage by one, and
+                // the page it answers with offers Linger -- the same immersion again, a
+                // point dearer every time. The emulator modelled a single dip for a flat
+                // 1 damage, which is the NET of the first one rather than the hit, and
+                // never offered the page at all: the whole decision the event is about,
+                // how deep to go before the escalation catches you, did not exist.
+                //
+                // EventPage counts immersions, which is what sets the price of the next.
                 if (action == 0)
                 {
-                    // MaxHpVar(2) then DamageVar(3), in that order -- the max hp arrives
-                    // first and carries current hp up with it, so immersing is a net
-                    // loss of one. The damage was modelled as 1, which is the net rather
-                    // than the hit. OnImmerse also raises the damage by 1 for the next
-                    // immersion, which the follow-up page's Linger offers; the emulator
-                    // does not model that page yet.
-                    RunNonCombatEffects.GainMaxHp(State, 2);
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 3);
+                    RunNonCombatEffects.Immerse(State);
+                    return 0;
                 }
-                else if (action == 1)
+
+                // On the second page the options are Linger and Exit; on the first they
+                // are Immerse and Abstain, and only Abstain heals.
+                if (action == 1)
                 {
+                    if (State.EventPage > 0)
+                    {
+                        State.EventId = RunConstants.EventResultPending;
+                        return 0;
+                    }
+
                     HealPlayer(10);
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -2286,6 +2298,23 @@ public sealed class RunEngine
                 }
 
                 break;
+            case RunConstants.EventDollRoom when State.EventPage > 0:
+            {
+                // The second page: pick one of the dolls the wait bought.
+                var offer = RunNonCombatEffects.DollRoomOffer(
+                    State,
+                    State.EventPage == 1 ? 2 : 3
+                );
+                if ((uint)action >= (uint)offer.Count)
+                {
+                    return action == RunConstants.EventSkipAction ? 0 : -1;
+                }
+
+                RunNonCombatEffects.ApplyRelicPickup(State, offer[action]);
+                State.EventId = RunConstants.EventResultPending;
+                return 0;
+            }
+
             case RunConstants.EventDollRoom:
                 // The dolls are three named relics, rolled from the event's own stream --
                 // not from the reward pool. Only "Pick at Random" hands one over here:
@@ -2298,13 +2327,14 @@ public sealed class RunEngine
                         RunNonCombatEffects.DollRoomRandomDoll(State)
                     );
                 }
-                else if (action == 1)
+                else if (action is 1 or 2)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 5);
-                }
-                else if (action == 2)
-                {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 15);
+                    // What the HP buys is the CHOICE, on a second page: five for two
+                    // dolls, fifteen for all three. Costing the HP and finishing there
+                    // charged the player for a decision they never got to make.
+                    State.PlayerHp = Math.Max(0, State.PlayerHp - (action == 1 ? 5 : 15));
+                    State.EventPage = action;
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2488,7 +2518,18 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 3);
+                    // CurrentHpLoss is 3 + NumberOfHoldOns, charged BEFORE the counter
+                    // moves -- so 3, then 4, then 5 -- and each hold re-rolls which card
+                    // the bridge is threatening. Holding on was a flat 3 that never
+                    // escalated and never changed the card, which makes it free to repeat.
+                    State.PlayerHp = Math.Max(
+                        0,
+                        State.PlayerHp - RunNonCombatEffects.SlipperyBridgeHpLoss(State)
+                    );
+                    State.EventPage++;
+                    // The bridge answers with the same two options, so the event stays
+                    // open rather than falling through to the end-of-event path.
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2690,19 +2731,28 @@ public sealed class RunEngine
                 // Unlock the Cage frees Repy for the named History Course; Unlock the
                 // Chest opens a reward screen carrying two potions and two relics. The
                 // emulator had the potion on the cage option and a pool relic on both.
-                // Both options also spend a Lantern Key, which the emulator does not
-                // model as a card -- the game's LanternKey has no entry in Cards.g.cs,
-                // so there is nothing in the deck to remove. Whatever brings a Lantern
-                // Key into a run has to add that card before this can spend it.
+                // Both doors spend a Lantern Key, and a run that arrived holding two
+                // gets to open the other one as well -- ShouldGetSecondReward. The key
+                // has a card id now that the negative-cost cards are extracted, so the
+                // deck is where that is read from rather than being assumed away.
                 if (action == 0)
                 {
+                    RunNonCombatEffects.SpendLanternKey(State);
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
                         RunNonCombatEffects.NamedRelic("HistoryCourse")
                     );
+                    // A run that arrived with two keys still holds one, and Repy offers
+                    // the other door.
+                    if (State.EventPage == 0 && RunNonCombatEffects.RepyOwesASecondReward(State))
+                    {
+                        State.EventPage = 1;
+                        return 0;
+                    }
                 }
                 else if (action == 1)
                 {
+                    RunNonCombatEffects.SpendLanternKey(State);
                     // The chest carries TWO potions and TWO relics; the emulator's
                     // reward screen carries one of each, so this offers half of it.
                     State.RewardGold = 0;
@@ -3563,6 +3613,23 @@ public sealed class RunEngine
                     SetMask(mask, 1);
                 }
 
+                break;
+            case RunConstants.EventDollRoom when State.EventPage > 0:
+                // The second page offers the dolls the wait bought, and nothing else.
+                for (int i = 0; i < (State.EventPage == 1 ? 2 : 3); i++)
+                {
+                    SetMask(mask, i);
+                }
+
+                break;
+            case RunConstants.EventWarHistorianRepy when State.EventPage == 1:
+                // Repy's second page offers only the door the player has not opened.
+                SetMask(mask, 1);
+                break;
+            case RunConstants.EventAbyssalBaths when State.EventPage > 0:
+                // Linger, or climb out.
+                SetMask(mask, 0);
+                SetMask(mask, 1);
                 break;
             case RunConstants.EventPunchOff when State.EventPage == 1:
                 // "I Can Take Them" answers with a page whose only option is the fight.
