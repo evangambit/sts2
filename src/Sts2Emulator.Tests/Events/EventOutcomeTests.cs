@@ -76,19 +76,10 @@ public class EventOutcomeTests
         // name alone.
         "CrystalSphere-opt0.json",
         "CrystalSphere-opt1.json",
-        // Share Knowledge rolls five cards through the reward machinery and opens a grid
-        // to keep one. RunState.RewardCards holds three, so the card-reward phase cannot
-        // carry the offer; the emulator picks a card itself instead, and off the wrong
-        // stream at that.
-        "BrainLeech-opt0.json",
-        // Gorge offers eight rolled Commons on a grid and takes two.
-        "RoomFullOfCheese-opt0.json",
         // Grabbing off the belt pays 40 gold for whatever RollDish landed on, a weighted
         // dish machine that is not modelled. Refused rather than paying out a dish the
         // belt never had.
         "EndlessConveyor-opt0.json",
-        // "I Can Take Them" starts a fight, which an event cannot do in the emulator yet.
-        "PunchOff-opt1.json",
     ];
 
     // "-opt0.json" and friends, but not "-options.json": one character after "opt".

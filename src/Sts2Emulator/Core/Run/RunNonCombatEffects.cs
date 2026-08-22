@@ -291,6 +291,7 @@ public static class RunNonCombatEffects
     {
         state.EventValue0 = null;
         state.EventValue1 = null;
+        state.EventPage = 0;
         if (
             state.EventSequenceIndex == 0
             && state.Relics.Any(relic => relic.DefId == RunConstants.RelicNewLeaf)

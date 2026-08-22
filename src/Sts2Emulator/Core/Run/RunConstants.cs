@@ -199,6 +199,16 @@ public static class RunConstants
     public const int RelicPandorasBox = 1510;
 
     /// <summary>Normal rooms drawn from the act's weak pool before the normal one.</summary>
+    /// <summary>The construct fight Punch Off's second page starts.</summary>
+    public const int PunchOffEncounterId = 56;
+
+    /// <summary>Room Full of Cheese's Gorge: eight offered, two kept.</summary>
+    public const int GorgeCardChoices = 8;
+    public const int GorgeCardsKept = 2;
+
+    /// <summary>Brain Leech's IntVar("FromCardChoiceCount").</summary>
+    public const int BrainLeechCardChoices = 5;
+
     /// <summary>Tea Master's prices, from the event's own DynamicVars.</summary>
     public const int BoneTeaCost = 50;
     public const int EmberTeaCost = 150;

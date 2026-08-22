@@ -130,6 +130,24 @@ public sealed class RunState
     public int PendingSelectionCount;
 
     /// <summary>
+    /// Cards an event has ROLLED and is offering, and how many of them the player still
+    /// gets to keep. Distinct from the selection above, which picks out of the deck the
+    /// player already has: Brain Leech rolls five cards and hands over one, Room Full of
+    /// Cheese rolls eight and hands over two, so the grid is the source rather than the
+    /// deck. A picked card leaves the offer, the way it leaves the game's grid.
+    /// </summary>
+    public int[] PendingOfferCards = [];
+    public int PendingOfferPicks;
+
+    /// <summary>
+    /// Which page of a multi-page event is showing; 0 is the one it opens on. Most
+    /// events answer a choice by finishing, but a few answer it with a fresh page of
+    /// their own options -- Punch Off's "I Can Take Them" leads to a page whose only
+    /// option is the fight itself.
+    /// </summary>
+    public int EventPage;
+
+    /// <summary>
     /// A card the event adds once the selection above finishes, and how many copies.
     /// Three events pay for a removal with a curse -- <c>RemoveFromDeck(cards)</c> and
     /// then <c>AddCurseToDeck&lt;T&gt;</c> -- so the curse has to survive the screen.

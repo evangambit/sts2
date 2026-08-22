@@ -524,7 +524,16 @@ public sealed class RunEngine
                 break;
 
             case RunPhase.TransformSelect:
-                if (State.PendingRestUpgrade)
+                if (State.PendingOfferCards.Length > 0)
+                {
+                    // The grid is the offer, so the action indexes the offer, not the
+                    // deck.
+                    for (int i = 0; i < State.PendingOfferCards.Length; i++)
+                    {
+                        SetMask(mask, i);
+                    }
+                }
+                else if (State.PendingRestUpgrade)
                 {
                     for (int i = 0; i < State.Deck.Count; i++)
                     {
@@ -1557,15 +1566,18 @@ public sealed class RunEngine
             case RunConstants.EventBrainLeech:
                 if (action == 0)
                 {
-                    RunNonCombatEffects.AddCardToDeck(
+                    // Share Knowledge rolls five cards through the reward machinery and
+                    // opens a grid to keep one. The emulator used to pick a card itself,
+                    // off the map-generation stream at that, which is neither the right
+                    // choice nor the right stream.
+                    State.PendingOfferCards = RunRewardGenerator.GenerateEventOfferCards(
                         State,
-                        new CardInstance(
-                            State.Rng.UpFront.NextItem(
-                                RunRewardGenerator.IroncladRewardPool.ToArray()
-                            ),
-                            Upgraded: false
-                        )
+                        RunConstants.BrainLeechCardChoices,
+                        RunRewardGenerator.IroncladRewardPool
                     );
+                    State.PendingOfferPicks = 1;
+                    State.Phase = RunPhase.TransformSelect;
+                    return 0;
                 }
                 else if (action == 1)
                 {
@@ -1947,8 +1959,37 @@ public sealed class RunEngine
                 break;
             case RunConstants.EventPunchOff:
                 // Nab takes an Injury and offers a relic on a reward screen -- it pays no
-                // gold and no potion. "I Can Take Them" starts a fight, which an event
-                // cannot do in the emulator yet, so it is refused rather than faked.
+                // gold and no potion. "I Can Take Them" does not fight: it answers with a
+                // second page whose only option does, which is the shape the capture
+                // shows -- the run stays on the event and nothing changes.
+                if (State.EventPage == 1)
+                {
+                    if (action != 0)
+                    {
+                        return -1;
+                    }
+
+                    return StartCombatWithDeck(
+                        State.Deck,
+                        RunConstants.PunchOffEncounterId,
+                        State.Relics,
+                        State.PlayerHp,
+                        State.PlayerMaxHp,
+                        State.PotionSlots,
+                        State.Gold,
+                        Math.Max(
+                            0,
+                            State.NormalEncountersVisited + State.EliteEncountersVisited - 1
+                        )
+                    );
+                }
+
+                if (action == 1)
+                {
+                    State.EventPage = 1;
+                    return 0;
+                }
+
                 if (action == 0)
                 {
                     RunNonCombatEffects.AddCardToDeck(
@@ -2224,7 +2265,18 @@ public sealed class RunEngine
             case RunConstants.EventRoomFullOfCheese:
                 if (action == 0)
                 {
-                    AddEventRewardCard();
+                    // Gorge rolls eight Commons and opens a grid to keep two. Uniform
+                    // odds with the pool filtered to Commons means no rarity roll at all,
+                    // so each card is a single draw.
+                    State.PendingOfferCards = RunRewardGenerator.GenerateEventOfferCards(
+                        State,
+                        RunConstants.GorgeCardChoices,
+                        RunRewardGenerator.IroncladRewardPool,
+                        CardRarity.Common
+                    );
+                    State.PendingOfferPicks = RunConstants.GorgeCardsKept;
+                    State.Phase = RunPhase.TransformSelect;
+                    return 0;
                 }
                 else if (action == 1)
                 {
@@ -2894,9 +2946,45 @@ public sealed class RunEngine
         return 0;
     }
 
+    /// <summary>
+    /// Take one card off an offered grid. The card joins the deck and leaves the grid;
+    /// the screen stays up while more picks are owed and there is still something to
+    /// pick, which is where the game's own selector stops too.
+    /// </summary>
+    private int StepOfferSelect(int action)
+    {
+        if ((uint)action >= (uint)State.PendingOfferCards.Length)
+        {
+            return -1;
+        }
+
+        RunNonCombatEffects.AddCardToDeck(
+            State,
+            new CardInstance(State.PendingOfferCards[action], Upgraded: false)
+        );
+        State.PendingOfferCards = [.. State.PendingOfferCards.Where((_, index) => index != action)];
+        State.PendingOfferPicks--;
+
+        if (State.PendingOfferPicks > 0 && State.PendingOfferCards.Length > 0)
+        {
+            return 0;
+        }
+
+        State.PendingOfferCards = [];
+        State.PendingOfferPicks = 0;
+        State.EventId = RunConstants.EventResultPending;
+        State.Phase = RunPhase.Event;
+        return 0;
+    }
+
     private int StepTransformSelect(int action, out bool terminal)
     {
         terminal = false;
+        if (State.PendingOfferCards.Length > 0)
+        {
+            return StepOfferSelect(action);
+        }
+
         if (State.PendingRestUpgrade)
         {
             if (
@@ -3160,6 +3248,10 @@ public sealed class RunEngine
                     SetMask(mask, 1);
                 }
 
+                break;
+            case RunConstants.EventPunchOff when State.EventPage == 1:
+                // "I Can Take Them" answers with a page whose only option is the fight.
+                SetMask(mask, 0);
                 break;
             case RunConstants.EventStoneOfAllTime:
                 // Lift needs a potion to drink; Push needs a card Vigorous can enchant,

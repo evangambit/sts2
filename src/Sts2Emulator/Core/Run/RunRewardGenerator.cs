@@ -357,6 +357,55 @@ public static class RunRewardGenerator
         state.RelicReward = 0;
     }
 
+    /// <summary>
+    /// Roll the cards an event offers on a grid -- Brain Leech's five, Room Full of
+    /// Cheese's eight.
+    /// </summary>
+    /// <remarks>
+    /// CardCreationOptions.ForNonCombatWithDefaultOdds is CardCreationSource.Other with
+    /// RegularEncounter odds and the NoUpgradeRoll flag, so each card is two draws on the
+    /// Rewards stream rather than three: the rarity, off the flat odds with no running
+    /// offset, and the card itself. A combat reward's third draw is the upgrade roll, and
+    /// this path does not make it.
+    /// </remarks>
+    /// <param name="fixedRarity">
+    /// Set when the event pins the rarity itself, as Room Full of Cheese does by filtering
+    /// its pool to Commons and asking for Uniform odds. CreateForReward skips RollForRarity
+    /// entirely on the Uniform branch, so a pinned rarity is one draw per card rather than
+    /// two -- getting that wrong shifts the whole grid.
+    /// </param>
+    public static int[] GenerateEventOfferCards(
+        RunState state,
+        int count,
+        ReadOnlySpan<int> pool,
+        CardRarity? fixedRarity = null
+    )
+    {
+        var blacklist = new List<int>();
+        var offers = new List<int>();
+        for (int i = 0; i < count; i++)
+        {
+            int rarity = fixedRarity switch
+            {
+                CardRarity.Common => RarityCommon,
+                CardRarity.Uncommon => RarityUncommon,
+                CardRarity.Rare => RarityRare,
+                _ => RollCardRarity(
+                    state,
+                    RegularEncounterCardOdds,
+                    mutateOffset: false,
+                    state.PlayerRng.Rewards,
+                    useOffset: false
+                ),
+            };
+            int cardId = ChooseCardWithRarity(pool, rarity, blacklist, state.PlayerRng.Rewards);
+            offers.Add(cardId);
+            blacklist.Add(cardId);
+        }
+
+        return [.. offers];
+    }
+
     private static void PopulateCardReward(RunState state)
     {
         Array.Clear(state.RewardCards);
