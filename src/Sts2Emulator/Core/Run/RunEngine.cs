@@ -2788,10 +2788,28 @@ public sealed class RunEngine
                     }
 
                     State.Gold -= price;
+
+                    // Three tiers, three different things -- not one rolled relic three
+                    // times. The bin is a shop-legal COMMON, the featured item a shop-legal
+                    // RARE named on the option when the event opened, and the mystery box
+                    // is Wongo's Mystery Ticket by name.
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        action switch
+                        {
+                            0 => RunRewardGenerator.NextShopRelicOfRarity(
+                                State,
+                                RelicRarity.Common
+                            ),
+                            1 => RunNonCombatEffects.WongosFeaturedItem(State),
+                            _ => RunNonCombatEffects.NamedRelic("WongosMysteryTicket"),
+                        }
                     );
+
+                    // Buying also earns Wongo points toward a customer badge, which
+                    // accumulate in the PROFILE across runs (SaveManager.Progress) rather
+                    // than in the run. A run cannot know that total, so the badge is not
+                    // modelled -- see the fixed-profile note in HANDOFF.md.
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {

@@ -387,13 +387,52 @@ public static class RunNonCombatEffects
             eventPool.Add(RunConstants.EventSimpleReward);
         }
 
-        state.EventId = state.Rng.UpFront.NextItem(eventPool);
+        // The fallback pool is hand-written and had no eligibility check of any kind, so
+        // it could hand out an event the run is not entitled to -- including the act-2
+        // ones it lists by name. Everything the sequence is filtered by applies here too.
+        var allowed = eventPool.Where(id => IsEventAllowed(state, id)).ToList();
+        state.EventId = state.Rng.UpFront.NextItem(
+            allowed.Count > 0 ? allowed : [RunConstants.EventSimpleReward]
+        );
         CalculateEventVars(state);
         state.Phase = RunPhase.Event;
     }
 
+    /// <summary>
+    /// Events whose <c>IsAllowed</c> reads <c>CurrentActIndex</c> and refuses index 0.
+    /// The emulator models Act 1 and only Act 1 -- a run ends at its boss -- so every one
+    /// of these is unreachable, and rolling one puts a room in front of an agent that the
+    /// game would never have shown it.
+    ///
+    /// Eight of the nine were not gated at all. The ninth, the Crystal Sphere, was gated
+    /// on <c>state.Act > ActOvergrowth</c> -- but Act is which of the two Act-1 acts the
+    /// run drew (Overgrowth 1, Underdocks 2), not an act INDEX, so the test was true for
+    /// every Underdocks run and let the sphere into half of Act 1.
+    /// </summary>
+    private static readonly int[] ActTwoAndLaterEvents =
+    [
+        RunConstants.EventCrystalSphere,
+        RunConstants.EventDollRoom,
+        RunConstants.EventFakeMerchant,
+        RunConstants.EventPotionCourier,
+        RunConstants.EventRanwidTheElder,
+        RunConstants.EventRelicTrader,
+        RunConstants.EventStoneOfAllTime,
+        RunConstants.EventSymbiote,
+        RunConstants.EventWelcomeToWongos,
+    ];
+
+    /// <summary>Test seam for <see cref="IsEventAllowed"/>.</summary>
+    public static bool IsEventAllowedForTests(RunState state, int eventId) =>
+        IsEventAllowed(state, eventId);
+
     internal static bool IsEventAllowed(RunState state, int eventId)
     {
+        if (ActTwoAndLaterEvents.Contains(eventId))
+        {
+            return false;
+        }
+
         return eventId switch
         {
             RunConstants.EventMorphicGrove => state.Gold >= 100 && state.Deck.Count >= 2,
@@ -407,10 +446,7 @@ public static class RunNonCombatEffects
             RunConstants.EventSelfHelpBook => state.Deck.Any(CardCanReceiveSelfHelpBookEnchantment),
             RunConstants.EventTheLegendsWereTrue => state.PlayerHp >= 10
                 && state.Deck.Any(card => card.DefId != RunConstants.SpoilsMapCard),
-            // CrystalSphere.IsAllowed also wants CurrentActIndex > 0, so the sphere
-            // never turns up in Act 1 however much gold the run is holding.
-            RunConstants.EventCrystalSphere => state.Gold >= 100
-                && state.Act > RunConstants.ActOvergrowth,
+            RunConstants.EventCrystalSphere => state.Gold >= 100,
             RunConstants.EventRanwidTheElder => state.Gold >= 100
                 || state.PotionSlots.Any(potion => potion != 0)
                 || state.Relics.Count > 1,
@@ -709,6 +745,11 @@ public static class RunNonCombatEffects
                 break;
             case RunConstants.EventThisOrThat:
                 CalculateThisOrThatVars(state);
+                break;
+            case RunConstants.EventWelcomeToWongos:
+                // The featured item is pulled when the options are generated, so it comes
+                // off the bag on entry whether or not the player buys it.
+                WongosFeaturedItem(state);
                 break;
         }
     }
@@ -1032,6 +1073,17 @@ public static class RunNonCombatEffects
             .ToList();
         EventRng(state, "DOLL_ROOM").Shuffle(dolls);
         return dolls.Take(count).ToList();
+    }
+
+    /// <summary>
+    /// The Rare relic Wongo has on display. It is pulled in GenerateInitialOptions -- when
+    /// the event OPENS, not when it is bought -- so the option can name it, and it leaves
+    /// the bag either way. Cached in EventValue1 so reading it twice does not pull twice.
+    /// </summary>
+    public static int WongosFeaturedItem(RunState state)
+    {
+        state.EventValue1 ??= RunRewardGenerator.NextShopRelicOfRarity(state, RelicRarity.Rare);
+        return state.EventValue1.Value;
     }
 
     /// <summary>The Lantern Key card, which War Historian Repy spends to open anything.</summary>

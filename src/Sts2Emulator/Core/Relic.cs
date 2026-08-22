@@ -24,7 +24,10 @@ public readonly record struct RelicDef(
     // RelicModel.HasUponPickupEffect: the relic did something on pickup that handing it
     // over could not undo.
     bool HasUponPickupEffect = false,
-    bool SpawnsPets = false
+    bool SpawnsPets = false,
+    // RelicModel.IsAllowedInShops: five relics are never sold, and every shop pull is
+    // filtered on it.
+    bool IsAllowedInShops = true
 )
 {
     /// <summary>

@@ -257,21 +257,24 @@ public class CrystalSphereTests
     /// <summary>
     /// <c>CrystalSphere.IsAllowed</c> wants <c>CurrentActIndex > 0</c> as well as 100 gold,
     /// so the sphere is an Act 2 sight however rich an Act 1 run gets.
+    ///
+    /// This used to assert the opposite for Underdocks, and its own comment said so even
+    /// while the assertion below contradicted it. The gate read <c>state.Act</c> -- which
+    /// is WHICH of the two Act-1 acts the run drew, Overgrowth 1 and Underdocks 2 -- as
+    /// though it were an act index, so it was true for every Underdocks run. Both of these
+    /// acts are Act 1.
     /// </summary>
-    [Fact]
-    public void TheSphereNeverTurnsUpInActOne()
+    [Theory]
+    [InlineData(RunConstants.ActOvergrowth)]
+    [InlineData(RunConstants.ActUnderdocks)]
+    public void TheSphereNeverTurnsUpInActOne(int act)
     {
         var engine = new RunEngine();
         engine.Reset("ABCDEF");
         engine.State.Gold = 500;
+        engine.State.Act = act;
 
-        engine.State.Act = RunConstants.ActOvergrowth;
         Assert.False(
-            RunNonCombatEffects.IsEventAllowed(engine.State, RunConstants.EventCrystalSphere)
-        );
-
-        engine.State.Act = RunConstants.ActUnderdocks;
-        Assert.True(
             RunNonCombatEffects.IsEventAllowed(engine.State, RunConstants.EventCrystalSphere)
         );
     }

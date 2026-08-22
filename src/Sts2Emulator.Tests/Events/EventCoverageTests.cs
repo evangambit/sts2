@@ -73,7 +73,6 @@ public class EventCoverageTests
         "TinkerTime",
         "Trial",
         "UnrestSite",
-        "WelcomeToWongos",
         "ZenWeaver",
     ];
 

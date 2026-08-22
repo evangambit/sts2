@@ -720,6 +720,30 @@ public static class RunRewardGenerator
     public static int NextRelic(RunState state, GameRng? rngOverride = null) =>
         PullRelic(state, fromFront: true, rngOverride: rngOverride);
 
+    /// <summary>
+    /// A shop pull of a NAMED rarity, filtered to relics that may be sold. Welcome to
+    /// Wongos asks for a Common for its bargain bin and a Rare for its featured item, so
+    /// neither is the usual rolled rarity -- and both go through the shop filter, which
+    /// five relics fail.
+    /// </summary>
+    public static int NextShopRelicOfRarity(RunState state, RelicRarity rarity)
+    {
+        var allowed = RelicGrabBag.AllowedInSoloRun(state.Floor);
+        int? relicId = state.RelicBag.Pull(
+            rarity,
+            fromFront: true,
+            allowed,
+            relicId => GeneratedData.Relics.Get(relicId).IsAllowedInShops
+        );
+        if (relicId is null)
+        {
+            return FallbackRelic;
+        }
+
+        state.SharedRelicBag.Remove(relicId.Value);
+        return relicId.Value;
+    }
+
     /// <summary>Shops pull the same queues from the BACK.</summary>
     public static int NextShopRelic(RunState state, RelicRarity rarity = RelicRarity.Shop) =>
         PullRelic(state, fromFront: false, rarity);

@@ -516,6 +516,11 @@ def extract_relics() -> str:
             fields.append("HasUponPickupEffect: true")
         if "SpawnsPets => true" in text:
             fields.append("SpawnsPets: true")
+        # RelicModel.IsAllowedInShops. Five relics refuse to be sold, and the shop pulls
+        # are filtered on it -- Welcome to Wongos included, whose bargain bin and featured
+        # item both go through PullNextRelicFromFront with this filter.
+        if "IsAllowedInShops => false" in text:
+            fields.append("IsAllowedInShops: false")
         entries.append(f"        new RelicDef({', '.join(fields)}),")
 
     if not entries:
