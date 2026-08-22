@@ -740,6 +740,14 @@ public static class NativeExports
     [UnmanagedCallersOnly(EntryPoint = "Sts2Run_GetPhase")]
     public static int Sts2Run_GetPhase(int handle) => RunNativeExports.Sts2Run_GetPhase(handle);
 
+    [UnmanagedCallersOnly(EntryPoint = "Sts2Run_DebugSetHp")]
+    public static int Sts2Run_DebugSetHp(int handle, int hp, int maxHp) =>
+        RunNativeExports.Sts2Run_DebugSetHp(handle, hp, maxHp);
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2Run_DebugUpgradeDeck")]
+    public static int Sts2Run_DebugUpgradeDeck(int handle) =>
+        RunNativeExports.Sts2Run_DebugUpgradeDeck(handle);
+
     [UnmanagedCallersOnly(EntryPoint = "Sts2Run_PlayerWon")]
     public static int Sts2Run_PlayerWon(int handle) => RunNativeExports.Sts2Run_PlayerWon(handle);
 

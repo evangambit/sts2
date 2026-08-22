@@ -8,7 +8,7 @@ namespace Sts2Emulator.Interop;
 public static class RunNativeExports
 {
     // v13: the observation carries the shop's whole board, priced.
-    public const int RUN_NATIVE_API_VERSION = 13;
+    public const int RUN_NATIVE_API_VERSION = 14;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -273,6 +273,43 @@ public static class RunNativeExports
     public static int Sts2Run_GetPhase(int handle)
     {
         return TryGet(handle, out var run) ? (int)run.State.Phase : -1;
+    }
+
+    /// <summary>
+    /// Hand a run extra HP, for soaking only. A random or greedy policy dies around
+    /// floor six and never exercises the back half of the act, so scripts/soak_act_one.py
+    /// uses this to reach the boss. It is a DEBUG hook and not a game rule: anything a
+    /// boosted soak turns up has to be reproduced on an untouched run before it counts.
+    /// </summary>
+    public static int Sts2Run_DebugSetHp(int handle, int hp, int maxHp)
+    {
+        if (!TryGet(handle, out var run))
+        {
+            return -1;
+        }
+
+        run.State.PlayerMaxHp = Math.Max(1, maxHp);
+        run.State.PlayerHp = Math.Clamp(hp, 1, run.State.PlayerMaxHp);
+        return 0;
+    }
+
+    /// <summary>Upgrade every upgradable card in the deck. Debug hook, as above.</summary>
+    public static int Sts2Run_DebugUpgradeDeck(int handle)
+    {
+        if (!TryGet(handle, out var run))
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < run.State.Deck.Count; i++)
+        {
+            if (Core.Run.RunConstants.IsRunCardUpgradable(run.State.Deck[i]))
+            {
+                run.State.Deck[i] = run.State.Deck[i] with { Upgraded = true };
+            }
+        }
+
+        return 0;
     }
 
     public static int Sts2Run_PlayerWon(int handle)

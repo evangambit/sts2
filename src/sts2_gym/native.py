@@ -12,7 +12,7 @@ _LIB_NAMES = {
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
 _REQUIRED_NATIVE_API_VERSION = 19
-_REQUIRED_RUN_NATIVE_API_VERSION = 13
+_REQUIRED_RUN_NATIVE_API_VERSION = 14
 
 
 def _repo_root() -> Path:
@@ -359,6 +359,12 @@ _lib.Sts2Run_GetStateList.argtypes = [
     ctypes.POINTER(ctypes.c_int),
     ctypes.c_int,
 ]
+
+_lib.Sts2Run_DebugSetHp.restype = ctypes.c_int
+_lib.Sts2Run_DebugSetHp.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
+
+_lib.Sts2Run_DebugUpgradeDeck.restype = ctypes.c_int
+_lib.Sts2Run_DebugUpgradeDeck.argtypes = [ctypes.c_int]
 
 _lib.Sts2Run_GetPhase.restype = ctypes.c_int
 _lib.Sts2Run_GetPhase.argtypes = [ctypes.c_int]
@@ -787,6 +793,18 @@ def run_get_shuffle_rng_call_count(handle: int) -> int:
 
 def run_get_niche_rng_call_count(handle: int) -> int:
     return int(_lib.Sts2Run_GetNicheRngCallCount(handle))
+
+
+def run_debug_set_hp(handle: int, hp: int, max_hp: int) -> None:
+    """Soak-only: hand a run extra HP so it can reach the act's boss."""
+    if _lib.Sts2Run_DebugSetHp(handle, hp, max_hp) != 0:
+        raise RuntimeError("Sts2Run_DebugSetHp failed")
+
+
+def run_debug_upgrade_deck(handle: int) -> None:
+    """Soak-only: upgrade every upgradable card in the deck."""
+    if _lib.Sts2Run_DebugUpgradeDeck(handle) != 0:
+        raise RuntimeError("Sts2Run_DebugUpgradeDeck failed")
 
 
 def run_destroy(handle: int) -> None:
