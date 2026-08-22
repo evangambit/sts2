@@ -17,6 +17,9 @@ public enum DeckSelection
 
     /// <summary>Transform the chosen card into a rolled one (CardCmd.TransformToRandom).</summary>
     TransformToRandom,
+
+    /// <summary>Remove the chosen card from the deck.</summary>
+    Remove,
 }
 
 public sealed class RunState
@@ -109,6 +112,14 @@ public sealed class RunState
     public DeckSelection PendingSelectionKind;
     public int PendingSelectionArg;
     public int PendingSelectionCount;
+
+    /// <summary>
+    /// A card the event adds once the selection above finishes, and how many copies.
+    /// Three events pay for a removal with a curse -- <c>RemoveFromDeck(cards)</c> and
+    /// then <c>AddCurseToDeck&lt;T&gt;</c> -- so the curse has to survive the screen.
+    /// </summary>
+    public int PendingSelectionFollowUpCard;
+    public int PendingSelectionFollowUpCount;
     public bool PendingRestUpgrade;
     public bool RestResultPending;
     public int UnknownMapPointsVisited;

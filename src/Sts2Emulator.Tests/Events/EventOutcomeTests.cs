@@ -63,24 +63,24 @@ public class EventOutcomeTests
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
+        // The deck is right now; what is left is the relic, which comes off the grab bag
+        // -- see the UnrestSite-opt1 note below.
+        "ThisOrThat-opt1.json",
+        // Payment Plan leads to the event's own "crystal_sphere" screen, which the
+        // emulator has no phase for.
+        "CrystalSphere-opt1.json",
         // Gorge offers eight rolled Commons on a grid and takes two; the emulator has
         // no grid selection, so it adds one card outright.
         "RoomFullOfCheese-opt0.json",
         "AbyssalBaths-opt0.json",
-        "AromaOfChaos-opt0.json",
-        "AromaOfChaos-opt1.json",
         "BrainLeech-opt0.json",
         "ByrdonisNest-opt1.json",
         "CrystalSphere-opt0.json",
-        "CrystalSphere-opt1.json",
         "DenseVegetation-opt0.json",
-        "DoorsOfLightAndDark-opt1.json",
         "EndlessConveyor-opt0.json",
         "EndlessConveyor-opt1.json",
         "JungleMazeAdventure-opt0.json",
         "JungleMazeAdventure-opt1.json",
-        "LuminousChoir-opt0.json",
-        "MorphicGrove-opt0.json",
         "PotionCourier-opt0.json",
         "PotionCourier-opt1.json",
         "PunchOff-opt0.json",
@@ -90,19 +90,15 @@ public class EventOutcomeTests
         "SlipperyBridge-opt0.json",
         "SlipperyBridge-opt1.json",
         "StoneOfAllTime-opt1.json",
-        "SunkenTreasury-opt1.json",
         "TheLegendsWereTrue-opt1.json",
         "ThisOrThat-opt0.json",
-        "ThisOrThat-opt1.json",
         // Kill the Trees pulls from the game's per-player RelicGrabBag
         // (RelicFactory.PullNextRelicFromFront); the emulator re-rolls from a flat pool
         // on the wrong stream, so it hands over Blood Vial where the game hands over
         // Orichalcum. That is not an UnrestSite bug -- it is every random relic in the
         // run -- so it is fixed once, in NextRelic, not here.
         "UnrestSite-opt1.json",
-        "UnrestSite-opt0.json",
         "Wellspring-opt0.json",
-        "Wellspring-opt1.json",
         "WhisperingHollow-opt0.json",
         "WhisperingHollow-opt1.json",
     ];

@@ -130,6 +130,10 @@ public static class RunNonCombatEffects
                     );
                 }
 
+                // The game rolls this curse from CurseCardPool on Rng.Niche, filtered
+                // to CanBeGeneratedByModifiers and ordered by id. Neither the pool nor
+                // that flag is extracted, so this still hands over Ascender's Bane --
+                // which is at least A curse, but never the one the game picked.
                 AddCardToDeck(
                     state,
                     new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
@@ -171,18 +175,12 @@ public static class RunNonCombatEffects
                 UpgradeLastCardMatching(state, 131);
                 break;
             case RunConstants.RelicCursedPearl:
-                AddCardToDeck(
-                    state,
-                    new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
-                );
+                AddCardToDeck(state, new CardInstance(NamedCard("Greed"), Upgraded: false));
                 state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 333);
                 break;
             case RunConstants.RelicHeftyTablet:
                 AddRandomRewardCard(state, state.Rng.UpFront);
-                AddCardToDeck(
-                    state,
-                    new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
-                );
+                AddCardToDeck(state, new CardInstance(NamedCard("Injury"), Upgraded: false));
                 break;
             case RunConstants.RelicKaleidoscope:
                 // Handled as two card rewards in RunEngine.ApplyAncientChoice; the relic
@@ -239,7 +237,7 @@ public static class RunNonCombatEffects
             case RunConstants.RelicCallingBell:
                 AddCardToDeck(
                     state,
-                    new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
+                    new CardInstance(NamedCard("CurseOfTheBell"), Upgraded: false)
                 );
                 ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
                 ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
@@ -444,12 +442,16 @@ public static class RunNonCombatEffects
         RunState state,
         DeckSelection kind,
         int arg,
-        int count = 1
+        int count = 1,
+        int followUpCard = 0,
+        int followUpCount = 0
     )
     {
         state.PendingSelectionKind = kind;
         state.PendingSelectionArg = arg;
         state.PendingSelectionCount = count;
+        state.PendingSelectionFollowUpCard = followUpCard;
+        state.PendingSelectionFollowUpCount = followUpCount;
         if (!Enumerable.Range(0, state.Deck.Count).Any(i => CanSelectCard(state, i)))
         {
             ClearDeckSelection(state);
@@ -465,6 +467,23 @@ public static class RunNonCombatEffects
         state.PendingSelectionKind = DeckSelection.None;
         state.PendingSelectionArg = 0;
         state.PendingSelectionCount = 0;
+        state.PendingSelectionFollowUpCard = 0;
+        state.PendingSelectionFollowUpCount = 0;
+    }
+
+    /// <summary>
+    /// Pay out whatever the event owes once the selection is done -- the curse Luminous
+    /// Choir and the Wellspring hand over in exchange for the removal.
+    /// </summary>
+    public static void ResolveDeckSelectionFollowUp(RunState state)
+    {
+        for (int i = 0; i < state.PendingSelectionFollowUpCount; i++)
+        {
+            AddCardToDeck(
+                state,
+                new CardInstance(state.PendingSelectionFollowUpCard, Upgraded: false)
+            );
+        }
     }
 
     /// <summary>Whether the pending selection would take the card at this deck index.</summary>
@@ -487,7 +506,7 @@ public static class RunNonCombatEffects
             DeckSelection.TransformTo => GeneratedData.Cards.Get(card.DefId).Rarity
                 == CardRarity.Basic,
             DeckSelection.Upgrade => RunConstants.IsRunCardUpgradable(card),
-            DeckSelection.TransformToRandom => true,
+            DeckSelection.TransformToRandom or DeckSelection.Remove => true,
             _ => false,
         };
     }
@@ -526,6 +545,9 @@ public static class RunNonCombatEffects
                 break;
             case DeckSelection.TransformToRandom:
                 TransformCardAt(state, deckIndex, state.Rng.Niche);
+                break;
+            case DeckSelection.Remove:
+                state.Deck.RemoveAt(deckIndex);
                 break;
             default:
                 return false;

@@ -210,6 +210,13 @@ public static class RunConstants
 
     public const int WeakEncountersPerAct = 3;
 
+    /// <summary>
+    /// Ascender's Bane, standing in for a curse the emulator cannot name yet. It used to
+    /// stand in for EVERY curse any event or relic inflicted, which is not merely the
+    /// wrong name -- Ascender's Bane is Ethereal and the curses it replaced are not.
+    /// The named ones are extracted now; the only remaining user is Neow's Bones, which
+    /// rolls from a pool that is not.
+    /// </summary>
     public const int CursePlaceholderCard = 10001;
     public const int SpoilsMapCard = 10020;
     public const int NeowsFuryCard = 321;

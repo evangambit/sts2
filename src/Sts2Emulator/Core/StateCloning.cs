@@ -252,6 +252,8 @@ public static class StateCloning
             PendingSelectionKind = state.PendingSelectionKind,
             PendingSelectionArg = state.PendingSelectionArg,
             PendingSelectionCount = state.PendingSelectionCount,
+            PendingSelectionFollowUpCard = state.PendingSelectionFollowUpCard,
+            PendingSelectionFollowUpCount = state.PendingSelectionFollowUpCount,
             PendingRestUpgrade = state.PendingRestUpgrade,
             RestResultPending = state.RestResultPending,
             UnknownMapPointsVisited = state.UnknownMapPointsVisited,

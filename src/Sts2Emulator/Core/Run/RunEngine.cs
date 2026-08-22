@@ -1371,7 +1371,7 @@ public sealed class RunEngine
                     State.PlayerHp = State.PlayerMaxHp;
                     RunNonCombatEffects.AddCardToDeck(
                         State,
-                        new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
+                        new CardInstance(RunNonCombatEffects.NamedCard("PoorSleep"), Upgraded: false)
                     );
                 }
                 else if (action == 1)
@@ -1389,18 +1389,19 @@ public sealed class RunEngine
                 }
                 break;
             case RunConstants.EventAromaOfChaos:
-                if (action == 0)
+                // Both options are a choice: which card is transformed, which upgraded.
+                if (action is 0 or 1)
                 {
-                    RunNonCombatEffects.TransformFirstCard(State);
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        action == 0 ? DeckSelection.TransformToRandom : DeckSelection.Upgrade,
+                        0
+                    )
+                        ? 0
+                        : -1;
                 }
-                else if (action == 1)
-                {
-                    if (!RunNonCombatEffects.UpgradeFirstCard(State))
-                    {
-                        return -1;
-                    }
-                }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
@@ -1429,13 +1430,26 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventMorphicGrove:
+                // Group transforms TWO cards the player picks.
                 if (action == 0)
                 {
+                    if (
+                        !RunNonCombatEffects.BeginDeckSelection(
+                            State,
+                            DeckSelection.TransformToRandom,
+                            0,
+                            count: 2
+                        )
+                    )
+                    {
+                        return -1;
+                    }
+
                     State.Gold = 0;
-                    RunNonCombatEffects.TransformFirstCard(State);
-                    RunNonCombatEffects.TransformFirstCard(State);
+                    return 0;
                 }
-                else if (action == 1)
+
+                if (action == 1)
                 {
                     RunNonCombatEffects.GainMaxHp(State, 5);
                 }
@@ -1472,9 +1486,15 @@ public sealed class RunEngine
                 }
                 if (action == 1)
                 {
-                    RunNonCombatEffects.RemoveLowestPriorityCard(State);
-                    State.EventId = RunConstants.EventResultPending;
-                    return 0;
+                    // The Dark door removes one card the player picks. Light stays a
+                    // roll: it StableShuffles the upgradable cards and takes two.
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.Remove,
+                        0
+                    )
+                        ? 0
+                        : -1;
                 }
                 if (action != RunConstants.EventSkipAction)
                 {
@@ -1492,9 +1512,14 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
+                    // The big chest is paid for with Greed.
                     State.Gold += Effects.RelicEffects.ModifyGoldGained(
                         State.Relics,
                         RunNonCombatEffects.SunkenTreasuryLargeChestGold(State)
+                    );
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunNonCombatEffects.NamedCard("Greed"), Upgraded: false)
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -1598,16 +1623,24 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventLuminousChoir:
+                // The player picks the two cards that go; the Spore Mind arrives after
+                // they are gone. RemoveLowestPriorityCard was the emulator choosing for
+                // them, which is the whole cost of the option.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.RemoveLowestPriorityCard(State);
-                    RunNonCombatEffects.RemoveLowestPriorityCard(State);
-                    RunNonCombatEffects.AddCardToDeck(
+                    return RunNonCombatEffects.BeginDeckSelection(
                         State,
-                        new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
-                    );
+                        DeckSelection.Remove,
+                        0,
+                        count: 2,
+                        followUpCard: RunNonCombatEffects.NamedCard("SporeMind"),
+                        followUpCount: 1
+                    )
+                        ? 0
+                        : -1;
                 }
-                else if (action == 1)
+
+                if (action == 1)
                 {
                     if (State.Gold < 149)
                     {
@@ -1708,11 +1741,18 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.RemoveLowestPriorityCard(State);
-                    RunNonCombatEffects.AddCardToDeck(
+                    // Bathe removes one card the PLAYER picks, then adds BatheCurses (1)
+                    // Guilty.
+                    return RunNonCombatEffects.BeginDeckSelection(
                         State,
-                        new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
-                    );
+                        DeckSelection.Remove,
+                        0,
+                        count: 1,
+                        followUpCard: RunNonCombatEffects.NamedCard("Guilty"),
+                        followUpCount: 1
+                    )
+                        ? 0
+                        : -1;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -1975,7 +2015,7 @@ public sealed class RunEngine
                 {
                     RunNonCombatEffects.AddCardToDeck(
                         State,
-                        new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
+                        new CardInstance(RunNonCombatEffects.NamedCard("Debt"), Upgraded: false)
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -2300,7 +2340,7 @@ public sealed class RunEngine
                     );
                     RunNonCombatEffects.AddCardToDeck(
                         State,
-                        new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
+                        new CardInstance(RunNonCombatEffects.NamedCard("Clumsy"), Upgraded: false)
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -2538,7 +2578,7 @@ public sealed class RunEngine
                 {
                     RunNonCombatEffects.AddCardToDeck(
                         State,
-                        new CardInstance(RunConstants.CursePlaceholderCard, false)
+                        new CardInstance(RunNonCombatEffects.NamedCard("LanternKey"), false)
                     );
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
@@ -2608,7 +2648,7 @@ public sealed class RunEngine
                 {
                     RunNonCombatEffects.AddCardToDeck(
                         State,
-                        new CardInstance(RunConstants.CursePlaceholderCard, false)
+                        new CardInstance(RunNonCombatEffects.NamedCard("Decay"), false)
                     );
                     State.Gold += Effects.RelicEffects.ModifyGoldGained(
                         State.Relics,
@@ -2806,6 +2846,7 @@ public sealed class RunEngine
                 return 0;
             }
 
+            RunNonCombatEffects.ResolveDeckSelectionFollowUp(State);
             RunNonCombatEffects.ClearDeckSelection(State);
             State.EventId = RunConstants.EventResultPending;
             State.Phase = RunPhase.Event;
