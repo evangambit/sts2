@@ -22,159 +22,89 @@ public static class RunRewardGenerator
     /// </summary>
     public static ReadOnlySpan<int> IroncladRewardPool => GeneratedData.CardPools.Ironclad;
 
-    public static ReadOnlySpan<int> IroncladTransformPool =>
-        [
-            9,
-            13,
-            18,
-            20,
-            29,
-            31,
-            46,
-            45,
-            47,
-            50,
-            58,
-            59,
-            60,
-            66,
-            69,
-            546,
-            87,
-            95,
-            99,
-            107,
-            113,
-            114,
-            119,
-            141,
-            142,
-            147,
-            150,
-            155,
-            174,
-            175,
-            185,
-            188,
-            189,
-            195,
-            205,
-            238,
-            240,
-            246,
-            247,
-            254,
-            261,
-            262,
-            263,
-            265,
-            268,
-            272,
-            273,
-            295,
-            313,
-            328,
-            332,
-            334,
-            339,
-            349,
-            353,
-            358,
-            364,
-            374,
-            378,
-            381,
-            404,
-            414,
-            421,
-            433,
-            454,
-            462,
-            464,
-            465,
-            466,
-            486,
-            492,
-            493,
-            494,
-            505,
-            508,
-            516,
-            517,
-            519,
-            525,
-            526,
-            529,
-            533,
-            538,
-        ];
+    /// <summary>
+    /// What a card may be transformed into, given what it is now.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// CardFactory.GetDefaultTransformationOptions draws from the ORIGINAL card's own
+    /// pool -- an Ironclad card becomes an Ironclad card, a curse becomes a curse --
+    /// falling back to Colorless only for the rarities that have no pool of their own
+    /// (Ancient, Event, Token) and for Quest cards. It then keeps Common, Uncommon and
+    /// Rare, drops the original itself, and drops multiplayer-only cards.
+    /// </para>
+    /// <para>
+    /// The rarity filter is skipped when the original is a Status or a Curse, which is
+    /// how a curse transforms into another curse rather than into nothing at all.
+    /// </para>
+    /// <para>
+    /// One hand-written list used to stand for all of this. It held 83 cards where the
+    /// Ironclad case has 80: it carried Break and Corruption, which are Ancient, and
+    /// Demonic Shield and Tank, which are multiplayer-only, and it was missing Feed.
+    /// </para>
+    /// </remarks>
+    public static int[] TransformOptionsFor(int originalCardId)
+    {
+        var original = GeneratedData.Cards.Get(originalCardId);
+        bool ownPoolHasNoHome =
+            original.Rarity is CardRarity.Ancient or CardRarity.Event or CardRarity.Token;
+        int[] pool = ownPoolHasNoHome
+            ? GeneratedData.CardPools.Colorless.ToArray()
+            : PoolContaining(originalCardId);
 
-    public static ReadOnlySpan<int> ColorlessRewardPool =>
+        // Status and Curse originals keep the whole pool; everything else is narrowed to
+        // the three rarities a run can actually be handed.
+        bool keepEveryRarity = original.Rarity is CardRarity.Status or CardRarity.Curse;
+
+        return
         [
-            10,
-            14,
-            23,
-            32,
-            34,
-            38,
-            51,
-            73,
-            80,
-            121,
-            146,
-            153,
-            168,
-            170,
-            173,
-            181,
-            191,
-            193,
-            197,
-            213,
-            225,
-            234,
-            250,
-            255,
-            260,
-            266,
-            270,
-            271,
-            277,
-            286,
-            297,
-            300,
-            306,
-            307,
-            327,
-            333,
-            342,
-            343,
-            363,
-            365,
-            366,
-            369,
-            372,
-            380,
-            394,
-            396,
-            401,
-            406,
-            411,
-            415,
-            416,
-            417,
-            431,
-            455,
-            470,
-            491,
-            498,
-            499,
-            504,
-            506,
-            521,
-            522,
-            535,
+            .. pool.Where(cardId =>
+                cardId != originalCardId
+                && IsAllowedSolo(cardId)
+                && (
+                    keepEveryRarity
+                    || GeneratedData.Cards.Get(cardId).Rarity
+                        is CardRarity.Common
+                            or CardRarity.Uncommon
+                            or CardRarity.Rare
+                )
+            ),
         ];
+    }
+
+    /// <summary>The pool a card belongs to, which is the pool it transforms within.</summary>
+    private static int[] PoolContaining(int cardId)
+    {
+        foreach (
+            var pool in (int[][])
+                [
+                    GeneratedData.CardPools.Ironclad.ToArray(),
+                    GeneratedData.CardPools.Curse.ToArray(),
+                    GeneratedData.CardPools.Status.ToArray(),
+                    GeneratedData.CardPools.Colorless.ToArray(),
+                ]
+        )
+        {
+            if (pool.Contains(cardId))
+            {
+                return pool;
+            }
+        }
+
+        // A card in no pool the emulator models: the Ironclad pool is the only sensible
+        // home, and it is what the old single list assumed for everything.
+        return GeneratedData.CardPools.Ironclad.ToArray();
+    }
+
+    /// <summary>
+    /// The Colorless pool, as the game declares it. Callers filter it: the solo filter
+    /// runs at pick time, the way CardFactory.FilterForPlayerCount runs on every pool.
+    ///
+    /// A hand-written copy stood here with 63 entries against the pool's 64 -- it kept
+    /// ten multiplayer-only cards the pick would drop anyway and left out Coordinate for
+    /// no reason anyone recorded.
+    /// </summary>
+    public static ReadOnlySpan<int> ColorlessRewardPool => GeneratedData.CardPools.Colorless;
 
     /// <summary>
     /// What the merchant can stock, by card type. The game does not keep per-type shop
@@ -226,34 +156,6 @@ public static class RunRewardGenerator
     ];
 
     public static ReadOnlySpan<int> PotionRewardPool => _potionRewardPool;
-
-    public static ReadOnlySpan<int> RelicRewardPool =>
-        [
-            3,
-            4,
-            9,
-            10,
-            19,
-            23,
-            41,
-            110,
-            114,
-            128,
-            135,
-            144,
-            149,
-            169,
-            170,
-            172,
-            186,
-            190,
-            215,
-            250,
-            252,
-            279,
-            282,
-            286,
-        ];
 
     public static void GenerateCombatRewards(RunState state)
     {
@@ -1022,83 +924,4 @@ public static class RunRewardGenerator
             RarityUncommon => [RarityUncommon, RarityRare, RarityCommon],
             _ => [RarityRare, RarityCommon, RarityUncommon],
         };
-
-    private static readonly Dictionary<int, int> PotionRarityById = new()
-    {
-        [1] = 2,
-        [2] = 1,
-        [3] = 3,
-        [4] = 2,
-        [5] = 1,
-        [6] = 1,
-        [8] = 3,
-        [9] = 2,
-        [10] = 1,
-        [13] = 2,
-        [14] = 1,
-        [15] = 3,
-        [16] = 3,
-        [17] = 2,
-        [18] = 1,
-        [19] = 3,
-        [21] = 1,
-        [22] = 3,
-        [23] = 1,
-        [24] = 1,
-        [26] = 2,
-        [28] = 3,
-        [29] = 2,
-        [30] = 2,
-        [32] = 3,
-        [34] = 2,
-        [36] = 2,
-        [37] = 3,
-        [38] = 3,
-        [39] = 3,
-        [40] = 3,
-        [42] = 2,
-        [47] = 2,
-        [48] = 1,
-        [49] = 2,
-        [50] = 2,
-        [51] = 3,
-        [52] = 3,
-        [53] = 1,
-        [54] = 3,
-        [56] = 1,
-        [57] = 2,
-        [58] = 3,
-        [59] = 1,
-        [60] = 1,
-        [61] = 2,
-        [62] = 1,
-        [63] = 1,
-    };
-
-    private static readonly Dictionary<int, int> ShopRelicBaseCosts = new()
-    {
-        [3] = 175,
-        [4] = 175,
-        [9] = 175,
-        [10] = 175,
-        [23] = 175,
-        [41] = 275,
-        [110] = 175,
-        [114] = 225,
-        [128] = 175,
-        [135] = 200,
-        [144] = 275,
-        [149] = 275,
-        [169] = 175,
-        [170] = 275,
-        [172] = 175,
-        [186] = 175,
-        [190] = 225,
-        [215] = 175,
-        [250] = 175,
-        [252] = 175,
-        [279] = 175,
-        [282] = 175,
-        [286] = 999999999,
-    };
 }

@@ -32,4 +32,12 @@ internal static class CardPools
     /// <summary>Colorless: 64 cards, in pool order.</summary>
     public static ReadOnlySpan<int> Colorless =>
         [10, 14, 23, 32, 34, 38, 51, 73, 80, 105, 121, 146, 153, 168, 170, 173, 181, 191, 193, 197, 213, 225, 234, 250, 255, 260, 266, 270, 271, 277, 286, 297, 300, 306, 307, 327, 333, 342, 343, 363, 365, 366, 369, 372, 380, 394, 396, 401, 406, 411, 415, 416, 417, 431, 455, 470, 491, 498, 499, 504, 506, 521, 522, 535];
+
+    /// <summary>Curse: 18 cards, in pool order.</summary>
+    public static ReadOnlySpan<int> Curse =>
+        [10001, 10021, 10023, 10024, 10025, 10026, 10027, 166, 10028, 10029, 10030, 10031, 10034, 10035, 10036, 10037, 457, 10042];
+
+    /// <summary>Status: 12 cards, in pool order.</summary>
+    public static ReadOnlySpan<int> Status =>
+        [36, 10009, 10002, 128, 206, 10008, 10012, 440, 10039, 512, 10040, 10011];
 }

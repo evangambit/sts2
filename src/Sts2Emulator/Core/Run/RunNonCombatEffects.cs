@@ -979,12 +979,10 @@ public static class RunNonCombatEffects
         }
 
         int originalId = Math.Abs(state.Deck[deckIndex].DefId);
-        // Transforming rolls a new card the same way a reward does, so the solo filter
-        // applies here too: CardFactory.FilterForPlayerCount runs on every pool.
-        var pool = RunRewardGenerator
-            .IroncladTransformPool.ToArray()
-            .Where(cardId => cardId != originalId && RunRewardGenerator.IsAllowedSolo(cardId))
-            .ToArray();
+        // What a card can become depends on what it is: the options come from the
+        // original's own pool, narrowed to the rarities a run is handed, with the
+        // original and the multiplayer-only cards dropped.
+        var pool = RunRewardGenerator.TransformOptionsFor(originalId);
         if (pool.Length == 0)
         {
             return;

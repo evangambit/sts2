@@ -625,7 +625,18 @@ CARD_POOLS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Models.CardPools"
 
 # The pools a run can draw from. Deprecated/Mock are the game's own test scaffolding,
 # and Curse/Status/Token/Event/Quest are not character pools.
-PLAYABLE_POOLS = ("Ironclad", "Silent", "Defect", "Necrobinder", "Regent", "Colorless")
+# Curse and Status are not character pools, but a transform draws from the pool its
+# original card came from -- so transforming a curse needs the curse pool.
+PLAYABLE_POOLS = (
+    "Ironclad",
+    "Silent",
+    "Defect",
+    "Necrobinder",
+    "Regent",
+    "Colorless",
+    "Curse",
+    "Status",
+)
 
 
 def extract_card_pools(card_ids: dict[str, int]) -> str:
