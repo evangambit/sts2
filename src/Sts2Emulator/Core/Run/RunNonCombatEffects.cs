@@ -416,44 +416,59 @@ public static class RunNonCombatEffects
         };
     }
 
-    public static bool CardCanReceiveSelfHelpBookEnchantment(CardInstance card)
-    {
-        var def = GeneratedData.Cards.Get(card.DefId);
-        return def.Type switch
-        {
-            CardType.Attack => card.Sharp == 0,
-            CardType.Skill => card.Nimble == 0,
-            CardType.Power => card.Swift == 0,
-            _ => false,
-        };
-    }
+    /// <summary>
+    /// The book offers Sharp to Attacks, Nimble to Skills and Swift to Powers, so a card
+    /// is a candidate for SOME page of it when its own type's enchantment would take.
+    /// </summary>
+    public static bool CardCanReceiveSelfHelpBookEnchantment(CardInstance card) =>
+        Enchantments.CanEnchant(card, Enchantment.Sharp)
+        || Enchantments.CanEnchant(card, Enchantment.Nimble)
+        || Enchantments.CanEnchant(card, Enchantment.Swift);
 
-    public static bool CanApplySelfHelpBookEnchantment(RunState state, int deckIndex)
-    {
-        if ((uint)deckIndex >= (uint)state.Deck.Count)
+    public static Enchantment SelfHelpBookEnchantment(int enchantType) =>
+        enchantType switch
         {
+            0 => Enchantment.Sharp,
+            1 => Enchantment.Nimble,
+            2 => Enchantment.Swift,
+            _ => Enchantment.None,
+        };
+
+    /// <summary>
+    /// Open a deck selection: the run moves to the card-select screen and stays there
+    /// until <paramref name="count"/> cards have been chosen. Refuses -- and leaves the
+    /// run where it was -- when no card in the deck is eligible, which is what an event
+    /// with a locked option is telling the player.
+    /// </summary>
+    public static bool BeginDeckSelection(
+        RunState state,
+        DeckSelection kind,
+        int arg,
+        int count = 1
+    )
+    {
+        state.PendingSelectionKind = kind;
+        state.PendingSelectionArg = arg;
+        state.PendingSelectionCount = count;
+        if (!Enumerable.Range(0, state.Deck.Count).Any(i => CanSelectCard(state, i)))
+        {
+            ClearDeckSelection(state);
             return false;
         }
 
-        return CanApplySelfHelpBookEnchantment(
-            state.Deck[deckIndex],
-            state.PendingSelfHelpBookEnchantType
-        );
+        state.Phase = RunPhase.TransformSelect;
+        return true;
     }
 
-    public static bool CanApplySelfHelpBookEnchantment(CardInstance card, int enchantType)
+    public static void ClearDeckSelection(RunState state)
     {
-        var def = GeneratedData.Cards.Get(card.DefId);
-        return enchantType switch
-        {
-            1 => def.Type == CardType.Attack && card.Sharp == 0,
-            2 => def.Type == CardType.Skill && card.Nimble == 0,
-            3 => def.Type == CardType.Power && card.Swift == 0,
-            _ => false,
-        };
+        state.PendingSelectionKind = DeckSelection.None;
+        state.PendingSelectionArg = 0;
+        state.PendingSelectionCount = 0;
     }
 
-    public static bool ApplySelfHelpBookEnchantment(RunState state, int deckIndex)
+    /// <summary>Whether the pending selection would take the card at this deck index.</summary>
+    public static bool CanSelectCard(RunState state, int deckIndex)
     {
         if ((uint)deckIndex >= (uint)state.Deck.Count)
         {
@@ -461,21 +476,67 @@ public static class RunNonCombatEffects
         }
 
         var card = state.Deck[deckIndex];
-        switch (state.PendingSelfHelpBookEnchantType)
+        return state.PendingSelectionKind switch
         {
-            case 1 when CanApplySelfHelpBookEnchantment(card, 1):
-                state.Deck[deckIndex] = card with { Sharp = 2 };
-                return true;
-            case 2 when CanApplySelfHelpBookEnchantment(card, 2):
-                state.Deck[deckIndex] = card with { Nimble = 2 };
-                return true;
-            case 3 when CanApplySelfHelpBookEnchantment(card, 3):
-                state.Deck[deckIndex] = card with { Swift = 2 };
-                return true;
+            DeckSelection.Enchant => Enchantments.CanEnchant(
+                card,
+                (Enchantment)state.PendingSelectionArg
+            ),
+            // CardSelectCmd.FromDeckGeneric(c => c.IsTransformable && c.Rarity == Basic)
+            // -- Wood Carvings carves a Basic card into a Peck or a Toric Toughness.
+            DeckSelection.TransformTo => GeneratedData.Cards.Get(card.DefId).Rarity
+                == CardRarity.Basic,
+            DeckSelection.Upgrade => RunConstants.IsRunCardUpgradable(card),
+            DeckSelection.TransformToRandom => true,
+            _ => false,
+        };
+    }
+
+    /// <summary>
+    /// Take one card for the pending selection. Returns false -- changing nothing -- when
+    /// the index is out of range or the card is not one the selection would take.
+    /// </summary>
+    public static bool ApplyDeckSelection(RunState state, int deckIndex)
+    {
+        if (!CanSelectCard(state, deckIndex))
+        {
+            return false;
+        }
+
+        var card = state.Deck[deckIndex];
+        switch (state.PendingSelectionKind)
+        {
+            case DeckSelection.Enchant:
+                state.Deck[deckIndex] = card with
+                {
+                    Enchantment = (Enchantment)state.PendingSelectionArg,
+                    // Self-Help Book applies at 2 (its Enchantment*Amount vars); every
+                    // event enchantment is CardCmd.Enchant<T>(card, 1m).
+                    EnchantAmount = SelfHelpBookAmount((Enchantment)state.PendingSelectionArg),
+                };
+                break;
+            case DeckSelection.TransformTo:
+                state.Deck[deckIndex] = new CardInstance(
+                    state.PendingSelectionArg,
+                    Upgraded: false
+                );
+                break;
+            case DeckSelection.Upgrade:
+                state.Deck[deckIndex] = card with { Upgraded = true };
+                break;
+            case DeckSelection.TransformToRandom:
+                TransformCardAt(state, deckIndex, state.Rng.Niche);
+                break;
             default:
                 return false;
         }
+
+        state.PendingSelectionCount--;
+        return true;
     }
+
+    private static int SelfHelpBookAmount(Enchantment enchantment) =>
+        enchantment is Enchantment.Sharp or Enchantment.Nimble or Enchantment.Swift ? 2 : 1;
 
     /// <summary>
     /// What Luminous Choir asks for its tribute. The event starts from a GoldVar of 149
@@ -507,11 +568,139 @@ public static class RunNonCombatEffects
 
     private static void CalculateEventVars(RunState state)
     {
-        if (state.EventId == RunConstants.EventSunkenTreasury)
+        switch (state.EventId)
         {
-            CalculateSunkenTreasuryVars(state);
+            case RunConstants.EventSunkenTreasury:
+                CalculateSunkenTreasuryVars(state);
+                break;
+            case RunConstants.EventSunkenStatue:
+                CalculateSunkenStatueVars(state);
+                break;
+            case RunConstants.EventDenseVegetation:
+                CalculateDenseVegetationVars(state);
+                break;
         }
     }
+
+    /// <summary>
+    /// The gold the statue's pool pays. <c>SunkenStatue.CalculateVars</c> takes a
+    /// GoldVar of 111 and adds <c>Rng.NextInt(-10, 11)</c> from the event's own stream,
+    /// so the amount is 101..121 and is rolled when the event is generated -- before
+    /// either option is taken, which is why it cannot be rolled inside the option.
+    /// </summary>
+    public static int SunkenStatueGold(RunState state)
+    {
+        if (state.EventValue0 is null)
+        {
+            CalculateSunkenStatueVars(state);
+        }
+
+        return state.EventValue0!.Value;
+    }
+
+    private static void CalculateSunkenStatueVars(RunState state)
+    {
+        state.EventValue0 = 111 + EventRng(state, "SUNKEN_STATUE").NextInt(-10, 11);
+    }
+
+    /// <summary>
+    /// What trudging through the vegetation pays: <c>Rng.NextInt(61, 100)</c>, rolled in
+    /// CalculateVars rather than in the option.
+    /// </summary>
+    public static int DenseVegetationGold(RunState state)
+    {
+        if (state.EventValue0 is null)
+        {
+            CalculateDenseVegetationVars(state);
+        }
+
+        return state.EventValue0!.Value;
+    }
+
+    private static void CalculateDenseVegetationVars(RunState state)
+    {
+        state.EventValue0 = EventRng(state, "DENSE_VEGETATION").NextInt(61, 100);
+    }
+
+    /// <summary>
+    /// Trash Heap's two prize tables, transcribed from the event's own literal arrays.
+    /// The game lists them by class, so they are resolved by name here rather than by
+    /// number: an id that stops resolving throws instead of silently picking whatever
+    /// now sits at that index.
+    /// </summary>
+    private static readonly string[] TrashHeapRelicNames =
+    [
+        "DarkstonePeriapt",
+        "DreamCatcher",
+        "HandDrill",
+        "MawBank",
+        "TheBoot",
+    ];
+
+    private static readonly string[] TrashHeapCardNames =
+    [
+        "Caltrops",
+        "Clash",
+        "Distraction",
+        "DualWield",
+        "Entrench",
+        "HelloWorld",
+        "Outmaneuver",
+        "Rebound",
+        "RipAndTear",
+        "Stack",
+    ];
+
+    public static int TrashHeapRelic(RunState state) =>
+        ResolveRelic(EventRng(state, "TRASH_HEAP").NextItem(TrashHeapRelicNames));
+
+    public static int TrashHeapCard(RunState state) =>
+        ResolveCard(EventRng(state, "TRASH_HEAP").NextItem(TrashHeapCardNames));
+
+    /// <summary>
+    /// A relic an event names outright. Most events that hand over a relic hand over a
+    /// SPECIFIC one -- <c>RelicCmd.Obtain&lt;ChosenCheese&gt;</c> -- and the emulator was
+    /// rolling one from the reward pool at every such site, which is a different relic
+    /// and also burns a draw the game never makes.
+    /// </summary>
+    public static int NamedRelic(string name) => ResolveRelic(name);
+
+    /// <summary>A card an event names outright -- Wood Carvings' Peck and Toric Toughness.</summary>
+    public static int NamedCard(string name) => ResolveCard(name);
+
+    /// <summary>Doll Room's three dolls, in the event's own declaration order.</summary>
+    private static readonly string[] DollRoomDolls =
+    [
+        "DaughterOfTheWind",
+        "MrStruggles",
+        "BingBong",
+    ];
+
+    public static int DollRoomRandomDoll(RunState state) =>
+        ResolveRelic(EventRng(state, "DOLL_ROOM").NextItem(DollRoomDolls));
+
+    private static int ResolveRelic(string name) =>
+        GeneratedData.Relics.FindId(name)
+        ?? throw new InvalidOperationException($"No relic named {name}");
+
+    private static int ResolveCard(string name) =>
+        GeneratedData.Cards.FindId(name) ?? throw new InvalidOperationException($"No card named {name}");
+
+    /// <summary>
+    /// What Spiraling Whirlpool's Drink heals: a HealVar whose BaseValue is
+    /// <c>MaxHp * 0.33m</c>, read through <c>DynamicVar.IntValue</c>, which is a plain
+    /// <c>(int)</c> cast and therefore truncates.
+    /// </summary>
+    public static int SpiralingWhirlpoolHeal(RunState state) =>
+        (int)(state.PlayerMaxHp * 0.33m);
+
+    public static int FresnelLensRelic => ResolveRelic("FresnelLens");
+
+    public static int SwordOfStoneRelic => ResolveRelic("SwordOfStone");
+
+    public static int GlowwaterPotion =>
+        GeneratedData.Potions.FindId("GlowwaterPotion")
+        ?? throw new InvalidOperationException("No potion named GlowwaterPotion");
 
     private static void CalculateSunkenTreasuryVars(RunState state)
     {
@@ -540,6 +729,18 @@ public static class RunNonCombatEffects
     {
         state.PlayerMaxHp += amount;
         state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + amount);
+    }
+
+    /// <summary>
+    /// The game's <c>CreatureCmd.LoseMaxHp</c>: current HP is only damaged by the amount
+    /// the new maximum falls BELOW it, and the maximum itself never goes under 1. A
+    /// player already below the new cap keeps the HP they had.
+    /// </summary>
+    public static void LoseMaxHp(RunState state, int amount)
+    {
+        int newMaxHp = Math.Max(1, state.PlayerMaxHp - amount);
+        state.PlayerHp = Math.Min(state.PlayerHp, newMaxHp);
+        state.PlayerMaxHp = newMaxHp;
     }
 
     public static bool UpgradeFirstCard(RunState state)

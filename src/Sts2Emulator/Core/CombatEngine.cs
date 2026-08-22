@@ -127,6 +127,9 @@ public static class CombatEngine
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
         int extraPlays =
             state.CardPlaysThisTurn < BuffSystem.Get(state.PlayerBuffs, BuffId.EchoForm) ? 1 : 0;
+
+        // Spiral.EnchantPlayCount(original) => original + Times, and Times is 1.
+        extraPlays += card.EnchantedWith(Enchantment.Spiral);
         int signalBoost = BuffSystem.Get(state.PlayerBuffs, BuffId.SignalBoost);
         if (def.Type == CardType.Power && signalBoost > 0)
         {
@@ -368,7 +371,7 @@ public static class CombatEngine
                 state.PlayerHp = Math.Max(0, state.PlayerHp - 6); // Beckon is unblockable
             }
 
-            if (retainHand > 0 || def.Retain)
+            if (retainHand > 0 || card.IsRetained())
             {
                 nextHand.Add(card with { FreeThisTurn = false });
             }

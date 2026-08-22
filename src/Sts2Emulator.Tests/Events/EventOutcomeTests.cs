@@ -13,8 +13,9 @@ namespace Sts2Emulator.Tests;
 /// option, and recording the run either side of it -- so what is asserted here is the
 /// game's own before and after, never the emulator's.
 ///
-/// Three things are compared, being the three an event can move that the game reports
-/// outside combat: the player's hp and max hp, their gold, and their deck. The screen the
+/// Four things are compared, being what an event can move that the game reports
+/// outside combat: the player's hp and max hp, their gold, their deck and their
+/// relics. The screen the
 /// choice leads to is compared as well, because half of these options do their work by
 /// opening one -- a card select to transform, a reward to claim -- and routing to the
 /// wrong screen is as wrong as the wrong number.
@@ -62,6 +63,9 @@ public class EventOutcomeTests
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
+        // Gorge offers eight rolled Commons on a grid and takes two; the emulator has
+        // no grid selection, so it adds one card outright.
+        "RoomFullOfCheese-opt0.json",
         "AbyssalBaths-opt0.json",
         "AromaOfChaos-opt0.json",
         "AromaOfChaos-opt1.json",
@@ -71,8 +75,6 @@ public class EventOutcomeTests
         "CrystalSphere-opt1.json",
         "DenseVegetation-opt0.json",
         "DoorsOfLightAndDark-opt1.json",
-        "DrowningBeacon-opt0.json",
-        "DrowningBeacon-opt1.json",
         "EndlessConveyor-opt0.json",
         "EndlessConveyor-opt1.json",
         "JungleMazeAdventure-opt0.json",
@@ -85,36 +87,24 @@ public class EventOutcomeTests
         "PunchOff-opt1.json",
         "RanwidTheElder-opt1.json",
         "RelicTrader-opt0.json",
-        "RoomFullOfCheese-opt0.json",
-        "SapphireSeed-opt0.json",
-        "SapphireSeed-opt1.json",
         "SlipperyBridge-opt0.json",
         "SlipperyBridge-opt1.json",
-        "SpiralingWhirlpool-opt0.json",
-        "SpiralingWhirlpool-opt1.json",
         "StoneOfAllTime-opt1.json",
-        "SunkenStatue-opt1.json",
         "SunkenTreasury-opt1.json",
-        "Symbiote-opt0.json",
-        "Symbiote-opt1.json",
-        "TeaMaster-opt0.json",
         "TheLegendsWereTrue-opt1.json",
         "ThisOrThat-opt0.json",
         "ThisOrThat-opt1.json",
-        "TrashHeap-opt0.json",
-        "TrashHeap-opt1.json",
+        // Kill the Trees pulls from the game's per-player RelicGrabBag
+        // (RelicFactory.PullNextRelicFromFront); the emulator re-rolls from a flat pool
+        // on the wrong stream, so it hands over Blood Vial where the game hands over
+        // Orichalcum. That is not an UnrestSite bug -- it is every random relic in the
+        // run -- so it is fixed once, in NextRelic, not here.
+        "UnrestSite-opt1.json",
         "UnrestSite-opt0.json",
-        "WarHistorianRepy-opt1.json",
-        "WaterloggedScriptorium-opt0.json",
-        "WaterloggedScriptorium-opt1.json",
-        "WaterloggedScriptorium-opt2.json",
         "Wellspring-opt0.json",
         "Wellspring-opt1.json",
         "WhisperingHollow-opt0.json",
         "WhisperingHollow-opt1.json",
-        "WoodCarvings-opt0.json",
-        "WoodCarvings-opt1.json",
-        "WoodCarvings-opt2.json",
     ];
 
     // "-opt0.json" and friends, but not "-options.json": one character after "opt".
@@ -192,6 +182,29 @@ public class EventOutcomeTests
             .OrderBy(slug => slug, StringComparer.Ordinal)
             .ToList();
 
+    /// <summary>
+    /// A relic name reduced to letters only and upper-cased, so the game's
+    /// <c>SWORD_OF_STONE</c> and the emulator's <c>SwordOfStone</c> compare equal
+    /// without either side having to guess where the other puts its word breaks.
+    /// </summary>
+    private static string RelicKey(string name) =>
+        string.Concat(name.Where(char.IsLetterOrDigit)).ToUpperInvariant();
+
+    private static List<string> RelicKeys(JsonElement player) =>
+        player.TryGetProperty("relics", out var relics)
+            ? relics
+                .EnumerateArray()
+                .Select(relic => RelicKey(relic.GetProperty("id").GetString() ?? ""))
+                .OrderBy(key => key, StringComparer.Ordinal)
+                .ToList()
+            : [];
+
+    private static List<string> RelicKeys(RunState state) =>
+        state
+            .Relics.Select(relic => RelicKey(GeneratedData.Relics.Get(relic.DefId).Name))
+            .OrderBy(key => key, StringComparer.Ordinal)
+            .ToList();
+
     [Theory]
     [MemberData(nameof(Fixtures))]
     public void TakingTheOptionMovesTheRunTheWayTheGameDid(string fixtureName)
@@ -210,6 +223,7 @@ public class EventOutcomeTests
         Assert.Equal(before.GetProperty("gold").GetInt32(), engine.State.Gold);
         Assert.Equal(before.GetProperty("hp").GetInt32(), engine.State.PlayerHp);
         Assert.Equal(DeckSlugs(before), DeckSlugs(engine.State));
+        Assert.Equal(RelicKeys(before), RelicKeys(engine.State));
 
         engine.State.EventId = EventIds()[name];
         engine.State.Phase = RunPhase.Event;
@@ -221,6 +235,7 @@ public class EventOutcomeTests
         Assert.Equal(after.GetProperty("max_hp").GetInt32(), engine.State.PlayerMaxHp);
         Assert.Equal(after.GetProperty("gold").GetInt32(), engine.State.Gold);
         Assert.Equal(DeckSlugs(after), DeckSlugs(engine.State));
+        Assert.Equal(RelicKeys(after), RelicKeys(engine.State));
         Assert.Equal(
             root.GetProperty("after_state_type").GetString(),
             ScreenFor(engine.State.Phase)

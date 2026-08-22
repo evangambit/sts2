@@ -53,7 +53,7 @@ public sealed class RunEngine
         State.PendingRelicReward = false;
         State.ShopRemovalsUsed = 0;
         State.TransformSelectedDeckIndex = null;
-        State.PendingSelfHelpBookEnchantType = 0;
+        RunNonCombatEffects.ClearDeckSelection(State);
         State.PendingRestUpgrade = false;
         State.RestResultPending = false;
         State.UnknownMapPointsVisited = 0;
@@ -534,11 +534,11 @@ public sealed class RunEngine
                         }
                     }
                 }
-                else if (State.PendingSelfHelpBookEnchantType != 0)
+                else if (State.PendingSelectionKind != DeckSelection.None)
                 {
                     for (int i = 0; i < State.Deck.Count; i++)
                     {
-                        if (RunNonCombatEffects.CanApplySelfHelpBookEnchantment(State, i))
+                        if (RunNonCombatEffects.CanSelectCard(State, i))
                         {
                             SetMask(mask, i);
                         }
@@ -1448,23 +1448,15 @@ public sealed class RunEngine
             case RunConstants.EventSelfHelpBook:
                 if (action is >= 0 and <= 2)
                 {
-                    State.PendingSelfHelpBookEnchantType = action + 1;
-                    if (
-                        !State
-                            .Deck.Where(
-                                (_, i) =>
-                                    RunNonCombatEffects.CanApplySelfHelpBookEnchantment(State, i)
-                            )
-                            .Any()
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.Enchant,
+                        (int)RunNonCombatEffects.SelfHelpBookEnchantment(action)
                     )
-                    {
-                        State.PendingSelfHelpBookEnchantType = 0;
-                        return -1;
-                    }
-
-                    State.Phase = RunPhase.TransformSelect;
-                    return 0;
+                        ? 0
+                        : -1;
                 }
+
                 if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
@@ -1635,32 +1627,50 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventSapphireSeed:
+                // Consume heals and then asks WHICH card to upgrade; Plant enchants with
+                // Sown. The emulator healed and upgraded whatever came first, and had no
+                // Plant at all, so the game's second option was refused.
                 if (action == 0)
                 {
                     HealPlayer(9);
-                    if (!RunNonCombatEffects.UpgradeFirstCard(State))
-                    {
-                        return -1;
-                    }
+                    RunNonCombatEffects.BeginDeckSelection(State, DeckSelection.Upgrade, 0);
+                    return 0;
                 }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action == 1)
+                {
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.Enchant,
+                        (int)Enchantment.Sown
+                    )
+                        ? 0
+                        : -1;
+                }
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
 
                 break;
             case RunConstants.EventSunkenStatue:
+                // GrabSword obtains one named relic -- RelicCmd.Obtain<SwordOfStone> --
+                // not a roll from the reward pool.
                 if (action == 0)
                 {
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        RunNonCombatEffects.SwordOfStoneRelic
                     );
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(State.Relics, 111);
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 12);
+                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
+                        State.Relics,
+                        RunNonCombatEffects.SunkenStatueGold(State)
+                    );
+                    State.PlayerHp = Math.Max(0, State.PlayerHp - 7);
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -1740,11 +1750,34 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventWoodCarvings:
-                if (action is >= 0 and <= 2)
+                // Three carvings, three different things: a Basic card becomes a Peck, or
+                // is enchanted with Slither, or becomes a Toric Toughness. All three used
+                // to transform the first card in the deck into a rolled one.
+                if (action is 0 or 2)
                 {
-                    RunNonCombatEffects.TransformFirstCard(State);
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.TransformTo,
+                        action == 0
+                            ? RunNonCombatEffects.NamedCard("Peck")
+                            : RunNonCombatEffects.NamedCard("ToricToughness")
+                    )
+                        ? 0
+                        : -1;
                 }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action == 1)
+                {
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.Enchant,
+                        (int)Enchantment.Slither
+                    )
+                        ? 0
+                        : -1;
+                }
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
@@ -1767,15 +1800,26 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventDrowningBeacon:
+                // Bottle offers the Glowwater Potion on a reward screen
+                // (RewardsCmd.OfferCustom), so the player can decline it or make room.
+                // Climb is the option that costs Max HP -- the emulator had the cost on
+                // Bottle and no Climb at all.
                 if (action == 0)
                 {
-                    if (State.PlayerHp <= 13)
-                    {
-                        return -1;
-                    }
+                    State.RewardGold = 0;
+                    State.RelicReward = 0;
+                    State.RewardPotion = RunNonCombatEffects.GlowwaterPotion;
+                    State.Phase = RunPhase.RelicReward;
+                    return 0;
+                }
 
-                    State.PlayerHp -= 13;
-                    RunRewardGenerator.AddPotion(State, 29);
+                if (action == 1)
+                {
+                    RunNonCombatEffects.LoseMaxHp(State, 13);
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunNonCombatEffects.FresnelLensRelic
+                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -1827,13 +1871,22 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventSpiralingWhirlpool:
+                // Observe enchants; Drink heals a third of Max HP. The emulator had the
+                // healing on Observe, at the rest-site amount, and made Drink transform.
                 if (action == 0)
                 {
-                    HealPlayer(RestHealAmount());
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.Enchant,
+                        (int)Enchantment.Spiral
+                    )
+                        ? 0
+                        : -1;
                 }
-                else if (action == 1)
+
+                if (action == 1)
                 {
-                    RunNonCombatEffects.TransformFirstCard(State);
+                    HealPlayer(RunNonCombatEffects.SpiralingWhirlpoolHeal(State));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -1842,16 +1895,23 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventTrashHeap:
+                // DiveIn pays HP for a relic; Grab pays nothing for gold and a card.
+                // Both prizes come off the event's own fixed tables, not the reward
+                // pools -- the emulator had the two options' costs and prizes crossed.
                 if (action == 0)
                 {
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 8);
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(State.Relics, 100);
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunNonCombatEffects.TrashHeapRelic(State)
+                    );
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.ApplyRelicPickup(
+                    State.Gold += Effects.RelicEffects.ModifyGoldGained(State.Relics, 100);
+                    RunNonCombatEffects.AddCardToDeck(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        new CardInstance(RunNonCombatEffects.TrashHeapCard(State), Upgraded: false)
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -1861,26 +1921,38 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventWaterloggedScriptorium:
+                // Bloody Ink is the free option and comes FIRST; the two paid options
+                // both enchant with Steady, at 55 gold for one card and 99 for two. The
+                // emulator had Bloody Ink second, upgraded instead of enchanting, and
+                // turned the 99-gold option into a card reward.
                 if (action == 0)
                 {
-                    if (State.Gold < 55)
+                    RunNonCombatEffects.GainMaxHp(State, 6);
+                }
+                else if (action is 1 or 2)
+                {
+                    int cost = action == 1 ? 55 : 99;
+                    if (State.Gold < cost)
                     {
                         return -1;
                     }
 
-                    State.Gold -= 55;
-                    RunNonCombatEffects.UpgradeFirstCard(State);
-                }
-                else if (action == 1)
-                {
-                    RunNonCombatEffects.GainMaxHp(State, 6);
-                }
-                else if (action == 2)
-                {
-                    State.RewardGold = 0;
-                    State.RewardPotion = 0;
-                    State.RelicReward = 0;
-                    RunRewardGenerator.EnterCardReward(State);
+                    // The gold is spent before the selector opens, and the game does not
+                    // refund it when the player picks nothing -- so a refused selection
+                    // must not have taken the gold either.
+                    if (
+                        !RunNonCombatEffects.BeginDeckSelection(
+                            State,
+                            DeckSelection.Enchant,
+                            (int)Enchantment.Steady,
+                            action == 1 ? 1 : 2
+                        )
+                    )
+                    {
+                        return -1;
+                    }
+
+                    State.Gold -= cost;
                     return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -1913,28 +1985,24 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventDollRoom:
+                // The dolls are three named relics, rolled from the event's own stream --
+                // not from the reward pool. Only "Pick at Random" hands one over here:
+                // the two paid options buy a CHOICE of doll on a second page, so they
+                // cost the HP and grant nothing yet.
                 if (action == 0)
                 {
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        RunNonCombatEffects.DollRoomRandomDoll(State)
                     );
                 }
                 else if (action == 1)
                 {
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 5);
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
                 }
                 else if (action == 2)
                 {
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 15);
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2057,7 +2125,7 @@ public sealed class RunEngine
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 14);
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        RunNonCombatEffects.NamedRelic("ChosenCheese")
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -2108,55 +2176,71 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventSymbiote:
+                // Approach enchants an Attack with Corrupted -- it does not upgrade --
+                // and Kill with Fire lets the player CHOOSE what burns.
                 if (action == 0)
                 {
-                    if (!RunNonCombatEffects.UpgradeFirstCard(State))
-                    {
-                        return -1;
-                    }
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.Enchant,
+                        (int)Enchantment.Corrupted
+                    )
+                        ? 0
+                        : -1;
                 }
-                else if (action == 1)
+
+                if (action == 1)
                 {
-                    RunNonCombatEffects.TransformFirstCard(State);
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.TransformToRandom,
+                        0
+                    )
+                        ? 0
+                        : -1;
                 }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
 
                 break;
             case RunConstants.EventTeaMaster:
+                // Three named teas at three prices. Bone Tea is 50, not 150 -- the
+                // action mask already read BoneTeaCost while the step charged the
+                // Ember price for both, and all three handed over a pool relic.
                 if (action == 0)
                 {
-                    if (State.Gold < 150)
+                    if (State.Gold < RunConstants.BoneTeaCost)
                     {
                         return -1;
                     }
 
-                    State.Gold -= 150;
+                    State.Gold -= RunConstants.BoneTeaCost;
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        RunNonCombatEffects.NamedRelic("BoneTea")
                     );
                 }
                 else if (action == 1)
                 {
-                    if (State.Gold < 150)
+                    if (State.Gold < RunConstants.EmberTeaCost)
                     {
                         return -1;
                     }
 
-                    State.Gold -= 150;
+                    State.Gold -= RunConstants.EmberTeaCost;
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        RunNonCombatEffects.NamedRelic("EmberTea")
                     );
                 }
                 else if (action == 2)
                 {
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        RunNonCombatEffects.NamedRelic("TeaOfDiscourtesy")
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -2226,23 +2310,32 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventWarHistorianRepy:
+                // Unlock the Cage frees Repy for the named History Course; Unlock the
+                // Chest opens a reward screen carrying two potions and two relics. The
+                // emulator had the potion on the cage option and a pool relic on both.
+                // Both options also spend a Lantern Key, which the emulator does not
+                // model as a card -- the game's LanternKey has no entry in Cards.g.cs,
+                // so there is nothing in the deck to remove. Whatever brings a Lantern
+                // Key into a run has to add that card before this can spend it.
                 if (action == 0)
                 {
-                    RunRewardGenerator.AddPotion(
-                        State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                    );
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        RunNonCombatEffects.NamedRelic("HistoryCourse")
                     );
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.ApplyRelicPickup(
+                    // The chest carries TWO potions and TWO relics; the emulator's
+                    // reward screen carries one of each, so this offers half of it.
+                    State.RewardGold = 0;
+                    State.RewardPotion = RunRewardGenerator.NextPotion(
                         State,
-                        RunRewardGenerator.NextRelic(State)
+                        State.PlayerRng.Rewards
                     );
+                    State.RelicReward = RunRewardGenerator.NextRelic(State);
+                    State.Phase = RunPhase.RelicReward;
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2693,14 +2786,27 @@ public sealed class RunEngine
             return 0;
         }
 
-        if (State.PendingSelfHelpBookEnchantType != 0)
+        if (State.PendingSelectionKind != DeckSelection.None)
         {
-            if (!RunNonCombatEffects.ApplySelfHelpBookEnchantment(State, action))
+            if (!RunNonCombatEffects.ApplyDeckSelection(State, action))
             {
                 return -1;
             }
 
-            State.PendingSelfHelpBookEnchantType = 0;
+            // A selection for two cards stays on the screen for the second -- unless the
+            // deck has run out of cards it would take, which is where the game's own
+            // selector stops too.
+            if (
+                State.PendingSelectionCount > 0
+                && Enumerable
+                    .Range(0, State.Deck.Count)
+                    .Any(i => RunNonCombatEffects.CanSelectCard(State, i))
+            )
+            {
+                return 0;
+            }
+
+            RunNonCombatEffects.ClearDeckSelection(State);
             State.EventId = RunConstants.EventResultPending;
             State.Phase = RunPhase.Event;
             return 0;
@@ -2848,9 +2954,9 @@ public sealed class RunEngine
                 SetMask(mask, 1);
                 break;
             case RunConstants.EventSelfHelpBook:
-                SetSelfHelpBookMask(mask, 1, 0);
-                SetSelfHelpBookMask(mask, 2, 1);
-                SetSelfHelpBookMask(mask, 3, 2);
+                SetSelfHelpBookMask(mask, 0);
+                SetSelfHelpBookMask(mask, 1);
+                SetSelfHelpBookMask(mask, 2);
                 break;
             case RunConstants.EventBrainLeech:
                 SetMask(mask, 0);
@@ -3038,13 +3144,15 @@ public sealed class RunEngine
         GeneratedData.Relics.Get(relic.DefId).IsTradable
         && !State.UsedUpRelics.Contains(relic.DefId);
 
-    private void SetSelfHelpBookMask(Span<int> mask, int enchantType, int action)
+    /// <summary>
+    /// One page of the book is offered when the deck holds a card its enchantment would
+    /// take -- Sharp for action 0, Nimble for 1, Swift for 2. The page index IS the
+    /// action, so mask and step read the same number.
+    /// </summary>
+    private void SetSelfHelpBookMask(Span<int> mask, int action)
     {
-        if (
-            State.Deck.Any(card =>
-                RunNonCombatEffects.CanApplySelfHelpBookEnchantment(card, enchantType)
-            )
-        )
+        var enchantment = RunNonCombatEffects.SelfHelpBookEnchantment(action);
+        if (State.Deck.Any(card => Enchantments.CanEnchant(card, enchantment)))
         {
             SetMask(mask, action);
         }

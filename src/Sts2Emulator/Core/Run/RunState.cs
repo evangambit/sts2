@@ -2,6 +2,23 @@ using Sts2Emulator.Core.Rng;
 
 namespace Sts2Emulator.Core.Run;
 
+public enum DeckSelection
+{
+    None = 0,
+
+    /// <summary>Apply <c>PendingSelectionArg</c> as an <see cref="Enchantment"/>.</summary>
+    Enchant,
+
+    /// <summary>Transform the chosen card into the card id in <c>PendingSelectionArg</c>.</summary>
+    TransformTo,
+
+    /// <summary>Upgrade the chosen card.</summary>
+    Upgrade,
+
+    /// <summary>Transform the chosen card into a rolled one (CardCmd.TransformToRandom).</summary>
+    TransformToRandom,
+}
+
 public sealed class RunState
 {
     public string StringSeed = "";
@@ -82,7 +99,16 @@ public sealed class RunState
     public bool PendingRelicReward;
     public int ShopRemovalsUsed;
     public int? TransformSelectedDeckIndex;
-    public int PendingSelfHelpBookEnchantType;
+    /// <summary>
+    /// A deck selection an event has opened and is waiting on: what is being done to the
+    /// chosen cards, the enchantment or target card it is being done with, and how many
+    /// are still to pick. Half the Act 1 events end in one of these -- enchant this,
+    /// transform that -- and each used to need its own flag; Self-Help Book's was the
+    /// only one, so every other event silently resolved without ever asking.
+    /// </summary>
+    public DeckSelection PendingSelectionKind;
+    public int PendingSelectionArg;
+    public int PendingSelectionCount;
     public bool PendingRestUpgrade;
     public bool RestResultPending;
     public int UnknownMapPointsVisited;

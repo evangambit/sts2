@@ -4310,13 +4310,15 @@ public static class CardEffects
     /// and on top of the upgrade.
     /// </summary>
     private static int Dmg(CardDef def, bool upgraded, CardInstance card) =>
-        (upgraded ? def.BaseDamage + def.UpgradeDamage : def.BaseDamage) + card.Sharp;
+        (upgraded ? def.BaseDamage + def.UpgradeDamage : def.BaseDamage)
+        + card.EnchantedWith(Enchantment.Sharp);
 
     /// <summary>
     /// The card's block, including the Nimble enchantment.
     /// </summary>
     private static int Blk(CardDef def, bool upgraded, CardInstance card) =>
-        (upgraded ? def.BaseBlock + def.UpgradeBlock : def.BaseBlock) + card.Nimble;
+        (upgraded ? def.BaseBlock + def.UpgradeBlock : def.BaseBlock)
+        + card.EnchantedWith(Enchantment.Nimble);
 
     private static EnemyState? FirstEnemy(CombatState state)
     {
