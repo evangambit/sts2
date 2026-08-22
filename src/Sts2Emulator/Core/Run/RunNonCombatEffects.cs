@@ -824,6 +824,22 @@ public static class RunNonCombatEffects
     }
 
     /// <summary>
+    /// The relic Ranwid asks for: <c>Rng.NextItem(Relics.Where(IsTradable))</c> off the
+    /// event's own stream. Returns an index into <c>state.Relics</c>, or -1 when the run
+    /// holds nothing the elder will take.
+    /// </summary>
+    public static int RanwidTradeIndex(RunState state)
+    {
+        var tradable = Enumerable
+            .Range(0, state.Relics.Count)
+            .Where(i => IsTradableRelic(state, state.Relics[i]))
+            .ToList();
+        return tradable.Count == 0
+            ? -1
+            : EventRng(state, "RANWID_THE_ELDER").NextItem(tradable);
+    }
+
+    /// <summary>
     /// <c>RelicModel.IsTradable</c>: Starter, Event and Ancient relics are never traded,
     /// nor is one whose pickup already paid out, nor one with a pet attached.
     /// </summary>
@@ -1149,6 +1165,10 @@ public static class RunNonCombatEffects
     /// wrong relics and the player rng set reading the wrong stream. Sunken Treasury's
     /// chests paid 67 and 343 where the game pays 63 and 340.
     /// </summary>
+    /// <summary>An event's own stream, for callers outside this class.</summary>
+    public static GameRng EventStream(RunState state, string eventEntry) =>
+        EventRng(state, eventEntry);
+
     private static GameRng EventRng(RunState state, string eventEntry)
     {
         uint eventSeed = unchecked(

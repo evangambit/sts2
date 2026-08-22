@@ -1050,6 +1050,74 @@ public static class RunRewardGenerator
     private static int RarityOf(int cardId) => (int)GeneratedData.Cards.Get(cardId).Rarity;
 
     /// <summary>
+    /// The card rarity a potion trades for at The Future of Potions, from the event's own
+    /// GetCardRarity: Rare and Event potions buy Rare cards, Uncommon buys Uncommon, and
+    /// Common and Token buy Common.
+    /// </summary>
+    public static CardRarity CardRarityForPotion(int potionId) =>
+        GeneratedData.Potions.Get(potionId).Rarity switch
+        {
+            Core.PotionRarity.Rare or Core.PotionRarity.Event => CardRarity.Rare,
+            Core.PotionRarity.Uncommon => CardRarity.Uncommon,
+            _ => CardRarity.Common,
+        };
+
+    /// <summary>
+    /// The card types a potion can buy at The Future of Potions. Power is off the table
+    /// for a Common or Token potion -- and the reason is in the pool: the Ironclad has no
+    /// Common Power at all, so rolling one would filter the reward down to nothing and
+    /// offer the player an empty screen.
+    /// </summary>
+    public static CardType[] FutureOfPotionsCardTypes(int potionId) =>
+        GeneratedData.Potions.Get(potionId).Rarity
+        is Core.PotionRarity.Common
+            or Core.PotionRarity.Token
+            ? [CardType.Attack, CardType.Skill]
+            : [CardType.Attack, CardType.Skill, CardType.Power];
+
+    /// <summary>
+    /// The Future of Potions offers THREE upgraded cards, all of one rarity and one type:
+    /// the rarity comes from the potion handed over, and the type is rolled per potion
+    /// from Attack/Skill/Power -- with Power off the table for a Common or Token potion,
+    /// which cannot buy one.
+    ///
+    /// The odds are uniform over the filtered pool, not the usual rarity roll, so this
+    /// picks cards rather than rolling a rarity first.
+    /// </summary>
+    public static void EnterFutureOfPotionsReward(RunState state, int potionId, GameRng rng)
+    {
+        var rarity = CardRarityForPotion(potionId);
+        var type = rng.NextItem(FutureOfPotionsCardTypes(potionId));
+
+        var pool = IroncladRewardPool
+            .ToArray()
+            .Where(IsAllowedSolo)
+            .Where(cardId =>
+                GeneratedData.Cards.Get(cardId).Rarity == rarity
+                && GeneratedData.Cards.Get(cardId).Type == type
+            )
+            .ToList();
+
+        Array.Clear(state.RewardCards);
+        Array.Clear(state.RewardUpgraded);
+        for (int i = 0; i < state.RewardCards.Length && pool.Count > 0; i++)
+        {
+            int cardId = rng.NextItem(pool);
+            pool.Remove(cardId);
+            state.RewardCards[i] = cardId;
+            // reward.AfterGenerated upgrades every card in the reward.
+            state.RewardUpgraded[i] = true;
+        }
+
+        state.RewardGold = 0;
+        state.RewardPotion = 0;
+        state.RelicReward = 0;
+        state.PendingPotionRewards.Clear();
+        state.RewardCardPending = true;
+        state.Phase = RunPhase.CardReward;
+    }
+
+    /// <summary>
     /// A potion's rarity, from the extracted potion data. A hand-written table stood
     /// here and defaulted anything it did not list to Common, which put every potion it
     /// had never heard of into the bucket a Common roll draws from.

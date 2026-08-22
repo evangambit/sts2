@@ -2379,16 +2379,24 @@ public sealed class RunEngine
                 }
                 else if (action == 2)
                 {
-                    if (State.Relics.Count <= 1)
+                    // The elder names the relic he wants -- rolled off the event's own
+                    // stream from the ones he will take -- and hands back TWO. The
+                    // emulator gave up whatever sat in slot 1, which is a positional
+                    // guess that would surrender an untradable relic, and returned one.
+                    int traded = RunNonCombatEffects.RanwidTradeIndex(State);
+                    if (traded < 0)
                     {
                         return -1;
                     }
 
-                    State.Relics.RemoveAt(1);
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
+                    State.Relics.RemoveAt(traded);
+                    for (int i = 0; i < 2; i++)
+                    {
+                        RunNonCombatEffects.ApplyRelicPickup(
+                            State,
+                            RunRewardGenerator.NextRelic(State)
+                        );
+                    }
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2632,8 +2640,17 @@ public sealed class RunEngine
                         return -1;
                     }
 
+                    // Three upgraded cards on a reward screen, all of the rarity the
+                    // potion buys and the type the event rolled for it -- not one card
+                    // taken off the map-generation stream and pushed into the deck.
+                    int traded = State.PotionSlots[slot];
                     State.PotionSlots[slot] = 0;
-                    AddEventRewardCard(upgraded: true);
+                    RunRewardGenerator.EnterFutureOfPotionsReward(
+                        State,
+                        traded,
+                        RunNonCombatEffects.EventStream(State, "THE_FUTURE_OF_POTIONS")
+                    );
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
