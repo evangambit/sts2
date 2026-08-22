@@ -313,4 +313,11 @@ internal static class Relics
         Array.Find(_all, r => r.Name == name) is { Id: > 0 } def
             ? def.Id
             : null;
+
+    /// <summary>Lookup that does not throw, for ids that may not name a relic at all.</summary>
+    public static bool TryGet(int id, out RelicDef def)
+    {
+        def = Array.Find(_all, r => r.Id == id);
+        return def.Id > 0;
+    }
 }

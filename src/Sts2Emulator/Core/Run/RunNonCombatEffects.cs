@@ -107,6 +107,25 @@ public static class RunNonCombatEffects
             state.Relics.Add(new RelicInstance(relicId, StartingRelicCounter(relicId)));
         }
 
+        // RelicCmd.Obtain strikes the relic from both grab bags unless it is stackable,
+        // and Circlet -- the fallback -- is the only stackable relic there is. Without
+        // this a relic handed over by name (the Sword of Stone, a Neow pick) stays in the
+        // queue and can be offered a second time.
+        //
+        // Guarded rather than a plain Get: RunConstants carries five Neow-only relic ids
+        // in the 1300-1500 range (Astrolabe = 1332, where Relics.g.cs says Astrolabe is
+        // id 8) that resolve to nothing. Those are ancient relics and are not in any grab
+        // bag anyway, so skipping them is correct here -- but the mismatch is real and is
+        // its own bug.
+        if (
+            relicId != CircletRelic
+            && GeneratedData.Relics.TryGet(relicId, out _)
+        )
+        {
+            state.RelicBag.Remove(relicId);
+            state.SharedRelicBag.Remove(relicId);
+        }
+
         switch (relicId)
         {
             case RunConstants.RelicWarPaint:
@@ -689,6 +708,9 @@ public static class RunNonCombatEffects
 
     /// <summary>A card an event names outright -- Wood Carvings' Peck and Toric Toughness.</summary>
     public static int NamedCard(string name) => ResolveCard(name);
+
+    /// <summary>Circlet, the fallback relic -- the only stackable one in the game.</summary>
+    public static int CircletRelic => ResolveRelic("Circlet");
 
     /// <summary>Doll Room's three dolls, in the event's own declaration order.</summary>
     private static readonly string[] DollRoomDolls =

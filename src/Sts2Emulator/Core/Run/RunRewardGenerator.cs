@@ -613,7 +613,7 @@ public static class RunRewardGenerator
         _ = RollRelicRarity(state.PlayerRng.Rewards);
         for (int i = 0; i < state.ShopRelics.Length; i++)
         {
-            state.ShopRelics[i] = NextRelic(state);
+            state.ShopRelics[i] = NextShopRelic(state);
             state.ShopCosts[7 + i] = ShopRelicCost(state.ShopRelics[i], state.PlayerRng.Shops);
         }
 
@@ -661,16 +661,48 @@ public static class RunRewardGenerator
         return false;
     }
 
-    public static int NextRelic(RunState state)
+    /// <summary>
+    /// The game's <c>RelicFactory.PullNextRelicFromFront</c>: roll a rarity off the
+    /// player's rewards stream, take the front of that rarity's queue, and strike it from
+    /// the shared bag too. Shops call <see cref="NextShopRelic"/>, which reads the same
+    /// queues from the back.
+    ///
+    /// This used to re-roll uniformly from a flat pool on the UpFront stream, filtered to
+    /// relics the player did not already own. Wrong mechanism, wrong stream, and a rarity
+    /// distribution that did not exist: the queue is the reason a run does not see the
+    /// same relic twice, and the 50/33/17 rarity split is the reason it sees Commons most.
+    /// </summary>
+    public static int NextRelic(RunState state) => PullRelic(state, fromFront: true);
+
+    /// <summary>Shops pull the same queues from the BACK.</summary>
+    public static int NextShopRelic(RunState state) =>
+        PullRelic(state, fromFront: false, RelicRarity.Shop);
+
+    private static int PullRelic(
+        RunState state,
+        bool fromFront,
+        RelicRarity? rarity = null
+    )
     {
-        var available = RelicRewardPool
-            .ToArray()
-            .Where(relicId => state.Relics.All(relic => relic.DefId != relicId))
-            .ToArray();
-        return available.Length == 0
-            ? state.Rng.UpFront.NextItem(RelicRewardPool.ToArray())
-            : state.Rng.UpFront.NextItem(available);
+        var rolled = rarity ?? RelicGrabBag.RollRarity(state.PlayerRng.Rewards);
+        var allowed = RelicGrabBag.AllowedInSoloRun(state.Floor);
+        int? relicId = state.RelicBag.Pull(rolled, fromFront, allowed);
+        if (relicId is null)
+        {
+            // RelicFactory falls back to a fixed relic when the bag has nothing left.
+            return FallbackRelic;
+        }
+
+        state.SharedRelicBag.Remove(relicId.Value);
+        return relicId.Value;
     }
+
+    /// <summary>
+    /// <c>RelicFactory.FallbackRelic</c>, handed over when every queue is exhausted.
+    /// </summary>
+    private static int FallbackRelic =>
+        GeneratedData.Relics.FindId("Circlet")
+        ?? throw new InvalidOperationException("No relic named Circlet");
 
     private static int GoldRewardForCurrentNode(RunState state)
     {

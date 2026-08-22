@@ -540,6 +540,13 @@ internal static class Relics
         Array.Find(_all, r => r.Name == name) is {{ Id: > 0 }} def
             ? def.Id
             : null;
+
+    /// <summary>Lookup that does not throw, for ids that may not name a relic at all.</summary>
+    public static bool TryGet(int id, out RelicDef def)
+    {{
+        def = Array.Find(_all, r => r.Id == id);
+        return def.Id > 0;
+    }}
 }}
 """
 
@@ -655,6 +662,60 @@ internal static class CardPools
 """
 
 
+RELIC_POOLS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Models.RelicPools"
+
+# The pools a run's relic grab bag is built from: the shared pool plus the pool of the
+# character being played. Event/Fallback/Deprecated are not grab-bag pools.
+RELIC_POOL_NAMES = ("Shared", "Ironclad", "Silent", "Defect", "Necrobinder", "Regent")
+
+
+def extract_relic_pools(relic_ids: dict[str, int]) -> str:
+    """Each relic pool, in the order the pool declares it.
+
+    Order is load-bearing. RelicGrabBag.Populate concatenates the shared pool and the
+    character's, buckets the result by rarity and UnstableShuffles each bucket, so a
+    differently-ordered list shuffles into a different queue and every relic the run ever
+    hands out changes.
+    """
+    entries: list[str] = []
+    for pool in RELIC_POOL_NAMES:
+        path = RELIC_POOLS_DIR / f"{pool}RelicPool.cs"
+        if not path.exists():
+            print(f"  Relic pools: {pool} not found, skipping.")
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        body = re.search(r"GenerateAllRelics\(\)[\s\S]*?\{([\s\S]*?)\n\t\}", text)
+        if body is None:
+            print(f"  Relic pools: could not parse {pool}.")
+            continue
+        names = re.findall(r"ModelDb\.Relic<(\w+)>\(\)", body.group(1))
+        ids = [relic_ids[name] for name in names if name in relic_ids]
+        missing = [name for name in names if name not in relic_ids]
+        if missing:
+            print(f"  Relic pools: {pool} skipped {len(missing)} unextracted relics.")
+        entries.append(
+            f"    /// <summary>{pool}: {len(ids)} relics, in pool order.</summary>\n"
+            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];"
+        )
+        print(f"  Relic pools: {pool} {len(ids)} relics.")
+
+    joined = "\n\n".join(entries)
+    return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
+
+/// <summary>
+/// The relic pools, extracted from the game's RelicPoolModel declarations.
+///
+/// RelicGrabBag.Populate builds a run's relic queue from the shared pool plus the
+/// character's, so this is where the queue's contents AND their pre-shuffle order come
+/// from. A RelicDef carries a rarity but not a pool, and the grab bag needs both.
+/// </summary>
+internal static class RelicPools
+{{
+{joined}
+}}
+"""
+
+
 def main() -> None:
     load_id_map()
     if not DECOMPILED.exists():
@@ -678,14 +739,24 @@ def main() -> None:
         )
     }
 
+    relics_cs = extract_relics()
+    relic_ids = {
+        name: int(raw)
+        for raw, name in re.findall(
+            r'new RelicDef\(Id: (\d+), Name: "([^"]+)"',
+            relics_cs,
+        )
+    }
+
     for filename, content in [
         ("Cards.g.cs", cards_cs),
         ("CardIds.g.cs", extract_card_ids(card_ids)),
         ("Enemies.g.cs", extract_enemies()),
         ("Powers.g.cs", extract_powers()),
-        ("Relics.g.cs", extract_relics()),
+        ("Relics.g.cs", relics_cs),
         ("Potions.g.cs", extract_potions()),
         ("CardPools.g.cs", extract_card_pools(card_ids)),
+        ("RelicPools.g.cs", extract_relic_pools(relic_ids)),
     ]:
         out = GENERATED / filename
         out.write_text(content, encoding="utf-8")

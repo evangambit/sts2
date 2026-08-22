@@ -60,12 +60,12 @@ public class EventOutcomeTests
     /// without a way to check them against the game looks like. Delete an entry when its
     /// event is fixed; <see cref="PendingListHasNoOptionThatNowMatches"/> fails if one
     /// lingers.
+    ///
+    /// What is left needs mechanics the emulator does not have: multi-page events, grid
+    /// card selection, and the events with a screen of their own.
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
-        // The deck is right now; what is left is the relic, which comes off the grab bag
-        // -- see the UnrestSite-opt1 note below.
-        "ThisOrThat-opt1.json",
         // Payment Plan leads to the event's own "crystal_sphere" screen, which the
         // emulator has no phase for.
         "CrystalSphere-opt1.json",
@@ -92,12 +92,6 @@ public class EventOutcomeTests
         "StoneOfAllTime-opt1.json",
         "TheLegendsWereTrue-opt1.json",
         "ThisOrThat-opt0.json",
-        // Kill the Trees pulls from the game's per-player RelicGrabBag
-        // (RelicFactory.PullNextRelicFromFront); the emulator re-rolls from a flat pool
-        // on the wrong stream, so it hands over Blood Vial where the game hands over
-        // Orichalcum. That is not an UnrestSite bug -- it is every random relic in the
-        // run -- so it is fixed once, in NextRelic, not here.
-        "UnrestSite-opt1.json",
         "Wellspring-opt0.json",
         "WhisperingHollow-opt0.json",
         "WhisperingHollow-opt1.json",

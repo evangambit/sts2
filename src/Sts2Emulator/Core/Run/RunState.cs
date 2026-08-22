@@ -96,6 +96,15 @@ public sealed class RunState
     public int EliteEncountersVisited;
     public int[] EventSequence = [];
     public int EventSequenceIndex;
+    /// <summary>
+    /// The run's relic queues, shuffled once at run start. Every relic reward pulls from
+    /// the player's; the shared one exists so that a relic pulled by one player is gone
+    /// for the others, and is kept because populating it consumes 112 UpFront draws that
+    /// sit between the seed and everything else in the run.
+    /// </summary>
+    public RelicGrabBag RelicBag = new();
+    public RelicGrabBag SharedRelicBag = new(refreshAllowed: true);
+
     public int WingedBootsTimesUsed;
     public double CardRarityOffset;
     public double PotionRewardOdds = 0.4;

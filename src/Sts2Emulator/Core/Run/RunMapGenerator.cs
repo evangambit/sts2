@@ -5,11 +5,40 @@ namespace Sts2Emulator.Core.Run;
 public static class RunMapGenerator
 {
     /// <summary>
-    /// UpFront draws RunManager.GenerateRooms makes before the first act's rooms
-    /// are generated: the shared-ancient shuffle plus one subset-size draw per act
-    /// after the first. Pinned to the mature profile the captures are taken on.
+    /// UpFront draws RunManager.GenerateRooms makes before the first act's rooms are
+    /// generated: the shared-ancient shuffle plus one subset-size draw per act after the
+    /// first. Pinned to the mature profile the captures are taken on.
+    ///
+    /// This was 232 while the relic grab bags were unmodelled, because
+    /// RunManager.InitializeNewRun populates them off the same stream BEFORE
+    /// GenerateRooms runs, and their shuffles are 230 of those draws. Populating the bags
+    /// for real makes the same draws in the same order, so the map still lands where it
+    /// did -- and now the run knows which relics came out.
     /// </summary>
-    private const int SharedAncientPrefixDraws = 232;
+    private const int SharedAncientPrefixDraws = 2;
+
+    /// <summary>
+    /// RunManager.InitializeNewRun: the shared bag from SharedRelicPool as-is, then the
+    /// player's from the shared pool plus the character's, filtered to the four reward
+    /// rarities. Both shuffle off UpFront, shared first -- the order and the split are
+    /// what put the rest of the run's draws where they are.
+    /// </summary>
+    private static void PopulateRelicGrabBags(RunState state, GameRng upFront)
+    {
+        state.SharedRelicBag = new RelicGrabBag(refreshAllowed: true);
+        state.SharedRelicBag.Populate(
+            GeneratedData.RelicPools.Shared.ToArray(),
+            upFront,
+            filterRarities: false
+        );
+
+        state.RelicBag = new RelicGrabBag();
+        state.RelicBag.Populate(
+            [.. GeneratedData.RelicPools.Shared.ToArray(), .. GeneratedData.RelicPools.Ironclad.ToArray()],
+            upFront,
+            filterRarities: true
+        );
+    }
 
     public static void SelectActAndGenerateRooms(RunState state)
     {
@@ -39,6 +68,7 @@ public static class RunMapGenerator
         // 232 + 30 = 262 for Overgrowth's 31 events, 232 + 27 = 259 for
         // Underdocks' 28.
         var upFront = state.Rng.UpFront;
+        PopulateRelicGrabBags(state, upFront);
         for (int i = 0; i < SharedAncientPrefixDraws; i++)
         {
             upFront.NextDouble();
