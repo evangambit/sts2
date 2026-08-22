@@ -237,7 +237,7 @@
       "block": 0,
       "energy": null,
       "max_energy": null,
-      "gold": 99,
+      "gold": 257,
       "deck": [
         {
           "index": 0,
@@ -388,19 +388,10 @@
       "options": [
         {
           "index": 0,
-          "title": "Solo Quest",
-          "description": "Gain 158 Gold. Lose 18 HP.",
+          "title": "Proceed",
+          "description": "",
           "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": true,
-          "keywords": []
-        },
-        {
-          "index": 1,
-          "title": "Join Forces",
-          "description": "Gain 51 Gold.",
-          "is_locked": false,
-          "is_proceed": false,
+          "is_proceed": true,
           "was_chosen": false,
           "keywords": []
         }

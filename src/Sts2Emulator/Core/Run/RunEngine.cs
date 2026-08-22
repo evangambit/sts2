@@ -1646,8 +1646,15 @@ public sealed class RunEngine
             case RunConstants.EventDenseVegetation:
                 if (action == 0)
                 {
+                    // The gold is rolled -- NextInt(61, 100) on the event's own stream --
+                    // and RunNonCombatEffects already rolled it. The handler was paying a
+                    // flat 80, which is inside the range and so looked right in every
+                    // capture that never checked the number.
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 8);
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(State.Relics, 80);
+                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
+                        State.Relics,
+                        RunNonCombatEffects.DenseVegetationGold(State)
+                    );
                 }
                 else if (action == 1)
                 {
@@ -1870,8 +1877,14 @@ public sealed class RunEngine
             case RunConstants.EventAbyssalBaths:
                 if (action == 0)
                 {
+                    // MaxHpVar(2) then DamageVar(3), in that order -- the max hp arrives
+                    // first and carries current hp up with it, so immersing is a net
+                    // loss of one. The damage was modelled as 1, which is the net rather
+                    // than the hit. OnImmerse also raises the damage by 1 for the next
+                    // immersion, which the follow-up page's Linger offers; the emulator
+                    // does not model that page yet.
                     RunNonCombatEffects.GainMaxHp(State, 2);
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 1);
+                    State.PlayerHp = Math.Max(0, State.PlayerHp - 3);
                 }
                 else if (action == 1)
                 {
@@ -2151,12 +2164,11 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    if (State.Gold < 100)
-                    {
-                        return -1;
-                    }
-
-                    State.Gold -= 100;
+                    // GiveGold is offered unconditionally and simply loses GoldVar(100);
+                    // LoseGold floors at zero, so a player with 99 hands over 99 and
+                    // still gets the relic. Refusing below 100 made the option look
+                    // unaffordable when the game never priced it that way.
+                    State.Gold = Math.Max(0, State.Gold - 100);
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
                         RunRewardGenerator.NextRelic(State)
@@ -2184,6 +2196,14 @@ public sealed class RunEngine
             case RunConstants.EventRelicTrader:
                 if (action is >= 0 and <= 2)
                 {
+                    // With nothing tradable the event offers a lone Proceed at index 0
+                    // rather than a trade -- which is what the action mask offers too, so
+                    // refusing it here left the two disagreeing about the same action.
+                    if (!State.Relics.Any(relic => IsTradableRelic(relic)))
+                    {
+                        break;
+                    }
+
                     if (State.Relics.Count <= action + 1)
                     {
                         return -1;

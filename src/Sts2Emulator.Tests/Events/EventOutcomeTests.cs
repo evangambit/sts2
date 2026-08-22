@@ -66,26 +66,29 @@ public class EventOutcomeTests
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
-        // Payment Plan leads to the event's own "crystal_sphere" screen, which the
-        // emulator has no phase for.
-        "CrystalSphere-opt1.json",
-        // Gorge offers eight rolled Commons on a grid and takes two; the emulator has
-        // no grid selection, so it adds one card outright.
-        "RoomFullOfCheese-opt0.json",
-        "AbyssalBaths-opt0.json",
-        "BrainLeech-opt0.json",
+        // What is left all needs a screen or a mechanic the emulator does not have. The
+        // numbers and the gates are done: everything that was a wrong amount or a wrongly
+        // refused option has been fixed.
+        //
+        // Crystal Sphere runs its own "crystal_sphere" minigame screen, which has no
+        // phase here. Paying for it is refused outright, and Payment Plan's OUTCOME
+        // already matches -- the deck gains the same card -- so opt1 fails on the screen
+        // name alone.
         "CrystalSphere-opt0.json",
-        // Two racy captures, not emulator defects. Both options run VFX waits before
-        // their effects land and the capture reads the run mid-animation: Dense
-        // Vegetation records neither the 8 HP nor the gold, and Jungle Maze records the
-        // 18 HP but not the 158 gold its own option text promises. They need re-capturing.
-        "DenseVegetation-opt0.json",
-        "JungleMazeAdventure-opt0.json",
+        "CrystalSphere-opt1.json",
+        // Share Knowledge rolls five cards through the reward machinery and opens a grid
+        // to keep one. RunState.RewardCards holds three, so the card-reward phase cannot
+        // carry the offer; the emulator picks a card itself instead, and off the wrong
+        // stream at that.
+        "BrainLeech-opt0.json",
+        // Gorge offers eight rolled Commons on a grid and takes two.
+        "RoomFullOfCheese-opt0.json",
+        // Grabbing off the belt pays 40 gold for whatever RollDish landed on, a weighted
+        // dish machine that is not modelled. Refused rather than paying out a dish the
+        // belt never had.
         "EndlessConveyor-opt0.json",
-        "JungleMazeAdventure-opt0.json",
+        // "I Can Take Them" starts a fight, which an event cannot do in the emulator yet.
         "PunchOff-opt1.json",
-        "RanwidTheElder-opt1.json",
-        "RelicTrader-opt0.json",
     ];
 
     // "-opt0.json" and friends, but not "-options.json": one character after "opt".

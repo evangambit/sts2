@@ -160,7 +160,38 @@ def choose(base_url: str, index: int) -> dict[str, Any]:
     if result.get("status") != "ok":
         raise RuntimeError(f"choose_event_option failed: {result}")
 
-    return trace_real_game.wait_for_state(base_url, 0.5)
+    return wait_until_settled(base_url)
+
+
+def wait_until_settled(
+    base_url: str,
+    settle_reads: int = 4,
+    timeout: float = 20.0,
+) -> dict[str, Any]:
+    """Poll until the run stops changing, then return it.
+
+    An option's effects do not land at once: several run a VFX wait first, so a fixed
+    pause after the choice reads the run mid-animation and records a state the game was
+    only passing through. Dense Vegetation lost both its healing and its gold that way,
+    and Jungle Maze recorded the hp it costs but not the gold it pays.
+
+    Returns the last state read when it never settles, so a genuinely animated event
+    yields something to look at rather than raising.
+    """
+    deadline = time.monotonic() + timeout
+    previous: dict[str, Any] | None = None
+    still_for = 0
+    state = start_real_game_run.get_state(base_url)
+    while time.monotonic() < deadline:
+        current = trace_run.compact_state(state)
+        still_for = still_for + 1 if current == previous else 0
+        previous = current
+        if still_for >= settle_reads:
+            return state
+        time.sleep(0.25)
+        state = start_real_game_run.get_state(base_url)
+
+    return state
 
 
 def capture(
