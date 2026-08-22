@@ -968,6 +968,64 @@ public static class RunNonCombatEffects
         state.EventPage++;
     }
 
+    /// <summary>
+    /// What the next Decipher costs at the Tablet of Truth. The tablet is not one choice
+    /// but five, and the price doubles each time before the last one asks for everything:
+    /// 3, 6, 12, 24, then MaxHp - 1. <c>GetDecipherCost</c> reads the count AFTER it moves,
+    /// which is why the first is the DynamicVar's own 3 rather than anything the switch
+    /// returns.
+    /// </summary>
+    public static int TabletOfTruthCost(RunState state) =>
+        state.EventPage switch
+        {
+            0 => 3,
+            1 => 6,
+            2 => 12,
+            3 => 24,
+            _ => state.PlayerMaxHp - 1,
+        };
+
+    /// <summary>
+    /// One Decipher: pay the Max HP and upgrade. Every stage but the last upgrades ONE
+    /// card rolled off the event's stream; the fifth upgrades every upgradable card in the
+    /// deck, which is the whole reason to have kept paying.
+    ///
+    /// <c>LoseMaxHpAndUpgrade</c> also kills outright when the price is not less than Max
+    /// HP -- it takes MaxHp - 1 and then calls Kill -- so a tablet the run cannot afford
+    /// ends it.
+    /// </summary>
+    public static void Decipher(RunState state)
+    {
+        int cost = TabletOfTruthCost(state);
+        bool lethal = cost >= state.PlayerMaxHp;
+        LoseMaxHp(state, lethal ? state.PlayerMaxHp - 1 : cost);
+        if (lethal)
+        {
+            state.PlayerHp = 0;
+            return;
+        }
+
+        if (state.EventPage == 4)
+        {
+            for (int i = 0; i < state.Deck.Count; i++)
+            {
+                if (RunConstants.IsRunCardUpgradable(state.Deck[i]))
+                {
+                    state.Deck[i] = state.Deck[i] with { Upgraded = true };
+                }
+            }
+        }
+        else
+        {
+            UpgradeRandomCard(state, "TABLET_OF_TRUTH");
+        }
+
+        state.EventPage++;
+    }
+
+    /// <summary>The tablet has five secrets and no more.</summary>
+    public static bool TabletHasMoreToSay(RunState state) => state.EventPage < 5;
+
     /// <summary>The damage the NEXT immersion will do: DamageVar(3), plus one per dip.</summary>
     public static int AbyssalBathsDamage(RunState state) => 3 + state.EventPage;
 

@@ -1893,19 +1893,27 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventTabletOfTruth:
+                // The tablet is five secrets, not one, and each costs more than the last:
+                // 3, 6, 12, 24, and then everything but a single point of Max HP. The
+                // emulator read exactly one of them for a flat 3 and upgraded whichever
+                // card came first, so the decision the event is built around -- how far to
+                // read before it takes the run -- did not exist.
                 if (action == 0)
                 {
-                    State.PlayerMaxHp = Math.Max(1, State.PlayerMaxHp - 3);
-                    State.PlayerHp = Math.Min(State.PlayerHp, State.PlayerMaxHp);
-                    // A deck with nothing left to upgrade does not make the option
-                    // illegal: none of these events locks it, so the game opens a selector
-                    // that comes back empty and the event finishes. Refusing here told an
-                    // agent a move it was offered did not exist.
-                    RunNonCombatEffects.UpgradeFirstCard(State);
+                    RunNonCombatEffects.Decipher(State);
+                    if (RunNonCombatEffects.TabletHasMoreToSay(State))
+                    {
+                        return 0;
+                    }
                 }
                 else if (action == 1)
                 {
-                    HealPlayer(20);
+                    // Smash heals 20 on the first page; on a later one the second option
+                    // is Give Up, which does nothing at all.
+                    if (State.EventPage == 0)
+                    {
+                        HealPlayer(20);
+                    }
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3646,6 +3654,11 @@ public sealed class RunEngine
                 break;
             case RunConstants.EventAbyssalBaths when State.EventPage > 0:
                 // Linger, or climb out.
+                SetMask(mask, 0);
+                SetMask(mask, 1);
+                break;
+            case RunConstants.EventTabletOfTruth when State.EventPage > 0:
+                // A later page offers Decipher again, or Give Up.
                 SetMask(mask, 0);
                 SetMask(mask, 1);
                 break;

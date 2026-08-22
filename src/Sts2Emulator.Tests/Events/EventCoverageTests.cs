@@ -44,10 +44,8 @@ public class EventCoverageTests
         "BattlewornDummy",
         "BrainLeech",
         "Bugslayer",
-        "ByrdonisNest",
         "ColorfulPhilosophers",
         "ColossalFlower",
-        "DenseVegetation",
         "EndlessConveyor",
         // No option-list capture exists for this one: it presents as its own
         // "fake_merchant" state with a shop of fake relics rather than a list of
@@ -57,22 +55,16 @@ public class EventCoverageTests
         "GraveOfTheForgotten",
         "HungryForMushrooms",
         "InfestedAutomaton",
-        "JungleMazeAdventure",
         "LostWisp",
         "PunchOff",
         "Reflections",
         "RoomFullOfCheese",
         "RoundTeaParty",
-        "SapphireSeed",
-        "SelfHelpBook",
         "SpiritGrafter",
         "Symbiote",
-        "TabletOfTruth",
         "TheLanternKey",
-        "ThisOrThat",
         "TinkerTime",
         "Trial",
-        "UnrestSite",
         "ZenWeaver",
     ];
 
