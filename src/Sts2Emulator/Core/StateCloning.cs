@@ -262,6 +262,7 @@ public static class StateCloning
             PendingSelectionFollowUpCard = state.PendingSelectionFollowUpCard,
             PendingSelectionFollowUpCount = state.PendingSelectionFollowUpCount,
             PendingSelectionFollowUpHpLoss = state.PendingSelectionFollowUpHpLoss,
+            PendingSelectionReturnsToEvent = state.PendingSelectionReturnsToEvent,
             RelicBag = state.RelicBag.Clone(),
             SharedRelicBag = state.SharedRelicBag.Clone(),
             PendingRestUpgrade = state.PendingRestUpgrade,

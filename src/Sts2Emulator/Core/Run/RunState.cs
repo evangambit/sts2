@@ -193,6 +193,13 @@ public sealed class RunState
     /// selector is open shows the player still at full health.
     /// </summary>
     public int PendingSelectionFollowUpHpLoss;
+
+    /// <summary>
+    /// The event that opened this selection is not finished by it. The Endless Conveyor's
+    /// Jelly Liver transforms a card and then the belt turns and offers the next dish, so
+    /// resolving the selection has to return to the event rather than end it.
+    /// </summary>
+    public bool PendingSelectionReturnsToEvent;
     public bool PendingRestUpgrade;
     public bool RestResultPending;
     public int UnknownMapPointsVisited;

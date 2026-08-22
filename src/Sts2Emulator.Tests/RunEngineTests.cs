@@ -1180,7 +1180,20 @@ public class RunEngineTests
         Assert.Equal(25, engine.State.PlayerHp);
         Assert.All(engine.State.RewardCards, cardId => Assert.NotEqual(0, cardId));
         Assert.True(engine.State.RewardCardPending);
-        Assert.Equal(rewardsCallsBefore, engine.State.PlayerRng.Rewards.CallCount);
+
+        // The reward is ROLLED from the colourless pool, so it costs draws off the
+        // rewards stream -- CardFactory.CreateForReward rolls a rarity and then a card
+        // for each of the three. This used to assert that nothing was drawn, which was
+        // true only because three card ids were hard-written here and the same three came
+        // out of every seed.
+        Assert.True(
+            engine.State.PlayerRng.Rewards.CallCount > rewardsCallsBefore,
+            "a rolled card reward has to cost draws"
+        );
+        Assert.All(
+            engine.State.RewardCards,
+            cardId => Assert.Contains(cardId, GeneratedData.CardPools.Colorless.ToArray())
+        );
     }
 
     [Fact]

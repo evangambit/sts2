@@ -1700,17 +1700,26 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
+                    // Rip offers a COLORLESS card reward -- three cards rolled from the
+                    // colourless pool at the usual odds. Three card ids stood here,
+                    // hard-written, which is the same reward whatever the seed.
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 5);
                     State.RewardGold = 0;
                     State.RewardPotion = 0;
                     State.RelicReward = 0;
+                    State.PendingPotionRewards.Clear();
+                    var offered = RunRewardGenerator.GenerateEventOfferCards(
+                        State,
+                        State.RewardCards.Length,
+                        GeneratedData.CardPools.Colorless
+                    );
+                    for (int i = 0; i < State.RewardCards.Length; i++)
+                    {
+                        State.RewardCards[i] = offered[i];
+                        State.RewardUpgraded[i] = false;
+                    }
+
                     State.RewardCardPending = true;
-                    State.RewardCards[0] = 455;
-                    State.RewardCards[1] = 521;
-                    State.RewardCards[2] = 396;
-                    State.RewardUpgraded[0] = false;
-                    State.RewardUpgraded[1] = false;
-                    State.RewardUpgraded[2] = false;
                     State.Phase = RunPhase.RelicReward;
                     return 0;
                 }
@@ -2083,21 +2092,28 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventEndlessConveyor:
-                // The belt is a weighted dish machine and only the second option is
-                // modelled: Observe the Chef upgrades ONE card rolled off the event's own
-                // stream. The emulator healed 10 for it. Grabbing off the belt pays 40
-                // gold for whatever dish RollDish landed on, which is not modelled -- so
-                // it is refused rather than paying out a potion the belt never had.
+                // The belt keeps turning: grabbing pays for whatever dish RollDish
+                // landed on and then offers the next one, so the event is a loop the
+                // player leaves rather than a single choice.
                 if (action == 0)
                 {
                     // Grabbing pays GoldVar(40) for whatever the belt is carrying, then
                     // the belt turns. Jelly Liver is the one dish that needs the player:
                     // it transforms a card they pick.
+                    // GenerateGrabSomethingOffTheBeltOption locks the grab below the
+                    // price, so a run that cannot pay is not offered it and must not be
+                    // allowed to take it.
+                    if (State.Gold < RunConstants.ConveyorGrabCost)
+                    {
+                        return -1;
+                    }
+
                     int dish = RunNonCombatEffects.EndlessConveyorDish(State);
-                    State.Gold = Math.Max(0, State.Gold - RunConstants.ConveyorGrabCost);
+                    State.Gold -= RunConstants.ConveyorGrabCost;
                     if (dish == RunNonCombatEffects.DishJellyLiver)
                     {
                         RunNonCombatEffects.RollNextConveyorDish(State);
+                        State.EventPage++;
                         if (
                             RunNonCombatEffects.BeginDeckSelection(
                                 State,
@@ -2106,6 +2122,7 @@ public sealed class RunEngine
                             )
                         )
                         {
+                            State.PendingSelectionReturnsToEvent = true;
                             State.Phase = RunPhase.TransformSelect;
                             return 0;
                         }
@@ -2115,12 +2132,19 @@ public sealed class RunEngine
 
                     RunNonCombatEffects.ApplyEndlessConveyorDish(State, dish);
                     RunNonCombatEffects.RollNextConveyorDish(State);
+                    State.EventPage++;
                     return 0;
                 }
 
                 if (action == 1)
                 {
-                    RunNonCombatEffects.UpgradeRandomCard(State, "ENDLESS_CONVEYOR");
+                    // Only the FIRST page offers Observe the Chef. Once the player has
+                    // grabbed, the belt's second option is Leave, which does nothing --
+                    // upgrading a card for it paid them to walk away.
+                    if (State.EventPage == 0)
+                    {
+                        RunNonCombatEffects.UpgradeRandomCard(State, "ENDLESS_CONVEYOR");
+                    }
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3415,8 +3439,15 @@ public sealed class RunEngine
             }
 
             RunNonCombatEffects.ResolveDeckSelectionFollowUp(State);
+            bool returnsToEvent = State.PendingSelectionReturnsToEvent;
             RunNonCombatEffects.ClearDeckSelection(State);
-            State.EventId = RunConstants.EventResultPending;
+            // Most selections finish the event that opened them; the belt's Jelly Liver
+            // does not, because the belt turns and offers the next dish.
+            if (!returnsToEvent)
+            {
+                State.EventId = RunConstants.EventResultPending;
+            }
+
             State.Phase = RunPhase.Event;
             return 0;
         }
@@ -3655,6 +3686,17 @@ public sealed class RunEngine
             case RunConstants.EventAbyssalBaths when State.EventPage > 0:
                 // Linger, or climb out.
                 SetMask(mask, 0);
+                SetMask(mask, 1);
+                break;
+            case RunConstants.EventEndlessConveyor:
+                // Grabbing is locked below its price; the second option is Observe the
+                // Chef on the first page and Leave on every later one, and neither costs
+                // anything.
+                if (State.Gold >= RunConstants.ConveyorGrabCost)
+                {
+                    SetMask(mask, 0);
+                }
+
                 SetMask(mask, 1);
                 break;
             case RunConstants.EventTabletOfTruth when State.EventPage > 0:

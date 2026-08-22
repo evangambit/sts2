@@ -548,6 +548,7 @@ public static class RunNonCombatEffects
         state.PendingSelectionFollowUpCard = 0;
         state.PendingSelectionFollowUpCount = 0;
         state.PendingSelectionFollowUpHpLoss = 0;
+        state.PendingSelectionReturnsToEvent = false;
     }
 
     /// <summary>

@@ -42,11 +42,9 @@ public class EventCoverageTests
     [
         "Amalgamator",
         "BattlewornDummy",
-        "BrainLeech",
         "Bugslayer",
         "ColorfulPhilosophers",
         "ColossalFlower",
-        "EndlessConveyor",
         // No option-list capture exists for this one: it presents as its own
         // "fake_merchant" state with a shop of fake relics rather than a list of
         // options, so it needs a shop-shaped capture. See scripts/capture_event.py.
@@ -56,9 +54,7 @@ public class EventCoverageTests
         "HungryForMushrooms",
         "InfestedAutomaton",
         "LostWisp",
-        "PunchOff",
         "Reflections",
-        "RoomFullOfCheese",
         "RoundTeaParty",
         "SpiritGrafter",
         "Symbiote",
