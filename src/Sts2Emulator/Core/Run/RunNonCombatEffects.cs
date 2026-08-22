@@ -617,6 +617,9 @@ public static class RunNonCombatEffects
             case RunConstants.EventSunkenTreasury:
                 CalculateSunkenTreasuryVars(state);
                 break;
+            case RunConstants.EventEndlessConveyor:
+                CalculateEndlessConveyorVars(state);
+                break;
             case RunConstants.EventSunkenStatue:
                 CalculateSunkenStatueVars(state);
                 break;
@@ -881,6 +884,151 @@ public static class RunNonCombatEffects
     public static int GlowwaterPotion =>
         GeneratedData.Potions.FindId("GlowwaterPotion")
         ?? throw new InvalidOperationException("No potion named GlowwaterPotion");
+
+    // ── Endless Conveyor's belt ───────────────────────────────────────────────
+    // The dish is rolled before the option is even shown -- the option reads "Grab
+    // Fried Eel off the Belt" -- and rolled again after every grab, so the belt is a
+    // small state machine rather than a one-off. EventValue0 carries the dish now on
+    // the belt and EventValue1 how many grabs have happened.
+
+    public const int DishCaviar = 1;
+    public const int DishSpicySnappy = 2;
+    public const int DishJellyLiver = 3;
+    public const int DishFriedEel = 4;
+    public const int DishSuspiciousCondiment = 5;
+    public const int DishClamRoll = 6;
+    public const int DishGoldenFysh = 7;
+    public const int DishSeapunkSalad = 8;
+
+    /// <summary>The dish currently on the belt.</summary>
+    public static int EndlessConveyorDish(RunState state)
+    {
+        if (state.EventValue0 is null)
+        {
+            CalculateEndlessConveyorVars(state);
+        }
+
+        return state.EventValue0!.Value;
+    }
+
+    private static void CalculateEndlessConveyorVars(RunState state)
+    {
+        state.EventValue1 = 0;
+        RollDish(state);
+    }
+
+    /// <summary>
+    /// EndlessConveyor.RollDish: every fifth grab is a Seapunk Salad outright, and
+    /// otherwise a weighted pick over the dishes the run currently qualifies for, minus
+    /// whatever was on the belt a moment ago.
+    /// </summary>
+    /// <remarks>
+    /// The forced fifth returns before the roll, so it consumes nothing -- which is why
+    /// the stream position is the grab count less the fifths, not the grab count.
+    /// </remarks>
+    /// <summary>Turn the belt after a grab.</summary>
+    public static void RollNextConveyorDish(RunState state) => RollDish(state);
+
+    private static void RollDish(RunState state)
+    {
+        int grabs = (state.EventValue1 ?? 0) + 1;
+        state.EventValue1 = grabs;
+        if (grabs % 5 == 0)
+        {
+            state.EventValue0 = DishSeapunkSalad;
+            return;
+        }
+
+        int lastDish = state.EventValue0 ?? 0;
+        var dishes = new List<(int Dish, float Weight)>
+        {
+            (DishCaviar, 6f),
+            (DishSpicySnappy, 3f),
+            (DishJellyLiver, 3f),
+            (DishFriedEel, 3f),
+        };
+        if (state.PotionSlots.Any(potion => potion == 0))
+        {
+            dishes.Add((DishSuspiciousCondiment, 3f));
+        }
+
+        if (state.PlayerHp != state.PlayerMaxHp)
+        {
+            dishes.Add((DishClamRoll, 6f));
+        }
+
+        if (grabs > 1)
+        {
+            dishes.Add((DishGoldenFysh, 1f));
+        }
+
+        dishes.RemoveAll(dish => dish.Dish == lastDish);
+
+        int priorRolls = grabs - 1 - ((grabs - 1) / 5);
+        var rng = EventRng(state, "ENDLESS_CONVEYOR");
+        rng.AdvanceToCallCount(priorRolls);
+
+        float total = dishes.Sum(dish => dish.Weight);
+        float roll = (float)rng.NextDouble() * total;
+        float running = 0f;
+        foreach (var (dish, weight) in dishes)
+        {
+            running += weight;
+            if (roll < running)
+            {
+                state.EventValue0 = dish;
+                return;
+            }
+        }
+
+        state.EventValue0 = dishes[^1].Dish;
+    }
+
+    /// <summary>
+    /// Eat what was grabbed, then let the belt turn. Returns false when the dish needs a
+    /// screen the caller has to open.
+    /// </summary>
+    public static void ApplyEndlessConveyorDish(RunState state, int dish)
+    {
+        switch (dish)
+        {
+            case DishClamRoll:
+                state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 10);
+                break;
+            case DishCaviar:
+                GainMaxHp(state, 4);
+                break;
+            case DishGoldenFysh:
+                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 75);
+                break;
+            case DishSeapunkSalad:
+                AddCardToDeck(state, new CardInstance(NamedCard("FeedingFrenzy"), Upgraded: false));
+                break;
+            case DishFriedEel:
+                AddCardToDeck(
+                    state,
+                    new CardInstance(
+                        RunRewardGenerator.GenerateEventOfferCards(
+                            state,
+                            1,
+                            RunRewardGenerator.ColorlessRewardPool
+                        )[0],
+                        Upgraded: false
+                    )
+                );
+                break;
+            case DishSpicySnappy:
+                UpgradeRandomCard(state, "ENDLESS_CONVEYOR");
+                break;
+            case DishSuspiciousCondiment:
+                state.PendingPotionRewards.Add(
+                    RunRewardGenerator.NextPotion(state, state.PlayerRng.Rewards)
+                );
+                break;
+            default:
+                break;
+        }
+    }
 
     private static void CalculateSunkenTreasuryVars(RunState state)
     {

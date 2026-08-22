@@ -199,6 +199,9 @@ public static class RunConstants
     public const int RelicPandorasBox = 1510;
 
     /// <summary>Normal rooms drawn from the act's weak pool before the normal one.</summary>
+    /// <summary>Endless Conveyor's GoldVar(40): the price of one grab.</summary>
+    public const int ConveyorGrabCost = 40;
+
     /// <summary>The construct fight Punch Off's second page starts.</summary>
     public const int PunchOffEncounterId = 56;
 

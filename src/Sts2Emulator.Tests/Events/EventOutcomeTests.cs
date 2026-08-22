@@ -66,20 +66,18 @@ public class EventOutcomeTests
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
-        // What is left all needs a screen or a mechanic the emulator does not have. The
-        // numbers and the gates are done: everything that was a wrong amount or a wrongly
-        // refused option has been fixed.
+        // Crystal Sphere is the last one, and it is a feature rather than a defect.
+        // Both its options end in CrystalSphereMinigame: an 11x11 grid seeded off the
+        // event's own stream, two tool sizes, three or six divinations to spend, and
+        // rewards for whatever the player uncovers. That is an action space of its own
+        // -- the mod carries three dedicated actions for it -- so it wants building
+        // deliberately, not bolting onto an event handler.
         //
-        // Crystal Sphere runs its own "crystal_sphere" minigame screen, which has no
-        // phase here. Paying for it is refused outright, and Payment Plan's OUTCOME
-        // already matches -- the deck gains the same card -- so opt1 fails on the screen
-        // name alone.
+        // Until it exists neither option can be taken. Payment Plan's outcome already
+        // matches, mind: the deck gains the same Debt, so opt1 fails on the screen name
+        // alone.
         "CrystalSphere-opt0.json",
         "CrystalSphere-opt1.json",
-        // Grabbing off the belt pays 40 gold for whatever RollDish landed on, a weighted
-        // dish machine that is not modelled. Refused rather than paying out a dish the
-        // belt never had.
-        "EndlessConveyor-opt0.json",
     ];
 
     // "-opt0.json" and friends, but not "-options.json": one character after "opt".

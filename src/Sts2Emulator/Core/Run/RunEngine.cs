@@ -1944,7 +1944,32 @@ public sealed class RunEngine
                 // it is refused rather than paying out a potion the belt never had.
                 if (action == 0)
                 {
-                    return -1;
+                    // Grabbing pays GoldVar(40) for whatever the belt is carrying, then
+                    // the belt turns. Jelly Liver is the one dish that needs the player:
+                    // it transforms a card they pick.
+                    int dish = RunNonCombatEffects.EndlessConveyorDish(State);
+                    State.Gold = Math.Max(0, State.Gold - RunConstants.ConveyorGrabCost);
+                    if (dish == RunNonCombatEffects.DishJellyLiver)
+                    {
+                        RunNonCombatEffects.RollNextConveyorDish(State);
+                        if (
+                            RunNonCombatEffects.BeginDeckSelection(
+                                State,
+                                DeckSelection.TransformToRandom,
+                                arg: 0
+                            )
+                        )
+                        {
+                            State.Phase = RunPhase.TransformSelect;
+                            return 0;
+                        }
+
+                        return 0;
+                    }
+
+                    RunNonCombatEffects.ApplyEndlessConveyorDish(State, dish);
+                    RunNonCombatEffects.RollNextConveyorDish(State);
+                    return 0;
                 }
 
                 if (action == 1)
