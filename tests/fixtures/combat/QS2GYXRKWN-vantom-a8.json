@@ -1,5 +1,5 @@
 {
-  "rooms_entered": 58,
+  "rooms_entered": 52,
   "state_type": "boss",
   "battle": {
     "round": 1,
@@ -7,19 +7,28 @@
     "is_play_phase": true,
     "enemies": [
       {
-        "entity_id": "SOUL_FYSH_0",
+        "entity_id": "VANTOM_0",
         "combat_id": 1,
-        "name": "Soul Fysh",
-        "hp": 221,
-        "max_hp": 221,
+        "name": "Vantom",
+        "hp": 183,
+        "max_hp": 183,
         "block": 0,
-        "status": [],
+        "status": [
+          {
+            "id": "SLIPPERY_POWER",
+            "name": "Slippery",
+            "amount": 9,
+            "type": "Buff",
+            "description": "The next 9 times Vantom loses HP, it only loses 1 HP instead.",
+            "keywords": []
+          }
+        ],
         "intents": [
           {
-            "type": "StatusCard",
-            "label": "2",
-            "title": "Strategic",
-            "description": "This enemy intends to give you 2 Status cards."
+            "type": "Attack",
+            "label": "7",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 7 damage."
           }
         ]
       }
@@ -429,8 +438,8 @@
   },
   "capture": {
     "seed": "QS2GYXRKWN",
-    "encounter": "soul-fysh",
-    "live_encounter": "SoulFyshBoss",
+    "encounter": "vantom",
+    "live_encounter": "VantomBoss",
     "completed_combat_rooms": -1,
     "total_floor": 1,
     "ascension": 8,
@@ -445,24 +454,24 @@
       "actions": [
         5
       ],
-      "player_hp": 64,
+      "player_hp": 57,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Vantom",
+          "hp": 183,
           "intent": [
             0,
-            16
+            12
           ]
         }
       ],
       "live_hand": [
         "BASH",
-        "BECKON",
         "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
-        "DEFEND_IRONCLAD"
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD"
       ]
     },
     {
@@ -471,23 +480,23 @@
       "actions": [
         5
       ],
-      "player_hp": 42,
+      "player_hp": 45,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Vantom",
+          "hp": 183,
           "intent": [
             0,
-            7
+            26
           ]
         }
       ],
       "live_hand": [
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
         "DEFEND_IRONCLAD",
-        "BECKON",
         "STRIKE_IRONCLAD"
       ]
     },
@@ -497,12 +506,12 @@
       "actions": [
         5
       ],
-      "player_hp": 29,
+      "player_hp": 19,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Vantom",
+          "hp": 183,
           "intent": [
             2,
             null
@@ -510,11 +519,11 @@
         }
       ],
       "live_hand": [
-        "BECKON",
+        "BASH",
         "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
-        "BASH",
-        "STRIKE_IRONCLAD"
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD"
       ]
     },
     {
@@ -523,21 +532,21 @@
       "actions": [
         5
       ],
-      "player_hp": 23,
+      "player_hp": 19,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Vantom",
+          "hp": 183,
           "intent": [
             0,
-            13
+            9
           ]
         }
       ],
       "live_hand": [
-        "DEFEND_IRONCLAD",
-        "DEFEND_IRONCLAD",
+        "WOUND",
+        "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD"
@@ -553,53 +562,27 @@
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
-          "intent": [
-            3,
-            2
-          ]
-        }
-      ],
-      "live_hand": [
-        "STRIKE_IRONCLAD",
-        "STRIKE_IRONCLAD",
-        "DEFEND_IRONCLAD",
-        "DEFEND_IRONCLAD",
-        "BECKON"
-      ]
-    },
-    {
-      "turn": 7,
-      "action": 5,
-      "actions": [
-        5
-      ],
-      "player_hp": 4,
-      "player_max_hp": 80,
-      "enemies": [
-        {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Vantom",
+          "hp": 183,
           "intent": [
             0,
-            24
+            16
           ]
         }
       ],
       "live_hand": [
-        "BECKON",
-        "BECKON",
-        "BASH",
-        "BECKON",
-        "BECKON"
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "BASH"
       ]
     }
   ],
   "coverage": {
-    "Soul Fysh": {
+    "Vantom": {
       "seen": 6,
-      "declared": 5
+      "declared": 4
     }
   }
 }

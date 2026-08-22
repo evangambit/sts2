@@ -1,5 +1,5 @@
 {
-  "rooms_entered": 58,
+  "rooms_entered": 56,
   "state_type": "boss",
   "battle": {
     "round": 1,
@@ -7,19 +7,41 @@
     "is_play_phase": true,
     "enemies": [
       {
-        "entity_id": "SOUL_FYSH_0",
+        "entity_id": "LAGAVULIN_MATRIARCH_0",
         "combat_id": 1,
-        "name": "Soul Fysh",
-        "hp": 221,
-        "max_hp": 221,
-        "block": 0,
-        "status": [],
+        "name": "Lagavulin Matriarch",
+        "hp": 233,
+        "max_hp": 233,
+        "block": 12,
+        "status": [
+          {
+            "id": "PLATING_POWER",
+            "name": "Plating",
+            "amount": 12,
+            "type": "Buff",
+            "description": "At the end of your turn, gain 12 Block. Plating is reduced by 1 at the start of your turn.",
+            "keywords": [
+              {
+                "name": "Block",
+                "description": "Until next turn, prevents damage."
+              }
+            ]
+          },
+          {
+            "id": "ASLEEP_POWER",
+            "name": "Asleep",
+            "amount": 3,
+            "type": "Buff",
+            "description": "Awakens upon losing HP or after 3 turns.",
+            "keywords": []
+          }
+        ],
         "intents": [
           {
-            "type": "StatusCard",
-            "label": "2",
-            "title": "Strategic",
-            "description": "This enemy intends to give you 2 Status cards."
+            "type": "Sleep",
+            "label": "",
+            "title": "Sleeping",
+            "description": "This enemy is doing nothing this turn."
           }
         ]
       }
@@ -429,8 +451,8 @@
   },
   "capture": {
     "seed": "QS2GYXRKWN",
-    "encounter": "soul-fysh",
-    "live_encounter": "SoulFyshBoss",
+    "encounter": "lagavulin-matriarch",
+    "live_encounter": "LagavulinMatriarchBoss",
     "completed_combat_rooms": -1,
     "total_floor": 1,
     "ascension": 8,
@@ -449,20 +471,20 @@
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Lagavulin Matriarch",
+          "hp": 233,
           "intent": [
-            0,
-            16
+            4,
+            null
           ]
         }
       ],
       "live_hand": [
         "BASH",
-        "BECKON",
         "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
-        "DEFEND_IRONCLAD"
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD"
       ]
     },
     {
@@ -471,23 +493,23 @@
       "actions": [
         5
       ],
-      "player_hp": 42,
+      "player_hp": 64,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Lagavulin Matriarch",
+          "hp": 233,
           "intent": [
-            0,
-            7
+            4,
+            null
           ]
         }
       ],
       "live_hand": [
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
         "DEFEND_IRONCLAD",
-        "BECKON",
         "STRIKE_IRONCLAD"
       ]
     },
@@ -497,24 +519,24 @@
       "actions": [
         5
       ],
-      "player_hp": 29,
+      "player_hp": 64,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Lagavulin Matriarch",
+          "hp": 233,
           "intent": [
-            2,
-            null
+            0,
+            19
           ]
         }
       ],
       "live_hand": [
-        "BECKON",
+        "BASH",
         "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
-        "BASH",
-        "STRIKE_IRONCLAD"
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD"
       ]
     },
     {
@@ -523,22 +545,22 @@
       "actions": [
         5
       ],
-      "player_hp": 23,
+      "player_hp": 45,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Lagavulin Matriarch",
+          "hp": 233,
           "intent": [
             0,
-            13
+            18
           ]
         }
       ],
       "live_hand": [
         "DEFEND_IRONCLAD",
-        "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD"
       ]
@@ -549,24 +571,24 @@
       "actions": [
         5
       ],
-      "player_hp": 10,
+      "player_hp": 27,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Lagavulin Matriarch",
+          "hp": 233,
           "intent": [
-            3,
-            2
+            0,
+            12
           ]
         }
       ],
       "live_hand": [
+        "DEFEND_IRONCLAD",
+        "BASH",
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD",
-        "DEFEND_IRONCLAD",
-        "DEFEND_IRONCLAD",
-        "BECKON"
+        "DEFEND_IRONCLAD"
       ]
     },
     {
@@ -575,29 +597,55 @@
       "actions": [
         5
       ],
-      "player_hp": 4,
+      "player_hp": 15,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Lagavulin Matriarch",
+          "hp": 233,
           "intent": [
-            0,
-            24
+            3,
+            null
           ]
         }
       ],
       "live_hand": [
-        "BECKON",
-        "BECKON",
-        "BASH",
-        "BECKON",
-        "BECKON"
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 8,
+      "action": 5,
+      "actions": [
+        5
+      ],
+      "player_hp": 15,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Lagavulin Matriarch",
+          "hp": 233,
+          "intent": [
+            0,
+            21
+          ]
+        }
+      ],
+      "live_hand": [
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "BASH"
       ]
     }
   ],
   "coverage": {
-    "Soul Fysh": {
+    "Lagavulin Matriarch": {
       "seen": 6,
       "declared": 5
     }

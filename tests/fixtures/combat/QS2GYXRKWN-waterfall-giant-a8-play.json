@@ -1,5 +1,5 @@
 {
-  "rooms_entered": 58,
+  "rooms_entered": 60,
   "state_type": "boss",
   "battle": {
     "round": 1,
@@ -7,19 +7,19 @@
     "is_play_phase": true,
     "enemies": [
       {
-        "entity_id": "SOUL_FYSH_0",
+        "entity_id": "WATERFALL_GIANT_0",
         "combat_id": 1,
-        "name": "Soul Fysh",
-        "hp": 221,
-        "max_hp": 221,
+        "name": "Waterfall Giant",
+        "hp": 250,
+        "max_hp": 250,
         "block": 0,
         "status": [],
         "intents": [
           {
-            "type": "StatusCard",
-            "label": "2",
-            "title": "Strategic",
-            "description": "This enemy intends to give you 2 Status cards."
+            "type": "Buff",
+            "label": "",
+            "title": "Empower",
+            "description": "This enemy intends to use a Buff."
           }
         ]
       }
@@ -429,80 +429,88 @@
   },
   "capture": {
     "seed": "QS2GYXRKWN",
-    "encounter": "soul-fysh",
-    "live_encounter": "SoulFyshBoss",
+    "encounter": "waterfall-giant",
+    "live_encounter": "WaterfallGiantBoss",
     "completed_combat_rooms": -1,
     "total_floor": 1,
     "ascension": 8,
-    "turns": 8,
-    "play": false,
+    "turns": 10,
+    "play": true,
     "add_cards": []
   },
   "turn_trace": [
     {
       "turn": 2,
-      "action": 5,
+      "action": 2,
       "actions": [
-        5
+        0,
+        0,
+        0,
+        2
       ],
       "player_hp": 64,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Waterfall Giant",
+          "hp": 238,
           "intent": [
             0,
-            16
+            15
           ]
         }
       ],
       "live_hand": [
         "BASH",
-        "BECKON",
         "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
-        "DEFEND_IRONCLAD"
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD"
       ]
     },
     {
       "turn": 3,
-      "action": 5,
+      "action": 3,
       "actions": [
-        5
+        0,
+        0,
+        3
       ],
-      "player_hp": 42,
+      "player_hp": 54,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Waterfall Giant",
+          "hp": 230,
           "intent": [
             0,
-            7
+            10
           ]
         }
       ],
       "live_hand": [
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
         "DEFEND_IRONCLAD",
-        "BECKON",
         "STRIKE_IRONCLAD"
       ]
     },
     {
       "turn": 4,
-      "action": 5,
+      "action": 2,
       "actions": [
-        5
+        0,
+        0,
+        0,
+        2
       ],
-      "player_hp": 29,
+      "player_hp": 44,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Waterfall Giant",
+          "hp": 212,
           "intent": [
             2,
             null
@@ -510,25 +518,56 @@
         }
       ],
       "live_hand": [
-        "BECKON",
+        "BASH",
         "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
-        "BASH",
-        "STRIKE_IRONCLAD"
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD"
       ]
     },
     {
       "turn": 5,
-      "action": 5,
+      "action": 3,
       "actions": [
-        5
+        0,
+        0,
+        3
       ],
-      "player_hp": 23,
+      "player_hp": 44,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Waterfall Giant",
+          "hp": 219,
+          "intent": [
+            0,
+            20
+          ]
+        }
+      ],
+      "live_hand": [
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 6,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2
+      ],
+      "player_hp": 34,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Waterfall Giant",
+          "hp": 210,
           "intent": [
             0,
             13
@@ -537,69 +576,132 @@
       ],
       "live_hand": [
         "DEFEND_IRONCLAD",
-        "DEFEND_IRONCLAD",
+        "BASH",
         "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 7,
+      "action": 3,
+      "actions": [
+        0,
+        0,
+        3
+      ],
+      "player_hp": 26,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Waterfall Giant",
+          "hp": 202,
+          "intent": [
+            0,
+            15
+          ]
+        }
+      ],
+      "live_hand": [
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD"
       ]
     },
     {
-      "turn": 6,
-      "action": 5,
+      "turn": 8,
+      "action": 2,
       "actions": [
-        5
+        0,
+        0,
+        0,
+        2
       ],
-      "player_hp": 10,
+      "player_hp": 16,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Waterfall Giant",
+          "hp": 184,
           "intent": [
-            3,
-            2
+            0,
+            10
           ]
         }
       ],
       "live_hand": [
-        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
         "DEFEND_IRONCLAD",
         "DEFEND_IRONCLAD",
-        "BECKON"
+        "BASH"
       ]
     },
     {
-      "turn": 7,
-      "action": 5,
+      "turn": 9,
+      "action": 2,
       "actions": [
-        5
+        0,
+        0,
+        0,
+        2
       ],
-      "player_hp": 4,
+      "player_hp": 16,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Waterfall Giant",
+          "hp": 180,
           "intent": [
-            0,
-            24
+            2,
+            null
           ]
         }
       ],
       "live_hand": [
-        "BECKON",
-        "BECKON",
-        "BASH",
-        "BECKON",
-        "BECKON"
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "BASH"
+      ]
+    },
+    {
+      "turn": 10,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2
+      ],
+      "player_hp": 16,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Waterfall Giant",
+          "hp": 189,
+          "intent": [
+            0,
+            25
+          ]
+        }
+      ],
+      "live_hand": [
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD"
       ]
     }
   ],
   "coverage": {
-    "Soul Fysh": {
+    "Waterfall Giant": {
       "seen": 6,
-      "declared": 5
+      "declared": 6
     }
   }
 }

@@ -1,5 +1,5 @@
 {
-  "rooms_entered": 58,
+  "rooms_entered": 50,
   "state_type": "boss",
   "battle": {
     "round": 1,
@@ -7,19 +7,77 @@
     "is_play_phase": true,
     "enemies": [
       {
-        "entity_id": "SOUL_FYSH_0",
+        "entity_id": "KIN_FOLLOWER_0",
         "combat_id": 1,
-        "name": "Soul Fysh",
-        "hp": 221,
-        "max_hp": 221,
+        "name": "Kin Follower",
+        "hp": 63,
+        "max_hp": 63,
+        "block": 0,
+        "status": [
+          {
+            "id": "MINION_POWER",
+            "name": "Minion",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Minions abandon combat without their leader.",
+            "keywords": []
+          }
+        ],
+        "intents": [
+          {
+            "type": "Buff",
+            "label": "",
+            "title": "Empower",
+            "description": "This enemy intends to use a Buff."
+          }
+        ]
+      },
+      {
+        "entity_id": "KIN_FOLLOWER_1",
+        "combat_id": 2,
+        "name": "Kin Follower",
+        "hp": 62,
+        "max_hp": 62,
+        "block": 0,
+        "status": [
+          {
+            "id": "MINION_POWER",
+            "name": "Minion",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Minions abandon combat without their leader.",
+            "keywords": []
+          }
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "5",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 5 damage."
+          }
+        ]
+      },
+      {
+        "entity_id": "KIN_PRIEST_0",
+        "combat_id": 3,
+        "name": "Kin Priest",
+        "hp": 199,
+        "max_hp": 199,
         "block": 0,
         "status": [],
         "intents": [
           {
-            "type": "StatusCard",
-            "label": "2",
+            "type": "Attack",
+            "label": "8",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 8 damage."
+          },
+          {
+            "type": "Debuff",
+            "label": "",
             "title": "Strategic",
-            "description": "This enemy intends to give you 2 Status cards."
+            "description": "This enemy intends to apply a Debuff to you."
           }
         ]
       }
@@ -429,8 +487,8 @@
   },
   "capture": {
     "seed": "QS2GYXRKWN",
-    "encounter": "soul-fysh",
-    "live_encounter": "SoulFyshBoss",
+    "encounter": "kin",
+    "live_encounter": "TheKinBoss",
     "completed_combat_rooms": -1,
     "total_floor": 1,
     "ascension": 8,
@@ -445,24 +503,40 @@
       "actions": [
         5
       ],
-      "player_hp": 64,
+      "player_hp": 51,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Kin Follower",
+          "hp": 63,
           "intent": [
             0,
-            16
+            7
+          ]
+        },
+        {
+          "name": "Kin Follower",
+          "hp": 62,
+          "intent": [
+            0,
+            4
+          ]
+        },
+        {
+          "name": "Kin Priest",
+          "hp": 199,
+          "intent": [
+            0,
+            8
           ]
         }
       ],
       "live_hand": [
         "BASH",
-        "BECKON",
         "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
-        "DEFEND_IRONCLAD"
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD"
       ]
     },
     {
@@ -471,23 +545,39 @@
       "actions": [
         5
       ],
-      "player_hp": 42,
+      "player_hp": 32,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Kin Follower",
+          "hp": 63,
           "intent": [
             0,
-            7
+            8
+          ]
+        },
+        {
+          "name": "Kin Follower",
+          "hp": 62,
+          "intent": [
+            2,
+            null
+          ]
+        },
+        {
+          "name": "Kin Priest",
+          "hp": 199,
+          "intent": [
+            0,
+            9
           ]
         }
       ],
       "live_hand": [
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
         "DEFEND_IRONCLAD",
-        "BECKON",
         "STRIKE_IRONCLAD"
       ]
     },
@@ -497,12 +587,28 @@
       "actions": [
         5
       ],
-      "player_hp": 29,
+      "player_hp": 15,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Kin Follower",
+          "hp": 63,
+          "intent": [
+            2,
+            null
+          ]
+        },
+        {
+          "name": "Kin Follower",
+          "hp": 62,
+          "intent": [
+            0,
+            7
+          ]
+        },
+        {
+          "name": "Kin Priest",
+          "hp": 199,
           "intent": [
             2,
             null
@@ -510,11 +616,11 @@
         }
       ],
       "live_hand": [
-        "BECKON",
+        "BASH",
         "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
-        "BASH",
-        "STRIKE_IRONCLAD"
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD"
       ]
     },
     {
@@ -523,83 +629,51 @@
       "actions": [
         5
       ],
-      "player_hp": 23,
+      "player_hp": 8,
       "player_max_hp": 80,
       "enemies": [
         {
-          "name": "Soul Fysh",
-          "hp": 221,
+          "name": "Kin Follower",
+          "hp": 63,
           "intent": [
             0,
-            13
+            9
+          ]
+        },
+        {
+          "name": "Kin Follower",
+          "hp": 62,
+          "intent": [
+            0,
+            8
+          ]
+        },
+        {
+          "name": "Kin Priest",
+          "hp": 199,
+          "intent": [
+            0,
+            10
           ]
         }
       ],
       "live_hand": [
         "DEFEND_IRONCLAD",
-        "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
         "STRIKE_IRONCLAD",
         "STRIKE_IRONCLAD"
-      ]
-    },
-    {
-      "turn": 6,
-      "action": 5,
-      "actions": [
-        5
-      ],
-      "player_hp": 10,
-      "player_max_hp": 80,
-      "enemies": [
-        {
-          "name": "Soul Fysh",
-          "hp": 221,
-          "intent": [
-            3,
-            2
-          ]
-        }
-      ],
-      "live_hand": [
-        "STRIKE_IRONCLAD",
-        "STRIKE_IRONCLAD",
-        "DEFEND_IRONCLAD",
-        "DEFEND_IRONCLAD",
-        "BECKON"
-      ]
-    },
-    {
-      "turn": 7,
-      "action": 5,
-      "actions": [
-        5
-      ],
-      "player_hp": 4,
-      "player_max_hp": 80,
-      "enemies": [
-        {
-          "name": "Soul Fysh",
-          "hp": 221,
-          "intent": [
-            0,
-            24
-          ]
-        }
-      ],
-      "live_hand": [
-        "BECKON",
-        "BECKON",
-        "BASH",
-        "BECKON",
-        "BECKON"
       ]
     }
   ],
   "coverage": {
-    "Soul Fysh": {
+    "Kin Follower": {
       "seen": 6,
-      "declared": 5
+      "declared": 3
+    },
+    "Kin Priest": {
+      "seen": 4,
+      "declared": 4
     }
   }
 }
