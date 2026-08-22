@@ -10,7 +10,7 @@ public static class RunConstants
     public const int CombatObsSize = CombatObservation.ObsSize;
 
     /// <summary>The run's flat scalars: phase, floor, gold, the screen in front of the player.</summary>
-    public const int RunScalarObsSize = 35;
+    public const int RunScalarObsSize = 25;
 
     /// <summary>
     /// How many of the deck's cards the observation carries. A run that grew past this
@@ -38,7 +38,23 @@ public static class RunConstants
     public const int DeckObsOffset = RunScalarObsSize;
 
     public const int RelicObsOffset = DeckObsOffset + MaxObservedDeck * DeckSlotSize;
-    public const int RunExtraObsSize = RelicObsOffset + MaxObservedRelics * RelicSlotSize;
+
+    /// <summary>
+    /// One slot per thing a merchant sells, indexed by the action that buys it: seven
+    /// cards, three relics, three potions, and the card-removal service at 13. Slot
+    /// <c>i</c> is shop action <c>i</c>, the way a deck slot is a card-select action.
+    /// </summary>
+    public const int ShopSlots = 14;
+
+    /// <summary>
+    /// Per slot: what is on it, and what it costs. The removal slot has no item, so its id
+    /// is 0 and only its price means anything. A sale is already in the price -- the game
+    /// halves the slot's cost rather than flagging it -- so there is nothing else to carry.
+    /// </summary>
+    public const int ShopSlotSize = 2;
+
+    public const int ShopObsOffset = RelicObsOffset + MaxObservedRelics * RelicSlotSize;
+    public const int RunExtraObsSize = ShopObsOffset + ShopSlots * ShopSlotSize;
     public const int RunObsSize = CombatObsSize + RunExtraObsSize;
     public const int RunInfoSize = 11;
 

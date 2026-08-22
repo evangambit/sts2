@@ -14,6 +14,7 @@ from .commands import execute_command
 from .env import ENCOUNTER_NAMES
 
 REWARD_SKIP_ACTION = constants.REWARD_SKIP_ACTION
+SHOP_REMOVE_ACTION = constants.SHOP_REMOVE_ACTION
 SHOP_SKIP_ACTION = constants.SHOP_SKIP_ACTION
 EVENT_SKIP_ACTION = constants.EVENT_SKIP_ACTION
 MAP_CHOICES = constants.MAP_CHOICES
@@ -210,6 +211,25 @@ class Sts2RunEnv(gym.Env):
         return tuple(cards)
 
     @staticmethod
+    def _shop(obs: np.ndarray) -> tuple[dict, ...]:
+        """Return the merchant's board, slot by slot and priced.
+
+        Slot ``i`` is shop action ``i``, so this reads straight against an action mask.
+        Slot 13 is the card-removal service, which has a price and no item.
+        """
+        layout = native.RUN_OBS_LAYOUT
+        base = native.OBS_SIZE + layout["shop_offset"]
+        width = layout["shop_slot_size"]
+        return tuple(
+            {
+                "action": i,
+                "item_id": int(obs[base + i * width]),
+                "cost": int(obs[base + i * width + 1]),
+            }
+            for i in range(layout["shop_slots"])
+        )
+
+    @staticmethod
     def _relics(obs: np.ndarray) -> tuple[dict, ...]:
         """Return the relics as the observation carries them, with their counters."""
         layout = native.RUN_OBS_LAYOUT
@@ -247,6 +267,7 @@ class Sts2RunEnv(gym.Env):
             "deck_size": int(info_buf[3]),
             "deck": self._deck(obs),
             "relic_slots": self._relics(obs),
+            "shop_slots": self._shop(obs),
             "gold": int(info_buf[4]),
             "player_hp": int(info_buf[5]),
             "player_max_hp": int(info_buf[6]),

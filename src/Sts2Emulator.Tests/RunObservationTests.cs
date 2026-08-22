@@ -185,4 +185,104 @@ public class RunObservationTests
         var obs = Observe(engine);
         Assert.Equal(engine.State.Deck[0].DefId, DeckSlot(obs, 0, 0));
     }
+
+    private static int ShopSlot(int[] obs, int action, int field) =>
+        obs[
+            RunConstants.CombatObsSize
+                + RunConstants.ShopObsOffset
+                + action * RunConstants.ShopSlotSize
+                + field
+        ];
+
+    /// <summary>
+    /// Every slot a merchant sells, priced, and lined up with the action that buys it.
+    /// Three of the seven cards were in the observation and none of the prices, so an
+    /// agent could buy shop slot 5 without ever being shown what was on it -- and could
+    /// not tell a 50-gold card from a 300-gold one on any slot.
+    /// </summary>
+    [Fact]
+    public void TheShopBlockIsEveryPricedSlotInActionOrder()
+    {
+        var engine = new RunEngine();
+        engine.Reset("ABCDEF");
+        RunRewardGenerator.EnterShop(engine.State);
+
+        var obs = Observe(engine);
+        for (int i = 0; i < engine.State.ShopCards.Length; i++)
+        {
+            Assert.Equal(engine.State.ShopCards[i], ShopSlot(obs, i, 0));
+            Assert.Equal(engine.State.ShopCosts[i], ShopSlot(obs, i, 1));
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            Assert.Equal(engine.State.ShopRelics[i], ShopSlot(obs, 7 + i, 0));
+            Assert.Equal(engine.State.ShopCosts[7 + i], ShopSlot(obs, 7 + i, 1));
+            Assert.Equal(engine.State.ShopPotions[i], ShopSlot(obs, 10 + i, 0));
+            Assert.Equal(engine.State.ShopCosts[10 + i], ShopSlot(obs, 10 + i, 1));
+        }
+
+        // The removal service has a price and nothing on it.
+        Assert.Equal(0, ShopSlot(obs, RunConstants.ShopRemoveAction, 0));
+        Assert.Equal(
+            engine.State.ShopCosts[RunConstants.ShopRemoveAction],
+            ShopSlot(obs, RunConstants.ShopRemoveAction, 1)
+        );
+
+        // Everything stocked really is stocked, so none of this is an empty board.
+        Assert.All(engine.State.ShopCards, card => Assert.NotEqual(0, card));
+    }
+
+    /// <summary>
+    /// A slot the agent can afford is a slot the mask offers, and the price it reads is the
+    /// one the purchase charges -- which is the whole point of carrying the price.
+    /// </summary>
+    [Fact]
+    public void TheShopBlockAgreesWithTheMaskAndWithWhatBuyingCosts()
+    {
+        var engine = new RunEngine();
+        engine.Reset("ABCDEF");
+        RunRewardGenerator.EnterShop(engine.State);
+
+        var obs = Observe(engine);
+        var mask = new int[RunConstants.MaxActions];
+        engine.WriteActionMask(mask);
+        for (int action = 0; action < engine.State.ShopCards.Length; action++)
+        {
+            bool affordable = engine.State.Gold >= ShopSlot(obs, action, 1);
+            Assert.Equal(affordable ? 1 : 0, mask[action]);
+        }
+
+        int cheapest = Enumerable
+            .Range(0, engine.State.ShopCards.Length)
+            .OrderBy(action => ShopSlot(obs, action, 1))
+            .First();
+        engine.State.Gold = ShopSlot(obs, cheapest, 1);
+
+        Assert.Equal(0, engine.Step(cheapest, -1, out _, out _, out _));
+        Assert.Equal(0, engine.State.Gold);
+    }
+
+    /// <summary>
+    /// The last-resort guard on the layout: the blocks sit end to end and the final one
+    /// ends exactly at the observation's width, so none of them can overrun another.
+    /// </summary>
+    [Fact]
+    public void TheBlocksTileTheObservationExactly()
+    {
+        Assert.Equal(RunConstants.RunScalarObsSize, RunConstants.DeckObsOffset);
+        Assert.Equal(
+            RunConstants.DeckObsOffset + RunConstants.MaxObservedDeck * RunConstants.DeckSlotSize,
+            RunConstants.RelicObsOffset
+        );
+        Assert.Equal(
+            RunConstants.RelicObsOffset
+                + RunConstants.MaxObservedRelics * RunConstants.RelicSlotSize,
+            RunConstants.ShopObsOffset
+        );
+        Assert.Equal(
+            RunConstants.ShopObsOffset + RunConstants.ShopSlots * RunConstants.ShopSlotSize,
+            RunConstants.RunExtraObsSize
+        );
+    }
 }

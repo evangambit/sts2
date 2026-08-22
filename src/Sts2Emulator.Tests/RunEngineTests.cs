@@ -432,21 +432,11 @@ public class RunEngineTests
                 202,
                 203,
                 204,
-                301,
-                302,
-                303,
                 401,
                 RunConstants.EventBrainLeech,
                 501,
                 502,
                 503,
-                601,
-                602,
-                603,
-                701,
-                702,
-                703,
-                175,
             },
             obs[offset..(offset + RunConstants.RunScalarObsSize)]
         );
@@ -475,6 +465,21 @@ public class RunEngineTests
                 obs[relics + RunConstants.RelicSlotSize],
                 obs[relics + 2 * RunConstants.RelicSlotSize],
             }
+        );
+
+        // The shop's slots are indexed by the action that buys them: seven cards, three
+        // relics, three potions, then the removal service, each with its price.
+        int shop = offset + RunConstants.ShopObsOffset;
+        Assert.Equal(
+            new[] { 301, 302, 303, 304, 305, 306, 307, 601, 602, 603, 701, 702, 703, 0 },
+            Enumerable
+                .Range(0, RunConstants.ShopSlots)
+                .Select(i => obs[shop + i * RunConstants.ShopSlotSize])
+                .ToArray()
+        );
+        Assert.Equal(
+            175,
+            obs[shop + RunConstants.ShopRemoveAction * RunConstants.ShopSlotSize + 1]
         );
     }
 
@@ -631,7 +636,7 @@ public class RunEngineTests
         Assert.Equal(54, obs[offset + 5]);
         Assert.Equal(80, obs[offset + 6]);
         Assert.Equal(108, obs[offset + 4]);
-        Assert.Equal(1, obs[offset + 25]);
+        Assert.Equal(1, obs[offset + 22]);
         Assert.Equal(54, info[5]);
         Assert.Equal(80, info[6]);
         Assert.Equal(108, info[4]);

@@ -729,24 +729,15 @@ public sealed class RunEngine
         obs[offset + 17] = State.MapChoices[1];
         obs[offset + 18] = State.MapChoices[2];
         obs[offset + 19] = State.MapChoices[3];
-        obs[offset + 20] = State.ShopCards[0];
-        obs[offset + 21] = State.ShopCards[1];
-        obs[offset + 22] = State.ShopCards[2];
-        obs[offset + 23] = State.RelicReward;
-        obs[offset + 24] = State.EventId;
-        obs[offset + 25] = potionSlots[0];
-        obs[offset + 26] = potionSlots[1];
-        obs[offset + 27] = potionSlots[2];
-        obs[offset + 28] = State.ShopRelics[0];
-        obs[offset + 29] = State.ShopRelics[1];
-        obs[offset + 30] = State.ShopRelics[2];
-        obs[offset + 31] = State.ShopPotions[0];
-        obs[offset + 32] = State.ShopPotions[1];
-        obs[offset + 33] = State.ShopPotions[2];
-        obs[offset + 34] = State.ShopCosts[RunConstants.ShopRemoveAction];
+        obs[offset + 20] = State.RelicReward;
+        obs[offset + 21] = State.EventId;
+        obs[offset + 22] = potionSlots[0];
+        obs[offset + 23] = potionSlots[1];
+        obs[offset + 24] = potionSlots[2];
 
         WriteDeckObservation(obs[(offset + RunConstants.DeckObsOffset)..]);
         WriteRelicObservation(obs[(offset + RunConstants.RelicObsOffset)..]);
+        WriteShopObservation(obs[(offset + RunConstants.ShopObsOffset)..]);
     }
 
     /// <summary>
@@ -781,6 +772,31 @@ public sealed class RunEngine
     /// charges is a different relic from one with three -- and a used-up relic is reported
     /// as such, since the run keeps carrying it after it stops doing anything.
     /// </summary>
+    /// <summary>
+    /// The merchant's board, slot by slot, priced. The scalars used to carry three of the
+    /// seven cards and none of the prices at all -- so an agent could buy shop slot 5
+    /// without ever being shown what was on it, and could not tell a 50-gold card from a
+    /// 300-gold one on any slot. Every purchase decision a shop is for turns on the price.
+    ///
+    /// Indexed by the action that buys the slot, so this reads straight against the shop's
+    /// action mask. The removal service is slot 13 and has no item, so its id stays 0.
+    /// </summary>
+    private void WriteShopObservation(Span<int> obs)
+    {
+        for (int action = 0; action < RunConstants.ShopSlots; action++)
+        {
+            int at = action * RunConstants.ShopSlotSize;
+            obs[at] = action switch
+            {
+                < 7 => State.ShopCards[action],
+                < 10 => State.ShopRelics[action - 7],
+                < 13 => State.ShopPotions[action - 10],
+                _ => 0,
+            };
+            obs[at + 1] = State.ShopCosts[action];
+        }
+    }
+
     private void WriteRelicObservation(Span<int> obs)
     {
         int slots = Math.Min(State.Relics.Count, RunConstants.MaxObservedRelics);

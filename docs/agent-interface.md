@@ -150,10 +150,23 @@ Relics carry their `Counter` and whether the run has spent them: a Silver
 Crucible with three charges is a different relic from one with none, and a
 used-up relic stays in the list doing nothing.
 
+### The shop
+
+The merchant's board is a block of its own, one slot per thing on sale, indexed
+by the action that buys it: seven cards, three relics, three potions, then the
+card-removal service at 13. Each slot carries what is on it and what it costs.
+
+Before this, three of the seven cards were in the observation and none of the
+prices — so an agent could buy shop slot 5 without ever being shown what was on
+it, and could not tell a 50-gold card from a 300-gold one on any slot, which is
+the whole decision a shop is. A sale needs no flag of its own: the game halves
+the slot's price rather than marking it, so the discount is already in the
+number.
+
 ### Sizes and truncation
 
 The deck block is 64 slots and the relic block 32, both well past what a full
-four-act run reaches. A run that overran either would have its later entries
+four-act run reaches; the shop block is exactly the merchant's 14 actions. A run that overran either would have its later entries
 unseen — but `Deck.Count` and `Relics.Count` still report the real sizes, so the
 truncation is visible rather than silent. `Sts2Run_ObsLayout` reports where the
 blocks sit so a consumer does not hard-code offsets that move when a block

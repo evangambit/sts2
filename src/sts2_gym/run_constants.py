@@ -5,6 +5,7 @@ from __future__ import annotations
 from . import native
 
 REWARD_SKIP_ACTION = 3
+SHOP_REMOVE_ACTION = 13
 SHOP_SKIP_ACTION = 14
 EVENT_SKIP_ACTION = 3
 MAP_CHOICES = 4

@@ -7,8 +7,8 @@ namespace Sts2Emulator.Interop;
 
 public static class RunNativeExports
 {
-    // v12: Sts2Run_ObsLayout, and the observation carries the deck and the relics.
-    public const int RUN_NATIVE_API_VERSION = 12;
+    // v13: the observation carries the shop's whole board, priced.
+    public const int RUN_NATIVE_API_VERSION = 13;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -20,14 +20,14 @@ public static class RunNativeExports
     public static int Sts2Run_InfoSize() => RunConstants.RunInfoSize;
 
     /// <summary>How many numbers <see cref="Sts2Run_ObsLayout"/> writes.</summary>
-    public const int RUN_OBS_LAYOUT_SIZE = 7;
+    public const int RUN_OBS_LAYOUT_SIZE = 10;
 
     /// <summary>
     /// Where the run observation's variable-length blocks sit, so a consumer does not have
     /// to hard-code offsets that move whenever a block grows:
     ///
     /// <c>[scalars, deck offset, deck slots, ints per card, relic offset, relic slots,
-    /// ints per relic]</c>
+    /// ints per relic, shop offset, shop slots, ints per shop slot]</c>
     ///
     /// Offsets are relative to the start of the run block, which itself begins at the
     /// combat observation's own size.
@@ -48,6 +48,9 @@ public static class RunNativeExports
         layout[4] = RunConstants.RelicObsOffset;
         layout[5] = RunConstants.MaxObservedRelics;
         layout[6] = RunConstants.RelicSlotSize;
+        layout[7] = RunConstants.ShopObsOffset;
+        layout[8] = RunConstants.ShopSlots;
+        layout[9] = RunConstants.ShopSlotSize;
         return RUN_OBS_LAYOUT_SIZE;
     }
 

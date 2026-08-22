@@ -48,7 +48,8 @@ class Sts2GymTests(unittest.TestCase):
                 native.OBS_SIZE
                 + layout["scalars"]
                 + layout["max_deck"] * layout["deck_slot_size"]
-                + layout["max_relics"] * layout["relic_slot_size"],
+                + layout["max_relics"] * layout["relic_slot_size"]
+                + layout["shop_slots"] * layout["shop_slot_size"],
             )
             self.assertEqual(layout["deck_offset"], layout["scalars"])
             # Wide enough for the Crystal Sphere's board -- 121 cells, either tool --
@@ -547,7 +548,10 @@ class RunDeckObservationTests(unittest.TestCase):
                 at = base + i * layout["deck_slot_size"]
                 self.assertEqual(int(obs[at]), card["card_id"])
             # The slot after the deck is empty, so a reader can stop at the first zero.
-            self.assertEqual(int(obs[base + len(info["deck"]) * layout["deck_slot_size"]]), 0)
+            self.assertEqual(
+                int(obs[base + len(info["deck"]) * layout["deck_slot_size"]]),
+                0,
+            )
         finally:
             env.close()
 
@@ -581,6 +585,46 @@ class RunDeckObservationTests(unittest.TestCase):
             self.assertEqual(len(info["deck"]), info["deck_size"])
         finally:
             env.close()
+
+
+class RunShopObservationTests(unittest.TestCase):
+    """The shop block: every slot a merchant sells, priced, in action order.
+
+    What the block *means* is checked on the C# side, where a shop can be opened outright;
+    a greedy walk from reset dies in the first fight long before it reaches a merchant.
+    What is checked here is the decoder -- that ``info["shop_slots"]`` reads exactly the
+    numbers the observation holds at the offsets the native layout reports, which is where
+    a hard-coded offset would drift.
+    """
+
+    def test_the_decoder_reads_the_block_the_layout_points_at(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            obs, info = env.reset()
+            layout = native.RUN_OBS_LAYOUT
+            base = native.OBS_SIZE + layout["shop_offset"]
+            width = layout["shop_slot_size"]
+            slots = info["shop_slots"]
+
+            self.assertEqual(len(slots), layout["shop_slots"])
+            self.assertEqual(
+                [slot["action"] for slot in slots],
+                list(range(len(slots))),
+            )
+            for i, slot in enumerate(slots):
+                self.assertEqual(slot["item_id"], int(obs[base + i * width]))
+                self.assertEqual(slot["cost"], int(obs[base + i * width + 1]))
+        finally:
+            env.close()
+
+    def test_the_shop_block_is_the_last_thing_in_the_observation(self):
+        layout = native.RUN_OBS_LAYOUT
+        end = (
+            native.OBS_SIZE
+            + layout["shop_offset"]
+            + layout["shop_slots"] * layout["shop_slot_size"]
+        )
+        self.assertEqual(end, native.RUN_OBS_SIZE)
 
 
 class RunEnvCloneTests(unittest.TestCase):
