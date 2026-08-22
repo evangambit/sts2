@@ -869,6 +869,19 @@ public static class RunRewardGenerator
             : rng.NextItem(PotionRewardPool.ToArray());
     }
 
+    /// <summary>
+    /// The Potion Courier's Ransack rolls only among Uncommon potions, so it does NOT
+    /// roll a rarity first -- it filters the pool and takes one.
+    /// </summary>
+    public static int NextUncommonPotion(RunState state, GameRng rng)
+    {
+        var available = PotionRewardPool
+            .ToArray()
+            .Where(potionId => PotionRarity(potionId) == RarityUncommon)
+            .ToArray();
+        return available.Length > 0 ? rng.NextItem(available) : NextPotion(state, rng);
+    }
+
     private static int RollPotionRarity(GameRng rng)
     {
         double roll = rng.NextDouble();

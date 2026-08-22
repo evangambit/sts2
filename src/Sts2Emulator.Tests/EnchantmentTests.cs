@@ -194,6 +194,7 @@ public class EnchantmentTests
                 Enchantment.Sown,
                 Enchantment.Corrupted,
                 Enchantment.Slither,
+                Enchantment.Vigorous,
             },
             Enchantments.InertInCombat
         );

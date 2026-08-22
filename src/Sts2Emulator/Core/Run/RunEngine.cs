@@ -1174,7 +1174,7 @@ public sealed class RunEngine
         if (action == RunConstants.RewardSkipAction)
         {
             // Skipping the screen abandons everything still on it, queued potions included.
-            State.PendingRestPotions = 0;
+            State.PendingPotionRewards.Clear();
             return AdvanceAfterRelicReward(out terminal);
         }
 
@@ -1197,16 +1197,41 @@ public sealed class RunEngine
         return 0;
     }
 
-    /// <summary>Moves the next queued rest potion onto the reward screen, if the screen is free.</summary>
+    /// <summary>
+    /// RewardsCmd.OfferCustom with potions: the run goes to the reward screen and the
+    /// player may decline, or drop a held potion to make room. Anything past the first is
+    /// queued, because the screen carries one at a time. A 0 is rolled when it reaches
+    /// the screen.
+    /// </summary>
+    private void OfferPotionRewards(params int[] potionIds)
+    {
+        State.RewardGold = 0;
+        State.RelicReward = 0;
+        State.RewardPotion = 0;
+        State.PendingPotionRewards.Clear();
+        State.PendingPotionRewards.AddRange(potionIds);
+        OfferNextRestPotion();
+        State.Phase = RunPhase.RelicReward;
+    }
+
+    /// <summary>
+    /// Moves the next queued potion onto the reward screen, if the screen is free. A
+    /// queued 0 is rolled here rather than when it was queued, which is where
+    /// PotionReward.Populate rolls it.
+    /// </summary>
     private void OfferNextRestPotion()
     {
-        if (State.PendingRestPotions <= 0 || State.RewardPotion != 0)
+        if (State.PendingPotionRewards.Count == 0 || State.RewardPotion != 0)
         {
             return;
         }
 
-        State.PendingRestPotions--;
-        State.RewardPotion = RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards);
+        int potionId = State.PendingPotionRewards[0];
+        State.PendingPotionRewards.RemoveAt(0);
+        State.RewardPotion =
+            potionId != 0
+                ? potionId
+                : RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards);
     }
 
     private int StepShop(int action, out bool terminal)
@@ -1326,7 +1351,7 @@ public sealed class RunEngine
             // to take it, and may drop a held potion to make room.
             if (Effects.RelicEffects.Has(State.Relics, Effects.RelicEffects.TinyMailbox))
             {
-                State.PendingRestPotions = 2;
+                State.PendingPotionRewards.AddRange([0, 0]);
                 OfferNextRestPotion();
                 State.Phase = RunPhase.RelicReward;
                 return 0;
@@ -1408,19 +1433,21 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventJungleMazeAdventure:
+                // Both purses are rolled with NextFloat, not fixed: 150 and 50, each
+                // shifted by NextFloat(-15, 15) off the event's own stream.
                 if (action == 0)
                 {
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 18);
                     State.Gold += Effects.RelicEffects.ModifyGoldGained(
                         State.Relics,
-                        EventGoldAmount(150)
+                        RunNonCombatEffects.JungleMazeSoloGold(State)
                     );
                 }
                 else if (action == 1)
                 {
                     State.Gold += Effects.RelicEffects.ModifyGoldGained(
                         State.Relics,
-                        EventGoldAmount(50)
+                        RunNonCombatEffects.JungleMazeJoinForcesGold(State)
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -1566,11 +1593,26 @@ public sealed class RunEngine
             case RunConstants.EventByrdonisNest:
                 if (action == 0)
                 {
-                    State.PlayerMaxHp += 7;
-                    State.PlayerHp = Math.Min(State.PlayerMaxHp, State.PlayerHp + 7);
+                    RunNonCombatEffects.GainMaxHp(State, 7);
                     State.EventId = RunConstants.EventResultPending;
                     return 0;
                 }
+
+                // Take the Egg adds the Byrdonis Egg quest card, which had no id until
+                // the negative-cost cards were extracted -- so the option was refused.
+                if (action == 1)
+                {
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(
+                            RunNonCombatEffects.NamedCard("ByrdonisEgg"),
+                            Upgraded: false
+                        )
+                    );
+                    State.EventId = RunConstants.EventResultPending;
+                    return 0;
+                }
+
                 if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
@@ -1587,18 +1629,14 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    if (
-                        State.PlayerHp <= 8
-                        || !RunRewardGenerator.AddPotion(
-                            State,
-                            RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                        )
-                    )
+                    if (State.PlayerHp <= 8)
                     {
                         return -1;
                     }
 
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 8);
+                    State.PlayerHp -= 8;
+                    OfferPotionRewards(0);
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -1734,12 +1772,11 @@ public sealed class RunEngine
             case RunConstants.EventWellspring:
                 if (action == 0)
                 {
-                    RunRewardGenerator.AddPotion(
-                        State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                    );
+                    OfferPotionRewards(0);
+                    return 0;
                 }
-                else if (action == 1)
+
+                if (action == 1)
                 {
                     // Bathe removes one card the PLAYER picks, then adds BatheCurses (1)
                     // Guilty.
@@ -1761,29 +1798,37 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventWhisperingHollow:
+                // Exchange Gold SPENDS the rolled amount for two potions on a reward
+                // screen -- the emulator was paying it out instead. Hug transforms a card
+                // the player picks and only then charges the 9 HP, which is why a capture
+                // taken at the selector shows full health.
                 if (action == 0)
                 {
-                    if (State.Gold < 35)
+                    int cost = RunNonCombatEffects.WhisperingHollowGold(State);
+                    if (State.Gold < cost)
                     {
                         return -1;
                     }
 
-                    State.Gold -= 35;
-                    RunRewardGenerator.AddPotion(
-                        State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                    );
-                    RunRewardGenerator.AddPotion(
-                        State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                    );
+                    State.Gold -= cost;
+                    OfferPotionRewards(0, 0);
+                    return 0;
                 }
-                else if (action == 1)
+
+                if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 9);
-                    RunNonCombatEffects.TransformFirstCard(State);
+                    return RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.TransformToRandom,
+                        0,
+                        count: 1,
+                        followUpHpLoss: 9
+                    )
+                        ? 0
+                        : -1;
                 }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
@@ -1868,26 +1913,19 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventEndlessConveyor:
+                // The belt is a weighted dish machine and only the second option is
+                // modelled: Observe the Chef upgrades ONE card rolled off the event's own
+                // stream. The emulator healed 10 for it. Grabbing off the belt pays 40
+                // gold for whatever dish RollDish landed on, which is not modelled -- so
+                // it is refused rather than paying out a potion the belt never had.
                 if (action == 0)
                 {
-                    if (State.Gold < 40)
-                    {
-                        return -1;
-                    }
+                    return -1;
+                }
 
-                    State.Gold -= 40;
-                    RunRewardGenerator.AddPotion(
-                        State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                    );
-                }
-                else if (action == 1)
+                if (action == 1)
                 {
-                    HealPlayer(10);
-                }
-                else if (action == 2)
-                {
-                    RunNonCombatEffects.GainMaxHp(State, 4);
+                    RunNonCombatEffects.UpgradeRandomCard(State, "ENDLESS_CONVEYOR");
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -1896,15 +1934,24 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventPunchOff:
+                // Nab takes an Injury and offers a relic on a reward screen -- it pays no
+                // gold and no potion. "I Can Take Them" starts a fight, which an event
+                // cannot do in the emulator yet, so it is refused rather than faked.
                 if (action == 0)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(State.Relics, 50);
-                    RunRewardGenerator.AddPotion(
+                    RunNonCombatEffects.AddCardToDeck(
                         State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
+                        new CardInstance(RunNonCombatEffects.NamedCard("Injury"), Upgraded: false)
                     );
+                    State.RewardGold = 0;
+                    State.RewardPotion = 0;
+                    State.PendingPotionRewards.Clear();
+                    State.RelicReward = RunRewardGenerator.NextRelic(State);
+                    State.Phase = RunPhase.RelicReward;
+                    return 0;
                 }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
@@ -2065,24 +2112,24 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventPotionCourier:
+                // Both options offer potions on a reward screen -- three named Foul
+                // Potions, or one rolled Uncommon. Neither forces anything into the belt.
                 if (action == 0)
                 {
-                    for (int i = 0; i < 3; i++)
-                    {
-                        RunRewardGenerator.AddPotion(
-                            State,
-                            RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                        );
-                    }
+                    int foul = RunNonCombatEffects.NamedPotion("FoulPotion");
+                    OfferPotionRewards(foul, foul, foul);
+                    return 0;
                 }
-                else if (action == 1)
+
+                if (action == 1)
                 {
-                    RunRewardGenerator.AddPotion(
-                        State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
+                    OfferPotionRewards(
+                        RunRewardGenerator.NextUncommonPotion(State, State.PlayerRng.Rewards)
                     );
+                    return 0;
                 }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
@@ -2175,13 +2222,22 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventSlipperyBridge:
+                // Overcome loses the ONE card the bridge is holding -- rolled off the
+                // event's stream, preferring a non-Basic card -- and Hold On costs
+                // 3 + NumberOfHoldOns HP, which is 3 the first time, not a flat 10.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.RemoveLowestPriorityCard(State);
+                    int index = RunNonCombatEffects.SlipperyBridgeCardIndex(State);
+                    if (index < 0)
+                    {
+                        return -1;
+                    }
+
+                    State.Deck.RemoveAt(index);
                 }
                 else if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 10);
+                    State.PlayerHp = Math.Max(0, State.PlayerHp - 3);
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2190,6 +2246,9 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventStoneOfAllTime:
+                // Lift drinks a potion for 10 Max HP, not 5. Push costs 6 HP, not 10, and
+                // enchants an Attack with Vigorous 8 rather than upgrading whatever came
+                // first -- and the HP is taken BEFORE the selector opens.
                 if (action == 0)
                 {
                     int slot = Array.FindIndex(State.PotionSlots, potion => potion != 0);
@@ -2199,15 +2258,23 @@ public sealed class RunEngine
                     }
 
                     State.PotionSlots[slot] = 0;
-                    RunNonCombatEffects.GainMaxHp(State, 5);
+                    RunNonCombatEffects.GainMaxHp(State, 10);
                 }
                 else if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 10);
-                    if (!RunNonCombatEffects.UpgradeFirstCard(State))
+                    if (
+                        !RunNonCombatEffects.BeginDeckSelection(
+                            State,
+                            DeckSelection.Enchant,
+                            (int)Enchantment.Vigorous
+                        )
+                    )
                     {
                         return -1;
                     }
+
+                    State.PlayerHp = Math.Max(0, State.PlayerHp - 6);
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2324,12 +2391,14 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventThisOrThat:
+                // The plain chest costs 6 HP, not 7, and its purse is NextInt(41, 69) off
+                // the event's own stream rather than a generic 55 +/- 15 off UpFront.
                 if (action == 0)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 7);
+                    State.PlayerHp = Math.Max(0, State.PlayerHp - 6);
                     State.Gold += Effects.RelicEffects.ModifyGoldGained(
                         State.Relics,
-                        EventGoldAmount(55)
+                        RunNonCombatEffects.ThisOrThatGold(State)
                     );
                 }
                 else if (action == 1)

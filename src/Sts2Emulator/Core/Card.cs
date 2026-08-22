@@ -102,6 +102,9 @@ public enum Enchantment
 
     /// <summary>Costs a fresh random amount (0..3) every time it is drawn to hand.</summary>
     Slither,
+
+    /// <summary>Attacks only; adds its amount to the FIRST powered attack, then stops.</summary>
+    Vigorous,
 }
 
 public readonly record struct CardInstance(
@@ -171,6 +174,8 @@ public static class Enchantments
     /// multiplier hook.</item>
     /// <item>Slither -- re-rolls its cost on every draw off the run's
     /// <c>combat_energy_costs</c> stream, which combat does not carry.</item>
+    /// <item>Vigorous -- adds its amount to the first powered attack and then disables
+    /// itself, which needs the same per-copy spent state as Sown.</item>
     /// </list>
     /// </summary>
     public static readonly Enchantment[] InertInCombat =
@@ -179,6 +184,7 @@ public static class Enchantments
         Enchantment.Sown,
         Enchantment.Corrupted,
         Enchantment.Slither,
+        Enchantment.Vigorous,
     ];
 
     /// <summary>
@@ -208,7 +214,8 @@ public static class Enchantments
         return enchantment switch
         {
             // CanEnchantCardType overrides.
-            Enchantment.Sharp or Enchantment.Corrupted => def.Type == CardType.Attack,
+            Enchantment.Sharp or Enchantment.Corrupted or Enchantment.Vigorous => def.Type
+                == CardType.Attack,
             Enchantment.Nimble => def.Type == CardType.Skill,
             Enchantment.Swift => def.Type == CardType.Power,
 

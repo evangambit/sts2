@@ -124,7 +124,7 @@ public class RunLevelRelicTests
         Assert.NotEqual(RunPhase.RelicReward, plain.Phase);
         Assert.Equal(RunPhase.RelicReward, withMailbox.Phase);
         Assert.NotEqual(0, withMailbox.RewardPotion);
-        Assert.Equal(1, withMailbox.PendingRestPotions);
+        Assert.Single(withMailbox.PendingPotionRewards);
     }
 
     /// <summary>
@@ -138,7 +138,7 @@ public class RunLevelRelicTests
 
         engine.Step(0, -1, out _, out _, out _);
         Assert.NotEqual(0, engine.State.RewardPotion);
-        Assert.Equal(0, engine.State.PendingRestPotions);
+        Assert.Empty(engine.State.PendingPotionRewards);
 
         engine.Step(0, -1, out _, out _, out _);
 
@@ -153,7 +153,7 @@ public class RunLevelRelicTests
 
         engine.Step(RunConstants.RewardSkipAction, -1, out _, out _, out _);
 
-        Assert.Equal(0, engine.State.PendingRestPotions);
+        Assert.Empty(engine.State.PendingPotionRewards);
         Assert.All(engine.State.PotionSlots, slot => Assert.Equal(0, slot));
     }
 

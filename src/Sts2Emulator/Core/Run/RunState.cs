@@ -44,11 +44,16 @@ public sealed class RunState
     public List<int> UsedUpRelics = [];
 
     /// <summary>
-    /// Potion rewards still owed by a rest site (Tiny Mailbox offers two). The reward
-    /// screen carries one potion at a time, so the second is queued here and offered once
-    /// the first is claimed.
+    /// Potion rewards still owed. The reward screen carries one potion at a time, so
+    /// anything that offers several -- Tiny Mailbox's two, the Potion Courier's three
+    /// Foul Potions, Whispering Hollow's two random ones -- queues the rest here and
+    /// offers them as the screen frees up.
+    ///
+    /// A 0 means "roll one when it reaches the screen", which is what
+    /// <c>PotionReward(player)</c> does: it carries no potion and rolls in
+    /// <c>Populate</c>. A non-zero entry is a potion the event named outright.
     /// </summary>
-    public int PendingRestPotions;
+    public List<int> PendingPotionRewards = [];
     public int[] PotionSlots = new int[3];
     public int CurrentNodeType;
     public int[] NeowOptions = new int[3];
@@ -129,6 +134,13 @@ public sealed class RunState
     /// </summary>
     public int PendingSelectionFollowUpCard;
     public int PendingSelectionFollowUpCount;
+
+    /// <summary>
+    /// HP the event takes once the selection finishes. Whispering Hollow's Hug transforms
+    /// the chosen card FIRST and only then charges for it, so a capture taken while the
+    /// selector is open shows the player still at full health.
+    /// </summary>
+    public int PendingSelectionFollowUpHpLoss;
     public bool PendingRestUpgrade;
     public bool RestResultPending;
     public int UnknownMapPointsVisited;

@@ -463,7 +463,8 @@ public static class RunNonCombatEffects
         int arg,
         int count = 1,
         int followUpCard = 0,
-        int followUpCount = 0
+        int followUpCount = 0,
+        int followUpHpLoss = 0
     )
     {
         state.PendingSelectionKind = kind;
@@ -471,6 +472,7 @@ public static class RunNonCombatEffects
         state.PendingSelectionCount = count;
         state.PendingSelectionFollowUpCard = followUpCard;
         state.PendingSelectionFollowUpCount = followUpCount;
+        state.PendingSelectionFollowUpHpLoss = followUpHpLoss;
         if (!Enumerable.Range(0, state.Deck.Count).Any(i => CanSelectCard(state, i)))
         {
             ClearDeckSelection(state);
@@ -488,6 +490,7 @@ public static class RunNonCombatEffects
         state.PendingSelectionCount = 0;
         state.PendingSelectionFollowUpCard = 0;
         state.PendingSelectionFollowUpCount = 0;
+        state.PendingSelectionFollowUpHpLoss = 0;
     }
 
     /// <summary>
@@ -503,6 +506,8 @@ public static class RunNonCombatEffects
                 new CardInstance(state.PendingSelectionFollowUpCard, Upgraded: false)
             );
         }
+
+        state.PlayerHp = Math.Max(0, state.PlayerHp - state.PendingSelectionFollowUpHpLoss);
     }
 
     /// <summary>Whether the pending selection would take the card at this deck index.</summary>
@@ -620,6 +625,15 @@ public static class RunNonCombatEffects
             case RunConstants.EventDenseVegetation:
                 CalculateDenseVegetationVars(state);
                 break;
+            case RunConstants.EventWhisperingHollow:
+                CalculateWhisperingHollowVars(state);
+                break;
+            case RunConstants.EventJungleMazeAdventure:
+                CalculateJungleMazeVars(state);
+                break;
+            case RunConstants.EventThisOrThat:
+                CalculateThisOrThatVars(state);
+                break;
         }
     }
 
@@ -711,6 +725,132 @@ public static class RunNonCombatEffects
 
     /// <summary>Circlet, the fallback relic -- the only stackable one in the game.</summary>
     public static int CircletRelic => ResolveRelic("Circlet");
+
+    /// <summary>A potion an event names outright -- the Potion Courier's Foul Potions.</summary>
+    public static int NamedPotion(string name) =>
+        GeneratedData.Potions.FindId(name)
+        ?? throw new InvalidOperationException($"No potion named {name}");
+
+    /// <summary>
+    /// What Whispering Hollow charges for its two potions: a GoldVar of 35 shifted by
+    /// <c>Rng.NextInt(-9, 10)</c> in CalculateVars, so 26..44 -- and it is SPENT, not paid
+    /// out. The event only appears at all when the run holds 44 gold.
+    /// </summary>
+    public static int WhisperingHollowGold(RunState state)
+    {
+        if (state.EventValue0 is null)
+        {
+            CalculateWhisperingHollowVars(state);
+        }
+
+        return state.EventValue0!.Value;
+    }
+
+    private static void CalculateWhisperingHollowVars(RunState state)
+    {
+        state.EventValue0 = 35 + EventRng(state, "WHISPERING_HOLLOW").NextInt(-9, 10);
+    }
+
+    /// <summary>
+    /// Jungle Maze's two purses. CalculateVars shifts each by <c>Rng.NextFloat(-15f, 15f)</c>
+    /// off the same stream, solo first, and DynamicVar.IntValue truncates the decimal.
+    /// </summary>
+    public static int JungleMazeSoloGold(RunState state)
+    {
+        EnsureJungleMazeVars(state);
+        return state.EventValue0!.Value;
+    }
+
+    public static int JungleMazeJoinForcesGold(RunState state)
+    {
+        EnsureJungleMazeVars(state);
+        return state.EventValue1!.Value;
+    }
+
+    private static void EnsureJungleMazeVars(RunState state)
+    {
+        if (state.EventValue0 is null || state.EventValue1 is null)
+        {
+            CalculateJungleMazeVars(state);
+        }
+    }
+
+    /// <summary>
+    /// This or That's purse: <c>Rng.NextInt(41, 69)</c>, rolled in CalculateVars.
+    /// </summary>
+    public static int ThisOrThatGold(RunState state)
+    {
+        if (state.EventValue0 is null)
+        {
+            CalculateThisOrThatVars(state);
+        }
+
+        return state.EventValue0!.Value;
+    }
+
+    private static void CalculateThisOrThatVars(RunState state)
+    {
+        state.EventValue0 = EventRng(state, "THIS_OR_THAT").NextInt(41, 69);
+    }
+
+    /// <summary>
+    /// The card the Slippery Bridge is holding over the player. It prefers a non-Basic
+    /// card and falls back to any removable one, which on a starter deck is the whole
+    /// deck bar Ascender's Bane -- so it is a roll, not a fixed pick.
+    /// </summary>
+    public static int SlipperyBridgeCardIndex(RunState state)
+    {
+        var candidates = Enumerable
+            .Range(0, state.Deck.Count)
+            .Where(i => GeneratedData.Cards.Get(state.Deck[i].DefId).Rarity != CardRarity.Basic)
+            .Where(i => IsRemovable(state.Deck[i]))
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            candidates = Enumerable
+                .Range(0, state.Deck.Count)
+                .Where(i => IsRemovable(state.Deck[i]))
+                .ToList();
+        }
+
+        return candidates.Count == 0
+            ? -1
+            : EventRng(state, "SLIPPERY_BRIDGE").NextItem(candidates);
+    }
+
+    /// <summary>
+    /// <c>CardModel.IsRemovable</c>: Ascender's Bane and the quest cards stay in the deck
+    /// whatever removes from it.
+    /// </summary>
+    private static bool IsRemovable(CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return def.Type != CardType.Quest && def.Entry != "ASCENDERS_BANE";
+    }
+
+    /// <summary>Upgrade one upgradable card, chosen off the event's own stream.</summary>
+    public static bool UpgradeRandomCard(RunState state, string eventEntry)
+    {
+        var candidates = Enumerable
+            .Range(0, state.Deck.Count)
+            .Where(i => RunConstants.IsRunCardUpgradable(state.Deck[i]))
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            return false;
+        }
+
+        int index = EventRng(state, eventEntry).NextItem(candidates);
+        state.Deck[index] = state.Deck[index] with { Upgraded = true };
+        return true;
+    }
+
+    private static void CalculateJungleMazeVars(RunState state)
+    {
+        var rng = EventRng(state, "JUNGLE_MAZE_ADVENTURE");
+        state.EventValue0 = (int)(150m + (decimal)rng.NextFloat(-15f, 15f));
+        state.EventValue1 = (int)(50m + (decimal)rng.NextFloat(-15f, 15f));
+    }
 
     /// <summary>Doll Room's three dolls, in the event's own declaration order.</summary>
     private static readonly string[] DollRoomDolls =

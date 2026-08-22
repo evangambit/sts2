@@ -74,27 +74,18 @@ public class EventOutcomeTests
         "RoomFullOfCheese-opt0.json",
         "AbyssalBaths-opt0.json",
         "BrainLeech-opt0.json",
-        "ByrdonisNest-opt1.json",
         "CrystalSphere-opt0.json",
+        // Two racy captures, not emulator defects. Both options run VFX waits before
+        // their effects land and the capture reads the run mid-animation: Dense
+        // Vegetation records neither the 8 HP nor the gold, and Jungle Maze records the
+        // 18 HP but not the 158 gold its own option text promises. They need re-capturing.
         "DenseVegetation-opt0.json",
-        "EndlessConveyor-opt0.json",
-        "EndlessConveyor-opt1.json",
         "JungleMazeAdventure-opt0.json",
-        "JungleMazeAdventure-opt1.json",
-        "PotionCourier-opt0.json",
-        "PotionCourier-opt1.json",
-        "PunchOff-opt0.json",
+        "EndlessConveyor-opt0.json",
+        "JungleMazeAdventure-opt0.json",
         "PunchOff-opt1.json",
         "RanwidTheElder-opt1.json",
         "RelicTrader-opt0.json",
-        "SlipperyBridge-opt0.json",
-        "SlipperyBridge-opt1.json",
-        "StoneOfAllTime-opt1.json",
-        "TheLegendsWereTrue-opt1.json",
-        "ThisOrThat-opt0.json",
-        "Wellspring-opt0.json",
-        "WhisperingHollow-opt0.json",
-        "WhisperingHollow-opt1.json",
     ];
 
     // "-opt0.json" and friends, but not "-options.json": one character after "opt".
