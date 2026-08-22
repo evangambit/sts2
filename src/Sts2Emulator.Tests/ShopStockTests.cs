@@ -105,14 +105,7 @@ public class ShopStockTests
         );
     }
 
-    [Fact(
-        Skip = "The potion pool is a hand-written list of 43. PotionFactory."
-            + "GetPotionOptions builds it as the character's own pool concatenated with "
-            + "the shared one -- for a solo Ironclad that is 3 + 45 = 48 potions -- and "
-            + "NextItem indexes into it, so a short list picks a different potion. Needs "
-            + "the potion pools extracted the way CardPools.g.cs extracts the card ones. "
-            + "The fixture holds the game's answer for when they are."
-    )]
+    [Fact]
     public void ThePotionsOnOfferAreThePotionsTheMerchantHad()
     {
         var fixture = Fixture();

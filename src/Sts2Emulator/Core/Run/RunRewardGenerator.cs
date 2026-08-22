@@ -211,52 +211,21 @@ public static class RunRewardGenerator
                 }),
         ];
 
-    public static ReadOnlySpan<int> PotionRewardPool =>
-        [
-            6, // Blood Potion
-            55, // Soldier's Stew
-            1,
-            2,
-            4,
-            5,
-            8,
-            9,
-            10,
-            13,
-            14,
-            15,
-            17,
-            18,
-            19,
-            21,
-            22,
-            23,
-            24,
-            26,
-            28,
-            29,
-            30,
-            32,
-            34,
-            36,
-            37,
-            38,
-            40,
-            42,
-            48,
-            49,
-            50,
-            51,
-            53,
-            54,
-            56,
-            57,
-            58,
-            59,
-            60,
-            62,
-            63,
-        ];
+    /// <summary>
+    /// What a potion roll may offer: the character's own pool followed by the shared
+    /// one, which is how PotionFactory.GetPotionOptions builds it. Order is load-bearing
+    /// because NextItem indexes into the concatenation.
+    ///
+    /// A hand-written list stood here and held 43 of the 48, so a roll that agreed with
+    /// the game on rarity still landed on a different potion.
+    /// </summary>
+    private static readonly int[] _potionRewardPool =
+    [
+        .. GeneratedData.PotionPools.Ironclad.ToArray(),
+        .. GeneratedData.PotionPools.Shared.ToArray(),
+    ];
+
+    public static ReadOnlySpan<int> PotionRewardPool => _potionRewardPool;
 
     public static ReadOnlySpan<int> RelicRewardPool =>
         [
@@ -642,13 +611,23 @@ public static class RunRewardGenerator
             state.ShopCosts[7 + i] = ShopRelicCost(state.ShopRelics[i], state.PlayerRng.Shops);
         }
 
+        // MerchantInventory.PopulatePotionEntries rolls all three potions in one
+        // CreateRandomPotionsOutOfCombat call and only then builds the entries that price
+        // them, so the draws are three picks followed by three costs -- not a pick and a
+        // cost three times over. Interleaving them read the same number of values off the
+        // Shops stream in the wrong order, which left every potion after the first
+        // rolling its rarity against a price.
         var potionBlacklist = new List<int>();
         for (int i = 0; i < state.ShopPotions.Length; i++)
         {
             int potion = NextPotion(state, state.PlayerRng.Shops, potionBlacklist);
             state.ShopPotions[i] = potion;
             potionBlacklist.Add(potion);
-            state.ShopCosts[10 + i] = ShopPotionCost(potion, state.PlayerRng.Shops);
+        }
+
+        for (int i = 0; i < state.ShopPotions.Length; i++)
+        {
+            state.ShopCosts[10 + i] = ShopPotionCost(state.ShopPotions[i], state.PlayerRng.Shops);
         }
         state.ShopCosts[RunConstants.ShopRemoveAction] = 100 + 50 * state.ShopRemovalsUsed;
 
@@ -1023,8 +1002,18 @@ public static class RunRewardGenerator
     /// </summary>
     private static int RarityOf(int cardId) => (int)GeneratedData.Cards.Get(cardId).Rarity;
 
+    /// <summary>
+    /// A potion's rarity, from the extracted potion data. A hand-written table stood
+    /// here and defaulted anything it did not list to Common, which put every potion it
+    /// had never heard of into the bucket a Common roll draws from.
+    /// </summary>
     private static int PotionRarity(int potionId) =>
-        PotionRarityById.GetValueOrDefault(potionId, RarityCommon);
+        GeneratedData.Potions.Get(potionId).Rarity switch
+        {
+            Core.PotionRarity.Rare => RarityRare,
+            Core.PotionRarity.Uncommon => RarityUncommon,
+            _ => RarityCommon,
+        };
 
     private static int[] RarityFallbacks(int rarity) =>
         rarity switch

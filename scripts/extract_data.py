@@ -39,7 +39,7 @@ HAS_ENERGY_COST_X = re.compile(r"HasEnergyCostX\s*=>\s*true")
 # run. Without the flag the reward pools are larger than the game's and offer cards that
 # cannot appear.
 MULTIPLAYER_ONLY = re.compile(
-    r"MultiplayerConstraint\s*=>\s*CardMultiplayerConstraint\.MultiplayerOnly"
+    r"MultiplayerConstraint\s*=>\s*CardMultiplayerConstraint\.MultiplayerOnly",
 )
 UPGRADE_DMG = re.compile(r"DynamicVars\.Damage\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
 UPGRADE_BLOCK = re.compile(r"DynamicVars\.Block\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
@@ -219,7 +219,7 @@ SPECIAL_CARD_IDS = {
 
 
 def slugify(name: str) -> str:
-    """The game's StringHelper.Slugify, which produces a model's ModelId.Entry.
+    r"""The game's StringHelper.Slugify, which produces a model's ModelId.Entry.
 
     Worth having in the data rather than derived at runtime: the mid-combat reshuffle
     sorts the pile by ModelId before shuffling (ListExtensions.StableShuffle), and
@@ -554,6 +554,12 @@ internal static class Relics
 # ── potion extraction ─────────────────────────────────────────────────────────
 
 
+def potion_rarity(text: str) -> str:
+    """Return the potion's declared rarity, or None when it does not declare one."""
+    match = re.search(r"PotionRarity Rarity => PotionRarity\.(\w+)", text)
+    return match.group(1) if match else "None"
+
+
 def extract_potions() -> str:
     entries: list[str] = []
 
@@ -577,7 +583,12 @@ def extract_potions() -> str:
             continue
 
         entries.append(
-            f'        new PotionDef(Id: {stable_id("potions", name)}, Name: "{name}"),',
+            # Rarity decides which potions a roll may land on, and PotionFactory rolls
+            # a rarity before it picks -- so a potion whose rarity is unknown is a potion
+            # in the wrong bucket. A hand-written table used to supply this and defaulted
+            # anything it did not know to Common.
+            f'        new PotionDef(Id: {stable_id("potions", name)}, Name: "{name}", '
+            f"Rarity: PotionRarity.{potion_rarity(text)}),",
         )
 
     if not entries:
@@ -643,7 +654,7 @@ def extract_card_pools(card_ids: dict[str, int]) -> str:
             print(f"  Card pools: {pool} skipped {len(missing)} unextracted cards.")
         entries.append(
             f"    /// <summary>{pool}: {len(ids)} cards, in pool order.</summary>\n"
-            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];"
+            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];",
         )
         print(f"  Card pools: {pool} {len(ids)} cards.")
 
@@ -656,6 +667,78 @@ def extract_card_pools(card_ids: dict[str, int]) -> str:
 /// another character's pool — Kaleidoscope at Neow — has to read it from here.
 /// </summary>
 internal static class CardPools
+{{
+{joined}
+}}
+"""
+
+
+POTION_POOLS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Models.PotionPools"
+EPOCHS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Timeline.Epochs"
+
+# The pools a run's potions come from: the shared pool plus the pool of the character
+# being played. Event/Token/Mock/Deprecated are not draw pools.
+POTION_POOL_NAMES = ("Shared", "Ironclad", "Silent", "Defect", "Necrobinder", "Regent")
+
+
+def _potion_names_in(text: str) -> list[str]:
+    """Potion class names in declaration order, following an epoch indirection.
+
+    A character's pool does not list its potions: it returns <Character>4Epoch.Potions,
+    and the epoch builds the list. The shared pool declares its own array inline.
+    """
+    names = re.findall(r"ModelDb\.Potion<(\w+)>\(\)", text)
+    if names:
+        return names
+
+    epoch = re.search(r"(\w+Epoch)\.Potions", text)
+    if epoch is None:
+        return []
+    path = EPOCHS_DIR / f"{epoch.group(1)}.cs"
+    if not path.exists():
+        return []
+    return re.findall(
+        r"ModelDb\.Potion<(\w+)>\(\)",
+        path.read_text(encoding="utf-8", errors="replace"),
+    )
+
+
+def extract_potion_pools(potion_ids: dict[str, int]) -> str:
+    """Each character's potion pool plus the shared one, in declaration order.
+
+    PotionFactory.GetPotionOptions builds what a shop or a reward can offer as the
+    character's pool concatenated with the shared pool, and NextItem indexes into that
+    list -- so both the membership and the order are load-bearing. A hand-written stand-in
+    for this was 43 potions against the real 48, which is why the merchant stocked the
+    wrong ones.
+    """
+    entries: list[str] = []
+    for pool in POTION_POOL_NAMES:
+        path = POTION_POOLS_DIR / f"{pool}PotionPool.cs"
+        if not path.exists():
+            print(f"  Potion pools: {pool} not found, skipping.")
+            continue
+        names = _potion_names_in(path.read_text(encoding="utf-8", errors="replace"))
+        ids = [potion_ids[name] for name in names if name in potion_ids]
+        missing = [name for name in names if name not in potion_ids]
+        if missing:
+            print(f"  Potion pools: {pool} skipped {len(missing)} unextracted potions.")
+        entries.append(
+            f"    /// <summary>{pool}: {len(ids)} potions, in pool order.</summary>\n"
+            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];",
+        )
+        print(f"  Potion pools: {pool} {len(ids)} potions.")
+
+    joined = "\n\n".join(entries)
+    return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
+
+/// <summary>
+/// The potion pools, extracted from the game's PotionPoolModel declarations. What a shop
+/// or a reward may offer is the character's pool followed by the shared one — see
+/// PotionFactory.GetPotionOptions — and the order matters because NextItem indexes into
+/// the concatenation.
+/// </summary>
+internal static class PotionPools
 {{
 {joined}
 }}
@@ -695,7 +778,7 @@ def extract_relic_pools(relic_ids: dict[str, int]) -> str:
             print(f"  Relic pools: {pool} skipped {len(missing)} unextracted relics.")
         entries.append(
             f"    /// <summary>{pool}: {len(ids)} relics, in pool order.</summary>\n"
-            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];"
+            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];",
         )
         print(f"  Relic pools: {pool} {len(ids)} relics.")
 
@@ -739,6 +822,15 @@ def main() -> None:
         )
     }
 
+    potions_cs = extract_potions()
+    potion_ids = {
+        name: int(raw)
+        for raw, name in re.findall(
+            r'new PotionDef\(Id: (\d+), Name: "([^"]+)"',
+            potions_cs,
+        )
+    }
+
     relics_cs = extract_relics()
     relic_ids = {
         name: int(raw)
@@ -754,8 +846,9 @@ def main() -> None:
         ("Enemies.g.cs", extract_enemies()),
         ("Powers.g.cs", extract_powers()),
         ("Relics.g.cs", relics_cs),
-        ("Potions.g.cs", extract_potions()),
+        ("Potions.g.cs", potions_cs),
         ("CardPools.g.cs", extract_card_pools(card_ids)),
+        ("PotionPools.g.cs", extract_potion_pools(potion_ids)),
         ("RelicPools.g.cs", extract_relic_pools(relic_ids)),
     ]:
         out = GENERATED / filename
