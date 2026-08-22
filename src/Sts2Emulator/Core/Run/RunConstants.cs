@@ -279,6 +279,13 @@ public static class RunConstants
     /// <summary>Brain Leech's IntVar("FromCardChoiceCount").</summary>
     public const int BrainLeechCardChoices = 5;
 
+    /// <summary>
+    /// The Waterlogged Scriptorium's two paid options, from the event's own DynamicVars:
+    /// Gold(55) for the Tentacle Quill and PricklySpongeGold(99) for the sponge.
+    /// </summary>
+    public const int ScriptoriumQuillCost = 55;
+    public const int ScriptoriumSpongeCost = 99;
+
     /// <summary>Tea Master's prices, from the event's own DynamicVars.</summary>
     public const int BoneTeaCost = 50;
     public const int EmberTeaCost = 150;

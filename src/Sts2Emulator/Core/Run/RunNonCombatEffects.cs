@@ -460,6 +460,24 @@ public static class RunNonCombatEffects
     /// run where it was -- when no card in the deck is eligible, which is what an event
     /// with a locked option is telling the player.
     /// </summary>
+    /// <summary>
+    /// Whether <see cref="BeginDeckSelection"/> would open rather than refuse. The action
+    /// mask has to ask the same question the step will, or the two disagree about an
+    /// option and the agent is offered a move it cannot make -- which is the single most
+    /// common defect this layer has had.
+    /// </summary>
+    public static bool CanBeginDeckSelection(RunState state, DeckSelection kind, int arg)
+    {
+        var savedKind = state.PendingSelectionKind;
+        int savedArg = state.PendingSelectionArg;
+        state.PendingSelectionKind = kind;
+        state.PendingSelectionArg = arg;
+        bool any = Enumerable.Range(0, state.Deck.Count).Any(i => CanSelectCard(state, i));
+        state.PendingSelectionKind = savedKind;
+        state.PendingSelectionArg = savedArg;
+        return any;
+    }
+
     public static bool BeginDeckSelection(
         RunState state,
         DeckSelection kind,
@@ -783,6 +801,35 @@ public static class RunNonCombatEffects
 
     /// <summary>Circlet, the fallback relic -- the only stackable one in the game.</summary>
     public static int CircletRelic => ResolveRelic("Circlet");
+
+    /// <summary>
+    /// The three relics the trader is willing to take, in the order it offers them:
+    /// <c>player.Relics.Where(IsTradable).StableShuffle(Rng).Take(3)</c>. StableShuffle
+    /// sorts by ModelId -- Category then Entry, as ordinal strings -- before Fisher-Yates,
+    /// which is why RelicDef carries an Entry now: our own numeric ids sort differently,
+    /// and a different pre-shuffle order is a different shuffle from the same stream.
+    ///
+    /// Returns indices into <c>state.Relics</c>, because the trade removes the relic the
+    /// player owns rather than a copy.
+    /// </summary>
+    public static List<int> RelicTraderStock(RunState state)
+    {
+        var tradable = Enumerable
+            .Range(0, state.Relics.Count)
+            .Where(i => IsTradableRelic(state, state.Relics[i]))
+            .OrderBy(i => GeneratedData.Relics.Get(state.Relics[i].DefId).Entry, StringComparer.Ordinal)
+            .ToList();
+        EventRng(state, "RELIC_TRADER").Shuffle(tradable);
+        return tradable.Take(3).ToList();
+    }
+
+    /// <summary>
+    /// <c>RelicModel.IsTradable</c>: Starter, Event and Ancient relics are never traded,
+    /// nor is one whose pickup already paid out, nor one with a pet attached.
+    /// </summary>
+    public static bool IsTradableRelic(RunState state, RelicInstance relic) =>
+        GeneratedData.Relics.Get(relic.DefId).IsTradable
+        && !state.UsedUpRelics.Contains(relic.DefId);
 
     /// <summary>A potion an event names outright -- the Potion Courier's Foul Potions.</summary>
     public static int NamedPotion(string name) =>

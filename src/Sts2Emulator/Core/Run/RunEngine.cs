@@ -843,6 +843,32 @@ public sealed class RunEngine
         out bool truncated
     )
     {
+        int status = StepInner(action, targetEnemyIndex, out reward, out terminal, out truncated);
+
+        // A run ends the moment the player runs out of HP, wherever that happens. Combat
+        // had its own path; nothing outside combat did, so an event that took the last of
+        // the player's HP left the run walking around at 0 and an agent learned that a
+        // lethal option was free. Guarding here rather than at each site means no new
+        // effect can forget it.
+        if (status == 0 && !terminal && State.PlayerHp <= 0)
+        {
+            State.PlayerHp = 0;
+            State.LastPlayerWon = false;
+            State.Phase = RunPhase.Complete;
+            terminal = true;
+        }
+
+        return status;
+    }
+
+    private int StepInner(
+        int action,
+        int targetEnemyIndex,
+        out float reward,
+        out bool terminal,
+        out bool truncated
+    )
+    {
         reward = 0.0f;
         terminal = false;
         truncated = false;
@@ -1871,10 +1897,11 @@ public sealed class RunEngine
                 {
                     State.PlayerMaxHp = Math.Max(1, State.PlayerMaxHp - 3);
                     State.PlayerHp = Math.Min(State.PlayerHp, State.PlayerMaxHp);
-                    if (!RunNonCombatEffects.UpgradeFirstCard(State))
-                    {
-                        return -1;
-                    }
+                    // A deck with nothing left to upgrade does not make the option
+                    // illegal: none of these events locks it, so the game opens a selector
+                    // that comes back empty and the event finishes. Refusing here told an
+                    // agent a move it was offered did not exist.
+                    RunNonCombatEffects.UpgradeFirstCard(State);
                 }
                 else if (action == 1)
                 {
@@ -2195,7 +2222,10 @@ public sealed class RunEngine
                 }
                 else if (action is 1 or 2)
                 {
-                    int cost = action == 1 ? 55 : 99;
+                    int cost =
+                        action == 1
+                            ? RunConstants.ScriptoriumQuillCost
+                            : RunConstants.ScriptoriumSpongeCost;
                     if (State.Gold < cost)
                     {
                         return -1;
@@ -2367,22 +2397,32 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventRelicTrader:
+                // The trader offers up to three of the player's OWN tradable relics, in
+                // the order it shuffled them -- so the option index reads that list, not
+                // state.Relics. The step used to index state.Relics directly (skipping
+                // slot 0 to dodge Burning Blood) and to accept every option when nothing
+                // was tradable, where the game offers a lone Proceed.
                 if (action is >= 0 and <= 2)
                 {
-                    // With nothing tradable the event offers a lone Proceed at index 0
-                    // rather than a trade -- which is what the action mask offers too, so
-                    // refusing it here left the two disagreeing about the same action.
-                    if (!State.Relics.Any(relic => IsTradableRelic(relic)))
+                    var stock = RunNonCombatEffects.RelicTraderStock(State);
+                    if (stock.Count == 0)
                     {
+                        // Nothing to trade: index 0 is the Proceed and the rest are not
+                        // options at all.
+                        if (action != 0)
+                        {
+                            return -1;
+                        }
+
                         break;
                     }
 
-                    if (State.Relics.Count <= action + 1)
+                    if (action >= stock.Count)
                     {
                         return -1;
                     }
 
-                    State.Relics.RemoveAt(action + 1);
+                    State.Relics.RemoveAt(stock[action]);
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
                         RunRewardGenerator.NextRelic(State)
@@ -2581,6 +2621,14 @@ public sealed class RunEngine
 
                     if (slot < 0)
                     {
+                        // With nothing to trade the event offers a lone Proceed at index
+                        // 0, which is what the mask offers -- so refusing it here left
+                        // the two disagreeing about the same action.
+                        if (action == 0 && !State.PotionSlots.Any(potion => potion != 0))
+                        {
+                            break;
+                        }
+
                         return -1;
                     }
 
@@ -2656,40 +2704,23 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventWelcomeToWongos:
-                if (action == 0)
+                // Three price tags, not one: 100, 200 and 300, and each option is locked
+                // below its OWN price. Charging a flat 100 for all three sold the mystery
+                // box at a third of its price, and only the mask knew the real numbers.
+                if (action is >= 0 and <= 2)
                 {
-                    if (State.Gold < 100)
+                    int price = action switch
+                    {
+                        0 => RunConstants.WongosBargainBinCost,
+                        1 => RunConstants.WongosFeaturedItemCost,
+                        _ => RunConstants.WongosMysteryBoxCost,
+                    };
+                    if (State.Gold < price)
                     {
                         return -1;
                     }
 
-                    State.Gold -= 100;
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
-                }
-                else if (action == 1)
-                {
-                    if (State.Gold < 100)
-                    {
-                        return -1;
-                    }
-
-                    State.Gold -= 100;
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
-                }
-                else if (action == 2)
-                {
-                    if (State.Gold < 100)
-                    {
-                        return -1;
-                    }
-
-                    State.Gold -= 100;
+                    State.Gold -= price;
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
                         RunRewardGenerator.NextRelic(State)
@@ -2747,6 +2778,10 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventColossalFlower:
+                // Two options, not three -- the step used to accept an option
+                // the event does not declare, which the action mask correctly
+                // never offered. What the two DO is transcribed but unverified:
+                // this is an act-2 event with no live capture behind it.
                 if (action == 0)
                 {
                     State.Gold += Effects.RelicEffects.ModifyGoldGained(
@@ -2759,13 +2794,6 @@ public sealed class RunEngine
                     RunRewardGenerator.AddPotion(
                         State,
                         RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                    );
-                }
-                else if (action == 2)
-                {
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -2877,10 +2905,11 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    if (!RunNonCombatEffects.UpgradeFirstCard(State))
-                    {
-                        return -1;
-                    }
+                    // A deck with nothing left to upgrade does not make the option
+                    // illegal: none of these events locks it, so the game opens a selector
+                    // that comes back empty and the event finishes. Refusing here told an
+                    // agent a move it was offered did not exist.
+                    RunNonCombatEffects.UpgradeFirstCard(State);
                 }
                 else if (action == 2)
                 {
@@ -2959,10 +2988,11 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    if (!RunNonCombatEffects.UpgradeFirstCard(State))
-                    {
-                        return -1;
-                    }
+                    // A deck with nothing left to upgrade does not make the option
+                    // illegal: none of these events locks it, so the game opens a selector
+                    // that comes back empty and the event finishes. Refusing here told an
+                    // agent a move it was offered did not exist.
+                    RunNonCombatEffects.UpgradeFirstCard(State);
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2971,6 +3001,10 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventRoundTeaParty:
+                // Two options, not three -- the step used to accept an option
+                // the event does not declare, which the action mask correctly
+                // never offered. What the two DO is transcribed but unverified:
+                // this is an act-2 event with no live capture behind it.
                 if (action == 0)
                 {
                     HealPlayer(18);
@@ -2980,13 +3014,6 @@ public sealed class RunEngine
                     State.Gold += Effects.RelicEffects.ModifyGoldGained(
                         State.Relics,
                         EventGoldAmount(80)
-                    );
-                }
-                else if (action == 2)
-                {
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -3017,10 +3044,11 @@ public sealed class RunEngine
             case RunConstants.EventTinkerTime:
                 if (action == 0)
                 {
-                    if (!RunNonCombatEffects.UpgradeFirstCard(State))
-                    {
-                        return -1;
-                    }
+                    // A deck with nothing left to upgrade does not make the option
+                    // illegal: none of these events locks it, so the game opens a selector
+                    // that comes back empty and the event finishes. Refusing here told an
+                    // agent a move it was offered did not exist.
+                    RunNonCombatEffects.UpgradeFirstCard(State);
                 }
                 else if (action == 1)
                 {
@@ -3402,16 +3430,11 @@ public sealed class RunEngine
         switch (State.EventId)
         {
             case RunConstants.EventUnrestSite:
-                if (State.PlayerHp < State.PlayerMaxHp)
-                {
-                    SetMask(mask, 0);
-                }
-
-                if (State.PlayerMaxHp > 8)
-                {
-                    SetMask(mask, 1);
-                }
-
+                // Neither option is ever locked. Resting at full health still costs a
+                // Poor Sleep, and Kill's LoseMaxHp floors the cap at 1 rather than
+                // refusing, so gating these hid two legal moves.
+                SetMask(mask, 0);
+                SetMask(mask, 1);
                 break;
             case RunConstants.EventAromaOfChaos:
                 if (State.Deck.Count > 0)
@@ -3426,15 +3449,22 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventJungleMazeAdventure:
-                if (State.PlayerHp > 18)
-                {
-                    SetMask(mask, 0);
-                }
-
+                // The solo quest is offered at any health; its 18 damage can end the run.
+                SetMask(mask, 0);
                 SetMask(mask, 1);
                 break;
             case RunConstants.EventMorphicGrove:
-                if (State.Gold > 0 && State.Deck.Count >= 2)
+                // Group is LoseGold(Owner.Gold) -- it takes whatever the run holds, with
+                // no minimum -- so the only thing that can stop it is having nothing to
+                // transform. The gold >= 100 rule is IsAllowed, which decides whether the
+                // EVENT appears, not whether the option is takeable once it has.
+                if (
+                    RunNonCombatEffects.CanBeginDeckSelection(
+                        State,
+                        DeckSelection.TransformToRandom,
+                        0
+                    )
+                )
                 {
                     SetMask(mask, 0);
                 }
@@ -3447,12 +3477,10 @@ public sealed class RunEngine
                 SetSelfHelpBookMask(mask, 2);
                 break;
             case RunConstants.EventBrainLeech:
+                // Rip is offered at any health -- the game lets it kill you, and the run
+                // ends when it does.
                 SetMask(mask, 0);
-                if (State.PlayerHp > 5)
-                {
-                    SetMask(mask, 1);
-                }
-
+                SetMask(mask, 1);
                 break;
             case RunConstants.EventTheLegendsWereTrue:
                 SetMask(mask, 0);
@@ -3463,16 +3491,10 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventDoorsOfLightAndDark:
-                if (State.Deck.Any(RunConstants.IsRunCardUpgradable))
-                {
-                    SetMask(mask, 0);
-                }
-
-                if (State.Deck.Count > 0)
-                {
-                    SetMask(mask, 1);
-                }
-
+                // Both doors are always open. Light takes up to two upgradable cards and
+                // is content with none; Dark opens a removal the player may leave empty.
+                SetMask(mask, 0);
+                SetMask(mask, 1);
                 break;
             case RunConstants.EventSunkenTreasury:
                 SetMask(mask, 0);
@@ -3507,7 +3529,12 @@ public sealed class RunEngine
                 SetMask(mask, 2);
                 break;
             case RunConstants.EventRelicTrader:
-                SetTradeMask(mask, State.Relics.Count(relic => IsTradableRelic(relic)));
+                SetTradeMask(
+                    mask,
+                    State.Relics.Count(relic =>
+                        RunNonCombatEffects.IsTradableRelic(State, relic)
+                    )
+                );
                 break;
             case RunConstants.EventTheFutureOfPotions:
                 SetTradeMask(mask, State.PotionSlots.Count(potion => potion != 0));
@@ -3556,7 +3583,7 @@ public sealed class RunEngine
                 }
 
                 SetMask(mask, 1);
-                if (State.Relics.Any(relic => IsTradableRelic(relic)))
+                if (State.Relics.Any(relic => RunNonCombatEffects.IsTradableRelic(State, relic)))
                 {
                     SetMask(mask, 2);
                 }
@@ -3584,6 +3611,63 @@ public sealed class RunEngine
                 SetMask(mask, 3);
                 break;
             case RunConstants.EventResultPending:
+                SetMask(mask, 0);
+                break;
+            case RunConstants.EventCrystalSphere:
+                // Paying for three divinations needs the rolled price; taking the Debt
+                // instead is free.
+                if (State.Gold >= RunNonCombatEffects.CrystalSphereCost(State))
+                {
+                    SetMask(mask, 0);
+                }
+
+                SetMask(mask, 1);
+                break;
+            case RunConstants.EventWhisperingHollow:
+                if (State.Gold >= RunNonCombatEffects.WhisperingHollowGold(State))
+                {
+                    SetMask(mask, 0);
+                }
+
+                if (
+                    RunNonCombatEffects.CanBeginDeckSelection(
+                        State,
+                        DeckSelection.TransformToRandom,
+                        0
+                    )
+                )
+                {
+                    SetMask(mask, 1);
+                }
+
+                break;
+            case RunConstants.EventWaterloggedScriptorium:
+                // Bloody Ink is free; the quill and the sponge are locked below their own
+                // prices, and both need a card Steady can take.
+                SetMask(mask, 0);
+                if (
+                    RunNonCombatEffects.CanBeginDeckSelection(
+                        State,
+                        DeckSelection.Enchant,
+                        (int)Enchantment.Steady
+                    )
+                )
+                {
+                    if (State.Gold >= RunConstants.ScriptoriumQuillCost)
+                    {
+                        SetMask(mask, 1);
+                    }
+
+                    if (State.Gold >= RunConstants.ScriptoriumSpongeCost)
+                    {
+                        SetMask(mask, 2);
+                    }
+                }
+
+                break;
+            case RunConstants.EventFakeMerchant:
+                // The fake shop is not modelled: the step takes one relic and refuses the
+                // rest, so offering three options was offering two the agent cannot use.
                 SetMask(mask, 0);
                 break;
             default:
@@ -3631,10 +3715,6 @@ public sealed class RunEngine
             SetMask(mask, i);
         }
     }
-
-    private bool IsTradableRelic(RelicInstance relic) =>
-        GeneratedData.Relics.Get(relic.DefId).IsTradable
-        && !State.UsedUpRelics.Contains(relic.DefId);
 
     /// <summary>
     /// One page of the book is offered when the deck holds a card its enchantment would

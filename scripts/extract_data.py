@@ -509,6 +509,7 @@ def extract_relics() -> str:
         fields = [
             f'Id: {stable_id("relics", name)}',
             f'Name: "{name}"',
+            f'Entry: "{slugify(name)}"',
             f"Rarity: RelicRarity.{rarity.group(1) if rarity else 'None'}",
         ]
         if "HasUponPickupEffect => true" in text:
