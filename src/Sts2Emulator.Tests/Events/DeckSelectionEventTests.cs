@@ -17,6 +17,11 @@ namespace Sts2Emulator.Tests;
 /// lowest-priority card, transform whichever card sat first in the deck, or upgrade it.
 /// The choice IS the option, so choosing for the player was the defect.
 /// </summary>
+[CoversEvent("AromaOfChaos")]
+[CoversEvent("DoorsOfLightAndDark")]
+[CoversEvent("LuminousChoir")]
+[CoversEvent("MorphicGrove")]
+[CoversEvent("Wellspring")]
 public class DeckSelectionEventTests
 {
     private static RunEngine At(int eventId, string seed = "ABCDEF")
@@ -79,6 +84,41 @@ public class DeckSelectionEventTests
         Assert.Equal(0, engine.Step(Selectable(engine), -1, out _, out _, out _));
         Assert.Equal(1, engine.State.PendingSelectionCount);
         Assert.Equal(0, CountOf(engine.State, "SporeMind"));
+    }
+
+    /// <summary>
+    /// The other half of the Choir: a tribute of gold buys a relic outright, with no
+    /// selection and no curse. The price is rolled per run, which is what locks the
+    /// option when the purse is short.
+    /// </summary>
+    [Fact]
+    public void OfferingTributeBuysARelicAndAsksNothing()
+    {
+        var engine = At(RunConstants.EventLuminousChoir);
+        int price = RunNonCombatEffects.LuminousChoirTributeCost(engine.State);
+        Assert.InRange(price, 100, 149);
+        engine.State.Gold = price;
+        int deck = engine.State.Deck.Count;
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        Assert.Equal(0, engine.State.Gold);
+        Assert.Equal(2, engine.State.Relics.Count);
+        Assert.Equal(deck, engine.State.Deck.Count);
+        Assert.Equal(DeckSelection.None, engine.State.PendingSelectionKind);
+    }
+
+    [Fact]
+    public void TheTributeIsRefusedWhenThePurseIsShort()
+    {
+        var engine = At(RunConstants.EventLuminousChoir);
+        engine.State.Gold = RunNonCombatEffects.LuminousChoirTributeCost(engine.State) - 1;
+        int gold = engine.State.Gold;
+
+        Assert.Equal(-1, engine.Step(1, -1, out _, out _, out _));
+
+        Assert.Equal(gold, engine.State.Gold);
+        Assert.Single(engine.State.Relics);
     }
 
     // ── The Wellspring ───────────────────────────────────────────────────────

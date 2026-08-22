@@ -1791,12 +1791,18 @@ public sealed class RunEngine
 
                 if (action == 1)
                 {
-                    if (State.Gold < 149)
+                    // The tribute is the ROLLED price -- 149 minus NextInt(0, 50) -- which
+                    // is what the action mask already read. Charging the flat 149 here
+                    // meant a run holding, say, 120 gold was offered the tribute and then
+                    // refused when it took it: the same mask/step disagreement the Tea
+                    // Master had.
+                    int tribute = RunNonCombatEffects.LuminousChoirTributeCost(State);
+                    if (State.Gold < tribute)
                     {
                         return -1;
                     }
 
-                    State.Gold -= 149;
+                    State.Gold -= tribute;
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
                         RunRewardGenerator.NextRelic(State)

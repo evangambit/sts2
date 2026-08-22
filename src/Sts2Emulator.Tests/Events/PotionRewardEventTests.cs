@@ -17,6 +17,10 @@ namespace Sts2Emulator.Tests;
 /// arrive one after another is invisible to <c>EventOutcomeTests</c>. Two regressions in
 /// that code passed the whole fixture suite before this was written.
 /// </summary>
+[CoversEvent("PotionCourier")]
+[CoversEvent("StoneOfAllTime")]
+[CoversEvent("TheLegendsWereTrue")]
+[CoversEvent("WhisperingHollow")]
 public class PotionRewardEventTests
 {
     private static RunEngine At(int eventId, string seed = "ABCDEF")
@@ -142,6 +146,24 @@ public class PotionRewardEventTests
     }
 
     // ── The Legends Were True / the Wellspring ───────────────────────────────
+
+    /// <summary>
+    /// Nabbing the map takes the Spoils Map quest card and costs nothing -- the HP and the
+    /// potion both belong to the other option.
+    /// </summary>
+    [Fact]
+    public void NabbingTheMapTakesTheSpoilsMapAndCostsNothing()
+    {
+        var engine = At(RunConstants.EventTheLegendsWereTrue);
+        int deck = engine.State.Deck.Count;
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        Assert.Equal(deck + 1, engine.State.Deck.Count);
+        Assert.Equal(RunConstants.SpoilsMapCard, engine.State.Deck[^1].DefId);
+        Assert.Equal(64, engine.State.PlayerHp);
+        Assert.NotEqual(RunPhase.RelicReward, engine.State.Phase);
+    }
 
     [Fact]
     public void SlowlyFindingAnExitCostsEightHpAndOffersOnePotion()
