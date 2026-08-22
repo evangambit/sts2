@@ -25,6 +25,14 @@ public class CombatCoverageTests
     /// <summary>
     /// Encounters the emulator can build that no test exercises yet. Every entry is a
     /// fight the emulator will happily run wrongly in silence.
+    ///
+    /// Nothing in Act 1 is on this list any more: every encounter either act declares --
+    /// weak, normal, elite and boss alike -- has a committed live capture that replays
+    /// turn by turn. What is left is later-act content, which the emulator models well
+    /// enough to build but has never been held to. That is not idle debt: sweeping a
+    /// sample of it found eleven of fifteen diverging on intents or move cycles, so
+    /// these are known-wrong rather than merely unchecked, and the captures were not
+    /// committed precisely because they would have been committing failures.
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
@@ -37,7 +45,6 @@ public class CombatCoverageTests
         "Bowlbugs",
         "BowlbugsWeak",
         "Chompers",
-        "ConstructMenagerie",
         "CultistAndSeapunk",
         "Decimillipede",
         "DenseVegetation",
@@ -46,11 +53,8 @@ public class CombatCoverageTests
         "Exoskeletons",
         "Fabricator",
         "FakeMerchant",
-        "FossilStalker",
         "FrogKnight",
-        "FuzzyWurmCrawler",
         "GlobeHead",
-        "GremlinMerc",
         "HunterKiller",
         "InfestedPrisms",
         "KaiserCrab",
@@ -58,28 +62,18 @@ public class CombatCoverageTests
         "KnowledgeDemon",
         "LostAndForgotten",
         "LouseProgenitor",
-        "Mawler",
         "MechaKnight",
         "MysteriousKnight",
         "Mytes",
-        "NibbitsNormal",
-        "NibbitsWeak",
         "Obscura",
-        "OvergrowthCrawlers",
         "Ovicopter",
         "OwlMagistrate",
         "PunchOff",
         "Queen",
-        "RubyRaiders",
         "Scrolls",
         "ScrollsWeak",
-        "ShrinkerBeetle",
         "SlimedBerserker",
-        "SlimesNormal",
-        "SlimesWeak",
-        "SlitheringStrangler",
         "SlumberingBeetle",
-        "SnappingJaxfruitNormal",
         "SoulNexus",
         "SpinyToad",
         "TestSubject",

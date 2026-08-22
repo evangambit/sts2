@@ -204,6 +204,22 @@ def moves_for_live_name(live_name: str) -> list[Move] | None:
     for candidate in MONSTERS.glob("*.cs"):
         if candidate.stem.lower() == wanted:
             return moves_for(candidate.stem)
+
+    # Some display names drop a word the class keeps: every Ruby Raider shows as
+    # "Crossbow Raider" against CrossbowRubyRaider. Match on the first and last word
+    # instead, which pins both ends of the name and cannot collapse two raiders onto
+    # each other.
+    words = [w for w in re.split(r"[^A-Za-z0-9]+", live_name) if w]
+    if len(words) >= 2:
+        head, tail = words[0].lower(), words[-1].lower()
+        matches = [
+            candidate.stem
+            for candidate in MONSTERS.glob("*.cs")
+            if candidate.stem.lower().startswith(head)
+            and candidate.stem.lower().endswith(tail)
+        ]
+        if len(matches) == 1:
+            return moves_for(matches[0])
     return None
 
 
