@@ -42,7 +42,9 @@ class Sts2GymTests(unittest.TestCase):
             self.assertEqual(native.run_reset(handle, "0", obs), 0)
             self.assertEqual(native.run_phase(handle), PHASE_ANCIENT)
             self.assertEqual(native.RUN_OBS_SIZE, native.OBS_SIZE + 35)
-            self.assertEqual(native.RUN_MAX_ACTIONS, 32)
+            # Wide enough for the Crystal Sphere's board -- 121 cells, either tool --
+            # which is what pushed this past the 32 a shop needed.
+            self.assertEqual(native.RUN_MAX_ACTIONS, 256)
             self.assertEqual(native.RUN_INFO_SIZE, 11)
 
             run_offset = native.OBS_SIZE

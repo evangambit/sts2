@@ -41,7 +41,6 @@ public class EventCoverageTests
         "ByrdonisNest",
         "ColorfulPhilosophers",
         "ColossalFlower",
-        "CrystalSphere",
         "DenseVegetation",
         "DollRoom",
         "DoorsOfLightAndDark",

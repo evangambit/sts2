@@ -270,6 +270,7 @@ public static class RunRewardGenerator
             || state.RewardPotion != 0
             || state.RelicReward != 0
             || state.RewardCardPending
+            || state.PendingCardOffers.Count > 0
             || state.PendingOtherCharacterCardRewards > 0;
     }
 
@@ -286,6 +287,7 @@ public static class RunRewardGenerator
             {
                 state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, state.RewardGold);
                 state.RewardGold = 0;
+                OfferNextGold(state);
                 return true;
             }
             itemIndex--;
@@ -325,7 +327,20 @@ public static class RunRewardGenerator
             return true;
         }
 
+        if (state.PendingCardOffers.Count > 0 && itemIndex == 0)
+        {
+            OfferNextCardOffer(state);
+            state.RewardCardPending = false;
+            state.ReturnToRewardScreenAfterCardReward = true;
+            state.Phase = RunPhase.CardReward;
+            return true;
+        }
+
         if (state.RewardCardPending)
+        {
+            itemIndex--;
+        }
+        else if (state.PendingCardOffers.Count > 0)
         {
             itemIndex--;
         }
@@ -355,6 +370,81 @@ public static class RunRewardGenerator
         state.RewardCardPending = false;
         state.ReturnToRewardScreenAfterCardReward = false;
         state.RelicReward = 0;
+        state.PendingGoldRewards.Clear();
+        state.PendingCardOffers.Clear();
+    }
+
+    /// <summary>Moves the next queued gold pile onto the screen, if the screen is free.</summary>
+    public static void OfferNextGold(RunState state)
+    {
+        if (state.PendingGoldRewards.Count == 0 || state.RewardGold != 0)
+        {
+            return;
+        }
+
+        state.RewardGold = state.PendingGoldRewards[0];
+        state.PendingGoldRewards.RemoveAt(0);
+    }
+
+    /// <summary>Moves the next queued card offer onto the card screen.</summary>
+    private static void OfferNextCardOffer(RunState state)
+    {
+        var offer = state.PendingCardOffers[0];
+        state.PendingCardOffers.RemoveAt(0);
+        Array.Clear(state.RewardCards);
+        Array.Clear(state.RewardUpgraded);
+        for (int i = 0; i < state.RewardCards.Length && i < offer.Length; i++)
+        {
+            state.RewardCards[i] = offer[i];
+        }
+    }
+
+    /// <summary>
+    /// A card offer of a pinned rarity, rolled off a given stream: the Crystal Sphere's
+    /// buried card rewards are <c>CardRarityOddsType.Uniform</c> over the character's pool
+    /// filtered to one rarity, with the event's own Rng overriding the player's.
+    /// CreateForReward then rolls an upgrade per card whatever the odds, so each card is
+    /// two draws.
+    /// </summary>
+    public static int[] GenerateFixedRarityCardOffer(
+        RunState state,
+        int count,
+        CardRarity rarity,
+        GameRng rng
+    )
+    {
+        int rarityValue = rarity switch
+        {
+            CardRarity.Rare => RarityRare,
+            CardRarity.Uncommon => RarityUncommon,
+            _ => RarityCommon,
+        };
+        var blacklist = new List<int>();
+        var offer = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            offer[i] = ChooseCardWithRarity(IroncladRewardPool, rarityValue, blacklist, rng);
+            blacklist.Add(offer[i]);
+            RollCardUpgrade(state, offer[i], rng);
+        }
+
+        return offer;
+    }
+
+    /// <summary>
+    /// One potion of a named rarity, uniformly. No rarity roll first: the Crystal Sphere's
+    /// potions pin their own rarity and take <c>rng.NextItem</c> over what is left, the way
+    /// the Potion Courier's Ransack does.
+    /// </summary>
+    public static int NextPotionOfRarity(GameRng rng, Core.PotionRarity rarity)
+    {
+        var available = PotionRewardPool
+            .ToArray()
+            .Where(potionId => GeneratedData.Potions.Get(potionId).Rarity == rarity)
+            .ToArray();
+        return available.Length > 0
+            ? rng.NextItem(available)
+            : rng.NextItem(PotionRewardPool.ToArray());
     }
 
     /// <summary>
@@ -627,15 +717,21 @@ public static class RunRewardGenerator
     /// distribution that did not exist: the queue is the reason a run does not see the
     /// same relic twice, and the 50/33/17 rarity split is the reason it sees Commons most.
     /// </summary>
-    public static int NextRelic(RunState state) => PullRelic(state, fromFront: true);
+    public static int NextRelic(RunState state, GameRng? rngOverride = null) =>
+        PullRelic(state, fromFront: true, rngOverride: rngOverride);
 
     /// <summary>Shops pull the same queues from the BACK.</summary>
     public static int NextShopRelic(RunState state, RelicRarity rarity = RelicRarity.Shop) =>
         PullRelic(state, fromFront: false, rarity);
 
-    private static int PullRelic(RunState state, bool fromFront, RelicRarity? rarity = null)
+    private static int PullRelic(
+        RunState state,
+        bool fromFront,
+        RelicRarity? rarity = null,
+        GameRng? rngOverride = null
+    )
     {
-        var rolled = rarity ?? RelicGrabBag.RollRarity(state.PlayerRng.Rewards);
+        var rolled = rarity ?? RelicGrabBag.RollRarity(rngOverride ?? state.PlayerRng.Rewards);
         var allowed = RelicGrabBag.AllowedInSoloRun(state.Floor);
         int? relicId = state.RelicBag.Pull(rolled, fromFront, allowed);
         if (relicId is null)

@@ -47,38 +47,23 @@ public class EventOutcomeTests
             RunPhase.Shop => "shop",
             RunPhase.Treasure => "treasure",
             RunPhase.TransformSelect => "card_select",
+            RunPhase.CrystalSphere => "crystal_sphere",
             _ => "unknown",
         };
 
     /// <summary>
-    /// Options whose outcome does not yet match the game. Every entry is an event the
-    /// emulator will resolve wrongly in silence -- the wrong hp, the wrong gold, the
-    /// wrong card, or the wrong screen next.
+    /// Options whose outcome does not yet match the game. Every entry would be an event
+    /// the emulator resolves wrongly in silence -- the wrong hp, the wrong gold, the wrong
+    /// card, or the wrong screen next.
     ///
-    /// A burn-down list, not a config knob: 53 of the 74 takeable Act 1 options were
-    /// wrong the first time they were ever compared, which is what forty events written
-    /// without a way to check them against the game looks like. Delete an entry when its
-    /// event is fixed; <see cref="PendingListHasNoOptionThatNowMatches"/> fails if one
-    /// lingers.
-    ///
-    /// What is left needs mechanics the emulator does not have: multi-page events, grid
-    /// card selection, and the events with a screen of their own.
+    /// A burn-down list, not a config knob, and it is now empty: 53 of the 74 takeable
+    /// Act 1 options were wrong the first time they were ever compared, which is what
+    /// forty events written without a way to check them against the game looks like. Add
+    /// an entry only for an option that is genuinely not modelled yet;
+    /// <see cref="PendingListHasNoOptionThatNowMatches"/> fails if one lingers past its
+    /// fix.
     /// </summary>
-    private static readonly HashSet<string> Pending =
-    [
-        // Crystal Sphere is the last one, and it is a feature rather than a defect.
-        // Both its options end in CrystalSphereMinigame: an 11x11 grid seeded off the
-        // event's own stream, two tool sizes, three or six divinations to spend, and
-        // rewards for whatever the player uncovers. That is an action space of its own
-        // -- the mod carries three dedicated actions for it -- so it wants building
-        // deliberately, not bolting onto an event handler.
-        //
-        // Until it exists neither option can be taken. Payment Plan's outcome already
-        // matches, mind: the deck gains the same Debt, so opt1 fails on the screen name
-        // alone.
-        "CrystalSphere-opt0.json",
-        "CrystalSphere-opt1.json",
-    ];
+    private static readonly HashSet<string> Pending = [];
 
     // "-opt0.json" and friends, but not "-options.json": one character after "opt".
     private static IEnumerable<string> AllFixtures() =>

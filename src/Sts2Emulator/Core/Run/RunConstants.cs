@@ -11,7 +11,28 @@ public static class RunConstants
     public const int RunExtraObsSize = 35;
     public const int RunObsSize = CombatObsSize + RunExtraObsSize;
     public const int RunInfoSize = 11;
-    public const int MaxActions = 32;
+
+    /// <summary>
+    /// How wide the run's action mask is. 32 was enough while the widest screen was a
+    /// shop, and silently wrong past that: <c>SetMask</c> drops anything it cannot fit,
+    /// so a deck grown past 32 cards had its later cards unselectable at a card-select
+    /// screen, without a word. The Crystal Sphere is what forced the issue -- its board
+    /// is 121 cells and each may be divined with either tool -- so the mask now covers
+    /// 242 and rounds up.
+    /// </summary>
+    public const int MaxActions = 256;
+
+    /// <summary>The Crystal Sphere's board is 11x11.</summary>
+    public const int CrystalSphereSize = 11;
+    public const int CrystalSphereCells = CrystalSphereSize * CrystalSphereSize;
+
+    /// <summary>
+    /// Actions 0..120 divine a cell with the big tool, 121..241 with the small one; a
+    /// cell's index is <c>x * 11 + y</c>. The tool is folded into the action rather than
+    /// set by one of its own, because setting a tool costs the game nothing -- and a free
+    /// action is a cycle an agent can ride forever.
+    /// </summary>
+    public const int CrystalSphereSmallToolAction = CrystalSphereCells;
     public const int MapChoices = 4;
     public const int MapWidth = 7;
     public const int MapBossRow = 16;

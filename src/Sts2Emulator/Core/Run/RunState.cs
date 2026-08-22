@@ -87,6 +87,38 @@ public sealed class RunState
     public int EventId;
     public int? EventValue0;
     public int? EventValue1;
+
+    /// <summary>
+    /// The Crystal Sphere's board, while one is open. It carries its own copy of the
+    /// event's stream because the minigame keeps drawing from it -- the board is laid out
+    /// on entry and the rewards roll off the same stream when the last divination is
+    /// spent, so a fresh Rng seeded from the event id would replay the placement draws.
+    /// </summary>
+    public CrystalSphereGame? CrystalSphere;
+    public GameRng? CrystalSphereRng;
+
+    /// <summary>
+    /// Gold rewards still owed. The reward screen carries one pile at a time, the way it
+    /// carries one potion at a time, so anything that offers several -- the Crystal
+    /// Sphere can uncover seven -- queues the rest here.
+    ///
+    /// The game shows them all at once and lets the player claim them in any order; the
+    /// queue claims them one at a time instead. The gold that ends up in the purse is the
+    /// same either way, which is why the difference is left to stand: only the action
+    /// index moves.
+    /// </summary>
+    public List<int> PendingGoldRewards = [];
+
+    /// <summary>
+    /// Card offers still owed, each already rolled: three card ids the player will choose
+    /// one of. The Crystal Sphere can uncover a card reward of each rarity and the screen
+    /// shows one offer at a time, so the rest wait here.
+    ///
+    /// Rolled on the way in rather than on the way out because that is when the game rolls
+    /// them: RewardsSet populates every reward as the screen opens, in the order the
+    /// rewards were listed, and those draws all come off the same stream.
+    /// </summary>
+    public List<int[]> PendingCardOffers = [];
     public CombatState? ActiveCombat;
     public CountingRandom? ActiveCombatRng;
     public bool LastPlayerWon;

@@ -1,0 +1,1193 @@
+{
+  "_comment": "Captured from the live game by scripts/capture_crystal_sphere.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
+  "event": "CrystalSphere",
+  "seed": "ABCDEF",
+  "ascension": 8,
+  "option": 1,
+  "option_title": "Payment Plan",
+  "floor": 1,
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1"
+  },
+  "before": {
+    "state_type": "event",
+    "run": {
+      "act": 1,
+      "floor": 1,
+      "ascension": 8
+    },
+    "player": {
+      "character": "The Ironclad",
+      "hp": 64,
+      "max_hp": 80,
+      "block": 0,
+      "energy": null,
+      "max_energy": null,
+      "gold": 99,
+      "deck": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 5,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 6,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 7,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 8,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 9,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 10,
+          "id": "ASCENDERS_BANE",
+          "name": "Ascender's Bane",
+          "type": "Curse",
+          "cost": "0",
+          "description": "Unplayable. Ethereal. Eternal.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        }
+      ],
+      "deck_size": 11,
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "slot": null,
+          "counter": null
+        }
+      ],
+      "potions": [],
+      "max_potion_slots": 2,
+      "status": [],
+      "hand": [],
+      "draw_pile": [],
+      "discard_pile": [],
+      "exhaust_pile": []
+    },
+    "battle": null,
+    "event": {
+      "event_id": "CRYSTAL_SPHERE",
+      "event_name": "Crystal Sphere",
+      "is_ancient": false,
+      "in_dialogue": false,
+      "body": null,
+      "options": [
+        {
+          "index": 0,
+          "title": "Uncover Future",
+          "description": "Pay 79 Gold. Divine 3 times.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "title": "Payment Plan",
+          "description": "Gain a Debt. Divine 6 times.",
+          "is_locked": false,
+          "is_proceed": false,
+          "was_chosen": false,
+          "keywords": [
+            {
+              "name": "Debt",
+              "description": "Unplayable. At the end of your turn, if this is in your Hand, lose 10 Gold."
+            },
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
+            }
+          ]
+        }
+      ]
+    },
+    "rewards": {},
+    "card_reward": {},
+    "map": {},
+    "shop": {},
+    "rest": {},
+    "rest_site": {},
+    "treasure": {},
+    "bundle_select": {},
+    "menu_screen": null,
+    "options": null
+  },
+  "opening_board": {
+    "cleared": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        9
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        1,
+        9
+      ],
+      [
+        1,
+        10
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        2,
+        10
+      ],
+      [
+        8,
+        0
+      ],
+      [
+        8,
+        10
+      ],
+      [
+        9,
+        0
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        9,
+        9
+      ],
+      [
+        9,
+        10
+      ],
+      [
+        10,
+        0
+      ],
+      [
+        10,
+        1
+      ],
+      [
+        10,
+        2
+      ],
+      [
+        10,
+        8
+      ],
+      [
+        10,
+        9
+      ],
+      [
+        10,
+        10
+      ]
+    ],
+    "items": [],
+    "tool": "big",
+    "divinations_left": "6 Divinations remain"
+  },
+  "clicks": [
+    {
+      "x": 1,
+      "y": 3,
+      "tool": "small",
+      "state_type": "crystal_sphere",
+      "board": {
+        "cleared": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            8
+          ],
+          [
+            0,
+            9
+          ],
+          [
+            0,
+            10
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            9
+          ],
+          [
+            1,
+            10
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            10
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            8,
+            10
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            9,
+            1
+          ],
+          [
+            9,
+            9
+          ],
+          [
+            9,
+            10
+          ],
+          [
+            10,
+            0
+          ],
+          [
+            10,
+            1
+          ],
+          [
+            10,
+            2
+          ],
+          [
+            10,
+            8
+          ],
+          [
+            10,
+            9
+          ],
+          [
+            10,
+            10
+          ]
+        ],
+        "items": [
+          {
+            "item_type": "CrystalSpherePotion",
+            "x": 1,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        ],
+        "tool": "small",
+        "divinations_left": "5 Divinations remain"
+      }
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "tool": "small",
+      "state_type": "crystal_sphere",
+      "board": {
+        "cleared": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            8
+          ],
+          [
+            0,
+            9
+          ],
+          [
+            0,
+            10
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            9
+          ],
+          [
+            1,
+            10
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            10
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            8,
+            10
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            9,
+            1
+          ],
+          [
+            9,
+            9
+          ],
+          [
+            9,
+            10
+          ],
+          [
+            10,
+            0
+          ],
+          [
+            10,
+            1
+          ],
+          [
+            10,
+            2
+          ],
+          [
+            10,
+            8
+          ],
+          [
+            10,
+            9
+          ],
+          [
+            10,
+            10
+          ]
+        ],
+        "items": [
+          {
+            "item_type": "CrystalSpherePotion",
+            "x": 1,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        ],
+        "tool": "small",
+        "divinations_left": "4 Divinations remain"
+      }
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "tool": "small",
+      "state_type": "crystal_sphere",
+      "board": {
+        "cleared": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            8
+          ],
+          [
+            0,
+            9
+          ],
+          [
+            0,
+            10
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            9
+          ],
+          [
+            1,
+            10
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            10
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            8,
+            10
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            9,
+            1
+          ],
+          [
+            9,
+            9
+          ],
+          [
+            9,
+            10
+          ],
+          [
+            10,
+            0
+          ],
+          [
+            10,
+            1
+          ],
+          [
+            10,
+            2
+          ],
+          [
+            10,
+            8
+          ],
+          [
+            10,
+            9
+          ],
+          [
+            10,
+            10
+          ]
+        ],
+        "items": [
+          {
+            "item_type": "CrystalSpherePotion",
+            "x": 1,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        ],
+        "tool": "small",
+        "divinations_left": "3 Divinations remain"
+      }
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "tool": "small",
+      "state_type": "crystal_sphere",
+      "board": {
+        "cleared": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            8
+          ],
+          [
+            0,
+            9
+          ],
+          [
+            0,
+            10
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            9
+          ],
+          [
+            1,
+            10
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            2,
+            10
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            8,
+            10
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            9,
+            1
+          ],
+          [
+            9,
+            9
+          ],
+          [
+            9,
+            10
+          ],
+          [
+            10,
+            0
+          ],
+          [
+            10,
+            1
+          ],
+          [
+            10,
+            2
+          ],
+          [
+            10,
+            8
+          ],
+          [
+            10,
+            9
+          ],
+          [
+            10,
+            10
+          ]
+        ],
+        "items": [
+          {
+            "item_type": "CrystalSpherePotion",
+            "x": 1,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        ],
+        "tool": "small",
+        "divinations_left": "2 Divinations remain"
+      }
+    },
+    {
+      "x": 5,
+      "y": 6,
+      "tool": "small",
+      "state_type": "crystal_sphere",
+      "board": {
+        "cleared": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            8
+          ],
+          [
+            0,
+            9
+          ],
+          [
+            0,
+            10
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            9
+          ],
+          [
+            1,
+            10
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            2,
+            10
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            8,
+            10
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            9,
+            1
+          ],
+          [
+            9,
+            9
+          ],
+          [
+            9,
+            10
+          ],
+          [
+            10,
+            0
+          ],
+          [
+            10,
+            1
+          ],
+          [
+            10,
+            2
+          ],
+          [
+            10,
+            8
+          ],
+          [
+            10,
+            9
+          ],
+          [
+            10,
+            10
+          ]
+        ],
+        "items": [
+          {
+            "item_type": "CrystalSpherePotion",
+            "x": 1,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          },
+          {
+            "item_type": "CrystalSphereGold",
+            "x": 5,
+            "y": 6,
+            "width": 2,
+            "height": 1
+          }
+        ],
+        "tool": "small",
+        "divinations_left": "1 Divinations remain"
+      }
+    },
+    {
+      "x": 6,
+      "y": 6,
+      "tool": "small",
+      "state_type": "rewards",
+      "board": null
+    }
+  ],
+  "after_state_type": "rewards",
+  "rewards": [
+    {
+      "index": 0,
+      "type": "gold",
+      "gold_amount": 30,
+      "description": "30 Gold"
+    },
+    {
+      "index": 1,
+      "type": "potion",
+      "gold_amount": null,
+      "description": "Fairy in a Bottle"
+    }
+  ],
+  "card_offers": [],
+  "after": {
+    "state_type": "rewards",
+    "run": {
+      "act": 1,
+      "floor": 1,
+      "ascension": 8
+    },
+    "player": {
+      "character": "The Ironclad",
+      "hp": 64,
+      "max_hp": 80,
+      "block": 0,
+      "energy": null,
+      "max_energy": null,
+      "gold": 99,
+      "deck": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 5,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 6,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 7,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 8,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 9,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 10,
+          "id": "ASCENDERS_BANE",
+          "name": "Ascender's Bane",
+          "type": "Curse",
+          "cost": "0",
+          "description": "Unplayable. Ethereal. Eternal.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 11,
+          "id": "DEBT",
+          "name": "Debt",
+          "type": "Curse",
+          "cost": "0",
+          "description": "Unplayable. At the end of your turn, if this is in your Hand, lose 10 Gold.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        }
+      ],
+      "deck_size": 12,
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "slot": null,
+          "counter": null
+        }
+      ],
+      "potions": [],
+      "max_potion_slots": 2,
+      "status": [],
+      "hand": [],
+      "draw_pile": [],
+      "discard_pile": [],
+      "exhaust_pile": []
+    },
+    "battle": null,
+    "event": {},
+    "rewards": {
+      "items": [
+        {
+          "index": 0,
+          "type": "gold",
+          "description": "30 Gold",
+          "gold_amount": 30
+        },
+        {
+          "index": 1,
+          "type": "potion",
+          "description": "Fairy in a Bottle",
+          "potion_id": "FAIRY_IN_A_BOTTLE",
+          "potion_name": "Fairy in a Bottle",
+          "potion_description": "When your HP would be reduced to 0, instead this potion is discarded and you heal to 30% of your Max HP."
+        }
+      ],
+      "can_proceed": true
+    },
+    "card_reward": {},
+    "map": {},
+    "shop": {},
+    "rest": {},
+    "rest_site": {},
+    "treasure": {},
+    "bundle_select": {},
+    "menu_screen": null,
+    "options": null
+  }
+}

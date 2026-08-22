@@ -74,6 +74,13 @@ The player knows:
 Everything else about the future — the next shuffle, reward rolls, shop stock,
 encounter composition — is unknown, and stays unknown.
 
+The Crystal Sphere is the same rule on a grid. Its board is fifteen items buried
+under 11×11 of fog, and the game names an item — footprint and all — the moment
+any one of its cells clears. So an item with a cell showing is known, an item
+with none showing is not, and a resampled clone moves exactly the second kind
+(`CrystalSphereGame.ResampleUnseenItems`). Without that, a search could read
+where the relic is and divine straight onto it.
+
 ### Known-order tracking
 
 `DrawPile[0]` is the top: draws take from index 0, `Insert(0, …)` top-decks,
@@ -127,6 +134,20 @@ needs to carry:
 
 Enchantment magnitudes are not always 2: Self-Help Book grants 2, other sources
 vary, so they are small integers rather than flags.
+
+### Action width
+
+The run's action mask is 256 wide. It was 32, which was enough while the widest
+screen was a shop and silently wrong past that: the mask setter drops anything
+that does not fit, so a deck grown past 32 cards had its later cards
+unselectable at a card-select screen without a word. The Crystal Sphere forced
+the issue — its board is 121 cells and each may be divined with either tool, so
+242 actions — and a mask that cannot express a screen is a worse bug than a wide
+one.
+
+The sphere's tool is folded into the action (0..120 big, 121..241 small) rather
+than set by an action of its own. Switching tools costs the game nothing, and a
+free action is a cycle an agent can ride forever.
 
 ### Action identity
 

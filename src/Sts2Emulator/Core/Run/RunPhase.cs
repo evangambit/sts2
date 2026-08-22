@@ -13,4 +13,7 @@ public enum RunPhase
     Ancient = 8,
     TransformSelect = 9,
     Treasure = 10,
+
+    /// <summary>The Crystal Sphere's grid of fog, which is a screen of its own.</summary>
+    CrystalSphere = 11,
 }

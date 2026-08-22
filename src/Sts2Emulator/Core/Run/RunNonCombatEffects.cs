@@ -292,6 +292,8 @@ public static class RunNonCombatEffects
         state.EventValue0 = null;
         state.EventValue1 = null;
         state.EventPage = 0;
+        state.CrystalSphere = null;
+        state.CrystalSphereRng = null;
         if (
             state.EventSequenceIndex == 0
             && state.Relics.Any(relic => relic.DefId == RunConstants.RelicNewLeaf)
@@ -390,7 +392,7 @@ public static class RunNonCombatEffects
         state.Phase = RunPhase.Event;
     }
 
-    private static bool IsEventAllowed(RunState state, int eventId)
+    internal static bool IsEventAllowed(RunState state, int eventId)
     {
         return eventId switch
         {
@@ -405,7 +407,10 @@ public static class RunNonCombatEffects
             RunConstants.EventSelfHelpBook => state.Deck.Any(CardCanReceiveSelfHelpBookEnchantment),
             RunConstants.EventTheLegendsWereTrue => state.PlayerHp >= 10
                 && state.Deck.Any(card => card.DefId != RunConstants.SpoilsMapCard),
-            RunConstants.EventCrystalSphere => state.Gold >= 100,
+            // CrystalSphere.IsAllowed also wants CurrentActIndex > 0, so the sphere
+            // never turns up in Act 1 however much gold the run is holding.
+            RunConstants.EventCrystalSphere => state.Gold >= 100
+                && state.Act > RunConstants.ActOvergrowth,
             RunConstants.EventRanwidTheElder => state.Gold >= 100
                 || state.PotionSlots.Any(potion => potion != 0)
                 || state.Relics.Count > 1,
@@ -589,6 +594,58 @@ public static class RunNonCombatEffects
     /// </summary>
     public static int LuminousChoirTributeCost(RunState state) =>
         149 - EventRng(state, "LUMINOUS_CHOIR").NextInt(0, 50);
+
+    /// <summary>
+    /// What the sphere charges to Uncover Future. <c>CrystalSphere.CalculateVars</c> adds
+    /// <c>Rng.NextInt(1, 50)</c> to a base of 50, so the price is 51..99 -- and since the
+    /// event only turns up on a run holding at least 100 gold, it is always affordable and
+    /// neither option is ever locked.
+    ///
+    /// The draw matters beyond the price: it is the first thing taken from the event's
+    /// stream, and the board the minigame lays out is drawn from the same stream straight
+    /// after. A cost read off a fresh Rng would leave the board one draw early.
+    /// </summary>
+    public static int CrystalSphereCost(RunState state)
+    {
+        EnsureCrystalSphereVars(state);
+        return state.EventValue0!.Value;
+    }
+
+    private static void EnsureCrystalSphereVars(RunState state)
+    {
+        if (state.CrystalSphereRng is not null)
+        {
+            return;
+        }
+
+        state.CrystalSphereRng = EventRng(state, "CRYSTAL_SPHERE");
+        state.EventValue0 = 50 + state.CrystalSphereRng.NextInt(1, 50);
+    }
+
+    /// <summary>
+    /// Opens the sphere with the given number of divinations: three for Uncover Future,
+    /// six for the Payment Plan. Both options roll nothing of their own -- one spends gold,
+    /// the other adds a Debt -- so the board is the same either way for a given seed.
+    /// </summary>
+    public static void OpenCrystalSphere(RunState state, int divinations)
+    {
+        EnsureCrystalSphereVars(state);
+        state.CrystalSphere = CrystalSphereGame.Create(state.CrystalSphereRng!, divinations);
+        state.Phase = RunPhase.CrystalSphere;
+    }
+
+    /// <summary>
+    /// What uncovering a thing does on the spot. Only the curse acts immediately -- its
+    /// <c>RevealItem</c> puts a Doubt in the deck there and then; everything else waits for
+    /// the last divination and arrives as a reward.
+    /// </summary>
+    public static void RevealCrystalSphereItem(RunState state, CrystalSphereItem item)
+    {
+        if (item.Kind == CrystalSphereItemKind.Curse)
+        {
+            AddCardToDeck(state, new CardInstance(NamedCard("Doubt"), Upgraded: false));
+        }
+    }
 
     public static int SunkenTreasurySmallChestGold(RunState state)
     {

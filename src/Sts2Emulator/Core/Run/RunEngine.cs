@@ -565,6 +565,27 @@ public sealed class RunEngine
             case RunPhase.Treasure:
                 SetMask(mask, RunConstants.RewardSkipAction);
                 break;
+
+            case RunPhase.CrystalSphere when State.CrystalSphere is not null:
+                // Cells that would uncover nothing are left out. The game lets a
+                // divination be spent on clear ground and simply wastes it; nothing an
+                // agent could learn makes that worth offering.
+                for (int cell = 0; cell < RunConstants.CrystalSphereCells; cell++)
+                {
+                    int x = cell / RunConstants.CrystalSphereSize;
+                    int y = cell % RunConstants.CrystalSphereSize;
+                    if (State.CrystalSphere.WouldUncover(x, y, CrystalSphereTool.Big))
+                    {
+                        SetMask(mask, cell);
+                    }
+
+                    if (State.CrystalSphere.WouldUncover(x, y, CrystalSphereTool.Small))
+                    {
+                        SetMask(mask, RunConstants.CrystalSphereSmallToolAction + cell);
+                    }
+                }
+
+                break;
         }
     }
 
@@ -600,8 +621,9 @@ public sealed class RunEngine
         $"RESAMPLE{unchecked((uint)resampleSeed):X8}";
 
     /// <summary>
-    /// Point the in-combat streams at the resampled run's streams, and reshuffle the
-    /// region of the draw pile the player has not seen.
+    /// Point the in-combat streams at the resampled run's streams, reshuffle the region of
+    /// the draw pile the player has not seen, and move whatever the Crystal Sphere's fog is
+    /// still hiding.
     /// </summary>
     /// <remarks>
     /// The combat streams keep their call counts: SyncAfterCombat hands those counts
@@ -610,6 +632,8 @@ public sealed class RunEngine
     /// </remarks>
     private void ResampleHiddenState(Random rng)
     {
+        State.CrystalSphere?.ResampleUnseenItems(rng);
+
         var combat = State.ActiveCombat;
         if (combat is null)
         {
@@ -900,6 +924,11 @@ public sealed class RunEngine
         if (State.Phase == RunPhase.TransformSelect)
         {
             return StepTransformSelect(action, out terminal);
+        }
+
+        if (State.Phase == RunPhase.CrystalSphere)
+        {
+            return StepCrystalSphere(action, out terminal);
         }
 
         if (State.Phase == RunPhase.Treasure)
@@ -2127,14 +2156,20 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventCrystalSphere:
+                // Both options end in the same minigame, differing only in what they cost
+                // and how many divinations they buy. The price is not a flat 100: it is
+                // rolled in CalculateVars, off the first draw of the event's own stream.
                 if (action == 0)
                 {
-                    if (State.Gold < 100)
+                    int cost = RunNonCombatEffects.CrystalSphereCost(State);
+                    if (State.Gold < cost)
                     {
                         return -1;
                     }
 
-                    State.Gold -= 100;
+                    State.Gold -= cost;
+                    RunNonCombatEffects.OpenCrystalSphere(State, 3);
+                    return 0;
                 }
                 else if (action == 1)
                 {
@@ -2142,6 +2177,8 @@ public sealed class RunEngine
                         State,
                         new CardInstance(RunNonCombatEffects.NamedCard("Debt"), Upgraded: false)
                     );
+                    RunNonCombatEffects.OpenCrystalSphere(State, 6);
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3002,6 +3039,145 @@ public sealed class RunEngine
         return 0;
     }
 
+    /// <summary>
+    /// One divination. The action carries both the cell and the tool -- 0..120 is the big
+    /// tool, 121..241 the small one -- and the last one spent settles up.
+    /// </summary>
+    private int StepCrystalSphere(int action, out bool terminal)
+    {
+        terminal = false;
+        var game = State.CrystalSphere;
+        if (game is null || game.IsFinished)
+        {
+            return -1;
+        }
+
+        if (action < 0 || action >= 2 * RunConstants.CrystalSphereCells)
+        {
+            return -1;
+        }
+
+        var tool =
+            action >= RunConstants.CrystalSphereSmallToolAction
+                ? CrystalSphereTool.Small
+                : CrystalSphereTool.Big;
+        int cell = action % RunConstants.CrystalSphereSmallToolAction;
+        int x = cell / RunConstants.CrystalSphereSize;
+        int y = cell % RunConstants.CrystalSphereSize;
+        if (!game.WouldUncover(x, y, tool))
+        {
+            return -1;
+        }
+
+        game.Tool = tool;
+        foreach (int index in game.Click(x, y))
+        {
+            RunNonCombatEffects.RevealCrystalSphereItem(State, game.Items[index]);
+        }
+
+        if (!game.IsFinished)
+        {
+            return 0;
+        }
+
+        return CompleteCrystalSphere(out terminal);
+    }
+
+    /// <summary>
+    /// Settles the sphere once the divinations run out: every fully-uncovered thing turns
+    /// into a reward, and the run goes to the reward screen -- or straight on, if the fog
+    /// kept everything.
+    ///
+    /// The draw order is the game's, and it is two passes rather than one. Every reward is
+    /// built first (<c>ToReward</c>, which is where a potion picks itself), then every
+    /// reward is populated (<c>RewardsSet.GenerateWithoutOffering</c>, which is where the
+    /// relic is pulled and the card offers rolled). Both passes walk the items in the order
+    /// they were uncovered.
+    /// </summary>
+    private int CompleteCrystalSphere(out bool terminal)
+    {
+        var game = State.CrystalSphere!;
+        var rng = State.CrystalSphereRng!;
+        var revealed = game
+            .Revealed.Select(index => game.Items[index])
+            // The curse has no reward: it was taken at the moment it was uncovered.
+            .Where(item => item.Kind != CrystalSphereItemKind.Curse)
+            .ToList();
+
+        // Pass one, ToReward. Only a potion draws here -- it picks itself as the reward is
+        // built, where everything else waits to be populated.
+        var potions = new List<int>();
+        foreach (var item in revealed)
+        {
+            if (item.Kind == CrystalSphereItemKind.Potion)
+            {
+                potions.Add(RunRewardGenerator.NextPotionOfRarity(rng, (PotionRarity)item.Rarity));
+            }
+        }
+
+        // Pass two, Populate, in the same order. A gold pile draws even though its amount
+        // is fixed -- GoldReward.Populate is Rng.NextInt(amount, amount + 1) whether or not
+        // there is a range -- and that draw sits between the piles and the card offers.
+        var golds = new List<int>();
+        int relic = 0;
+        var offers = new List<int[]>();
+        foreach (var item in revealed)
+        {
+            switch (item.Kind)
+            {
+                case CrystalSphereItemKind.Gold:
+                    int amount = item.IsBigGold ? 30 : 10;
+                    golds.Add(rng.NextInt(amount, amount + 1));
+                    break;
+                case CrystalSphereItemKind.Relic:
+                    relic = RunRewardGenerator.NextRelic(State, rng);
+                    break;
+                case CrystalSphereItemKind.CardReward:
+                    offers.Add(
+                        RunRewardGenerator.GenerateFixedRarityCardOffer(
+                            State,
+                            State.RewardCards.Length,
+                            (CardRarity)item.Rarity,
+                            rng
+                        )
+                    );
+                    break;
+            }
+        }
+
+        State.CrystalSphere = null;
+        State.CrystalSphereRng = null;
+        RunRewardGenerator.ClearRewardScreen(State);
+        State.PendingPotionRewards.Clear();
+
+        if (golds.Count == 0 && potions.Count == 0 && relic == 0 && offers.Count == 0)
+        {
+            return AdvanceAfterNode(out terminal);
+        }
+
+        State.PendingGoldRewards.AddRange(golds);
+        RunRewardGenerator.OfferNextGold(State);
+        State.PendingPotionRewards.AddRange(potions);
+        OfferNextRestPotion();
+        State.RelicReward = relic;
+        if (offers.Count > 0)
+        {
+            Array.Clear(State.RewardCards);
+            Array.Clear(State.RewardUpgraded);
+            for (int i = 0; i < State.RewardCards.Length && i < offers[0].Length; i++)
+            {
+                State.RewardCards[i] = offers[0][i];
+            }
+
+            State.RewardCardPending = true;
+            State.PendingCardOffers.AddRange(offers.Skip(1));
+        }
+
+        State.Phase = RunPhase.RelicReward;
+        terminal = false;
+        return 0;
+    }
+
     private int StepTransformSelect(int action, out bool terminal)
     {
         terminal = false;
@@ -3423,6 +3599,10 @@ public sealed class RunEngine
         }
 
         if (State.RewardCardPending)
+        {
+            SetMask(mask, action++);
+        }
+        else if (State.PendingCardOffers.Count > 0)
         {
             SetMask(mask, action++);
         }
