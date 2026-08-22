@@ -8,6 +8,7 @@ from typing import Any
 
 import numpy as np
 
+from . import native
 from .run_constants import (
     EVENT_SKIP_ACTION,
     MAP_CHOICES,
@@ -449,10 +450,22 @@ def resolve_runreplays_index_if_card_matches(
         and 0 <= requested < len(pre_hand)
         and normalize_trace_card_name(pre_hand[requested])
         == normalize_trace_card_name(card_name)
-        and int(obs[8 + requested * 2]) == card_id
+        and hand_card_id(obs, requested) == card_id
     ):
         return requested
     return None
+
+
+def hand_card_id(obs: np.ndarray, hand_index: int) -> int:
+    """The card id in a hand slot.
+
+    The stride is the emulator's, not a literal: this was ``obs[8 + i * 2]`` at four call
+    sites, and when a card slot grew from two fields to four every one of them silently
+    resolved the wrong hand index. That does not read as an observation bug -- it made a
+    replay play different cards, and the run diverged 150 steps later with the player
+    alive at 4 hp where the capture had them dead.
+    """
+    return int(obs[native.OBS_HAND_OFFSET + hand_index * native.OBS_CARD_SLOT_SIZE])
 
 
 def hand_index_matches_replay_card(
@@ -468,7 +481,7 @@ def hand_index_matches_replay_card(
     if card_id is None:
         raise UnsupportedCommandError(f"unknown trace card id {replay_id!r}")
 
-    return 0 <= index < 10 and int(obs[8 + index * 2]) == card_id
+    return 0 <= index < native.OBS_MAX_HAND and hand_card_id(obs, index) == card_id
 
 
 def resolve_runreplays_card_index_or_none(
@@ -483,8 +496,8 @@ def resolve_runreplays_card_index_or_none(
     if card_id is None:
         raise UnsupportedCommandError(f"unknown trace card id {replay_id!r}")
 
-    for hand_index in range(10):
-        if int(obs[8 + hand_index * 2]) == card_id:
+    for hand_index in range(native.OBS_MAX_HAND):
+        if hand_card_id(obs, hand_index) == card_id:
             return hand_index
     return None
 
@@ -582,8 +595,8 @@ def proceed_action(phase: int) -> int | None:
 
 def hand_count(obs: np.ndarray) -> int:
     count = 0
-    for hand_index in range(10):
-        if int(obs[8 + hand_index * 2]) != 0:
+    for hand_index in range(native.OBS_MAX_HAND):
+        if hand_card_id(obs, hand_index) != 0:
             count += 1
     return count
 

@@ -499,17 +499,18 @@ def summarize_player(
 
 
 def summarize_hand(obs: np.ndarray) -> list[dict[str, Any]]:
+    slot = native.OBS_CARD_SLOT_SIZE
     return [
-        {"index": hand_index, "id": int(obs[8 + hand_index * 2])}
-        for hand_index in range(10)
-        if int(obs[8 + hand_index * 2]) != 0
+        {"index": hand_index, "id": int(obs[native.OBS_HAND_OFFSET + hand_index * slot])}
+        for hand_index in range(native.OBS_MAX_HAND)
+        if int(obs[native.OBS_HAND_OFFSET + hand_index * slot]) != 0
     ]
 
 
 def summarize_battle(obs: np.ndarray) -> dict[str, Any]:
     enemies = []
     for enemy_index in range(native.MAX_ENEMIES):
-        base = 54 + enemy_index * 15
+        base = native.OBS_ENEMY_OFFSET + enemy_index * native.OBS_ENEMY_SLOT_SIZE
         hp = int(obs[base])
         max_hp = int(obs[base + 1])
         if hp == 0 and max_hp == 0:

@@ -135,7 +135,7 @@ public class CultistsTests
         Span<int> obs = stackalloc int[CombatObservation.ObsSize];
         CombatObservation.Write(fight.State, obs);
         int announced = obs[
-            8 + CombatObservation.MaxHand * 2 + 6 + CombatObservation.MaxPlayerBuffs * 2 + 4
+            CombatObservation.EnemyOffset + CombatObservation.EnemyIntentField + 1
         ];
 
         // Strength 2 from the first Ritual payout, on top of the printed 9.

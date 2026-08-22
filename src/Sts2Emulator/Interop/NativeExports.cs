@@ -36,7 +36,7 @@ public static class NativeExports
     public const int MAX_ENEMY_BUFFS = 5;
 
     // v17: observation carries an open card selection (kind, count, candidates).
-    public const int NATIVE_API_VERSION = 18;
+    public const int NATIVE_API_VERSION = 19;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -327,6 +327,38 @@ public static class NativeExports
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_MaxEnemies")]
     public static int Sts2_MaxEnemies() => MAX_ENEMIES;
+
+    // The combat observation's layout, so the Python side can read it rather than
+    // restate it. scripts/trace.py used to carry the offsets as magic numbers (8, 34, 54,
+    // 15, 144) and went silently wrong the moment a card slot grew from two fields to
+    // four -- it decoded zero enemies and 77 live-fixture tests failed at once.
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsCardSlotSize")]
+    public static int Sts2_ObsCardSlotSize() => CombatObservation.CardSlotSize;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsHandOffset")]
+    public static int Sts2_ObsHandOffset() => CombatObservation.HandOffset;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsMaxHand")]
+    public static int Sts2_ObsMaxHand() => CombatObservation.MaxHand;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsPlayerBuffOffset")]
+    public static int Sts2_ObsPlayerBuffOffset() => CombatObservation.PlayerBuffOffset;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsMaxPlayerBuffs")]
+    public static int Sts2_ObsMaxPlayerBuffs() => CombatObservation.MaxPlayerBuffs;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsMaxEnemyBuffs")]
+    public static int Sts2_ObsMaxEnemyBuffs() => CombatObservation.MaxEnemyBuffs;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsEnemyOffset")]
+    public static int Sts2_ObsEnemyOffset() => CombatObservation.EnemyOffset;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsEnemySlotSize")]
+    public static int Sts2_ObsEnemySlotSize() => CombatObservation.EnemySlotSize;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsSecondaryIntentOffset")]
+    public static int Sts2_ObsSecondaryIntentOffset() =>
+        CombatObservation.SecondaryIntentOffset;
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_NativeApiVersion")]
     public static int Sts2_NativeApiVersion() => NATIVE_API_VERSION;

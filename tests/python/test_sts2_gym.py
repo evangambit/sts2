@@ -24,8 +24,17 @@ PHASE_COMBAT = run_env.PHASE_COMBAT
 PHASE_MAP = run_env.PHASE_MAP
 PHASE_RELIC_REWARD = run_env.PHASE_RELIC_REWARD
 
-HAND_ID_INDICES = range(8, 28, 2)
-ENEMY_INTENT_INDICES = (47, 87, 127)
+# Read from the emulator rather than restated: these were the literals 8, 28, 2 and
+# (47, 87, 127), which silently pointed at the wrong fields the moment a card slot grew.
+HAND_ID_INDICES = range(
+    native.OBS_HAND_OFFSET,
+    native.OBS_HAND_OFFSET + native.OBS_MAX_HAND * native.OBS_CARD_SLOT_SIZE,
+    native.OBS_CARD_SLOT_SIZE,
+)
+ENEMY_INTENT_INDICES = tuple(
+    native.OBS_ENEMY_OFFSET + i * native.OBS_ENEMY_SLOT_SIZE + 3
+    for i in range(native.MAX_ENEMIES)
+)
 ASCENDERS_BANE_OBS_ID = 10001
 
 

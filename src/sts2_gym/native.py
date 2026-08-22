@@ -11,7 +11,7 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 18
+_REQUIRED_NATIVE_API_VERSION = 19
 _REQUIRED_RUN_NATIVE_API_VERSION = 13
 
 
@@ -128,6 +128,33 @@ _lib.Sts2_ObsSize.argtypes = []
 
 _lib.Sts2_MaxEnemies.restype = ctypes.c_int
 _lib.Sts2_MaxEnemies.argtypes = []
+
+_lib.Sts2_ObsCardSlotSize.restype = ctypes.c_int
+_lib.Sts2_ObsCardSlotSize.argtypes = []
+
+_lib.Sts2_ObsHandOffset.restype = ctypes.c_int
+_lib.Sts2_ObsHandOffset.argtypes = []
+
+_lib.Sts2_ObsMaxHand.restype = ctypes.c_int
+_lib.Sts2_ObsMaxHand.argtypes = []
+
+_lib.Sts2_ObsPlayerBuffOffset.restype = ctypes.c_int
+_lib.Sts2_ObsPlayerBuffOffset.argtypes = []
+
+_lib.Sts2_ObsMaxPlayerBuffs.restype = ctypes.c_int
+_lib.Sts2_ObsMaxPlayerBuffs.argtypes = []
+
+_lib.Sts2_ObsMaxEnemyBuffs.restype = ctypes.c_int
+_lib.Sts2_ObsMaxEnemyBuffs.argtypes = []
+
+_lib.Sts2_ObsEnemyOffset.restype = ctypes.c_int
+_lib.Sts2_ObsEnemyOffset.argtypes = []
+
+_lib.Sts2_ObsEnemySlotSize.restype = ctypes.c_int
+_lib.Sts2_ObsEnemySlotSize.argtypes = []
+
+_lib.Sts2_ObsSecondaryIntentOffset.restype = ctypes.c_int
+_lib.Sts2_ObsSecondaryIntentOffset.argtypes = []
 
 _lib.Sts2_Create.restype = ctypes.c_int
 _lib.Sts2_Create.argtypes = [ctypes.c_int]
@@ -355,6 +382,20 @@ _lib.Sts2Run_Destroy.argtypes = [ctypes.c_int]
 
 OBS_SIZE: int = _lib.Sts2_ObsSize()
 MAX_ENEMIES: int = _lib.Sts2_MaxEnemies()
+
+# The combat observation's layout, read from the emulator rather than restated here.
+# These used to be magic numbers in scripts/trace.py, which went silently wrong the
+# moment a card slot grew from two fields to four: it decoded zero enemies and 77 live
+# fixture tests failed at once, none of them about the observation.
+OBS_CARD_SLOT_SIZE: int = _lib.Sts2_ObsCardSlotSize()
+OBS_HAND_OFFSET: int = _lib.Sts2_ObsHandOffset()
+OBS_MAX_HAND: int = _lib.Sts2_ObsMaxHand()
+OBS_PLAYER_BUFF_OFFSET: int = _lib.Sts2_ObsPlayerBuffOffset()
+OBS_MAX_PLAYER_BUFFS: int = _lib.Sts2_ObsMaxPlayerBuffs()
+OBS_MAX_ENEMY_BUFFS: int = _lib.Sts2_ObsMaxEnemyBuffs()
+OBS_ENEMY_OFFSET: int = _lib.Sts2_ObsEnemyOffset()
+OBS_ENEMY_SLOT_SIZE: int = _lib.Sts2_ObsEnemySlotSize()
+OBS_SECONDARY_INTENT_OFFSET: int = _lib.Sts2_ObsSecondaryIntentOffset()
 RUN_OBS_SIZE: int = _lib.Sts2Run_ObsSize()
 RUN_MAX_ACTIONS: int = _lib.Sts2Run_MaxActions()
 RUN_INFO_SIZE: int = _lib.Sts2Run_InfoSize()
