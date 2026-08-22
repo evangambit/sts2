@@ -171,6 +171,7 @@ public sealed class RunEngine
         }
 
         combat.CardSelectionRng = cardSelectionRng;
+        combat.EnergyCostRng = new CountingRandom(State.Rng.CombatEnergyCosts.RawSeed);
 
         var cardGenerationRng = new CountingRandom(State.Rng.CombatCardGeneration.RawSeed);
         for (int i = 0; i < State.Rng.CombatCardGeneration.CallCount; i++)
@@ -644,6 +645,7 @@ public sealed class RunEngine
         combat.NicheHpRng = Restream(combat.NicheHpRng, State.Rng.Niche);
         combat.TargetRng = Restream(combat.TargetRng, State.Rng.CombatTargets);
         combat.CardSelectionRng = Restream(combat.CardSelectionRng, State.Rng.CombatCardSelection);
+        combat.EnergyCostRng = Restream(combat.EnergyCostRng, State.Rng.CombatEnergyCosts);
         combat.CardGenerationRng = Restream(
             combat.CardGenerationRng,
             State.Rng.CombatCardGeneration

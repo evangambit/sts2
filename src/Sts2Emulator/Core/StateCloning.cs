@@ -104,6 +104,7 @@ public static class StateCloning
             ShuffleRng = combat.ShuffleRng?.Clone(),
             TargetRng = combat.TargetRng?.Clone(),
             CardSelectionRng = combat.CardSelectionRng?.Clone(),
+            EnergyCostRng = combat.EnergyCostRng?.Clone(),
             CardGenerationRng = combat.CardGenerationRng?.Clone(),
             PotionGenerationRng = combat.PotionGenerationRng?.Clone(),
             // A CountingRandom carries its seed and position, so it clones exactly. A
@@ -114,6 +115,7 @@ public static class StateCloning
             PendingSelection = combat.PendingSelection?.Clone(),
             AutoPlaying = combat.AutoPlaying,
             PlayedCardBonusDamage = combat.PlayedCardBonusDamage,
+            PlayedCardEnchantSpent = combat.PlayedCardEnchantSpent,
             Turn = combat.Turn,
             PlayerTurn = combat.PlayerTurn,
             SkillPlayedWhileSmoggy = combat.SkillPlayedWhileSmoggy,

@@ -1866,13 +1866,35 @@ public static class CardEffects
             }
             else if (state.Hand.Count < MaxCardsInHand)
             {
-                state.Hand.Add(card);
+                // Slither.AfterCardDrawn re-rolls the card's cost for this combat, but
+                // only when it actually lands in HAND -- a card that goes to the discard
+                // because the hand is full keeps whatever cost it had.
+                state.Hand.Add(RollSlitherCost(state, card, rng));
             }
             else
             {
                 state.DiscardPile.Add(card);
             }
         }
+    }
+
+    /// <summary>
+    /// Slither's cost: <c>Rng.CombatEnergyCosts.NextInt(4)</c>, so 0..3, re-rolled every
+    /// time the card is drawn to hand.
+    /// </summary>
+    private static CardInstance RollSlitherCost(
+        CombatState state,
+        CardInstance card,
+        Random rng
+    )
+    {
+        if (card.Enchantment != Enchantment.Slither)
+        {
+            return card;
+        }
+
+        int cost = (state.EnergyCostRng as Random ?? rng).Next(4);
+        return card with { CostForCombat = cost };
     }
 
     private static void CountDrawnCardForAutomation(CombatState state)
@@ -4309,9 +4331,28 @@ public static class CardEffects
     /// rides along with the card's own damage stat -- per hit for multi-hit cards,
     /// and on top of the upgrade.
     /// </summary>
-    private static int Dmg(CardDef def, bool upgraded, CardInstance card) =>
-        (upgraded ? def.BaseDamage + def.UpgradeDamage : def.BaseDamage)
-        + card.EnchantedWith(Enchantment.Sharp);
+    private static int Dmg(CardDef def, bool upgraded, CardInstance card)
+    {
+        int damage =
+            (upgraded ? def.BaseDamage + def.UpgradeDamage : def.BaseDamage)
+            + card.EnchantedWith(Enchantment.Sharp);
+
+        // Vigorous.EnchantDamageAdditive adds its amount while the enchantment is Normal
+        // and nothing once it has fired.
+        if (card.Enchantment == Enchantment.Vigorous && !card.EnchantSpent)
+        {
+            damage += card.EnchantAmount;
+        }
+
+        // Corrupted.EnchantDamageMultiplicative is 1.5x on a powered attack, every play --
+        // it has no once-only status of its own.
+        if (card.Enchantment == Enchantment.Corrupted)
+        {
+            damage = (int)(damage * 1.5m);
+        }
+
+        return damage;
+    }
 
     /// <summary>
     /// The card's block, including the Nimble enchantment.

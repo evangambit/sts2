@@ -191,42 +191,145 @@ public class EnchantmentTests
     }
 
     /// <summary>
-    /// Pins the gap rather than hiding it: these four are recorded on the card and do
-    /// nothing when it is played. Delete an entry from <c>InertInCombat</c> when it is
-    /// modelled, and this test says which are left.
+    /// Every enchantment does something in combat now. The list is kept so the next
+    /// unmodelled one has somewhere to be declared, and this test says when it is empty.
     /// </summary>
     [Fact]
-    public void TheEnchantmentsThatDoNothingInCombatAreTheOnesDeclaredInert()
+    public void NoEnchantmentIsInertAnyMore()
     {
-        Assert.Equal(
-            new[]
+        Assert.Empty(Enchantments.InertInCombat);
+    }
+
+    /// <summary>
+    /// Sown gains its amount of energy the first time the card is played and then stops.
+    /// </summary>
+    [Fact]
+    public void Sown_GainsEnergyOnceAndThenStops()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.Hand =
+        [
+            new CardInstance(IC.StrikeIronclad, false)
             {
-                Enchantment.Swift,
-                Enchantment.Sown,
-                Enchantment.Corrupted,
-                Enchantment.Slither,
-                Enchantment.Vigorous,
+                Enchantment = Enchantment.Sown,
+                EnchantAmount = 1,
             },
-            Enchantments.InertInCombat
+            new CardInstance(IC.StrikeIronclad, false),
+        ];
+        state.Energy = 3;
+
+        CombatEngine.Step(state, 0, new Random(0));
+        // Paid 1 for the Strike and gained 1 back.
+        Assert.Equal(3, state.Energy);
+
+        // The same copy, played again, gains nothing.
+        var spent = state.DiscardPile.First(card => card.Enchantment == Enchantment.Sown);
+        Assert.True(spent.EnchantSpent);
+    }
+
+    /// <summary>Swift draws its amount the first time the card is played, once.</summary>
+    [Fact]
+    public void Swift_DrawsOnceWhenTheCardIsPlayed()
+    {
+        var plain = CombatFactory.NewCombat(seed: 0);
+        plain.Hand = [new CardInstance(IC.StrikeIronclad, false)];
+        plain.Energy = 3;
+        CombatEngine.Step(plain, 0, new Random(0));
+        int drawnPlain = plain.Hand.Count;
+
+        var swift = CombatFactory.NewCombat(seed: 0);
+        swift.Hand =
+        [
+            new CardInstance(IC.StrikeIronclad, false)
+            {
+                Enchantment = Enchantment.Swift,
+                EnchantAmount = 2,
+            },
+        ];
+        swift.Energy = 3;
+        CombatEngine.Step(swift, 0, new Random(0));
+
+        Assert.Equal(drawnPlain + 2, swift.Hand.Count);
+    }
+
+    /// <summary>
+    /// Vigorous adds its amount to the first powered attack and then disables itself.
+    /// </summary>
+    [Fact]
+    public void Vigorous_AddsToTheFirstAttackOnly()
+    {
+        var (plain, plainEnemy) = OneEnemy(new CardInstance(IC.Bash, false));
+        CombatEngine.Step(plain, 0, new Random(0));
+        int plainDamage = 60 - plainEnemy.Hp;
+
+        var (vigorous, vigorousEnemy) = OneEnemy(
+            new CardInstance(IC.Bash, false)
+            {
+                Enchantment = Enchantment.Vigorous,
+                EnchantAmount = 8,
+            }
         );
+        CombatEngine.Step(vigorous, 0, new Random(0));
 
-        foreach (var enchantment in Enchantments.InertInCombat)
+        Assert.Equal(plainDamage + 8, 60 - vigorousEnemy.Hp);
+        Assert.True(
+            vigorous.DiscardPile.First(card => card.DefId == IC.Bash).EnchantSpent,
+            "Vigorous should disable itself after the attack"
+        );
+    }
+
+    /// <summary>
+    /// Corrupted multiplies a powered attack by 1.5 and costs 2 HP every time the card is
+    /// played -- it has no once-only status.
+    /// </summary>
+    [Fact]
+    public void Corrupted_HitsHarderAndCostsHpEveryPlay()
+    {
+        var (plain, plainEnemy) = OneEnemy(new CardInstance(IC.Bash, false));
+        CombatEngine.Step(plain, 0, new Random(0));
+        int plainDamage = 60 - plainEnemy.Hp;
+
+        var (corrupted, corruptedEnemy) = OneEnemy(
+            new CardInstance(IC.Bash, false)
+            {
+                Enchantment = Enchantment.Corrupted,
+                EnchantAmount = 1,
+            }
+        );
+        int hp = corrupted.PlayerHp;
+        CombatEngine.Step(corrupted, 0, new Random(0));
+
+        Assert.Equal((int)(plainDamage * 1.5m), 60 - corruptedEnemy.Hp);
+        Assert.Equal(hp - 2, corrupted.PlayerHp);
+    }
+
+    /// <summary>
+    /// Slither re-rolls the card's cost every time it is drawn to hand, to 0..3.
+    /// </summary>
+    [Fact]
+    public void Slither_RerollsItsCostWhenDrawn()
+    {
+        var costs = new HashSet<int>();
+        for (int seed = 0; seed < 20; seed++)
         {
-            var (plain, plainEnemy) = OneEnemy(new CardInstance(IC.StrikeIronclad, false));
-            CombatEngine.Step(plain, 0, new Random(0));
-
-            var (enchanted, enchantedEnemy) = OneEnemy(
-                new CardInstance(IC.StrikeIronclad, false)
+            var state = CombatFactory.NewCombat(seed: seed);
+            state.Hand = [];
+            state.DrawPile =
+            [
+                new CardInstance(IC.Bash, false)
                 {
-                    Enchantment = enchantment,
+                    Enchantment = Enchantment.Slither,
                     EnchantAmount = 1,
-                }
-            );
-            CombatEngine.Step(enchanted, 0, new Random(0));
+                },
+            ];
+            CardEffects.DrawCards(state, 1, new Random(seed));
 
-            Assert.Equal(plainEnemy.Hp, enchantedEnemy.Hp);
-            Assert.Equal(plain.Energy, enchanted.Energy);
-            Assert.Equal(plain.PlayerHp, enchanted.PlayerHp);
+            Assert.Single(state.Hand);
+            int cost = CombatEngine.EffectiveCost(state.Hand[0], state);
+            Assert.InRange(cost, 0, 3);
+            costs.Add(cost);
         }
+
+        Assert.True(costs.Count > 1, $"Slither always rolled {string.Join(",", costs)}");
     }
 }

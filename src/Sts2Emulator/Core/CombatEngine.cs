@@ -124,6 +124,7 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FreeSkillPower, -1);
         }
 
+        ApplyEnchantmentOnPlay(state, card, rng);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
         int extraPlays =
             state.CardPlaysThisTurn < BuffSystem.Get(state.PlayerBuffs, BuffId.EchoForm) ? 1 : 0;
@@ -203,7 +204,11 @@ public static class CombatEngine
         }
         else if (ShouldExhaustAfterPlay(def, card) || corruptedSkill)
         {
-            Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+            Effects.CardEffects.ExhaustCard(
+                state,
+                card with { EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent },
+                rng: rng
+            );
         }
         else if (feralReturn)
         {
@@ -212,6 +217,7 @@ public static class CombatEngine
                 {
                     FreeThisTurn = false,
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                    EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                 }
             );
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FeralUsed, 1);
@@ -223,6 +229,7 @@ public static class CombatEngine
                 {
                     FreeThisTurn = false,
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                    EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                 }
             );
         }
@@ -233,11 +240,13 @@ public static class CombatEngine
                 {
                     FreeThisTurn = false,
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                    EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                 }
             );
         }
 
         state.PlayedCardBonusDamage = 0;
+        state.PlayedCardEnchantSpent = false;
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
@@ -754,6 +763,37 @@ public static class CombatEngine
         EffectiveCost(card, GeneratedData.Cards.Get(card.DefId), state);
 
     // Returns the energy cost of a card after applying active powers (e.g. Corruption).
+    /// <summary>
+    /// The enchantment hooks that fire when a card is PLAYED, as EnchantmentModel.OnPlay.
+    ///
+    /// Sown and Swift each go off once and then set EnchantmentStatus.Disabled -- the
+    /// spent flag here -- while Corrupted charges its 2 HP every single play. The flag is
+    /// handed back through the state because CardEffects takes the card by value.
+    /// </summary>
+    private static void ApplyEnchantmentOnPlay(CombatState state, CardInstance card, Random rng)
+    {
+        switch (card.Enchantment)
+        {
+            case Enchantment.Sown when !card.EnchantSpent:
+                state.Energy += card.EnchantAmount;
+                state.PlayedCardEnchantSpent = true;
+                break;
+            case Enchantment.Swift when !card.EnchantSpent:
+                Effects.CardEffects.DrawCards(state, card.EnchantAmount, rng);
+                state.PlayedCardEnchantSpent = true;
+                break;
+            case Enchantment.Vigorous when !card.EnchantSpent:
+                // Vigorous pays out through the damage calculation, and AfterCardPlayed
+                // disables it whether or not the card actually attacked.
+                state.PlayedCardEnchantSpent = true;
+                break;
+            case Enchantment.Corrupted:
+                // Unblockable, unpowered, and every play -- not once.
+                Effects.CardEffects.DealDamageToPlayer(state, 2);
+                break;
+        }
+    }
+
     private static int EffectiveCost(CardInstance card, CardDef def, CombatState state)
     {
         if (card.FreeThisTurn)
@@ -898,7 +938,11 @@ public static class CombatEngine
                 {
                     var card = state.Hand[index];
                     state.Hand.RemoveAt(index);
-                    Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+                    Effects.CardEffects.ExhaustCard(
+                state,
+                card,
+                rng: rng
+            );
                 }
 
                 if (selection.Kind == CardSelectionKind.ExhaustFromHandThenDraw)
@@ -1269,7 +1313,11 @@ public static class CombatEngine
             state.Hand.RemoveAt(handIndex);
             if (ShouldExhaustAfterPlay(def, card))
             {
-                Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+                Effects.CardEffects.ExhaustCard(
+                state,
+                card,
+                rng: rng
+            );
             }
             else
             {
@@ -1338,7 +1386,11 @@ public static class CombatEngine
         }
         else if (ShouldExhaustAfterPlay(def, card))
         {
-            Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+            Effects.CardEffects.ExhaustCard(
+                state,
+                card,
+                rng: rng
+            );
         }
         else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
         {
@@ -1519,7 +1571,11 @@ public static class CombatEngine
         {
             if (ShouldExhaustAfterPlay(def, card))
             {
-                Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+                Effects.CardEffects.ExhaustCard(
+                state,
+                card,
+                rng: rng
+            );
             }
             else
             {
@@ -1557,7 +1613,11 @@ public static class CombatEngine
         }
         else if (ShouldExhaustAfterPlay(def, card))
         {
-            Effects.CardEffects.ExhaustCard(state, card, rng: rng);
+            Effects.CardEffects.ExhaustCard(
+                state,
+                card,
+                rng: rng
+            );
         }
         else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
         {

@@ -116,6 +116,15 @@ public readonly record struct CardInstance(
     // Sharp/Nimble/Swift at 2; the event enchantments are all applied at 1.
     Enchantment Enchantment = Enchantment.None,
     int EnchantAmount = 0,
+    // Whether a once-per-combat enchantment on this copy has already fired. Sown, Swift
+    // and Vigorous each set EnchantmentStatus.Disabled after they go off.
+    //
+    // Modelled as once per COMBAT because combat builds its own CardInstance list from the
+    // run deck, so the flag never travels home. Nothing in the decompiled source resets
+    // EnchantmentStatus, which would make it once per RUN instead -- but nothing was found
+    // that copies the deck into the draw pile either, and the two readings only differ from
+    // the second combat onwards. A capture of a Sown card played in two fights settles it.
+    bool EnchantSpent = false,
     int CostForCombat = int.MinValue,
     // Damage this copy has permanently gained during the combat. Rampage raises its own
     // damage every time it is played, and the growth rides on the card rather than on the
@@ -161,31 +170,14 @@ public static class CardInstanceExtensions
 public static class Enchantments
 {
     /// <summary>
-    /// Enchantments whose combat behaviour is NOT modelled yet. Applying one is recorded
-    /// on the card and changes nothing when the card is played, so a run that takes the
-    /// event gets the wrong combat.
+    /// Enchantments whose combat behaviour is NOT modelled. Empty now: applying one used
+    /// to be recorded on the card and change nothing when it was played, so a run that
+    /// took Sapphire Seed, Wood Carvings or Self-Help Book got the wrong combat.
     ///
-    /// Kept as a list rather than a comment so a test can name the gap and so it shrinks
-    /// visibly. Each needs a piece of plumbing that does not exist:
-    /// <list type="bullet">
-    /// <item>Swift -- what it does was never transcribed.</item>
-    /// <item>Sown -- gains energy once per combat, which needs per-copy spent state.</item>
-    /// <item>Corrupted -- 1.5x powered damage plus 2 HP on play, which needs a damage
-    /// multiplier hook.</item>
-    /// <item>Slither -- re-rolls its cost on every draw off the run's
-    /// <c>combat_energy_costs</c> stream, which combat does not carry.</item>
-    /// <item>Vigorous -- adds its amount to the first powered attack and then disables
-    /// itself, which needs the same per-copy spent state as Sown.</item>
-    /// </list>
+    /// Kept as a list rather than deleted so the next unmodelled one has an obvious place
+    /// to be declared, and so the test that pins the gap keeps working.
     /// </summary>
-    public static readonly Enchantment[] InertInCombat =
-    [
-        Enchantment.Swift,
-        Enchantment.Sown,
-        Enchantment.Corrupted,
-        Enchantment.Slither,
-        Enchantment.Vigorous,
-    ];
+    public static readonly Enchantment[] InertInCombat = [];
 
     /// <summary>
     /// The game's <c>EnchantmentModel.CanEnchant</c>: Status, Curse and Quest cards are

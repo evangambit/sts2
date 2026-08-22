@@ -112,6 +112,20 @@ public sealed class CombatState
     // the CardInstance by value and cannot hand a mutation back any other way.
     public int PlayedCardBonusDamage;
 
+    /// <summary>
+    /// A once-per-combat enchantment on the card being played has just fired, so the copy
+    /// that lands in its result pile must carry the spent flag. CardEffects takes the card
+    /// by value and cannot hand a mutation back, which is the same reason
+    /// PlayedCardBonusDamage exists.
+    /// </summary>
+    public bool PlayedCardEnchantSpent;
+
+    /// <summary>
+    /// The run's <c>combat_energy_costs</c> stream, which Slither re-rolls its cost from
+    /// every time it is drawn. Null falls back to the combat rng, as the other streams do.
+    /// </summary>
+    public CountingRandom? EnergyCostRng;
+
     // Turn tracking
     public int Turn;
     public bool PlayerTurn = true;
