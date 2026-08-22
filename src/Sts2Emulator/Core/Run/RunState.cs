@@ -101,6 +101,7 @@ public sealed class RunState
     public int EliteEncountersVisited;
     public int[] EventSequence = [];
     public int EventSequenceIndex;
+
     /// <summary>
     /// The run's relic queues, shuffled once at run start. Every relic reward pulls from
     /// the player's; the shared one exists so that a relic pulled by one player is gone
@@ -116,6 +117,7 @@ public sealed class RunState
     public bool PendingRelicReward;
     public int ShopRemovalsUsed;
     public int? TransformSelectedDeckIndex;
+
     /// <summary>
     /// A deck selection an event has opened and is waiting on: what is being done to the
     /// chosen cards, the enchantment or target card it is being done with, and how many

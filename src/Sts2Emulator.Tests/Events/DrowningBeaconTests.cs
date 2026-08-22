@@ -52,10 +52,7 @@ public class DrowningBeaconTests
         Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
 
         Assert.Equal(maxHp - 13, engine.State.PlayerMaxHp);
-        Assert.Equal(
-            RunNonCombatEffects.NamedRelic("FresnelLens"),
-            engine.State.Relics[^1].DefId
-        );
+        Assert.Equal(RunNonCombatEffects.NamedRelic("FresnelLens"), engine.State.Relics[^1].DefId);
     }
 
     /// <summary>

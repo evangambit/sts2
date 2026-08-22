@@ -117,10 +117,7 @@ public static class RunNonCombatEffects
         // id 8) that resolve to nothing. Those are ancient relics and are not in any grab
         // bag anyway, so skipping them is correct here -- but the mismatch is real and is
         // its own bug.
-        if (
-            relicId != CircletRelic
-            && GeneratedData.Relics.TryGet(relicId, out _)
-        )
+        if (relicId != CircletRelic && GeneratedData.Relics.TryGet(relicId, out _))
         {
             state.RelicBag.Remove(relicId);
             state.SharedRelicBag.Remove(relicId);
@@ -813,9 +810,7 @@ public static class RunNonCombatEffects
                 .ToList();
         }
 
-        return candidates.Count == 0
-            ? -1
-            : EventRng(state, "SLIPPERY_BRIDGE").NextItem(candidates);
+        return candidates.Count == 0 ? -1 : EventRng(state, "SLIPPERY_BRIDGE").NextItem(candidates);
     }
 
     /// <summary>
@@ -868,15 +863,15 @@ public static class RunNonCombatEffects
         ?? throw new InvalidOperationException($"No relic named {name}");
 
     private static int ResolveCard(string name) =>
-        GeneratedData.Cards.FindId(name) ?? throw new InvalidOperationException($"No card named {name}");
+        GeneratedData.Cards.FindId(name)
+        ?? throw new InvalidOperationException($"No card named {name}");
 
     /// <summary>
     /// What Spiraling Whirlpool's Drink heals: a HealVar whose BaseValue is
     /// <c>MaxHp * 0.33m</c>, read through <c>DynamicVar.IntValue</c>, which is a plain
     /// <c>(int)</c> cast and therefore truncates.
     /// </summary>
-    public static int SpiralingWhirlpoolHeal(RunState state) =>
-        (int)(state.PlayerMaxHp * 0.33m);
+    public static int SpiralingWhirlpoolHeal(RunState state) => (int)(state.PlayerMaxHp * 0.33m);
 
     public static int FresnelLensRelic => ResolveRelic("FresnelLens");
 

@@ -95,8 +95,14 @@ public class RelicGrabBagTests
             GeneratedData.RelicPools.Shared.Length,
             state.SharedRelicBag.Remaining.Count()
         );
-        Assert.Contains(state.SharedRelicBag.Remaining, relicId => Rarity(relicId) == RelicRarity.Ancient);
-        Assert.DoesNotContain(state.RelicBag.Remaining, relicId => Rarity(relicId) == RelicRarity.Ancient);
+        Assert.Contains(
+            state.SharedRelicBag.Remaining,
+            relicId => Rarity(relicId) == RelicRarity.Ancient
+        );
+        Assert.DoesNotContain(
+            state.RelicBag.Remaining,
+            relicId => Rarity(relicId) == RelicRarity.Ancient
+        );
     }
 
     /// <summary>
@@ -207,10 +213,7 @@ public class RelicGrabBagTests
     public void RarityFollowsTheGamesSplitAndNotThePoolsShape()
     {
         var rng = new GameRng(12345u);
-        var rolled = Enumerable
-            .Range(0, 4000)
-            .Select(_ => RelicGrabBag.RollRarity(rng))
-            .ToList();
+        var rolled = Enumerable.Range(0, 4000).Select(_ => RelicGrabBag.RollRarity(rng)).ToList();
 
         Assert.InRange(rolled.Count(r => r == RelicRarity.Common) / 4000.0, 0.47, 0.53);
         Assert.InRange(rolled.Count(r => r == RelicRarity.Uncommon) / 4000.0, 0.30, 0.36);

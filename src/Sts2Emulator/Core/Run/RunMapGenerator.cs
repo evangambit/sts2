@@ -34,7 +34,10 @@ public static class RunMapGenerator
 
         state.RelicBag = new RelicGrabBag();
         state.RelicBag.Populate(
-            [.. GeneratedData.RelicPools.Shared.ToArray(), .. GeneratedData.RelicPools.Ironclad.ToArray()],
+            [
+                .. GeneratedData.RelicPools.Shared.ToArray(),
+                .. GeneratedData.RelicPools.Ironclad.ToArray(),
+            ],
             upFront,
             filterRarities: true
         );

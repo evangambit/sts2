@@ -39,9 +39,7 @@ public class DeckSelectionEventTests
         GeneratedData.Cards.Get(state.Deck[index].DefId).Entry;
 
     private static int CountOf(RunState state, string name) =>
-        state.Deck.Count(card =>
-            card.DefId == RunNonCombatEffects.NamedCard(name)
-        );
+        state.Deck.Count(card => card.DefId == RunNonCombatEffects.NamedCard(name));
 
     // ── Luminous Choir ───────────────────────────────────────────────────────
 
@@ -107,9 +105,7 @@ public class DeckSelectionEventTests
         Assert.Equal(1, CountOf(engine.State, "Guilty"));
         Assert.Equal(
             copies - 1,
-            engine.State.Deck.Count(card =>
-                GeneratedData.Cards.Get(card.DefId).Entry == removed
-            )
+            engine.State.Deck.Count(card => GeneratedData.Cards.Get(card.DefId).Entry == removed)
         );
     }
 
@@ -300,10 +296,7 @@ public class DeckSelectionEventTests
     [InlineData(RunConstants.EventAromaOfChaos, 1)]
     [InlineData(RunConstants.EventMorphicGrove, 0)]
     [InlineData(RunConstants.EventDoorsOfLightAndDark, 1)]
-    public void AnEmptyDeckRefusesTheOptionRatherThanOpeningAnEmptyScreen(
-        int eventId,
-        int option
-    )
+    public void AnEmptyDeckRefusesTheOptionRatherThanOpeningAnEmptyScreen(int eventId, int option)
     {
         var engine = At(eventId);
         engine.State.Deck.Clear();

@@ -37,7 +37,9 @@ public class EnchantmentTests
         CombatEngine.Step(plain, 0, new Random(0));
         int plainDamage = 60 - plainEnemy.Hp;
 
-        var (sharp, sharpEnemy) = OneEnemy(new CardInstance(IC.Bash, false) { Enchantment = Enchantment.Sharp, EnchantAmount = 2 });
+        var (sharp, sharpEnemy) = OneEnemy(
+            new CardInstance(IC.Bash, false) { Enchantment = Enchantment.Sharp, EnchantAmount = 2 }
+        );
         CombatEngine.Step(sharp, 0, new Random(0));
 
         Assert.Equal(8, plainDamage);
@@ -47,7 +49,9 @@ public class EnchantmentTests
     [Fact]
     public void Sharp_RidesOnTopOfTheUpgrade()
     {
-        var (state, enemy) = OneEnemy(new CardInstance(IC.Bash, true) { Enchantment = Enchantment.Sharp, EnchantAmount = 2 });
+        var (state, enemy) = OneEnemy(
+            new CardInstance(IC.Bash, true) { Enchantment = Enchantment.Sharp, EnchantAmount = 2 }
+        );
         CombatEngine.Step(state, 0, new Random(0));
 
         // Bash is 8 damage, +2 upgraded, +2 Sharp.
@@ -64,7 +68,14 @@ public class EnchantmentTests
         CombatEngine.Step(plain, 0, new Random(0));
 
         var nimble = CombatFactory.NewCombat(seed: 0);
-        nimble.Hand = [new CardInstance(IC.DefendIronclad, false) { Enchantment = Enchantment.Nimble, EnchantAmount = 2 }];
+        nimble.Hand =
+        [
+            new CardInstance(IC.DefendIronclad, false)
+            {
+                Enchantment = Enchantment.Nimble,
+                EnchantAmount = 2,
+            },
+        ];
         nimble.Energy = 3;
         nimble.PlayerBlock = 0;
         CombatEngine.Step(nimble, 0, new Random(0));

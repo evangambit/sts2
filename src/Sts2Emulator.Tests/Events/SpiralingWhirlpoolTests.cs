@@ -88,10 +88,9 @@ public class SpiralingWhirlpoolTests
         var engine = AtTheWhirlpool();
         Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
 
-        int bash = engine
-            .State.Deck.FindIndex(card =>
-                GeneratedData.Cards.Get(card.DefId).Entry == "BASH"
-            );
+        int bash = engine.State.Deck.FindIndex(card =>
+            GeneratedData.Cards.Get(card.DefId).Entry == "BASH"
+        );
         Assert.True(bash >= 0);
 
         Assert.Equal(-1, engine.Step(bash, -1, out _, out _, out _));
@@ -108,9 +107,7 @@ public class SpiralingWhirlpoolTests
     public void ObservingIsRefusedWhenNoCardCanCarrySpiral()
     {
         var engine = AtTheWhirlpool();
-        engine.State.Deck.RemoveAll(card =>
-            Enchantments.CanEnchant(card, Enchantment.Spiral)
-        );
+        engine.State.Deck.RemoveAll(card => Enchantments.CanEnchant(card, Enchantment.Spiral));
 
         Assert.Equal(-1, engine.Step(0, -1, out _, out _, out _));
 

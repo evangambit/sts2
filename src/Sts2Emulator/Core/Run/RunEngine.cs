@@ -1396,7 +1396,10 @@ public sealed class RunEngine
                     State.PlayerHp = State.PlayerMaxHp;
                     RunNonCombatEffects.AddCardToDeck(
                         State,
-                        new CardInstance(RunNonCombatEffects.NamedCard("PoorSleep"), Upgraded: false)
+                        new CardInstance(
+                            RunNonCombatEffects.NamedCard("PoorSleep"),
+                            Upgraded: false
+                        )
                     );
                 }
                 else if (action == 1)
@@ -1515,11 +1518,7 @@ public sealed class RunEngine
                 {
                     // The Dark door removes one card the player picks. Light stays a
                     // roll: it StableShuffles the upgradable cards and takes two.
-                    return RunNonCombatEffects.BeginDeckSelection(
-                        State,
-                        DeckSelection.Remove,
-                        0
-                    )
+                    return RunNonCombatEffects.BeginDeckSelection(State, DeckSelection.Remove, 0)
                         ? 0
                         : -1;
                 }

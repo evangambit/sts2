@@ -64,14 +64,7 @@ public class TrashHeapTests
     [Fact]
     public void ThePrizesOnlyEverComeFromTheEventsOwnTables()
     {
-        var relics = new[]
-        {
-            "DarkstonePeriapt",
-            "DreamCatcher",
-            "HandDrill",
-            "MawBank",
-            "TheBoot",
-        }
+        var relics = new[] { "DarkstonePeriapt", "DreamCatcher", "HandDrill", "MawBank", "TheBoot" }
             .Select(RunNonCombatEffects.NamedRelic)
             .ToHashSet();
         var cards = new[]

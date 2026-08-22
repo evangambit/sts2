@@ -33,10 +33,7 @@ public class SunkenStatueTests
 
         Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
 
-        Assert.Equal(
-            RunNonCombatEffects.NamedRelic("SwordOfStone"),
-            engine.State.Relics[^1].DefId
-        );
+        Assert.Equal(RunNonCombatEffects.NamedRelic("SwordOfStone"), engine.State.Relics[^1].DefId);
         Assert.Equal(hp, engine.State.PlayerHp);
         Assert.Equal(gold, engine.State.Gold);
     }

@@ -229,9 +229,7 @@ public sealed class RelicGrabBag
         var deque = Deque(rarity);
         deque.Clear();
         deque.AddRange(
-            _originalRelics.Where(relicId =>
-                GeneratedData.Relics.Get(relicId).Rarity == rarity
-            )
+            _originalRelics.Where(relicId => GeneratedData.Relics.Get(relicId).Rarity == rarity)
         );
     }
 

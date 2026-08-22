@@ -111,7 +111,10 @@ public class PotionRewardEventTests
         // forced to take any of them.
         ClaimEverything(engine);
         Assert.Equal(2, HeldPotions(engine.State));
-        Assert.All(engine.State.PotionSlots.Where(slot => slot != 0), slot => Assert.Equal(foul, slot));
+        Assert.All(
+            engine.State.PotionSlots.Where(slot => slot != 0),
+            slot => Assert.Equal(foul, slot)
+        );
     }
 
     [Fact]
@@ -230,7 +233,10 @@ public class PotionRewardEventTests
         int attack = Enumerable
             .Range(0, engine.State.Deck.Count)
             .First(i => RunNonCombatEffects.CanSelectCard(engine.State, i));
-        Assert.Equal(CardType.Attack, GeneratedData.Cards.Get(engine.State.Deck[attack].DefId).Type);
+        Assert.Equal(
+            CardType.Attack,
+            GeneratedData.Cards.Get(engine.State.Deck[attack].DefId).Type
+        );
 
         Assert.Equal(0, engine.Step(attack, -1, out _, out _, out _));
         Assert.Equal(Enchantment.Vigorous, engine.State.Deck[attack].Enchantment);
