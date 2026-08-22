@@ -36,12 +36,19 @@ What the agent is handed each step. This surface is currently clean: combat
 exposes `DrawPile.Count`, `DiscardPile.Count` and `ExhaustPile.Count` — sizes,
 never order.
 
-The risk is in closing the known gap. The run layer's observation carries
-`Deck.Count` but not the deck's contents, which makes card rewards, shops, rest
-upgrades and transforms unlearnable. Closing that must mean **composition, not
-order**: the multiset of cards in a pile, plus the parts of the order the player
-legitimately knows (below). Dumping `DrawPile` as an ordered list would close one
-gap by opening a worse one.
+The run layer used to carry `Deck.Count` and nothing else, which made card
+rewards, shops, rest upgrades and transforms unlearnable — the agent chose
+between three cards without being told what the other twenty in its deck were.
+It now carries the deck card by card and the relics relic by relic. What it does
+**not** carry is any pile's order: the deck list is composition, and the piles
+stay counts.
+
+The deck block is in `State.Deck` order, deliberately, because a card-select
+screen's action `i` indexes the same list — sorting it into a canonical multiset
+would read more tidily and leave the agent unable to say which card it meant.
+Nothing leaks by keeping that order: a deck is inspectable in full in-game. The
+draw pile is the opposite case, and dumping it as an ordered list would close
+one gap by opening a worse one.
 
 ### Search
 
@@ -125,15 +132,32 @@ vector.
 `CardInstance` splits in two, and the split matters for how much each consumer
 needs to carry:
 
-- **Persistent identity** — `DefId`, `Upgraded`, and the enchantments `Sharp`,
-  `Nimble`, `Swift`. This is what a deck-level representation needs; it is what a
-  card-reward or shop decision is about.
+- **Persistent identity** — `DefId`, `Upgraded`, and the card's one
+  `Enchantment` with the `EnchantAmount` it was applied at. This is what a
+  deck-level representation needs; it is what a card-reward or shop decision is
+  about, and it is what the run observation's deck block carries.
 - **Combat-local mutation** — `BonusDamage` (Rampage grows per copy),
   `CostForCombat`, `FreeThisTurn`, `Retain`. Only the in-combat representation
-  needs these.
+  needs these, and the deck block leaves them out.
 
 Enchantment magnitudes are not always 2: Self-Help Book grants 2, other sources
-vary, so they are small integers rather than flags.
+vary, so they are small integers rather than flags. The combat observation's
+hand slots still carry only `DefId` and `Upgraded`, so an enchanted card in hand
+is indistinguishable from a plain one mid-fight — a known gap, and a smaller one
+than the deck was.
+
+Relics carry their `Counter` and whether the run has spent them: a Silver
+Crucible with three charges is a different relic from one with none, and a
+used-up relic stays in the list doing nothing.
+
+### Sizes and truncation
+
+The deck block is 64 slots and the relic block 32, both well past what a full
+four-act run reaches. A run that overran either would have its later entries
+unseen — but `Deck.Count` and `Relics.Count` still report the real sizes, so the
+truncation is visible rather than silent. `Sts2Run_ObsLayout` reports where the
+blocks sit so a consumer does not hard-code offsets that move when a block
+grows.
 
 ### Action width
 
@@ -148,6 +172,13 @@ one.
 The sphere's tool is folded into the action (0..120 big, 121..241 small) rather
 than set by an action of its own. Switching tools costs the game nothing, and a
 free action is a cycle an agent can ride forever.
+
+**The sphere's board is deliberately not in the observation.** The phase is
+modelled and the mask is correct, so an agent can play it and will divine
+blind — which is a decision, not an oversight: divining well is worth little
+over a crude heuristic, and the decision that actually matters, which card to
+take from what the fog gave up, happens afterwards on the reward screen where
+the agent can see. Backlogged rather than built.
 
 ### Action identity
 

@@ -41,7 +41,16 @@ class Sts2GymTests(unittest.TestCase):
 
             self.assertEqual(native.run_reset(handle, "0", obs), 0)
             self.assertEqual(native.run_phase(handle), PHASE_ANCIENT)
-            self.assertEqual(native.RUN_OBS_SIZE, native.OBS_SIZE + 35)
+            # 35 scalars, then the deck and the relics card by card and relic by relic.
+            layout = native.RUN_OBS_LAYOUT
+            self.assertEqual(
+                native.RUN_OBS_SIZE,
+                native.OBS_SIZE
+                + layout["scalars"]
+                + layout["max_deck"] * layout["deck_slot_size"]
+                + layout["max_relics"] * layout["relic_slot_size"],
+            )
+            self.assertEqual(layout["deck_offset"], layout["scalars"])
             # Wide enough for the Crystal Sphere's board -- 121 cells, either tool --
             # which is what pushed this past the 32 a shop needed.
             self.assertEqual(native.RUN_MAX_ACTIONS, 256)
@@ -509,6 +518,69 @@ class CommittedRunTraceTests(unittest.TestCase):
         )
 
         self.assertEqual(divergences, [])
+
+
+class RunDeckObservationTests(unittest.TestCase):
+    """The deck and relic block of the run observation, read back through the env.
+
+    The observation is the only thing the agent sees, so every non-combat decision -- card
+    reward, shop, rest upgrade, transform -- turns on this block being there and being
+    readable against the action mask.
+    """
+
+    def test_info_reports_the_deck_the_run_is_actually_holding(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            _, info = env.reset()
+            self.assertEqual(len(info["deck"]), info["deck_size"])
+            self.assertTrue(all(card["card_id"] > 0 for card in info["deck"]))
+        finally:
+            env.close()
+
+    def test_the_deck_block_sits_where_the_layout_says(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            obs, info = env.reset()
+            layout = native.RUN_OBS_LAYOUT
+            base = native.OBS_SIZE + layout["deck_offset"]
+            for i, card in enumerate(info["deck"]):
+                at = base + i * layout["deck_slot_size"]
+                self.assertEqual(int(obs[at]), card["card_id"])
+            # The slot after the deck is empty, so a reader can stop at the first zero.
+            self.assertEqual(int(obs[base + len(info["deck"]) * layout["deck_slot_size"]]), 0)
+        finally:
+            env.close()
+
+    def test_the_relic_block_carries_what_the_run_is_wearing(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            _, info = env.reset()
+            self.assertEqual(
+                [relic["relic_id"] for relic in info["relic_slots"]],
+                [relic for relic in info["relics"] if relic != 0],
+            )
+        finally:
+            env.close()
+
+    def test_the_deck_block_follows_the_deck_as_it_grows(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            env.reset()
+            before = env._info()["deck"]
+            # Play until a card reward is answered, which is the first thing that can move
+            # the deck; stop either way rather than looping the whole run.
+            for _ in range(400):
+                legal = np.flatnonzero(env.action_masks())
+                if legal.size == 0:
+                    break
+                _, _, terminated, truncated, info = env.step(int(legal[0]))
+                if len(info["deck"]) != len(before) or terminated or truncated:
+                    break
+
+            info = env._info()
+            self.assertEqual(len(info["deck"]), info["deck_size"])
+        finally:
+            env.close()
 
 
 class RunEnvCloneTests(unittest.TestCase):

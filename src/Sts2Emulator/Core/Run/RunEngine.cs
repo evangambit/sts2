@@ -744,6 +744,54 @@ public sealed class RunEngine
         obs[offset + 32] = State.ShopPotions[1];
         obs[offset + 33] = State.ShopPotions[2];
         obs[offset + 34] = State.ShopCosts[RunConstants.ShopRemoveAction];
+
+        WriteDeckObservation(obs[(offset + RunConstants.DeckObsOffset)..]);
+        WriteRelicObservation(obs[(offset + RunConstants.RelicObsOffset)..]);
+    }
+
+    /// <summary>
+    /// The deck, card by card. Everything before this reported <c>Deck.Count</c> and
+    /// nothing else, which left every decision the run is actually about -- which card
+    /// reward to take, what to buy, what to upgrade at a fire, what to transform --
+    /// unlearnable: the agent chose between three cards without being told what the other
+    /// twenty in its deck were.
+    ///
+    /// Persistent identity only. <c>CostForCombat</c>, <c>BonusDamage</c>, <c>Retain</c>
+    /// and <c>FreeThisTurn</c> are combat-local and belong to the combat observation; what
+    /// survives a fight is the card, whether it is upgraded, and its one enchantment with
+    /// the amount it was applied at.
+    /// </summary>
+    private void WriteDeckObservation(Span<int> obs)
+    {
+        int slots = Math.Min(State.Deck.Count, RunConstants.MaxObservedDeck);
+        for (int i = 0; i < slots; i++)
+        {
+            var card = State.Deck[i];
+            int at = i * RunConstants.DeckSlotSize;
+            obs[at] = card.DefId;
+            obs[at + 1] = card.Upgraded ? 1 : 0;
+            obs[at + 2] = (int)card.Enchantment;
+            obs[at + 3] = card.EnchantAmount;
+        }
+    }
+
+    /// <summary>
+    /// The relics, in the order they were picked up. The counter is on the slot because
+    /// half of what a relic is worth is how much of it is left -- a Silver Crucible with no
+    /// charges is a different relic from one with three -- and a used-up relic is reported
+    /// as such, since the run keeps carrying it after it stops doing anything.
+    /// </summary>
+    private void WriteRelicObservation(Span<int> obs)
+    {
+        int slots = Math.Min(State.Relics.Count, RunConstants.MaxObservedRelics);
+        for (int i = 0; i < slots; i++)
+        {
+            var relic = State.Relics[i];
+            int at = i * RunConstants.RelicSlotSize;
+            obs[at] = relic.DefId;
+            obs[at + 1] = relic.Counter;
+            obs[at + 2] = State.UsedUpRelics.Contains(relic.DefId) ? 1 : 0;
+        }
     }
 
     public void WriteInfo(Span<int> info)

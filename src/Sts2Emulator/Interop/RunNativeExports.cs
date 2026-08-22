@@ -7,8 +7,8 @@ namespace Sts2Emulator.Interop;
 
 public static class RunNativeExports
 {
-    // v11: Sts2Run_Clone forks a run, optionally resampling what the agent has not seen.
-    public const int RUN_NATIVE_API_VERSION = 11;
+    // v12: Sts2Run_ObsLayout, and the observation carries the deck and the relics.
+    public const int RUN_NATIVE_API_VERSION = 12;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -18,6 +18,38 @@ public static class RunNativeExports
     public static int Sts2Run_MaxActions() => RunConstants.MaxActions;
 
     public static int Sts2Run_InfoSize() => RunConstants.RunInfoSize;
+
+    /// <summary>How many numbers <see cref="Sts2Run_ObsLayout"/> writes.</summary>
+    public const int RUN_OBS_LAYOUT_SIZE = 7;
+
+    /// <summary>
+    /// Where the run observation's variable-length blocks sit, so a consumer does not have
+    /// to hard-code offsets that move whenever a block grows:
+    ///
+    /// <c>[scalars, deck offset, deck slots, ints per card, relic offset, relic slots,
+    /// ints per relic]</c>
+    ///
+    /// Offsets are relative to the start of the run block, which itself begins at the
+    /// combat observation's own size.
+    /// </summary>
+    /// <returns>How many numbers were written, or -1 if the buffer is too small.</returns>
+    public static unsafe int Sts2Run_ObsLayout(int* buf, int len)
+    {
+        if (len < RUN_OBS_LAYOUT_SIZE)
+        {
+            return -1;
+        }
+
+        var layout = new Span<int>(buf, len);
+        layout[0] = RunConstants.RunScalarObsSize;
+        layout[1] = RunConstants.DeckObsOffset;
+        layout[2] = RunConstants.MaxObservedDeck;
+        layout[3] = RunConstants.DeckSlotSize;
+        layout[4] = RunConstants.RelicObsOffset;
+        layout[5] = RunConstants.MaxObservedRelics;
+        layout[6] = RunConstants.RelicSlotSize;
+        return RUN_OBS_LAYOUT_SIZE;
+    }
 
     public static int Sts2Run_Create()
     {

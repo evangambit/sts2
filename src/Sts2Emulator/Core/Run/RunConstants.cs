@@ -8,7 +8,37 @@ public static class RunConstants
     // apart the moment the combat block grew, and the run observation silently
     // reserved the old width for it.
     public const int CombatObsSize = CombatObservation.ObsSize;
-    public const int RunExtraObsSize = 35;
+
+    /// <summary>The run's flat scalars: phase, floor, gold, the screen in front of the player.</summary>
+    public const int RunScalarObsSize = 35;
+
+    /// <summary>
+    /// How many of the deck's cards the observation carries. A run that grew past this
+    /// would have its later cards unseen -- which the count at offset 3 still reports, so
+    /// the truncation is visible rather than silent -- but 64 is well past what a full
+    /// four-act run reaches, let alone Act 1.
+    /// </summary>
+    public const int MaxObservedDeck = 64;
+
+    /// <summary>Per card: def id, upgraded, enchantment, and the amount it was applied at.</summary>
+    public const int DeckSlotSize = 4;
+
+    public const int MaxObservedRelics = 32;
+
+    /// <summary>Per relic: def id, its counter, and whether the run has spent it.</summary>
+    public const int RelicSlotSize = 3;
+
+    /// <summary>
+    /// Where the deck begins. Slot <c>i</c> is <c>State.Deck[i]</c>, and deliberately so:
+    /// a card-select screen's action <c>i</c> indexes the same list, so sorting the
+    /// observation into a canonical multiset would break the agent's only way to say
+    /// which card it means. The order carries no information the player does not have --
+    /// a deck is inspectable in full -- so nothing leaks by keeping it.
+    /// </summary>
+    public const int DeckObsOffset = RunScalarObsSize;
+
+    public const int RelicObsOffset = DeckObsOffset + MaxObservedDeck * DeckSlotSize;
+    public const int RunExtraObsSize = RelicObsOffset + MaxObservedRelics * RelicSlotSize;
     public const int RunObsSize = CombatObsSize + RunExtraObsSize;
     public const int RunInfoSize = 11;
 

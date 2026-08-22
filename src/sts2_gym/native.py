@@ -12,7 +12,7 @@ _LIB_NAMES = {
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
 _REQUIRED_NATIVE_API_VERSION = 18
-_REQUIRED_RUN_NATIVE_API_VERSION = 11
+_REQUIRED_RUN_NATIVE_API_VERSION = 12
 
 
 def _repo_root() -> Path:
@@ -262,6 +262,9 @@ _lib.Sts2Run_MaxActions.argtypes = []
 _lib.Sts2Run_InfoSize.restype = ctypes.c_int
 _lib.Sts2Run_InfoSize.argtypes = []
 
+_lib.Sts2Run_ObsLayout.restype = ctypes.c_int
+_lib.Sts2Run_ObsLayout.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
+
 _lib.Sts2Run_Create.restype = ctypes.c_int
 _lib.Sts2Run_Create.argtypes = []
 _lib.Sts2Run_Clone.restype = ctypes.c_int
@@ -355,6 +358,40 @@ MAX_ENEMIES: int = _lib.Sts2_MaxEnemies()
 RUN_OBS_SIZE: int = _lib.Sts2Run_ObsSize()
 RUN_MAX_ACTIONS: int = _lib.Sts2Run_MaxActions()
 RUN_INFO_SIZE: int = _lib.Sts2Run_InfoSize()
+
+
+def _run_obs_layout() -> dict[str, int]:
+    """Where the run observation's deck and relic blocks sit, read from the native side.
+
+    Hard-coding these on this side is how the run observation and its readers drifted
+    apart before: the offsets move whenever a block grows, and a stale number reads the
+    wrong column rather than failing.
+
+    Raises:
+        RuntimeError: if the native library reports a layout this build cannot read.
+
+    """
+    size = 7
+    buf = (ctypes.c_int * size)()
+    written = int(_lib.Sts2Run_ObsLayout(buf, size))
+    if written != size:
+        raise RuntimeError(
+            f"Sts2Run_ObsLayout wrote {written} numbers, expected {size}. "
+            "Rebuild the native library.",
+        )
+    keys = (
+        "scalars",
+        "deck_offset",
+        "max_deck",
+        "deck_slot_size",
+        "relic_offset",
+        "max_relics",
+        "relic_slot_size",
+    )
+    return dict(zip(keys, (int(value) for value in buf), strict=True))
+
+
+RUN_OBS_LAYOUT: dict[str, int] = _run_obs_layout()
 
 
 def create(seed: int) -> int:

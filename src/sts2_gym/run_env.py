@@ -183,6 +183,53 @@ class Sts2RunEnv(gym.Env):
     def _obs(self) -> np.ndarray:
         return np.ctypeslib.as_array(self._run_obs_buf).copy()
 
+    @staticmethod
+    def _deck(obs: np.ndarray) -> tuple[dict, ...]:
+        """Return the deck as the observation carries it, card by card.
+
+        Slot ``i`` is deck index ``i``, which is also the action that selects that card at
+        a card-select screen -- so this is readable straight against an action mask.
+        """
+        layout = native.RUN_OBS_LAYOUT
+        base = native.OBS_SIZE + layout["deck_offset"]
+        width = layout["deck_slot_size"]
+        cards = []
+        for i in range(layout["max_deck"]):
+            at = base + i * width
+            card_id = int(obs[at])
+            if card_id == 0:
+                break
+            cards.append(
+                {
+                    "card_id": card_id,
+                    "upgraded": bool(obs[at + 1]),
+                    "enchantment": int(obs[at + 2]),
+                    "enchant_amount": int(obs[at + 3]),
+                },
+            )
+        return tuple(cards)
+
+    @staticmethod
+    def _relics(obs: np.ndarray) -> tuple[dict, ...]:
+        """Return the relics as the observation carries them, with their counters."""
+        layout = native.RUN_OBS_LAYOUT
+        base = native.OBS_SIZE + layout["relic_offset"]
+        width = layout["relic_slot_size"]
+        relics = []
+        for i in range(layout["max_relics"]):
+            at = base + i * width
+            relic_id = int(obs[at])
+            if relic_id == 0:
+                break
+            relics.append(
+                {
+                    "relic_id": relic_id,
+                    "counter": int(obs[at + 1]),
+                    "used_up": bool(obs[at + 2]),
+                },
+            )
+        return tuple(relics)
+
     def _info(self) -> dict:
         if self._run_handle is None:
             raise RuntimeError("Call reset() before _info().")
@@ -198,6 +245,8 @@ class Sts2RunEnv(gym.Env):
             "floor": int(info_buf[1]),
             "act": act,
             "deck_size": int(info_buf[3]),
+            "deck": self._deck(obs),
+            "relic_slots": self._relics(obs),
             "gold": int(info_buf[4]),
             "player_hp": int(info_buf[5]),
             "player_max_hp": int(info_buf[6]),

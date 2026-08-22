@@ -618,6 +618,10 @@ public static class NativeExports
     [UnmanagedCallersOnly(EntryPoint = "Sts2Run_InfoSize")]
     public static int Sts2Run_InfoSize() => RunNativeExports.Sts2Run_InfoSize();
 
+    [UnmanagedCallersOnly(EntryPoint = "Sts2Run_ObsLayout")]
+    public static unsafe int Sts2Run_ObsLayout(int* buf, int len) =>
+        RunNativeExports.Sts2Run_ObsLayout(buf, len);
+
     [UnmanagedCallersOnly(EntryPoint = "Sts2Run_Create")]
     public static int Sts2Run_Create() => RunNativeExports.Sts2Run_Create();
 

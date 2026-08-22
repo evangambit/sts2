@@ -448,7 +448,33 @@ public class RunEngineTests
                 703,
                 175,
             },
-            obs[offset..(offset + RunConstants.RunExtraObsSize)]
+            obs[offset..(offset + RunConstants.RunScalarObsSize)]
+        );
+
+        // The deck and the relics follow the scalars, in the order the run holds them.
+        int deck = offset + RunConstants.DeckObsOffset;
+        Assert.Equal(
+            new[] { 1, 0, 2, 0, 3, 1 },
+            new[]
+            {
+                obs[deck],
+                obs[deck + 1],
+                obs[deck + RunConstants.DeckSlotSize],
+                obs[deck + RunConstants.DeckSlotSize + 1],
+                obs[deck + 2 * RunConstants.DeckSlotSize],
+                obs[deck + 2 * RunConstants.DeckSlotSize + 1],
+            }
+        );
+
+        int relics = offset + RunConstants.RelicObsOffset;
+        Assert.Equal(
+            new[] { 10, 20, 0 },
+            new[]
+            {
+                obs[relics],
+                obs[relics + RunConstants.RelicSlotSize],
+                obs[relics + 2 * RunConstants.RelicSlotSize],
+            }
         );
     }
 
