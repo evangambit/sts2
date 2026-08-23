@@ -219,7 +219,7 @@ SPECIAL_CARD_IDS = {
 
 
 def slugify(name: str) -> str:
-    r"""The game's StringHelper.Slugify, which produces a model's ModelId.Entry.
+    r"""Reproduce the game's StringHelper.Slugify, which produces a ModelId.Entry.
 
     Worth having in the data rather than derived at runtime: the mid-combat reshuffle
     sorts the pile by ModelId before shuffling (ListExtensions.StableShuffle), and
@@ -295,6 +295,10 @@ def extract_cards() -> str:
             flags.append("HasEnergyCostX: true")
         if MULTIPLAYER_ONLY.search(text):
             flags.append("MultiplayerOnly: true")
+        # CardModel.CanBeGeneratedByModifiers. Eight curses refuse to be handed out by
+        # anything that rolls one -- Neow's Bones among them -- so the roll has to read it.
+        if "CanBeGeneratedByModifiers => false" in text:
+            flags.append("CanBeGeneratedByModifiers: false")
         flags_cs = f", {', '.join(flags)}" if flags else ""
 
         entries.append(

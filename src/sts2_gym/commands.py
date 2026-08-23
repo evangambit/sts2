@@ -457,7 +457,7 @@ def resolve_runreplays_index_if_card_matches(
 
 
 def hand_card_id(obs: np.ndarray, hand_index: int) -> int:
-    """The card id in a hand slot.
+    """Return the card id in a hand slot.
 
     The stride is the emulator's, not a literal: this was ``obs[8 + i * 2]`` at four call
     sites, and when a card slot grew from two fields to four every one of them silently

@@ -1094,8 +1094,8 @@ public static class RunRewardGenerator
     /// </summary>
     public static CardType[] FutureOfPotionsCardTypes(int potionId) =>
         GeneratedData.Potions.Get(potionId).Rarity
-        is Core.PotionRarity.Common
-            or Core.PotionRarity.Token
+            is Core.PotionRarity.Common
+                or Core.PotionRarity.Token
             ? [CardType.Attack, CardType.Skill]
             : [CardType.Attack, CardType.Skill, CardType.Power];
 

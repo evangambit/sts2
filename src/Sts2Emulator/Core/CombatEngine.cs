@@ -209,7 +209,10 @@ public static class CombatEngine
         {
             Effects.CardEffects.ExhaustCard(
                 state,
-                card with { EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent },
+                card with
+                {
+                    EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
+                },
                 rng: rng
             );
         }
@@ -941,11 +944,7 @@ public static class CombatEngine
                 {
                     var card = state.Hand[index];
                     state.Hand.RemoveAt(index);
-                    Effects.CardEffects.ExhaustCard(
-                state,
-                card,
-                rng: rng
-            );
+                    Effects.CardEffects.ExhaustCard(state, card, rng: rng);
                 }
 
                 if (selection.Kind == CardSelectionKind.ExhaustFromHandThenDraw)
@@ -1316,11 +1315,7 @@ public static class CombatEngine
             state.Hand.RemoveAt(handIndex);
             if (ShouldExhaustAfterPlay(def, card))
             {
-                Effects.CardEffects.ExhaustCard(
-                state,
-                card,
-                rng: rng
-            );
+                Effects.CardEffects.ExhaustCard(state, card, rng: rng);
             }
             else
             {
@@ -1389,11 +1384,7 @@ public static class CombatEngine
         }
         else if (ShouldExhaustAfterPlay(def, card))
         {
-            Effects.CardEffects.ExhaustCard(
-                state,
-                card,
-                rng: rng
-            );
+            Effects.CardEffects.ExhaustCard(state, card, rng: rng);
         }
         else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
         {
@@ -1574,11 +1565,7 @@ public static class CombatEngine
         {
             if (ShouldExhaustAfterPlay(def, card))
             {
-                Effects.CardEffects.ExhaustCard(
-                state,
-                card,
-                rng: rng
-            );
+                Effects.CardEffects.ExhaustCard(state, card, rng: rng);
             }
             else
             {
@@ -1616,11 +1603,7 @@ public static class CombatEngine
         }
         else if (ShouldExhaustAfterPlay(def, card))
         {
-            Effects.CardEffects.ExhaustCard(
-                state,
-                card,
-                rng: rng
-            );
+            Effects.CardEffects.ExhaustCard(state, card, rng: rng);
         }
         else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
         {

@@ -181,9 +181,7 @@ public class WelcomeToWongosTests
 
         Assert.DoesNotContain(
             engine.State.Relics,
-            relic =>
-                GeneratedData.Relics.Get(relic.DefId).Name
-                == "WongoCustomerAppreciationBadge"
+            relic => GeneratedData.Relics.Get(relic.DefId).Name == "WongoCustomerAppreciationBadge"
         );
     }
 }

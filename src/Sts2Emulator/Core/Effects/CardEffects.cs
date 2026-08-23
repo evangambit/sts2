@@ -1953,11 +1953,7 @@ public static class CardEffects
     /// Slither's cost: <c>Rng.CombatEnergyCosts.NextInt(4)</c>, so 0..3, re-rolled every
     /// time the card is drawn to hand.
     /// </summary>
-    private static CardInstance RollSlitherCost(
-        CombatState state,
-        CardInstance card,
-        Random rng
-    )
+    private static CardInstance RollSlitherCost(CombatState state, CardInstance card, Random rng)
     {
         if (card.Enchantment != Enchantment.Slither)
         {
@@ -2258,9 +2254,7 @@ public static class CardEffects
     {
         for (int i = 0; i < count && state.DrawPile.Count > 0; i++)
         {
-            int index = state.DrawPile.FindIndex(c =>
-                !GeneratedData.Cards.Get(c.DefId).Unplayable
-            );
+            int index = state.DrawPile.FindIndex(c => !GeneratedData.Cards.Get(c.DefId).Unplayable);
             if (index < 0)
             {
                 index = 0;
@@ -2327,7 +2321,11 @@ public static class CardEffects
     /// Seeker Strike: a sample of the draw pile, of which one card comes to hand. The
     /// sample is what the card offers, so it lives in the candidate list.
     /// </summary>
-    private static void OpenDrawPileSampleSelection(CombatState state, int sourceCardDefId, int sample)
+    private static void OpenDrawPileSampleSelection(
+        CombatState state,
+        int sourceCardDefId,
+        int sample
+    )
     {
         var candidates = Enumerable.Range(0, state.DrawPile.Count).Take(sample).ToList();
         if (candidates.Count == 0)

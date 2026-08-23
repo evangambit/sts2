@@ -146,13 +146,9 @@ public static class RunNonCombatEffects
                     );
                 }
 
-                // The game rolls this curse from CurseCardPool on Rng.Niche, filtered
-                // to CanBeGeneratedByModifiers and ordered by id. Neither the pool nor
-                // that flag is extracted, so this still hands over Ascender's Bane --
-                // which is at least A curse, but never the one the game picked.
                 AddCardToDeck(
                     state,
-                    new CardInstance(RunConstants.CursePlaceholderCard, Upgraded: false)
+                    new CardInstance(RollGeneratableCurse(state), Upgraded: false)
                 );
                 break;
             case RunConstants.RelicNutritiousOyster:
@@ -859,7 +855,10 @@ public static class RunNonCombatEffects
         var tradable = Enumerable
             .Range(0, state.Relics.Count)
             .Where(i => IsTradableRelic(state, state.Relics[i]))
-            .OrderBy(i => GeneratedData.Relics.Get(state.Relics[i].DefId).Entry, StringComparer.Ordinal)
+            .OrderBy(
+                i => GeneratedData.Relics.Get(state.Relics[i].DefId).Entry,
+                StringComparer.Ordinal
+            )
             .ToList();
         EventRng(state, "RELIC_TRADER").Shuffle(tradable);
         return tradable.Take(3).ToList();
@@ -876,9 +875,7 @@ public static class RunNonCombatEffects
             .Range(0, state.Relics.Count)
             .Where(i => IsTradableRelic(state, state.Relics[i]))
             .ToList();
-        return tradable.Count == 0
-            ? -1
-            : EventRng(state, "RANWID_THE_ELDER").NextItem(tradable);
+        return tradable.Count == 0 ? -1 : EventRng(state, "RANWID_THE_ELDER").NextItem(tradable);
     }
 
     /// <summary>
@@ -888,6 +885,26 @@ public static class RunNonCombatEffects
     public static bool IsTradableRelic(RunState state, RelicInstance relic) =>
         GeneratedData.Relics.Get(relic.DefId).IsTradable
         && !state.UsedUpRelics.Contains(relic.DefId);
+
+    /// <summary>
+    /// A curse rolled the way anything that hands one out rolls it: the curse pool,
+    /// filtered to cards that may be generated -- eight of the eighteen refuse -- ordered
+    /// by ModelId, and picked off the Niche stream.
+    ///
+    /// Ascender's Bane stood here for every such roll, which is not merely the wrong curse:
+    /// it is one of the eight the game will never generate.
+    /// </summary>
+    public static int RollGeneratableCurse(RunState state)
+    {
+        var curses = GeneratedData
+            .CardPools.Curse.ToArray()
+            .Where(id => GeneratedData.Cards.Get(id).CanBeGeneratedByModifiers)
+            .OrderBy(id => GeneratedData.Cards.Get(id).Entry, StringComparer.Ordinal)
+            .ToArray();
+        return curses.Length == 0
+            ? RunConstants.CursePlaceholderCard
+            : state.Rng.Niche.NextItem(curses);
+    }
 
     /// <summary>A potion an event names outright -- the Potion Courier's Foul Potions.</summary>
     public static int NamedPotion(string name) =>

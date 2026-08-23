@@ -74,9 +74,14 @@ public class EventActGatingTests
         engine.State.Gold = 999;
         engine.State.PotionSlots[0] = RunNonCombatEffects.NamedPotion("FoulPotion");
         engine.State.PotionSlots[1] = RunNonCombatEffects.NamedPotion("Ashwater");
-        foreach (string relic in new[] { "Akabeko", "Anchor", "BagOfMarbles", "Bellows", "BeltBuckle" })
+        foreach (
+            string relic in new[] { "Akabeko", "Anchor", "BagOfMarbles", "Bellows", "BeltBuckle" }
+        )
         {
-            RunNonCombatEffects.ApplyRelicPickup(engine.State, RunNonCombatEffects.NamedRelic(relic));
+            RunNonCombatEffects.ApplyRelicPickup(
+                engine.State,
+                RunNonCombatEffects.NamedRelic(relic)
+            );
         }
 
         return engine.State;

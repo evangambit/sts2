@@ -270,6 +270,9 @@ public static class RunConstants
     public const int ConveyorGrabCost = 40;
 
     /// <summary>The construct fight Punch Off's second page starts.</summary>
+    /// <summary>The fight Dense Vegetation's Rest wakes up, entered from the event.</summary>
+    public const int DenseVegetationEncounterId = 55;
+
     public const int PunchOffEncounterId = 56;
 
     /// <summary>Room Full of Cheese's Gorge: eight offered, two kept.</summary>
@@ -298,11 +301,11 @@ public static class RunConstants
     public const int WeakEncountersPerAct = 3;
 
     /// <summary>
-    /// Ascender's Bane, standing in for a curse the emulator cannot name yet. It used to
-    /// stand in for EVERY curse any event or relic inflicted, which is not merely the
-    /// wrong name -- Ascender's Bane is Ethereal and the curses it replaced are not.
-    /// The named ones are extracted now; the only remaining user is Neow's Bones, which
-    /// rolls from a pool that is not.
+    /// Ascender's Bane. It used to stand in for EVERY curse any event or relic inflicted,
+    /// which is not merely the wrong name -- Ascender's Bane is Ethereal and the curses it
+    /// replaced are not, and it is one of the eight the game will never generate. Every
+    /// site names or rolls its own curse now; this is the starting deck's copy and the
+    /// last-resort fallback if the curse pool ever comes back empty.
     /// </summary>
     public const int CursePlaceholderCard = 10001;
     public const int SpoilsMapCard = 10020;

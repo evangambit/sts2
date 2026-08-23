@@ -157,8 +157,7 @@ public static class CombatObservation
                     i++
                 )
                 {
-                    obs[SelectionOffset + i * CardSlotSize] =
-                        selection.GeneratedCandidates[i];
+                    obs[SelectionOffset + i * CardSlotSize] = selection.GeneratedCandidates[i];
                 }
             }
             else

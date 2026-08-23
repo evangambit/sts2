@@ -796,13 +796,23 @@ def run_get_niche_rng_call_count(handle: int) -> int:
 
 
 def run_debug_set_hp(handle: int, hp: int, max_hp: int) -> None:
-    """Soak-only: hand a run extra HP so it can reach the act's boss."""
+    """Soak-only: hand a run extra HP so it can reach the act's boss.
+
+    Raises:
+        RuntimeError: if the handle is not a live run.
+
+    """
     if _lib.Sts2Run_DebugSetHp(handle, hp, max_hp) != 0:
         raise RuntimeError("Sts2Run_DebugSetHp failed")
 
 
 def run_debug_upgrade_deck(handle: int) -> None:
-    """Soak-only: upgrade every upgradable card in the deck."""
+    """Soak-only: upgrade every upgradable card in the deck.
+
+    Raises:
+        RuntimeError: if the handle is not a live run.
+
+    """
     if _lib.Sts2Run_DebugUpgradeDeck(handle) != 0:
         raise RuntimeError("Sts2Run_DebugUpgradeDeck failed")
 

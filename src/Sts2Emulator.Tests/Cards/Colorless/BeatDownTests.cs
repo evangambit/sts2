@@ -60,11 +60,7 @@ public class BeatDownTests
         var fight = Fight
             .Hand(Card(CL.BeatDown))
             .Energy(3)
-            .Discard(
-                Card(IC.DefendIronclad),
-                Card(IC.DefendIronclad),
-                Card(IC.StrikeIronclad)
-            )
+            .Discard(Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad))
             .Enemy(hp: 60);
 
         fight.Play();

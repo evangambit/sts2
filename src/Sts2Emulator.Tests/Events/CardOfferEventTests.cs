@@ -167,10 +167,7 @@ public class CardOfferEventTests
         Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
 
         Assert.Equal(50, engine.State.PlayerHp);
-        Assert.Equal(
-            RunNonCombatEffects.NamedRelic("ChosenCheese"),
-            engine.State.Relics[^1].DefId
-        );
+        Assert.Equal(RunNonCombatEffects.NamedRelic("ChosenCheese"), engine.State.Relics[^1].DefId);
     }
 
     // ── The Endless Conveyor ─────────────────────────────────────────────────
@@ -259,9 +256,7 @@ public class CardOfferEventTests
 
         Assert.Equal(
             1,
-            engine.State.Deck.Count(card =>
-                card.DefId == RunNonCombatEffects.NamedCard("Injury")
-            )
+            engine.State.Deck.Count(card => card.DefId == RunNonCombatEffects.NamedCard("Injury"))
         );
         Assert.Equal(RunPhase.RelicReward, engine.State.Phase);
         Assert.NotEqual(0, engine.State.RelicReward);

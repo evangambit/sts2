@@ -1785,6 +1785,24 @@ public sealed class RunEngine
                 }
 
                 break;
+            case RunConstants.EventDenseVegetation when State.EventPage == 1:
+                // The page the Rest answers with: one option, and it is the fight.
+                if (action != 0)
+                {
+                    return -1;
+                }
+
+                return StartCombatWithDeck(
+                    State.Deck,
+                    RunConstants.DenseVegetationEncounterId,
+                    State.Relics,
+                    State.PlayerHp,
+                    State.PlayerMaxHp,
+                    State.PotionSlots,
+                    State.Gold,
+                    Math.Max(0, State.NormalEncountersVisited + State.EliteEncountersVisited - 1)
+                );
+
             case RunConstants.EventDenseVegetation:
                 if (action == 0)
                 {
@@ -1800,7 +1818,11 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
+                    // Rest mimics a rest site and then wakes something up: the page it
+                    // answers with has one option, and that option is the fight.
                     HealPlayer(RestHealAmount());
+                    State.EventPage = 1;
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2335,10 +2357,7 @@ public sealed class RunEngine
             case RunConstants.EventDollRoom when State.EventPage > 0:
             {
                 // The second page: pick one of the dolls the wait bought.
-                var offer = RunNonCombatEffects.DollRoomOffer(
-                    State,
-                    State.EventPage == 1 ? 2 : 3
-                );
+                var offer = RunNonCombatEffects.DollRoomOffer(State, State.EventPage == 1 ? 2 : 3);
                 if ((uint)action >= (uint)offer.Count)
                 {
                     return action == RunConstants.EventSkipAction ? 0 : -1;
@@ -3657,9 +3676,7 @@ public sealed class RunEngine
             case RunConstants.EventRelicTrader:
                 SetTradeMask(
                     mask,
-                    State.Relics.Count(relic =>
-                        RunNonCombatEffects.IsTradableRelic(State, relic)
-                    )
+                    State.Relics.Count(relic => RunNonCombatEffects.IsTradableRelic(State, relic))
                 );
                 break;
             case RunConstants.EventTheFutureOfPotions:
@@ -3705,6 +3722,10 @@ public sealed class RunEngine
                 // A later page offers Decipher again, or Give Up.
                 SetMask(mask, 0);
                 SetMask(mask, 1);
+                break;
+            case RunConstants.EventDenseVegetation when State.EventPage == 1:
+                // The Rest's page offers only the fight.
+                SetMask(mask, 0);
                 break;
             case RunConstants.EventPunchOff when State.EventPage == 1:
                 // "I Can Take Them" answers with a page whose only option is the fight.

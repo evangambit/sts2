@@ -70,10 +70,11 @@ class ObservationLayoutTests(unittest.TestCase):
         )
 
     def test_commands_resolves_the_same_hand_indices(self):
-        """
-        The replay adapter reads the hand separately from trace.py, and IT is the one
-        that turns a captured play into an emulator action -- so a stride it gets wrong
-        shows up as a divergent run, not as a bad observation.
+        """The replay adapter resolves the same hand indices as the emulator.
+
+        It reads the hand separately from trace.py, and IT is the one that turns a
+        captured play into an emulator action -- so a stride it gets wrong shows up as a
+        divergent run, not as a bad observation.
         """
         hand = [card for card, _ in self.env.get_pile("hand")]
 

@@ -66,7 +66,10 @@ public readonly record struct CardDef(
     // ModelId orders by Category then Entry as ordinal strings. Our own numeric ids sort
     // differently, and a different pre-shuffle order is a different shuffle from the
     // same stream — so the pile order has to come from this, not from Id.
-    string Entry = ""
+    string Entry = "",
+    // CardModel.CanBeGeneratedByModifiers: eight curses refuse to be handed out by
+    // anything that rolls one, so a curse roll has to filter on it.
+    bool CanBeGeneratedByModifiers = true
 );
 
 /// <summary>

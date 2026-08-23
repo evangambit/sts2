@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import numpy as np
 
-from sts2_gym import run_env
+from sts2_gym import native, run_env
 from sts2_gym.run_env import Sts2RunEnv
 
 # Events whose own IsAllowed refuses act index 0. None of them should ever appear in a
@@ -112,14 +112,16 @@ def play(
         # only accepts an int and would seed nothing useful here.
         _, info = env.reset()
         if boost:
-            from sts2_gym import native
-
+            # reset() opens the run, so the handle is live -- but it is Optional on the
+            # env, and a boost applied to a closed run would silently do nothing.
+            handle = env._run_handle
+            assert handle is not None, "reset() left the run handle closed"
             native.run_debug_set_hp(
-                env._run_handle,
+                handle,
                 info["player_hp"] + extra_hp,
                 info["player_max_hp"] + extra_hp,
             )
-            native.run_debug_upgrade_deck(env._run_handle)
+            native.run_debug_upgrade_deck(handle)
             info = env._info()
         stuck = 0
         last_signature = None
@@ -156,7 +158,7 @@ def play(
                 print(
                     f"  {PHASE_NAMES.get(phase, phase):12s} "
                     f"floor {info['floor']:2d} hp {info['player_hp']:3d} "
-                    f"action {action}"
+                    f"action {action}",
                 )
 
             if terminated:
@@ -186,7 +188,9 @@ def play(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runs", type=int, default=100)
-    parser.add_argument("--seed", type=int, default=0, help="seed for the policy itself")
+    parser.add_argument(
+        "--seed", type=int, default=0, help="seed for the policy itself"
+    )
     parser.add_argument("--max-steps", type=int, default=4000)
     parser.add_argument(
         "--boost",
@@ -203,7 +207,7 @@ def main() -> int:
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
-    rng = random.Random(args.seed)
+    rng = random.Random(args.seed)  # noqa: S311 - a soak policy, not a secret
     outcomes = []
     for i in range(args.runs):
         seed = f"SOAK{i:05d}"
@@ -218,7 +222,7 @@ def main() -> int:
                 args.policy == "greedy",
                 args.boost,
                 args.extra_hp,
-            )
+            ),
         )
 
     endings = collections.Counter(o.ending for o in outcomes)
@@ -234,26 +238,30 @@ def main() -> int:
         print(f"    {ending:16s} {count:5d}")
 
     reached = [o.floor for o in outcomes]
-    print(f"  floors reached: min {min(reached)} median {sorted(reached)[len(reached) // 2]} max {max(reached)}")
+    print(
+        f"  floors reached: min {min(reached)} median {sorted(reached)[len(reached) // 2]} max {max(reached)}"
+    )
     print(f"  distinct events seen: {len(events)}")
     # An Act 2 event turning up here means the act gate leaked, which no per-event
     # suite would notice: it is a property of which events a RUN offers.
-    banned = {
-        name: eid
-        for name, eid in ACT_TWO_EVENTS.items()
-        if eid in events
-    }
+    banned = {name: eid for name, eid in ACT_TWO_EVENTS.items() if eid in events}
     if banned:
         print(f"  !! act 2 events seen in act 1: {sorted(banned)}")
     print("  phases visited:")
     for phase, count in phases.most_common():
         print(f"    {phase:14s} {count:7d}")
 
-    bad = [o for o in outcomes if o.ending in ("crashed", "no legal action", "looping", "step limit")]
+    bad = [
+        o
+        for o in outcomes
+        if o.ending in ("crashed", "no legal action", "looping", "step limit")
+    ]
     if bad:
         print(f"\n{len(bad)} run(s) ended badly:")
         for o in bad[:5]:
-            print(f"  {o.seed}: {o.ending} at floor {o.floor}, hp {o.hp}, after {o.steps} steps")
+            print(
+                f"  {o.seed}: {o.ending} at floor {o.floor}, hp {o.hp}, after {o.steps} steps"
+            )
             if o.error:
                 print("    " + o.error.strip().splitlines()[-1])
         return 1

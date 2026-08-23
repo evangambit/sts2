@@ -71,11 +71,7 @@ public class SeekerStrikeTests
         var fight = Fight
             .Hand(Card(CL.SeekerStrike))
             .Energy(1)
-            .Draw(
-                Card(IC.DefendIronclad),
-                Card(IC.DefendIronclad),
-                Card(IC.DefendIronclad)
-            )
+            .Draw(Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad))
             .Enemy(hp: 60);
 
         fight.Play();

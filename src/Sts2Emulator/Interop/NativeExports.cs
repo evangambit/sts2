@@ -357,8 +357,7 @@ public static class NativeExports
     public static int Sts2_ObsEnemySlotSize() => CombatObservation.EnemySlotSize;
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsSecondaryIntentOffset")]
-    public static int Sts2_ObsSecondaryIntentOffset() =>
-        CombatObservation.SecondaryIntentOffset;
+    public static int Sts2_ObsSecondaryIntentOffset() => CombatObservation.SecondaryIntentOffset;
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_NativeApiVersion")]
     public static int Sts2_NativeApiVersion() => NATIVE_API_VERSION;

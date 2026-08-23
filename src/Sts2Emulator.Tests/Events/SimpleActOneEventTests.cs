@@ -245,11 +245,7 @@ public class SimpleActOneEventTests
     [Theory]
     [InlineData(0, Enchantment.Sharp, CardType.Attack)]
     [InlineData(1, Enchantment.Nimble, CardType.Skill)]
-    public void EachPageEnchantsItsOwnCardType(
-        int option,
-        Enchantment enchantment,
-        CardType type
-    )
+    public void EachPageEnchantsItsOwnCardType(int option, Enchantment enchantment, CardType type)
     {
         var engine = At(RunConstants.EventSelfHelpBook);
 
