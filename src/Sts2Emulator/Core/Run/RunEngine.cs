@@ -1285,6 +1285,20 @@ public sealed class RunEngine
                 return 0;
             }
 
+            // Brain Leech's colourless reward belongs to the EVENT, the same way Neow's
+            // does: once the screen is empty the run goes back to the event's finished
+            // page, not to an empty rewards screen. The check for this sat below, after
+            // the return here, so it never ran.
+            if (
+                State.EventId == RunConstants.EventBrainLeech
+                && !RunRewardGenerator.HasPendingRewards(State)
+            )
+            {
+                State.EventId = RunConstants.EventResultPending;
+                State.Phase = RunPhase.Event;
+                return 0;
+            }
+
             // Back to the rewards screen even when nothing is left on it. The game keeps
             // it open and waits to be dismissed — the player still has to proceed — so
             // advancing straight to the map skips an action the run actually takes.

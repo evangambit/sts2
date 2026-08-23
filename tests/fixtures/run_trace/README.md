@@ -18,6 +18,11 @@ is.
 | `Y75EFT6EDV-a8.json` | Overgrowth | 183 | clean |
 | `4KJ7X2MQND-a8.json` | Underdocks | 100 | clean |
 | `DPUJR117FL-a8.json` | Overgrowth | 244 | clean |
+| `41TJ3T2Y0Q-a8.json` | Overgrowth | 96 | clean |
+| `KFMKQQA7MS-a8.json` | Overgrowth | 97 | **diverges** at step 23 — the run took Winged Boots from Neow, and its free travel is unmodelled. While `TimesUsed < 3` the relic lets the player move to ANY node on the next row, not just a child, and moving to a non-child spends a charge. The map itself is right: all 77 edges match. `RunConstants.MapChoices` is 4, so the choice arrays cannot even hold a full row of 7 — widening it moves the run observation layout, and `sts2_gym/run_constants.py` restates the 4 rather than reading it. |
+| `WK1DEGZD8P-a8.json` | Underdocks | 216 | **diverges** at step 127 — player block 10 live vs 5 here, then HP follows. Uninvestigated. |
+| `CF32ERF3DH-a8.json` | Underdocks | 99 | **diverges** at step 1 — the Lost Coffer Neow blessing opens a rewards screen the emulator turns straight into a card reward. Also an enemy announcing no attack at step 68 where the emulator announces 12. Uninvestigated. |
+| `QD1DQCJU2K-a8.json` | Underdocks | 85 | **diverges** at step 76 — player HP 7 live vs 16 here. Uninvestigated. |
 
 `QS2GYXRKWN-a0.json` was removed: it is an ascension-0 run, and the emulator models
 A8 only (`RunEngine.Reset` starts the player at 64/80), so it diverged from step 0
