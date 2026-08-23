@@ -152,6 +152,12 @@ public sealed class RunState
     public int EventSequenceIndex;
 
     /// <summary>
+    /// <c>RunState.VisitedEventIds</c>: an event the run has already seen is skipped
+    /// rather than offered twice, however the sequence wraps.
+    /// </summary>
+    public List<int> VisitedEventIds = [];
+
+    /// <summary>
     /// The run's relic queues, shuffled once at run start. Every relic reward pulls from
     /// the player's; the shared one exists so that a relic pulled by one player is gone
     /// for the others, and is kept because populating it consumes 112 UpFront draws that

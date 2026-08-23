@@ -329,14 +329,28 @@ public static class RunNonCombatEffects
             return;
         }
 
+        // RoomSet.EnsureNextEventIsValid: NextEvent is events[visited % count], and the
+        // cursor is walked forward while the candidate is disallowed OR already seen.
+        // The sequence WRAPS -- it is a ring, not a list that runs out -- and the game
+        // only gives up after a full lap, logging "all unique events exhausted".
         List<int> eventPool = [];
-        while (state.EventSequenceIndex < state.EventSequence.Length)
+        if (state.EventSequence.Length > 0)
         {
-            int eventId = state.EventSequence[state.EventSequenceIndex++];
-            if (IsEventAllowed(state, eventId))
+            for (int i = 0; i < state.EventSequence.Length; i++)
             {
-                BeginEvent(state, eventId);
-                return;
+                int eventId = state.EventSequence[
+                    state.EventSequenceIndex % state.EventSequence.Length
+                ];
+                if (IsEventAllowed(state, eventId) && !state.VisitedEventIds.Contains(eventId))
+                {
+                    // PullNextEvent records it; MarkRoomVisited moves the cursor past it.
+                    state.VisitedEventIds.Add(eventId);
+                    state.EventSequenceIndex++;
+                    BeginEvent(state, eventId);
+                    return;
+                }
+
+                state.EventSequenceIndex++;
             }
         }
 
@@ -1243,6 +1257,48 @@ public static class RunNonCombatEffects
     {
         var def = GeneratedData.Cards.Get(card.DefId);
         return def.Type != CardType.Quest && def.Entry != "ASCENDERS_BANE";
+    }
+
+    /// <summary>
+    /// <c>FishingRod.AfterCombatEnd</c>: every third MONSTER room upgrades a card.
+    /// </summary>
+    /// <remarks>
+    /// Elites, bosses and the fights an event starts are all skipped -- the relic returns
+    /// early on anything that is not <c>RoomType.Monster</c>, so they do not even advance
+    /// the counter. The card is a plain <c>Rng.Niche.NextItem</c> over the upgradable
+    /// ones, and the counter lives on the relic so it survives a save.
+    /// </remarks>
+    public static void TriggerFishingRod(RunState state)
+    {
+        if (state.LastResolvedRoomType != RunConstants.NodeNormal)
+        {
+            return;
+        }
+
+        int index = state.Relics.FindIndex(relic => relic.DefId == RunConstants.RelicFishingRod);
+        if (index < 0)
+        {
+            return;
+        }
+
+        int seen = state.Relics[index].Counter + 1;
+        state.Relics[index] = state.Relics[index] with { Counter = seen };
+        if (seen % RunConstants.FishingRodCombats != 0)
+        {
+            return;
+        }
+
+        var upgradable = Enumerable
+            .Range(0, state.Deck.Count)
+            .Where(i => RunConstants.IsRunCardUpgradable(state.Deck[i]))
+            .ToList();
+        if (upgradable.Count == 0)
+        {
+            return;
+        }
+
+        int pick = state.Rng.Niche.NextItem(upgradable);
+        state.Deck[pick] = state.Deck[pick] with { Upgraded = true };
     }
 
     /// <summary>Upgrade one upgradable card, chosen off the event's own stream.</summary>

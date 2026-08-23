@@ -229,6 +229,9 @@ public static class RunConstants
     public const int RelicArcaneScroll = 5;
     public const int RelicCursedPearl = 54;
     public const int RelicFishingRod = 89;
+
+    /// <summary>FishingRod's DynamicVar("Combats", 3m): it fires every third monster room.</summary>
+    public const int FishingRodCombats = 3;
     public const int RelicGoldenPearl = 105;
     public const int RelicHeftyTablet = 111;
     public const int RelicKaleidoscope = 124;

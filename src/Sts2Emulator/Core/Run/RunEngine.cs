@@ -269,6 +269,10 @@ public sealed class RunEngine
 
     private int EnterEventRoom()
     {
+        // An event room is not a Monster room, and anything a fight-shaped event starts
+        // from here inherits that. Left unset, the type stayed at whatever the last map
+        // node resolved to, so Punch Off's fight could be counted as an ordinary combat.
+        State.LastResolvedRoomType = RunConstants.NodeEvent;
         if (State.Act == RunConstants.ActUnderdocks && State.Floor == 13)
         {
             State.CurrentNodeType = RunConstants.NodeNormal;
@@ -982,6 +986,7 @@ public sealed class RunEngine
                 SyncAfterCombat();
                 if (result.PlayerWon)
                 {
+                    RunNonCombatEffects.TriggerFishingRod(State);
                     RunRewardGenerator.GenerateCombatRewards(State);
                     terminal = false;
                 }
