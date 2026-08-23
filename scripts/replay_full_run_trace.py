@@ -140,8 +140,15 @@ def normalise_for_compare(field: str, value: Any) -> Any:
     on both sides is what makes a wide comparison usable rather than all-noise.
     """
     if field == "player.hand":
+        # (id, upgraded) rather than the id alone: an upgrade does not change the id,
+        # so Defend and Defend+ compared equal and a lost upgrade read as a match.
         return [
-            card.get("id") if isinstance(card, dict) else card for card in value or []
+            (
+                (card.get("id"), bool(card.get("is_upgraded")))
+                if isinstance(card, dict)
+                else (card, False)
+            )
+            for card in value or []
         ]
     if field == "battle.enemies":
         # The emulator keeps a dead enemy in the roster at 0 HP so an agent's
@@ -179,7 +186,11 @@ def first_divergences(
                 compare_traces.get_path(emu, field),
             )
             if field == "player.hand":
-                ref_value = [slugs.get(card, card) for card in ref_value]
+                # Only the id half needs translating; the flag means the same thing
+                # on both sides.
+                ref_value = [
+                    (slugs.get(card, card), upgraded) for card, upgraded in ref_value
+                ]
             if ref_value != emu_value:
                 first[field] = (
                     f"first divergence in {field} at step {index}: "
@@ -523,11 +534,19 @@ def summarize_player(
 
 
 def summarize_hand(obs: np.ndarray) -> list[dict[str, Any]]:
+    """Read the hand, with the upgrade flag the card slot already carries.
+
+    Recording the id alone made Defend and Defend+ the same card, since an upgrade
+    does not change the id. A run whose Defend+ had silently lost its upgrade played
+    it for 5 block where the game played it for 8, and the hand comparison saw two
+    identical hands -- the difference only surfaced as HP, three steps later.
+    """
     slot = native.OBS_CARD_SLOT_SIZE
     return [
         {
             "index": hand_index,
             "id": int(obs[native.OBS_HAND_OFFSET + hand_index * slot]),
+            "is_upgraded": bool(obs[native.OBS_HAND_OFFSET + hand_index * slot + 1]),
         }
         for hand_index in range(native.OBS_MAX_HAND)
         if int(obs[native.OBS_HAND_OFFSET + hand_index * slot]) != 0
