@@ -2133,12 +2133,26 @@ public static class CardEffects
     }
 
     // Deals `amount` to first living enemy, `hits` times.
+    /// <summary>
+    /// A single-targeted attack that lands <paramref name="hits" /> times on ONE enemy.
+    /// </summary>
+    /// <remarks>
+    /// <c>AttackCommand.Execute</c> re-filters its possible targets before every hit and
+    /// breaks out when none are alive. For a single-targeted attack that list is just the
+    /// one chosen target, so a target that dies partway through EATS the remaining hits --
+    /// they are not rolled onto whoever is standing next.
+    ///
+    /// The target was re-resolved per hit here, and <c>FirstEnemy</c> falls back to the
+    /// first living enemy once the chosen one is dead. So Twin Strike into a 3 hp slime
+    /// killed it and put the second 5 into a different slime, against a live capture where
+    /// the game dealt that damage to nobody.
+    /// </remarks>
     public static void DealDamageMultiHit(CombatState state, int amount, int hits, Random rng)
     {
+        var target = FirstEnemy(state);
         for (int i = 0; i < hits; i++)
         {
-            var target = FirstEnemy(state);
-            if (target is null)
+            if (target is null || target.Hp <= 0)
             {
                 break;
             }
