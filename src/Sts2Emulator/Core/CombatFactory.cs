@@ -543,18 +543,37 @@ public static class CombatFactory
                 CreateEnemy(KE.ShrinkerBeetle, rng, new Intent(IntentType.Debuff, 1)),
             ],
 
-            ActOneEncounter.Seapunk =>
-            [
-                CreateEnemy(
-                    KE.Seapunk,
-                    rng,
-                    // Seapunk.SeaKickDamage
-                    new Intent(
-                        IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
-                    )
-                ),
-            ],
+            // SeapunkWeak is one Seapunk; SeapunkNormal is a Calcified Cultist AND a
+            // Seapunk. They are two encounters in the game and one entry here, the same
+            // way CorpseSlugs is -- so the variant has to come off the weak flag. Without
+            // it the fourth normal fight of an Underdocks run was a lone Seapunk where
+            // the live run had a cultist beside it, and the sequence check could not see
+            // it: verify_run_generation normalises the WEAK/NORMAL suffix away.
+            ActOneEncounter.Seapunk => completedCombatRoomsBeforeCurrent is >= 0 and < 3
+                ?
+                [
+                    CreateEnemy(
+                        KE.Seapunk,
+                        rng,
+                        // Seapunk.SeaKickDamage
+                        new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
+                        )
+                    ),
+                ]
+                :
+                [
+                    CreateEnemy(KE.CalcifiedCultist, rng, new Intent(IntentType.Buff, 0)),
+                    CreateEnemy(
+                        KE.Seapunk,
+                        rng,
+                        new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
+                        )
+                    ),
+                ],
 
             ActOneEncounter.Toadpoles =>
             [

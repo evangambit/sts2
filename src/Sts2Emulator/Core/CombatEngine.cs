@@ -1231,6 +1231,13 @@ public static class CombatEngine
         int stolenGold
     )
     {
+        // The HP roll goes through the run's Niche stream with the unique-HP rule, the
+        // same as any other creature the game creates -- CombatState.CreateCreature calls
+        // SetUniqueMonsterHpValue for EVERY enemy, spawned or not. Rolling off the combat
+        // rng instead gave the merc's reinforcements a pair of numbers the game never
+        // produced: a live capture splits it into a 15 and an 18, and this gave 12 and 17.
+        // The sneaky gremlin is added before the fat one is rolled, so it is in the set
+        // the fat one has to differ from.
         state.Enemies.Add(
             Effects.RelicEffects.Spawned(
                 state,
@@ -1239,7 +1246,8 @@ public static class CombatEngine
                     rng,
                     new Intent(IntentType.Unknown, 0),
                     stunned: true,
-                    state.AscensionLevel
+                    state.AscensionLevel,
+                    state: state
                 )
             )
         );
@@ -1248,7 +1256,8 @@ public static class CombatEngine
             rng,
             new Intent(IntentType.Unknown, 0),
             stunned: true,
-            state.AscensionLevel
+            state.AscensionLevel,
+            state: state
         );
         fatGremlin.HeistGold = stolenGold;
         state.Enemies.Add(Effects.RelicEffects.Spawned(state, fatGremlin));
