@@ -98,7 +98,16 @@ public static class EnemyAI
                             state: state
                         );
                         BuffSystem.Apply(bloatBomb.Buffs, BuffId.Minion, 1);
-                        state.Enemies.Add(Effects.RelicEffects.Spawned(state, bloatBomb));
+                        // The bomb takes a slot BEFORE the fog, which is where a live
+                        // capture shows it: [Gas Bomb, Living Fog]. Appending it put the
+                        // fog first, so the same target index named a different creature
+                        // on each side -- a replayed run aimed its strikes at the fog
+                        // where the game killed the bomb, then ate the eight the bomb was
+                        // never alive to deal. Fogmog's eye is inserted the same way.
+                        state.Enemies.Insert(
+                            state.Enemies.IndexOf(enemy),
+                            Effects.RelicEffects.Spawned(state, bloatBomb)
+                        );
                     }
 
                     DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
