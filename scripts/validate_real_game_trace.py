@@ -285,21 +285,12 @@ def live_enemy_intent(enemy: dict[str, Any]) -> tuple[int, int | None] | None:
     intents = enemy.get("intents") or []
     if not intents:
         return None
-    if (
-        enemy.get("name") == "Sludge Spinner"
-        and any(intent.get("type") == "Attack" for intent in intents)
-        and any(intent.get("type") == "Debuff" for intent in intents)
-    ):
-        attack = next(intent for intent in intents if intent.get("type") == "Attack")
-        return 3, live_intent_magnitude(attack)
-    if (
-        enemy.get("name") == "Living Fog"
-        and any(intent.get("type") == "Attack" for intent in intents)
-        and any(intent.get("type") == "CardDebuff" for intent in intents)
-    ):
-        attack = next(intent for intent in intents if intent.get("type") == "Attack")
-        return 3, live_intent_magnitude(attack)
-
+    # The Sludge Spinner and the Living Fog used to be special-cased here: when their
+    # readout carried both an Attack and a debuff, this returned Debuff with the
+    # ATTACK's magnitude. That was not read off the game -- the captures plainly show
+    # "Attack 8" first and the debuff second -- it was bent to agree with what the
+    # emulator did, which is the one thing a live fixture must never do. Both are
+    # attacks that also apply something, and the emulator now says so.
     intent = intents[0]
     intent_type = intent.get("type")
     intent_by_type = {

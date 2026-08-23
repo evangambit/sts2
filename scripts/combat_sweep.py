@@ -240,10 +240,15 @@ def add_cards_to_both_hands(base_url: str, env: Any, cards: list[str]) -> list[s
     # The game holds at most ten cards; asking for more silently drops the overflow and
     # the two sides stop agreeing about the hand.
     room = MAX_HAND_SIZE - len(
-        ((start_real_game_run.get_state(base_url).get("player") or {}).get("hand") or [])
+        (
+            (start_real_game_run.get_state(base_url).get("player") or {}).get("hand")
+            or []
+        )
     )
     if len(cards) > room:
-        notes.append(f"only {room} of {len(cards)} cards fit in the hand; the rest were skipped")
+        notes.append(
+            f"only {room} of {len(cards)} cards fit in the hand; the rest were skipped"
+        )
         cards = cards[:room]
 
     for card in cards:
@@ -252,12 +257,19 @@ def add_cards_to_both_hands(base_url: str, env: Any, cards: list[str]) -> list[s
         upgraded = flag.lower() in {"u", "upgraded", "+"}
         card_id = slugs.get(entry)
         if card_id is None:
-            notes.append(f"unknown card {entry}; the harness knows it by its model entry")
+            notes.append(
+                f"unknown card {entry}; the harness knows it by its model entry"
+            )
             continue
 
         result = trace_real_game.post_action(
             base_url,
-            {"action": "debug_add_card", "card": entry, "upgraded": upgraded, "pile": "hand"},
+            {
+                "action": "debug_add_card",
+                "card": entry,
+                "upgraded": upgraded,
+                "pile": "hand",
+            },
         )
         if result.get("status") != "ok":
             notes.append(f"live refused {entry}: {result}")
@@ -266,7 +278,9 @@ def add_cards_to_both_hands(base_url: str, env: Any, cards: list[str]) -> list[s
     return notes
 
 
-def wait_for_hand_to_reach(base_url: str, size: int, timeout: float = 20.0) -> dict[str, Any]:
+def wait_for_hand_to_reach(
+    base_url: str, size: int, timeout: float = 20.0
+) -> dict[str, Any]:
     """Wait for the live hand to grow to `size` — debug_add_card is fire-and-forget."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -311,7 +325,9 @@ def action_is_legal_for_emulator(env: Any, action: int) -> bool:
     return bool(action < len(mask) and mask[action])
 
 
-def wait_for_card_to_leave_hand(base_url: str, hand_size_before: int, timeout: float = 20.0):
+def wait_for_card_to_leave_hand(
+    base_url: str, hand_size_before: int, timeout: float = 20.0
+):
     """Wait until the live game has actually PLAYED the card that was just posted.
 
     Posting an action and reading the state straight back reads it before the game has
@@ -335,7 +351,9 @@ def wait_for_card_to_leave_hand(base_url: str, hand_size_before: int, timeout: f
 def apply_action(base_url: str, env: Any, live_state: dict[str, Any], action: int):
     """Send one integer action to both sides, and hand back the new live state."""
     hand_size = len((live_state.get("player") or {}).get("hand") or [])
-    trace_real_game.post_action(base_url, trace_real_game.action_payload_from_index(live_state, action))
+    trace_real_game.post_action(
+        base_url, trace_real_game.action_payload_from_index(live_state, action)
+    )
     _obs, _reward, terminated, truncated, _info = env.step(action)
     return wait_for_card_to_leave_hand(base_url, hand_size), terminated, truncated
 
@@ -378,7 +396,13 @@ def intents_agree(live: tuple[Any, Any], emu: tuple[Any, Any]) -> bool:
 @functools.cache
 def card_slug_to_id() -> dict[str, int]:
     """The game's ModelId.Entry for each card, mapped to our numeric id."""
-    text = (Path(__file__).parent.parent / "src" / "Sts2Emulator" / "Generated" / "Cards.g.cs").read_text()
+    text = (
+        Path(__file__).parent.parent
+        / "src"
+        / "Sts2Emulator"
+        / "Generated"
+        / "Cards.g.cs"
+    ).read_text()
     return {
         m.group(2): int(m.group(1))
         for m in re.finditer(r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text)
@@ -393,7 +417,9 @@ def hands_agree(live_player: dict[str, Any], emu_player: dict[str, Any]) -> bool
     starts from the slugified card name and not from any id of ours.
     """
     slugs = card_slug_to_id()
-    live = [slugs.get(c.get("id"), c.get("id")) for c in (live_player.get("hand") or [])]
+    live = [
+        slugs.get(c.get("id"), c.get("id")) for c in (live_player.get("hand") or [])
+    ]
     emu = [c.get("id") for c in (emu_player.get("hand") or [])]
     return live == emu
 
@@ -565,9 +591,7 @@ def drive_turns(
                 "live_hand": [
                     card.get("id") for card in (live_player.get("hand") or [])
                 ],
-                "emu_hand": [
-                    card.get("id") for card in (emu_player.get("hand") or [])
-                ],
+                "emu_hand": [card.get("id") for card in (emu_player.get("hand") or [])],
             },
         )
         if terminated or truncated:

@@ -334,17 +334,22 @@ public class CombatEngineTests
     [Fact]
     public void Weakness_FromSludgeSpinner_LastsThroughNextPlayerTurn()
     {
-        // SludgeSpinner Move 0 is Oil Spray (9 dmg + 1 Weak).
+        // SludgeSpinner move 0 is OIL_SPRAY: an ATTACK that also applies 1 Weak.
+        // OIL_SPRAY_MOVE declares SingleAttackIntent first and DebuffIntent second, and
+        // a live capture reads Attack '8' then Debuff -- it used to be modelled as a
+        // debuff carrying damage. The spinner picks its move at random, so which move
+        // this is lives in LastMove, not in MoveIndex.
         var state = CombatFactory.NewCombat(seed: 0);
         state.Enemies =
         [
             CombatFactory.CreateEnemy(
                 KE.SludgeSpinner,
                 new Random(0),
-                new Intent(IntentType.Debuff, 9),
+                new Intent(IntentType.Attack, 9),
                 0
             ),
         ];
+        state.Enemies[0].LastMove = 0;
         state.Hand = [new CardInstance(IC.StrikeIronclad, false)];
         state.DrawPile = [];
         state.DiscardPile = [];

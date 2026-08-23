@@ -173,6 +173,26 @@ public static class EnemyAI
                     break;
                 }
 
+                if (enemy.DefId == KE.LivingFog && enemy.MoveIndex == 0)
+                {
+                    // ADVANCED_GAS: the attack, plus the SmoggyPower(1) its
+                    // CardDebuffIntent stands for -- which the debuff branch never
+                    // applied at all, it only dealt the damage.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Smoggy, 1);
+                    break;
+                }
+
+                if (enemy.DefId == KE.SludgeSpinner && enemy.LastMove == 0)
+                {
+                    // OIL_SPRAY: attack plus the WeakPower(1) its DebuffIntent stands
+                    // for. It used to be announced as a debuff and resolve in the debuff
+                    // branch, which its attack intent no longer reaches.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 1);
+                    break;
+                }
+
                 if (enemy.DefId == KE.SludgeSpinner && enemy.LastMove == 2)
                 {
                     // RAGE: attack plus the BuffIntent beside it. The live readout calls
@@ -1579,11 +1599,12 @@ public static class EnemyAI
                 // MoveIndex % 3 re-gassed every third turn. Same shape as Haunted Ship.
                 if (enemy.MoveIndex == 0)
                 {
-                    // AdvancedGasDamage; ADVANCED_GAS is an attack plus a card debuff.
+                    // AdvancedGasDamage. ADVANCED_GAS_MOVE declares SingleAttackIntent
+                    // first and CardDebuffIntent second, so the readout announces an
+                    // attack -- the same shape as the Sludge Spinner's oil spray.
                     return new Intent(
-                        IntentType.Debuff,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8),
-                        CarriesDamage: true
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                     );
                 }
 
@@ -1951,13 +1972,13 @@ public static class EnemyAI
                 enemy.LastMove = move;
                 return move switch
                 {
-                    // OilSprayDamage; OIL_SPRAY is attack + debuff, which the live
-                    // readout reports as a debuff carrying the attack's magnitude — and
-                    // that magnitude grows with Strength, 8 then 11 in a live trace.
+                    // OilSprayDamage. OIL_SPRAY_MOVE declares SingleAttackIntent first
+                    // and DebuffIntent second, and a live capture reads Attack '8' then
+                    // Debuff -- an attack that also applies Weak, not a debuff carrying
+                    // damage.
                     0 => new Intent(
-                        IntentType.Debuff,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8),
-                        CarriesDamage: true
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
                     ),
                     // SlamDamage
                     1 => new Intent(
@@ -2194,14 +2215,13 @@ public static class EnemyAI
                 IntentType.Attack,
                 enemy.CurrentIntent.Magnitude
             ),
-            KE.SludgeSpinner when enemy.MoveIndex % 3 is 0 or 2 => new Intent(
-                IntentType.Attack,
-                enemy.CurrentIntent.Magnitude
-            ),
-            KE.LivingFog when enemy.MoveIndex % 3 == 0 => new Intent(
-                IntentType.Attack,
-                enemy.CurrentIntent.Magnitude
-            ),
+            // OIL_SPRAY's second intent is the Weak it applies, RAGE's the Strength it
+            // takes. Keyed off the move actually chosen: the spinner picks at random, so
+            // MoveIndex says nothing about which move this is.
+            KE.SludgeSpinner when enemy.LastMove == 0 => new Intent(IntentType.Debuff, 1),
+            KE.SludgeSpinner when enemy.LastMove == 2 => new Intent(IntentType.Buff, 3),
+            // ADVANCED_GAS's second intent is the card debuff it inflicts.
+            KE.LivingFog when enemy.MoveIndex == 0 => new Intent(IntentType.Debuff, 1),
             KE.VineShambler when enemy.MoveIndex % 3 == 1 => new Intent(IntentType.Debuff, 1),
             KE.Stabbot => new Intent(IntentType.Attack, enemy.CurrentIntent.Magnitude),
             KE.SkulkingColony when enemy.MoveIndex % 4 == 2 => new Intent(
@@ -2323,13 +2343,6 @@ public static class EnemyAI
                         Effects.RelicEffects.Spawned(state, eye)
                     );
                 }
-                break;
-
-            case KE.LivingFog:
-                // Only ADVANCED_GAS reaches this branch now, and it does not summon —
-                // BLOAT is the SummonIntent, and it executes as an attack. Leaving the
-                // summon here spawned a bomb on the opening gas as well.
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
                 break;
 
             case KE.BruteRubyRaider:
@@ -2600,11 +2613,6 @@ public static class EnemyAI
             case KE.TwoTailedRat:
             case KE.CorpseSlug:
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, enemy.CurrentIntent.Magnitude);
-                break;
-
-            case KE.SludgeSpinner:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 1);
                 break;
 
             case KE.TerrorEel:

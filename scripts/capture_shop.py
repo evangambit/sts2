@@ -100,7 +100,9 @@ def stock(state: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
-def capture(base_url: str, seed: str, ascension: int, reuse_run: bool) -> dict[str, Any]:
+def capture(
+    base_url: str, seed: str, ascension: int, reuse_run: bool
+) -> dict[str, Any]:
     if not reuse_run:
         capture_card.wait_for_menu_options(base_url)
         capture_sweep.abandon_any_run(base_url)

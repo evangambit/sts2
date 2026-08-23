@@ -424,7 +424,9 @@ def _card_slug_to_id() -> dict[str, int]:
     text = (ROOT / "src" / "Sts2Emulator" / "Generated" / "Cards.g.cs").read_text()
     return {
         match.group(2): int(match.group(1))
-        for match in re.finditer(r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text)
+        for match in re.finditer(
+            r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text
+        )
     }
 
 

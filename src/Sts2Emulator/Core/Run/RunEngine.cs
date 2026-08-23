@@ -69,6 +69,13 @@ public sealed class RunEngine
         GenerateNeowOptions();
         RunMapGenerator.SelectActAndGenerateRooms(State);
         RunMapGenerator.GenerateActMap(State);
+        // Neow's room is a RoomType.Event (MapPointType.Ancient maps to it), and
+        // RunManager marks EVERY room it enters -- so RoomSet.eventsVisited is already 1
+        // by the time the run reaches its first real event, without anything having been
+        // pulled from the list. NextEvent is events[eventsVisited % count], so the first
+        // event a run actually meets is events[1]. Starting the cursor at 0 handed out
+        // the entry the game had already stepped past.
+        State.EventSequenceIndex = 1;
     }
 
     public int StartCombat(
@@ -313,8 +320,13 @@ public sealed class RunEngine
         int roomType = allowedRoomTypes.Contains(RunConstants.NodeEvent)
             ? RunConstants.NodeEvent
             : allowedRoomTypes.Min();
-        double roll = State.Rng.UnknownMapPoint.NextDouble();
-        double cumulative = 0.0;
+        // UnknownMapPointOdds.Roll draws a FLOAT and accumulates the odds as floats:
+        // `float num2 = _rng.NextFloat()` compared against a float running total. The
+        // draw is the same value either way, but the comparison is not -- a roll sitting
+        // within a float's precision of a threshold falls one side in float arithmetic
+        // and the other in double, which resolves a "?" to a different room entirely.
+        float roll = State.Rng.UnknownMapPoint.NextFloat();
+        float cumulative = 0f;
         foreach (
             var (candidateRoomType, odds) in new (int RoomType, double Odds)[]
             {
@@ -330,7 +342,7 @@ public sealed class RunEngine
                 continue;
             }
 
-            cumulative += odds;
+            cumulative += (float)odds;
             if (roll <= cumulative)
             {
                 roomType = candidateRoomType;

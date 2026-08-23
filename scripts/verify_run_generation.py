@@ -212,7 +212,9 @@ def encounter_names() -> dict[int, str]:
     src = (
         Path(__file__).parent.parent / "src/Sts2Emulator/Core/CombatFactory.cs"
     ).read_text()
-    body = re.search(r"(?:private|internal) enum ActOneEncounter\s*\{(.*?)\n    \}", src, re.DOTALL)
+    body = re.search(
+        r"(?:private|internal) enum ActOneEncounter\s*\{(.*?)\n    \}", src, re.DOTALL
+    )
     if body is None:
         raise SystemExit("Could not parse ActOneEncounter from CombatFactory.cs")
     names = [

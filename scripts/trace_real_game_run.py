@@ -118,6 +118,7 @@ def compact_state(state: dict[str, Any]) -> dict[str, Any]:
         "options": state.get("options"),
     }
 
+
 def simplify_named_list(items: list[Any]) -> list[dict[str, Any]]:
     simplified = []
     for item in items:
@@ -150,10 +151,6 @@ def simplify_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
         }
         for card in cards
     ]
-
-
-
-
 
 
 def wait_for_state_to_change(
@@ -201,10 +198,9 @@ def wait_for_state_to_change(
         # changed" comes true while the state is still a map — and the next action is
         # then a second choose_map_node, which the game rejects. A move between rooms is
         # only done when the phase itself has changed.
-        left_old_phase = (
-            not require_new_state_type
-            or state.get("state_type") != before.get("state_type")
-        )
+        left_old_phase = not require_new_state_type or state.get(
+            "state_type"
+        ) != before.get("state_type")
         if (
             left_old_phase
             and current != before
@@ -215,8 +211,6 @@ def wait_for_state_to_change(
         time.sleep(POLL_INTERVAL)
         state = start_real_game_run.get_state(base_url)
     return state
-
-
 
 
 def wait_for_actionable_state(
@@ -844,7 +838,9 @@ def append_snapshot(
     )
 
 
-def next_scripted_action(actions: list[dict[str, Any]], step: int) -> dict[str, Any] | None:
+def next_scripted_action(
+    actions: list[dict[str, Any]], step: int
+) -> dict[str, Any] | None:
     """Return the recorded action for this step, or None once the script runs out."""
     index = step - 1
     return actions[index] if index < len(actions) else None
@@ -859,7 +855,9 @@ def recorded_actions(path: Path) -> list[dict[str, Any]]:
     """
     payload = json.loads(path.read_text(encoding="utf-8"))
     return [
-        step["action"] for step in payload.get("trace", []) if step.get("action") is not None
+        step["action"]
+        for step in payload.get("trace", [])
+        if step.get("action") is not None
     ]
 
 
