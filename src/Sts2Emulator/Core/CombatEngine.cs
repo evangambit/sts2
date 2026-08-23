@@ -1136,6 +1136,13 @@ public static class CombatEngine
 
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, ravenous);
                 BuffSystem.Apply(enemy.Buffs, BuffId.Stunned, 1);
+                // The readout changes the moment the ally dies: a live capture shows the
+                // surviving slug announcing a Stun, not the attack it was going to make.
+                // Leaving the old intent up told an agent to expect 12 damage from a
+                // creature that is about to sit the turn out. Unknown is what a stunned
+                // enemy already announces elsewhere (TerrorEel does it this way).
+                enemy.CurrentIntent = new Intent(IntentType.Unknown, 0);
+                enemy.SecondaryIntent = null;
             }
         }
     }

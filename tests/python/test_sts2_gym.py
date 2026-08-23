@@ -452,15 +452,16 @@ class Sts2GymTests(unittest.TestCase):
         # Seed 3, not 0: this test is about the replay coalescing live reward
         # substeps, and seed 0 now opens on Kaleidoscope, whose TWO card rewards would
         # change the phase sequence for a reason unrelated to coalescing. Seed 3 offers
-        # Lost Coffer, which grants exactly one.
+        # Lost Coffer, which puts its card reward and its potion on ONE rewards screen --
+        # RewardsCmd.OfferCustom, the same shape the reference trace above records.
         result = replay_full_run_trace.replay_trace(payload, emulator_seed=3)
 
         self.assertIsNone(result.unsupported_action)
         self.assertEqual(
             [
                 "event",
-                "card_reward",
-                "card_reward",
+                "rewards",
+                "rewards",
                 "map",
                 "monster",
             ],

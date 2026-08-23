@@ -1125,12 +1125,16 @@ public sealed class RunEngine
         RunFollowUp followUp = RunNonCombatEffects.ApplyRelicPickup(State, relicId);
         if (relicId == RunConstants.RelicLostCoffer)
         {
-            RunRewardGenerator.EnterCardReward(State);
-            RunRewardGenerator.AddPotion(
-                State,
-                RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-            );
-            State.PotionRewardOdds -= 0.1;
+            // LostCoffer.AfterObtained is a RewardsCmd.OfferCustom of TWO rewards -- a
+            // three-card CardReward and a PotionReward -- so both sit on a rewards SCREEN
+            // for the player to claim, the same shape as Kaleidoscope. Handing the card
+            // reward straight over skipped the screen, and with it the claim the run
+            // really makes.
+            RunRewardGenerator.PopulateCardReward(State);
+            State.RewardCardPending = true;
+            State.RewardPotion = RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards);
+            State.NeowAwaitingProceed = true;
+            State.Phase = RunPhase.RelicReward;
             return;
         }
         if (followUp == RunFollowUp.TransformSelect)

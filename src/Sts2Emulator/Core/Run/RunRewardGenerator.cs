@@ -496,7 +496,7 @@ public static class RunRewardGenerator
         return [.. offers];
     }
 
-    private static void PopulateCardReward(RunState state)
+    internal static void PopulateCardReward(RunState state)
     {
         Array.Clear(state.RewardCards);
         Array.Clear(state.RewardUpgraded);

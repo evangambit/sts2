@@ -1235,11 +1235,43 @@ public class RunEngineTests
 
         Assert.Equal(0, status);
         Assert.False(terminal);
-        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
+        // AfterObtained is a RewardsCmd.OfferCustom of two rewards, so both sit on a
+        // SCREEN to be claimed -- it does not hand the card reward straight over.
+        Assert.Equal(RunPhase.RelicReward, engine.State.Phase);
         Assert.Contains(engine.State.Relics, relic => relic.DefId == RunConstants.RelicLostCoffer);
-        Assert.All(engine.State.RewardCards, cardId => Assert.NotEqual(0, cardId));
+        Assert.True(engine.State.RewardCardPending);
+        Assert.NotEqual(0, engine.State.RewardPotion);
+        // The potion is not in a slot until it is claimed.
+        Assert.All(engine.State.PotionSlots, potionId => Assert.Equal(0, potionId));
+        // PotionReward.Populate only draws a potion; the odds belong to RewardsSet, which
+        // is the combat path that ROLLS whether to offer one. A guaranteed potion leaves
+        // them alone.
+        Assert.Equal(0.4, engine.State.PotionRewardOdds, precision: 6);
+    }
+
+    /// <summary>
+    /// Claiming both rewards off the coffer's screen: the potion goes to a slot, the card
+    /// reward opens, and picking a card lands back on Neow's finished page rather than on
+    /// an empty rewards screen.
+    /// </summary>
+    [Fact]
+    public void AncientLostCoffer_ClaimsBothRewardsThenReturnsToNeow()
+    {
+        var engine = new RunEngine();
+        engine.Reset("0");
+        engine.State.NeowOptions = [RunConstants.RelicLostCoffer, 0, 0];
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        // The potion first, then the card reward.
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
         Assert.Contains(engine.State.PotionSlots, potionId => potionId != 0);
-        Assert.Equal(0.3, engine.State.PotionRewardOdds, precision: 6);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
+        Assert.All(engine.State.RewardCards, cardId => Assert.NotEqual(0, cardId));
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+        Assert.Equal(RunPhase.Ancient, engine.State.Phase);
     }
 
     [Fact]
