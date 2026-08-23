@@ -6,16 +6,16 @@ using static Sts2Emulator.Tests.TestDeck;
 namespace Sts2Emulator.Tests;
 
 // 3-cost Skill, TargetType.RandomEnemy. MegaCrit.Sts2.Core.Models.Cards/BeatDown.cs
-// auto-plays up to CardsVar(3) Attacks taken from the discard pile, each targeting a
-// random enemy off Rng.CombatTargets; OnUpgrade raises that to 4.
+// auto-plays up to CardsVar(3) Attacks taken from the discard pile; OnUpgrade raises that
+// to 4.
 //
-// The emulator moves that many discarded cards into hand instead of playing them, and
-// does not filter to Attacks. These tests pin the approximation, which is a long way
-// from the card: nothing is dealt, and the cards end up playable rather than spent.
+// This used to move that many discarded cards into HAND without playing them, and without
+// filtering to Attacks -- so three energy bought three cards and no damage. These tests
+// asserted that.
 public class BeatDownTests
 {
     [Fact]
-    public void MovesThreeDiscardedCardsToHandWithoutPlayingThem()
+    public void PlaysThreeAttacksOutOfTheDiscardPile()
     {
         var fight = Fight
             .Hand(Card(CL.BeatDown))
@@ -24,19 +24,18 @@ public class BeatDownTests
                 Card(IC.StrikeIronclad),
                 Card(IC.StrikeIronclad),
                 Card(IC.StrikeIronclad),
-                Card(IC.Bash)
+                Card(IC.StrikeIronclad)
             )
             .Enemy(hp: 60);
 
         fight.Play();
 
-        Assert.Equal(3, fight.State.Hand.Count);
-        // Three Strikes would have dealt 18 had they been played.
-        Assert.Equal(60, fight.Enemy0.Hp);
+        Assert.Equal(42, fight.Enemy0.Hp);
+        Assert.DoesNotContain(IC.StrikeIronclad, Fight.Ids(fight.State.Hand));
     }
 
     [Fact]
-    public void UpgradedMovesFour()
+    public void UpgradedPlaysFour()
     {
         var fight = Fight
             .Hand(Card(CL.BeatDown, upgraded: true))
@@ -45,14 +44,33 @@ public class BeatDownTests
                 Card(IC.StrikeIronclad),
                 Card(IC.StrikeIronclad),
                 Card(IC.StrikeIronclad),
-                Card(IC.StrikeIronclad),
-                Card(IC.Bash)
+                Card(IC.StrikeIronclad)
             )
             .Enemy(hp: 60);
 
         fight.Play();
 
-        Assert.Equal(4, fight.State.Hand.Count);
+        Assert.Equal(36, fight.Enemy0.Hp);
+    }
+
+    /// <summary>Only Attacks: a discard pile of Defends buys nothing.</summary>
+    [Fact]
+    public void TakesOnlyAttacks()
+    {
+        var fight = Fight
+            .Hand(Card(CL.BeatDown))
+            .Energy(3)
+            .Discard(
+                Card(IC.DefendIronclad),
+                Card(IC.DefendIronclad),
+                Card(IC.StrikeIronclad)
+            )
+            .Enemy(hp: 60);
+
+        fight.Play();
+
+        Assert.Equal(54, fight.Enemy0.Hp);
+        Assert.Equal(2, Fight.Ids(fight.State.DiscardPile).Count(id => id == IC.DefendIronclad));
     }
 
     [Fact]
@@ -66,6 +84,6 @@ public class BeatDownTests
 
         fight.Play();
 
-        Assert.Equal([IC.StrikeIronclad], Fight.Ids(fight.State.Hand));
+        Assert.Equal(54, fight.Enemy0.Hp);
     }
 }

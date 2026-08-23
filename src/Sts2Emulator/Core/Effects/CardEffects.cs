@@ -85,6 +85,87 @@ public static class CardEffects
                 state.DiscardPile.Add(new CardInstance(def.Id, upgraded));
                 break;
 
+            // ── Colourless cards that were falling through to the approximation ──
+
+            case CL.ThrummingHatchet: // 1-cost, 11/14 dmg, and it comes back next turn
+            {
+                var target = FirstEnemy(state);
+                if (target != null)
+                {
+                    DealDamageToEnemy(state, target, Dmg(def, upgraded, card));
+                }
+
+                // BeforeHandDraw puts it back in hand next turn if it was played this
+                // one, which is the queue Feral already uses.
+                state.ReturnToHandBeforeDraw.Add(card with { FreeThisTurn = false });
+
+                break;
+            }
+
+            case CL.Fisticuffs: // 1-cost, 7/9 dmg, block equal to the damage DEALT
+            {
+                var target = FirstEnemy(state);
+                if (target != null)
+                {
+                    // Block is what actually landed plus overkill, not the printed number
+                    // -- so a Vulnerable target pays out more and a blocked one less.
+                    int dealt = DealDamageToEnemy(state, target, Dmg(def, upgraded, card));
+                    GainBlock(state, dealt, rng);
+                }
+
+                break;
+            }
+
+            case CL.Jackpot: // 3-cost, 25/30 dmg, then three free cards into hand
+            {
+                var target = FirstEnemy(state);
+                if (target != null)
+                {
+                    DealDamageToEnemy(state, target, Dmg(def, upgraded, card));
+                }
+
+                AddZeroCostCardsToHand(state, 3, upgraded);
+                break;
+            }
+
+            case CL.SeekerStrike: // 1-cost, 9/12 dmg, then one of three draw-pile cards
+            {
+                var target = FirstEnemy(state);
+                if (target != null)
+                {
+                    DealDamageToEnemy(state, target, Dmg(def, upgraded, card));
+                }
+
+                OpenDrawPileSampleSelection(state, def.Id, 3);
+                break;
+            }
+
+            case CL.Catastrophe: // 2-cost: auto-play 2/3 cards off the draw pile
+            {
+                AutoPlayFromDrawPile(state, upgraded ? 3 : 2);
+                break;
+            }
+
+            case 546: // Cascade -- X-cost: auto-play X (+1 upgraded) off the draw pile
+            {
+                // Cascade used to grant Strength, which is a different card entirely.
+                AutoPlayFromDrawPile(state, state.Energy + (upgraded ? 1 : 0));
+                state.Energy = 0;
+                break;
+            }
+
+            case CL.BeatDown: // 3-cost: auto-play 3/4 Attacks out of the discard pile
+            {
+                AutoPlayAttacksFromDiscard(state, upgraded ? 4 : 3);
+                break;
+            }
+
+            case CL.HiddenGem: // 1-cost: a draw-pile card gains Replay 2/3
+            {
+                GrantReplayToADrawPileCard(state, upgraded ? 3 : 2);
+                break;
+            }
+
             case IC.Bash: // 2-cost, 8/10 dmg + Vulnerable 2/3
             {
                 var target = FirstEnemy(state);
@@ -1467,7 +1548,6 @@ public static class CardEffects
             case 27: // BansheesCry
             case 28: // Barrage
             case 33: // BeamCell
-            case 34: // BeatDown
             case 35: // BeatIntoShape
             case 37: // Begone
             case 39: // BiasedCognition
@@ -1492,7 +1572,6 @@ public static class CardEffects
             case 77: // Caltrops
             case 78: // Capacitor
             case 79: // CaptureSpirit
-            case 80: // Catastrophe
             case 81: // CelestialMight
             case 82: // Chaos
             case 83: // Charge
@@ -1562,7 +1641,6 @@ public static class CardEffects
             case 186: // Feral
             case 187: // Fetch
             case 190: // FightThrough
-            case 193: // Fisticuffs
             case 194: // FlakCannon
             case 198: // Flatten
             case 201: // FocusedStrike
@@ -1600,7 +1678,6 @@ public static class CardEffects
             case 244: // HelixDrill
             case 245: // HelloWorld
             case 248: // HiddenCache
-            case 250: // HiddenGem
             case 251: // HighFive
             case 252: // Hologram
             case 253: // Hotfix
@@ -1611,7 +1688,6 @@ public static class CardEffects
             case 266: // Intercept
             case 267: // Invoke
             case 269: // Iteration
-            case 271: // Jackpot
             case 274: // KinglyKick
             case 275: // KinglyPunch
             case 277: // Knockdown
@@ -1696,7 +1772,6 @@ public static class CardEffects
             case 410: // Scrape
             case 412: // SculptingStrike
             case 413: // Seance
-            case 417: // SeekerStrike
             case 418: // SeekingEdge
             case 419: // SentryMode
             case 422: // SevenStars
@@ -1747,11 +1822,9 @@ public static class CardEffects
             case 495: // Tempest
             case 496: // Terraforming
             case 497: // TeslaCoil
-            case 499: // TheGambit
             case 501: // TheScythe
             case 502: // TheSealedThrone
             case 503: // TheSmith
-            case 506: // ThrummingHatchet
             case 507: // Thunder
             case 509: // TimesUp
             case 511: // ToricToughness
@@ -1759,7 +1832,6 @@ public static class CardEffects
             case 515: // TrashToTreasure
             case 518: // Turbo
             case 520: // Tyranny
-            case 522: // UltimateStrike
             case 523: // Undeath
             case 524: // Unleash
             case 530: // Uproar
@@ -1773,7 +1845,6 @@ public static class CardEffects
             case 542: // Wisp
             case 544: // WroughtInWar
             case 545: // Zap
-            case 546: // Cascade
                 ApplyGeneratedCardApproximation(def, upgraded, state, rng, card);
                 break;
 
@@ -2175,6 +2246,140 @@ public static class CardEffects
             Candidates = candidates,
             SourceCardDefId = sourceCardDefId,
             Amount = amount,
+        };
+    }
+
+    /// <summary>
+    /// Auto-plays cards off the draw pile, as Catastrophe and Cascade do. The game shuffles
+    /// the pile on the Shuffle stream and takes the front, preferring a playable card and
+    /// falling back to any card when every one left is Unplayable.
+    /// </summary>
+    private static void AutoPlayFromDrawPile(CombatState state, int count)
+    {
+        for (int i = 0; i < count && state.DrawPile.Count > 0; i++)
+        {
+            int index = state.DrawPile.FindIndex(c =>
+                !GeneratedData.Cards.Get(c.DefId).Unplayable
+            );
+            if (index < 0)
+            {
+                index = 0;
+            }
+
+            var card = state.DrawPile[index];
+            state.RemoveFromDrawPileAt(index);
+            state.AutoPlayQueue.Add(card);
+        }
+    }
+
+    /// <summary>
+    /// Beat Down's three Attacks out of the discard pile. Unplayable attacks are skipped,
+    /// which is the filter the card itself carries.
+    /// </summary>
+    private static void AutoPlayAttacksFromDiscard(CombatState state, int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            int index = state.DiscardPile.FindIndex(c =>
+            {
+                var d = GeneratedData.Cards.Get(c.DefId);
+                return d.Type == CardType.Attack && !d.Unplayable;
+            });
+            if (index < 0)
+            {
+                return;
+            }
+
+            var card = state.DiscardPile[index];
+            state.DiscardPile.RemoveAt(index);
+            state.AutoPlayQueue.Add(card);
+        }
+    }
+
+    /// <summary>
+    /// Jackpot's three free cards: rolled from the character pool, restricted to a printed
+    /// cost of zero and no X, upgraded when Jackpot is, straight into hand.
+    /// </summary>
+    private static void AddZeroCostCardsToHand(CombatState state, int count, bool upgraded)
+    {
+        var pool = GeneratedData
+            .CardPools.Ironclad.ToArray()
+            .Where(id =>
+            {
+                var d = GeneratedData.Cards.Get(id);
+                return d.Cost == 0 && !d.HasEnergyCostX;
+            })
+            .ToArray();
+        if (pool.Length == 0)
+        {
+            return;
+        }
+
+        var rng = state.CardGenerationRng;
+        for (int i = 0; i < count && state.Hand.Count < MaxCardsInHand; i++)
+        {
+            int id = pool[(rng as Random ?? new Random(0)).Next(pool.Length)];
+            state.Hand.Add(new CardInstance(id, upgraded));
+        }
+    }
+
+    /// <summary>
+    /// Seeker Strike: a sample of the draw pile, of which one card comes to hand. The
+    /// sample is what the card offers, so it lives in the candidate list.
+    /// </summary>
+    private static void OpenDrawPileSampleSelection(CombatState state, int sourceCardDefId, int sample)
+    {
+        var candidates = Enumerable.Range(0, state.DrawPile.Count).Take(sample).ToList();
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        OpenCardSelection(
+            state,
+            CardSelectionKind.DrawPileToHand,
+            candidates,
+            sourceCardDefId,
+            autoPick: candidates[0]
+        );
+    }
+
+    /// <summary>
+    /// Hidden Gem: one card in the draw pile gains Replay. The game prefers an Attack,
+    /// Skill or Power that is playable and has no replay yet, and settles for any playable
+    /// card when there is no such thing.
+    /// </summary>
+    private static void GrantReplayToADrawPileCard(CombatState state, int replay)
+    {
+        var eligible = Enumerable
+            .Range(0, state.DrawPile.Count)
+            .Where(i =>
+            {
+                var d = GeneratedData.Cards.Get(state.DrawPile[i].DefId);
+                return !d.Unplayable
+                    && d.Type is not (CardType.Status or CardType.Curse)
+                    && state.DrawPile[i].ReplayCount < 1;
+            })
+            .ToList();
+        var preferred = eligible
+            .Where(i =>
+                GeneratedData.Cards.Get(state.DrawPile[i].DefId).Type
+                    is CardType.Attack
+                        or CardType.Skill
+                        or CardType.Power
+            )
+            .ToList();
+        var pick = preferred.Count > 0 ? preferred : eligible;
+        if (pick.Count == 0)
+        {
+            return;
+        }
+
+        var rng = state.CardSelectionRng;
+        int index = pick[(rng as Random ?? new Random(0)).Next(pick.Count)];
+        state.DrawPile[index] = state.DrawPile[index] with
+        {
+            ReplayCount = state.DrawPile[index].ReplayCount + replay,
         };
     }
 
@@ -3681,10 +3886,8 @@ public static class CardEffects
             case "Maul":
             case "Rebound":
             case "Squash":
-            case "ThrummingHatchet":
             case "UltimateStrike":
             case "TagTeam":
-            case "SeekerStrike":
             case "Knockdown":
             case "Whistle":
             case "MinionDiveBomb":
@@ -3718,10 +3921,6 @@ public static class CardEffects
             case "RipAndTear":
                 DealDamageToRandomEnemiesMultiHit(state, Dmg(def, upgraded, card), 2, rng);
                 return true;
-            case "Fisticuffs":
-                DealDamage(state, Dmg(def, upgraded, card));
-                GainBlock(state, Dmg(def, upgraded, card), rng);
-                return true;
             case "Intercept":
                 GainBlock(state, Blk(def, upgraded, card), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
@@ -3739,21 +3938,6 @@ public static class CardEffects
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.TheGambitPower, 1);
                 }
 
-                return true;
-            case "Jackpot":
-                DealDamage(state, Dmg(def, upgraded, card));
-                AddRandomColorlessCardsToHand(state, upgraded ? 4 : 3, rng);
-                return true;
-            case "HiddenGem":
-                DrawCards(state, upgraded ? 2 : 1, rng);
-                MakeHandFreeThisTurn(state);
-                return true;
-            case "BeatDown":
-                MoveDiscardCardsToHand(state, upgraded ? 4 : 3);
-                return true;
-            case "Catastrophe":
-                DrawCards(state, upgraded ? 3 : 2, rng);
-                DiscardFirstCardsFromHand(state, upgraded ? 3 : 2);
                 return true;
             case "Relax":
                 GainBlock(state, Blk(def, upgraded, card), rng);
@@ -3989,7 +4173,6 @@ public static class CardEffects
             case "Synchronize":
             case "Terraforming":
             case "Voltaic":
-            case "Cascade":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
                 break;
             case "Convergence":

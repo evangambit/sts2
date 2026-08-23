@@ -131,6 +131,9 @@ public static class CombatEngine
 
         // Spiral.EnchantPlayCount(original) => original + Times, and Times is 1.
         extraPlays += card.EnchantedWith(Enchantment.Spiral);
+
+        // Hidden Gem's Replay rides on the copy it was granted to, the same way.
+        extraPlays += card.ReplayCount;
         int signalBoost = BuffSystem.Get(state.PlayerBuffs, BuffId.SignalBoost);
         if (def.Type == CardType.Power && signalBoost > 0)
         {

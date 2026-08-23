@@ -124,6 +124,9 @@ public readonly record struct CardInstance(
     // EnchantmentStatus, which would make it once per RUN instead -- but nothing was found
     // that copies the deck into the draw pile either, and the two readings only differ from
     // the second combat onwards. A capture of a Sown card played in two fights settles it.
+    // Extra times this copy plays, from Hidden Gem's Replay. Per-copy, like BonusDamage:
+    // the gem picks one card out of the draw pile and only that copy replays.
+    int ReplayCount = 0,
     bool EnchantSpent = false,
     int CostForCombat = int.MinValue,
     // Damage this copy has permanently gained during the combat. Rampage raises its own

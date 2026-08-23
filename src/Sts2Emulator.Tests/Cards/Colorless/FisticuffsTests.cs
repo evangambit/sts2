@@ -36,8 +36,12 @@ public class FisticuffsTests
         Assert.Equal(9, fight.State.PlayerBlock);
     }
 
+    /// <summary>
+    /// The block is the damage DEALT, so Strength raises both. Blocking off the printed
+    /// number was the approximation, and this test asserted it.
+    /// </summary>
     [Fact]
-    public void StrengthRaisesTheDamageButNotTheBlockHere()
+    public void StrengthRaisesTheDamageAndTheBlockWithIt()
     {
         var fight = Fight
             .Hand(Card(CL.Fisticuffs))
@@ -48,7 +52,18 @@ public class FisticuffsTests
         fight.Play();
 
         Assert.Equal(50, fight.Enemy0.Hp);
-        // The game would give 10 here, reading the damage it actually dealt.
-        Assert.Equal(7, fight.State.PlayerBlock);
+        Assert.Equal(10, fight.State.PlayerBlock);
+    }
+
+    /// <summary>A hit the enemy absorbs entirely pays no block at all.</summary>
+    [Fact]
+    public void ABlockedHitPaysNoBlock()
+    {
+        var fight = Fight.Hand(Card(CL.Fisticuffs)).Energy(1).Enemy(hp: 60, block: 100);
+
+        fight.Play();
+
+        Assert.Equal(60, fight.Enemy0.Hp);
+        Assert.Equal(0, fight.State.PlayerBlock);
     }
 }
