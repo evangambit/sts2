@@ -2643,6 +2643,19 @@ public static class CardEffects
                 target.Block += curlUp;
                 BuffSystem.Remove(target.Buffs, BuffId.CurlUp);
             }
+
+            // SkittishPower.AfterAttack: the FIRST card each turn to land unblocked
+            // damage on the gardener makes it flinch behind N block. Unlike Curl Up the
+            // power stays -- it is spent for the turn, not consumed -- and the flag
+            // clears when the player's turn ends. This sits inside the `hpLoss > 0`
+            // branch because the game requires UnblockedDamage != 0: a hit the gardener
+            // fully blocks does not set it off.
+            int skittish = BuffSystem.Get(target.Buffs, BuffId.Skittish);
+            if (skittish > 0 && BuffSystem.Get(target.Buffs, BuffId.SkittishSpent) == 0)
+            {
+                BuffSystem.Apply(target.Buffs, BuffId.SkittishSpent, 1);
+                target.Block += skittish;
+            }
         }
         if (target.Hp == 0)
         {

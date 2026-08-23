@@ -1589,6 +1589,16 @@ public static class CombatFactory
             BuffSystem.Apply(enemy.Buffs, BuffId.CurlUp, 18);
         }
 
+        if (enemy.DefId == KE.PhantasmalGardener)
+        {
+            // PhantasmalGardener.AfterAddedToRoom applies SkittishPower at SkittishAmount.
+            BuffSystem.Apply(
+                enemy.Buffs,
+                BuffId.Skittish,
+                Ascension.Value(_currentAscension, Ascension.ToughEnemies, 7, 6)
+            );
+        }
+
         if (enemy.DefId == KE.PhrogParasite)
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.Infested, 4);

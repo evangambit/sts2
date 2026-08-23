@@ -171,10 +171,12 @@ def first_divergences(
             if field in first:
                 continue
             ref_value = normalise_for_compare(
-                field, compare_traces.get_path(ref, field),
+                field,
+                compare_traces.get_path(ref, field),
             )
             emu_value = normalise_for_compare(
-                field, compare_traces.get_path(emu, field),
+                field,
+                compare_traces.get_path(emu, field),
             )
             if field == "player.hand":
                 ref_value = [slugs.get(card, card) for card in ref_value]
@@ -199,7 +201,8 @@ def card_slug_to_id() -> dict[str, int]:
     return {
         match.group(2): int(match.group(1))
         for match in re.finditer(
-            r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text,
+            r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"',
+            text,
         )
     }
 
@@ -354,22 +357,29 @@ def replay_trace(
             replay_steps = replay_steps[:max_steps]
 
         current_target_map: dict[str, int] = {}
-        prev_ref_state: str | None = None
+        previous_reference_enemies: list[dict[str, Any]] = []
 
         for reference_step in replay_steps:
             payload = reference_step.get("action")
             ref_summary = compare_traces.summary(reference_step)
             ref_state = ref_summary.get("state_type")
 
-            # Build target map when entering a new combat from a reference battle enemy list.
-            if ref_state in COMBAT_STATES and prev_ref_state not in COMBAT_STATES:
-                ref_enemies = (
-                    compare_traces.get_path(ref_summary, "battle.enemies") or []
+            # The game RENUMBERS its entity ids as enemies die, so the map has to be
+            # rebuilt every step rather than once on entering the fight. It is built
+            # from the state the action was chosen in -- the previous step -- and its
+            # values are ordinals among living enemies, which are then resolved against
+            # the emulator's own list. The emulator keeps its dead in place, so the two
+            # index spaces diverge the moment anything dies.
+            if ref_state in COMBAT_STATES:
+                current_target_map = resolve_targets(
+                    build_target_map(previous_reference_enemies),
+                    obs,
                 )
-                current_target_map = build_target_map(ref_enemies)
-            elif ref_state not in COMBAT_STATES:
+            else:
                 current_target_map = {}
-            prev_ref_state = ref_state
+            previous_reference_enemies = (
+                compare_traces.get_path(ref_summary, "battle.enemies") or []
+            )
 
             try:
                 action = translate_command(payload, obs, info, env, reference_step)
@@ -524,6 +534,25 @@ def summarize_hand(obs: np.ndarray) -> list[dict[str, Any]]:
     ]
 
 
+def resolve_targets(ordinals: dict[str, int], obs: np.ndarray) -> dict[str, int]:
+    """Turn ordinals-among-living into the emulator's absolute enemy indices.
+
+    The game renumbers its entity ids as enemies die, so a target id names the Nth
+    LIVING enemy. The emulator leaves its dead in the list, so the Nth living enemy is
+    not the enemy at index N once anything has died.
+    """
+    living = [
+        index
+        for index in range(native.MAX_ENEMIES)
+        if int(obs[native.OBS_ENEMY_OFFSET + index * native.OBS_ENEMY_SLOT_SIZE]) > 0
+    ]
+    return {
+        name: living[ordinal]
+        for name, ordinal in ordinals.items()
+        if 0 <= ordinal < len(living)
+    }
+
+
 def summarize_battle(obs: np.ndarray) -> dict[str, Any]:
     enemies = []
     for enemy_index in range(native.MAX_ENEMIES):
@@ -574,7 +603,8 @@ def _event_names() -> dict[int, str]:
     ).read_text(encoding="utf-8")
     names: dict[int, str] = {}
     for name, value in re.findall(
-        r"public const int Event(\w+)\s*=\s*(-?\d+);", source,
+        r"public const int Event(\w+)\s*=\s*(-?\d+);",
+        source,
     ):
         entry = re.sub(r"(?<!^)(?=[A-Z])", "_", name).upper()
         names.setdefault(int(value), entry)

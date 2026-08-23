@@ -411,6 +411,13 @@ public static class CombatEngine
 
         // ── Enemy turns ───────────────────────────────────────────────────────
         state.PlayerTurn = false;
+
+        // SkittishPower.AfterSideTurnEnd fires for the side that is NOT its owner's, so
+        // a gardener may flinch again once the player's turn is over.
+        foreach (var enemy in state.Enemies)
+        {
+            BuffSystem.Remove(enemy.Buffs, BuffId.SkittishSpent);
+        }
         foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
         {
             // Poison damage at start of enemy turn.

@@ -298,14 +298,29 @@ def _normalize_enemy_name(name: str) -> str:
 
 
 def build_target_map(enemies: list[dict[str, Any]]) -> dict[str, int]:
-    """Build {target_id: absolute_enemy_index} from a combat's initial enemy list."""
+    """Build {target_id: ordinal among LIVING enemies} from a reference enemy list.
+
+    The game's ``entity_id`` suffix is a position, not a stable id: it RENUMBERS as
+    enemies die. Four gardeners are ``_0.._3``, and once the first dies the survivors
+    become ``_0.._2`` -- so ``PHANTASMAL_GARDENER_2`` names a different creature before
+    and after. Built once from a combat's opening list, this map silently pointed at the
+    wrong enemy for the rest of the fight.
+
+    The value is therefore an ordinal among living enemies, which the caller resolves
+    against the emulator's own list. The emulator KEEPS its dead in place, so the two
+    index spaces stop agreeing the moment anything dies.
+    """
     type_counters: dict[str, int] = {}
     result: dict[str, int] = {}
-    for index, enemy in enumerate(enemies):
+    ordinal = 0
+    for enemy in enemies:
+        if enemy.get("hp") is not None and int(enemy["hp"]) <= 0:
+            continue
         normalized = _normalize_enemy_name(enemy.get("name", ""))
         count = type_counters.get(normalized, 0)
-        result[f"{normalized}_{count}"] = index
+        result[f"{normalized}_{count}"] = ordinal
         type_counters[normalized] = count + 1
+        ordinal += 1
     return result
 
 

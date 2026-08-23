@@ -1431,9 +1431,11 @@ public static class RunNonCombatEffects
 
         dishes.RemoveAll(dish => dish.Dish == lastDish);
 
-        int priorRolls = grabs - 1 - ((grabs - 1) / 5);
+        // The event's stream is persistent now, so it is already where this roll belongs.
+        // This used to fast-forward a freshly built stream to grabs-minus-the-fifths --
+        // the fifth grab returns above without drawing -- which became a REWIND as soon
+        // as anything else drew from the event, and threw.
         var rng = EventRng(state, "ENDLESS_CONVEYOR");
-        rng.AdvanceToCallCount(priorRolls);
 
         float total = dishes.Sum(dish => dish.Weight);
         float roll = (float)rng.NextDouble() * total;
