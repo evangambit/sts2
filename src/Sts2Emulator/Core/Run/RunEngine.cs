@@ -897,7 +897,12 @@ public sealed class RunEngine
             ApplyAncientChoice(State.NeowOptions[action]);
             if (State.Phase == RunPhase.Ancient)
             {
-                EnterMapPhase();
+                // Every blessing ends in AncientEventModel.Done(), which is a
+                // SetEventFinished -- a page whose only option is Proceed. Only
+                // Kaleidoscope was given one here, because it was the one whose reward
+                // screen made the missing page visible; the rest went straight to the
+                // map and swallowed an action the run really takes.
+                State.NeowAwaitingProceed = true;
             }
 
             return 0;
