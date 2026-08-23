@@ -50,6 +50,12 @@ DEFAULT_BOUNDARY_FIELDS = [
     "player.hp",
     "player.max_hp",
     "player.gold",
+    # Which event, not just that there IS one. Without this a run that drew a
+    # different event still looked like it matched -- both sides say "event" --
+    # and the divergence only surfaced once the two runs had drifted far enough
+    # to disagree about gold. That is exactly how an Underdocks run hid a wrong
+    # event for 60 steps.
+    "event.event_id",
 ]
 PHASE_STATE_TYPES = {
     PHASE_CARD_REWARD: "card_reward",
@@ -134,7 +140,9 @@ def normalise_for_compare(field: str, value: Any) -> Any:
     on both sides is what makes a wide comparison usable rather than all-noise.
     """
     if field == "player.hand":
-        return [card.get("id") if isinstance(card, dict) else card for card in value or []]
+        return [
+            card.get("id") if isinstance(card, dict) else card for card in value or []
+        ]
     if field == "battle.enemies":
         # The emulator keeps a dead enemy in the roster at 0 HP so an agent's
         # observation has stable slots; the game removes the creature outright. Compare
@@ -162,8 +170,12 @@ def first_divergences(
         for field in fields:
             if field in first:
                 continue
-            ref_value = normalise_for_compare(field, compare_traces.get_path(ref, field))
-            emu_value = normalise_for_compare(field, compare_traces.get_path(emu, field))
+            ref_value = normalise_for_compare(
+                field, compare_traces.get_path(ref, field),
+            )
+            emu_value = normalise_for_compare(
+                field, compare_traces.get_path(emu, field),
+            )
             if field == "player.hand":
                 ref_value = [slugs.get(card, card) for card in ref_value]
             if ref_value != emu_value:
@@ -186,7 +198,9 @@ def card_slug_to_id() -> dict[str, int]:
     ).read_text()
     return {
         match.group(2): int(match.group(1))
-        for match in re.finditer(r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text)
+        for match in re.finditer(
+            r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text,
+        )
     }
 
 
@@ -501,7 +515,10 @@ def summarize_player(
 def summarize_hand(obs: np.ndarray) -> list[dict[str, Any]]:
     slot = native.OBS_CARD_SLOT_SIZE
     return [
-        {"index": hand_index, "id": int(obs[native.OBS_HAND_OFFSET + hand_index * slot])}
+        {
+            "index": hand_index,
+            "id": int(obs[native.OBS_HAND_OFFSET + hand_index * slot]),
+        }
         for hand_index in range(native.OBS_MAX_HAND)
         if int(obs[native.OBS_HAND_OFFSET + hand_index * slot]) != 0
     ]
@@ -541,6 +558,32 @@ def summarize_card_reward(info: dict[str, Any]) -> dict[str, Any]:
     return {"cards": cards}
 
 
+def _event_names() -> dict[int, str]:
+    """Map the emulator's event ids to the game's ModelId.Entry, off RunConstants.
+
+    Derived rather than written down: the constant's own name IS the entry, in
+    PascalCase, so ``EventSunkenTreasury`` is ``SUNKEN_TREASURY``.
+    """
+    source = (
+        Path(__file__).resolve().parent.parent
+        / "src"
+        / "Sts2Emulator"
+        / "Core"
+        / "Run"
+        / "RunConstants.cs"
+    ).read_text(encoding="utf-8")
+    names: dict[int, str] = {}
+    for name, value in re.findall(
+        r"public const int Event(\w+)\s*=\s*(-?\d+);", source,
+    ):
+        entry = re.sub(r"(?<!^)(?=[A-Z])", "_", name).upper()
+        names.setdefault(int(value), entry)
+    return names
+
+
+EVENT_NAMES = _event_names()
+
+
 def summarize_event(info: dict[str, Any]) -> dict[str, Any]:
     if int(info["phase"]) == PHASE_ANCIENT:
         return {
@@ -551,7 +594,8 @@ def summarize_event(info: dict[str, Any]) -> dict[str, Any]:
                 if int(relic_id) != 0
             ],
         }
-    return {"event_id": int(info["event_id"])}
+    event_id = int(info["event_id"])
+    return {"event_id": EVENT_NAMES.get(event_id, event_id)}
 
 
 def summarize_map(info: dict[str, Any]) -> dict[str, Any]:

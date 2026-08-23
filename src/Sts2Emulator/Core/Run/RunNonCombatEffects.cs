@@ -463,8 +463,24 @@ public static class RunNonCombatEffects
                 GeneratedData.Cards.Get(card.DefId).Rarity == CardRarity.Basic
             ),
             RunConstants.EventDrowningBeacon => state.PlayerHp > 13,
-            RunConstants.EventEndlessConveyor => state.Gold >= 40,
-            RunConstants.EventWaterloggedScriptorium => state.Gold >= 55 || state.Deck.Count > 0,
+            // Gold >= 120, not 40 -- the belt is a rich man's event.
+            RunConstants.EventEndlessConveyor => state.Gold >= 120,
+            // Gold >= 55 and nothing else. The `|| Deck.Count > 0` made this always true,
+            // because a run always has a deck.
+            RunConstants.EventWaterloggedScriptorium => state.Gold >= 55,
+            RunConstants.EventWhisperingHollow => state.Gold >= 44,
+            RunConstants.EventTrashHeap => state.PlayerHp > 5,
+            RunConstants.EventSpiralingWhirlpool => state.Deck.Any(card =>
+                Enchantments.CanEnchant(card, Enchantment.Spiral)
+            ),
+            // TotalFloor is floors across the whole run; the emulator models one act, so
+            // within it that is Floor.
+            RunConstants.EventPunchOff => state.Floor >= 6,
+            RunConstants.EventSlipperyBridge => state.Floor > 6 && state.Deck.Any(IsRemovable),
+            // WarHistorianRepy.IsAllowed is `return false` outright: it is never drawn
+            // from the sequence, only reached by its own means. Falling through to the
+            // default handed it out as an ordinary event.
+            RunConstants.EventWarHistorianRepy => false,
             RunConstants.EventSelfHelpBook => state.Deck.Any(CardCanReceiveSelfHelpBookEnchantment),
             RunConstants.EventTheLegendsWereTrue => state.PlayerHp >= 10
                 && state.Deck.Any(card => card.DefId != RunConstants.SpoilsMapCard),
@@ -487,9 +503,28 @@ public static class RunNonCombatEffects
             RunConstants.EventTinkerTime => state.Deck.Count > 0,
             RunConstants.EventZenWeaver => state.Deck.Any(RunConstants.IsRunCardUpgradable)
                 || state.PlayerHp < state.PlayerMaxHp,
-            RunConstants.EventUnrestSite
+            // The site only turns up on a run that is actually hurt: CurrentHp <= 70% of
+            // max. It was grouped with the unconditional events.
+            RunConstants.EventUnrestSite => state.PlayerHp <= state.PlayerMaxHp * 0.70m,
+            // ByrdonisNest is `!HasEventPet()`. Pets are not modelled, and the sequence
+            // offers each event at most once per act, so within an act it cannot matter.
+            // BrainLeech and RoomFullOfCheese are `CurrentActIndex < 2`, and Dense
+            // Vegetation only refuses in multiplayer. The emulator models a run's first
+            // act, single player, so all three are open -- transcribed rather than left
+            // to the default so the gate says so.
+            RunConstants.EventBrainLeech
+            or RunConstants.EventRoomFullOfCheese
+            or RunConstants.EventDenseVegetation
+            or RunConstants.EventByrdonisNest
             or RunConstants.EventAromaOfChaos
             or RunConstants.EventSimpleReward => true,
+            // Hive and Glory events. The emulator models a run's FIRST act, so none of
+            // these is in a pool it draws from. Refused rather than allowed, so adding a
+            // later act's pool surfaces them instead of silently letting them through.
+            RunConstants.EventColorfulPhilosophers
+            or RunConstants.EventColossalFlower
+            or RunConstants.EventGraveOfTheForgotten
+            or RunConstants.EventRoundTeaParty => false,
             _ => true,
         };
     }

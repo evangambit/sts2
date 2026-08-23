@@ -17,7 +17,7 @@ is.
 | `QS2GYXRKWN-a8.json` | Overgrowth | 158 | clean |
 | `Y75EFT6EDV-a8.json` | Overgrowth | 183 | clean |
 | `DPUJR117FL-a8.json` | Overgrowth | 244 | **diverges** — Cubex Construct's attack lands 3 high (it carries Strength 2 and intends 9; the emulator deals 12). Replay also stops at step 117 on an unsupported `select_card` action, which is a harness gap rather than an engine one. |
-| `4KJ7X2MQND-a8.json` | Underdocks | 100 | **diverges** — the first event drawn is Sunken Treasury in the game and War Historian Repy here, so the Underdocks event sequence is ordered differently. `scripts/verify_act_selection.py` already flags the Underdocks branch's rooms and map as unverified; this is that gap showing up. |
+| `4KJ7X2MQND-a8.json` | Underdocks | 100 | **diverges** — the Phantasmal Gardener's Skittish power is unmodelled: the first card that hits one each turn should give it 7 block (`SkittishAmount` at A8), and it gets none. The event divergence this trace originally showed is fixed. |
 
 `QS2GYXRKWN-a0.json` was removed: it is an ascension-0 run, and the emulator models
 A8 only (`RunEngine.Reset` starts the player at 64/80), so it diverged from step 0
