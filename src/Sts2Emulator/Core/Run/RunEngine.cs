@@ -2580,6 +2580,9 @@ public sealed class RunEngine
                         State.PlayerHp - RunNonCombatEffects.SlipperyBridgeHpLoss(State)
                     );
                     State.EventPage++;
+                    // GetNewRandomCard() again -- the re-roll is an explicit step now that
+                    // the named card is remembered rather than recomputed per read.
+                    RunNonCombatEffects.RollSlipperyBridgeCard(State);
                     // The bridge answers with the same two options, so the event stays
                     // open rather than falling through to the end-of-event path.
                     return 0;

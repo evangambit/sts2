@@ -98,6 +98,23 @@ public sealed class RunState
     public GameRng? CrystalSphereRng;
 
     /// <summary>
+    /// The current event's own Rng stream, and the entry it was seeded from.
+    ///
+    /// <para>
+    /// The game gives an event ONE <c>base.Rng</c> for its lifetime, so a second draw
+    /// continues where the first left off. This was rebuilt per call instead, which put
+    /// every draw at position 0 -- each value plausible on its own, and wrong the moment
+    /// an event drew twice.
+    /// </para>
+    /// </summary>
+    public GameRng? EventRngStream;
+
+    public string? EventRngName;
+
+    /// <summary>The Relic Trader's three-relic shelf, drawn once when the event opens.</summary>
+    public List<int>? EventRelicStock;
+
+    /// <summary>
     /// Gold rewards still owed. The reward screen carries one pile at a time, the way it
     /// carries one potion at a time, so anything that offers several -- the Crystal
     /// Sphere can uncover seven -- queues the rest here.

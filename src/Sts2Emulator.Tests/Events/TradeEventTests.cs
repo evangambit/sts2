@@ -43,14 +43,22 @@ public class TradeEventTests
     /// Appending straight to the list leaves it in the bag, so the trade can hand back the
     /// very relic just given up -- which the game cannot do.
     /// </summary>
+    /// <remarks>
+    /// The relics go on BEFORE the event opens. Both traders decide what they want as
+    /// their options are generated -- Ranwid names his relic there, the trader shuffles
+    /// its shelf there -- so a run that gains relics afterwards is a state the game never
+    /// reaches, and the choice would have been made against the wrong collection.
+    /// </remarks>
     private static RunEngine WithTradableRelics(int eventId)
     {
-        var engine = At(eventId);
+        var engine = new RunEngine();
+        engine.Reset("ABCDEF");
         foreach (string name in new[] { "Akabeko", "Anchor", "BagOfMarbles" })
         {
             RunNonCombatEffects.ApplyRelicPickup(engine.State, Relic(name));
         }
 
+        RunNonCombatEffects.BeginEvent(engine.State, eventId);
         return engine;
     }
 

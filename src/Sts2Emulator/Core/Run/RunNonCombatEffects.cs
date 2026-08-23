@@ -283,6 +283,32 @@ public static class RunNonCombatEffects
         return relicId == RunConstants.RelicSilverCrucible ? 3 : 0;
     }
 
+    /// <summary>
+    /// Put the run into <paramref name="eventId"/> the way the game does.
+    /// </summary>
+    /// <remarks>
+    /// Entering an event is not just setting its id: the game calls the event's
+    /// <c>CalculateVars</c> as it generates the options, and several events DRAW from
+    /// their own Rng stream there. Skip it and every later draw in that event lands one
+    /// position early -- which is not a visible failure, it is a different outcome. The
+    /// Endless Conveyor rolls its dish in CalculateVars and nothing else touches it, so
+    /// Observe the Chef upgraded the wrong card against a live capture.
+    /// </remarks>
+    public static void BeginEvent(RunState state, int eventId)
+    {
+        state.EventValue0 = null;
+        state.EventValue1 = null;
+        state.EventPage = 0;
+        state.CrystalSphere = null;
+        state.CrystalSphereRng = null;
+        state.EventRngStream = null;
+        state.EventRngName = null;
+        state.EventRelicStock = null;
+        state.EventId = eventId;
+        CalculateEventVars(state);
+        state.Phase = RunPhase.Event;
+    }
+
     public static void EnterEvent(RunState state)
     {
         state.EventValue0 = null;
@@ -290,15 +316,16 @@ public static class RunNonCombatEffects
         state.EventPage = 0;
         state.CrystalSphere = null;
         state.CrystalSphereRng = null;
+        state.EventRngStream = null;
+        state.EventRngName = null;
+        state.EventRelicStock = null;
         if (
             state.EventSequenceIndex == 0
             && state.Relics.Any(relic => relic.DefId == RunConstants.RelicNewLeaf)
             && IsEventAllowed(state, RunConstants.EventTheLegendsWereTrue)
         )
         {
-            state.EventId = RunConstants.EventTheLegendsWereTrue;
-            CalculateEventVars(state);
-            state.Phase = RunPhase.Event;
+            BeginEvent(state, RunConstants.EventTheLegendsWereTrue);
             return;
         }
 
@@ -308,9 +335,7 @@ public static class RunNonCombatEffects
             int eventId = state.EventSequence[state.EventSequenceIndex++];
             if (IsEventAllowed(state, eventId))
             {
-                state.EventId = eventId;
-                CalculateEventVars(state);
-                state.Phase = RunPhase.Event;
+                BeginEvent(state, eventId);
                 return;
             }
         }
@@ -387,11 +412,12 @@ public static class RunNonCombatEffects
         // it could hand out an event the run is not entitled to -- including the act-2
         // ones it lists by name. Everything the sequence is filtered by applies here too.
         var allowed = eventPool.Where(id => IsEventAllowed(state, id)).ToList();
-        state.EventId = state.Rng.UpFront.NextItem(
-            allowed.Count > 0 ? allowed : [RunConstants.EventSimpleReward]
+        BeginEvent(
+            state,
+            state.Rng.UpFront.NextItem(
+                allowed.Count > 0 ? allowed : [RunConstants.EventSimpleReward]
+            )
         );
-        CalculateEventVars(state);
-        state.Phase = RunPhase.Event;
     }
 
     /// <summary>
@@ -643,8 +669,23 @@ public static class RunNonCombatEffects
     /// and, on generate, takes off <c>Rng.NextInt(0, 50)</c> from its own stream -- so
     /// the price is somewhere in 100..149 and the option is locked below it.
     /// </summary>
-    public static int LuminousChoirTributeCost(RunState state) =>
-        149 - EventRng(state, "LUMINOUS_CHOIR").NextInt(0, 50);
+    public static int LuminousChoirTributeCost(RunState state)
+    {
+        if (state.EventValue0 is null)
+        {
+            CalculateLuminousChoirVars(state);
+        }
+
+        return state.EventValue0!.Value;
+    }
+
+    /// <summary>
+    /// <c>LuminousChoir.CalculateVars</c> takes GoldVar(149) and subtracts
+    /// <c>Rng.NextInt(0, 50)</c> -- once, as the event is generated. Reading it re-rolled
+    /// it, which was invisible only because every draw came off a fresh stream.
+    /// </summary>
+    private static void CalculateLuminousChoirVars(RunState state) =>
+        state.EventValue0 = 149 - EventRng(state, "LUMINOUS_CHOIR").NextInt(0, 50);
 
     /// <summary>
     /// What the sphere charges to Uncover Future. <c>CrystalSphere.CalculateVars</c> adds
@@ -742,6 +783,21 @@ public static class RunNonCombatEffects
                 break;
             case RunConstants.EventThisOrThat:
                 CalculateThisOrThatVars(state);
+                break;
+            case RunConstants.EventLuminousChoir:
+                CalculateLuminousChoirVars(state);
+                break;
+            case RunConstants.EventCrystalSphere:
+                // The cost is CalculateVars' only draw, and the board comes off the same
+                // stream straight after -- so it has to be spent on entry, not on the
+                // first read. Reading the mask would otherwise roll it.
+                EnsureCrystalSphereVars(state);
+                break;
+            case RunConstants.EventSlipperyBridge:
+                RollSlipperyBridgeCard(state);
+                break;
+            case RunConstants.EventRanwidTheElder:
+                CalculateRanwidVars(state);
                 break;
             case RunConstants.EventWelcomeToWongos:
                 // The featured item is pulled when the options are generated, so it comes
@@ -852,6 +908,16 @@ public static class RunNonCombatEffects
     /// </summary>
     public static List<int> RelicTraderStock(RunState state)
     {
+        state.EventRelicStock ??= RollRelicTraderStock(state);
+        return state.EventRelicStock;
+    }
+
+    /// <summary>
+    /// <c>RelicTrader._ownedRelics</c> is built once and kept: the shelf does not reshuffle
+    /// itself every time the player looks at it.
+    /// </summary>
+    private static List<int> RollRelicTraderStock(RunState state)
+    {
         var tradable = Enumerable
             .Range(0, state.Relics.Count)
             .Where(i => IsTradableRelic(state, state.Relics[i]))
@@ -871,11 +937,37 @@ public static class RunNonCombatEffects
     /// </summary>
     public static int RanwidTradeIndex(RunState state)
     {
+        if (state.EventValue0 is null)
+        {
+            CalculateRanwidVars(state);
+        }
+
+        return state.EventValue0!.Value;
+    }
+
+    /// <summary>
+    /// <c>RanwidTheElder.GenerateInitialOptions</c> draws twice: a potion, then a relic.
+    /// </summary>
+    /// <remarks>
+    /// The potion draw was never spent here, so the relic was read one position early
+    /// whenever the run held a potion. <c>Rng.NextItem</c> returns default and consumes
+    /// NOTHING on an empty sequence, and <c>Player.Potions</c> filters empty slots out --
+    /// so a run carrying no potions really does draw the relic first.
+    /// </remarks>
+    private static void CalculateRanwidVars(RunState state)
+    {
+        var rng = EventRng(state, "RANWID_THE_ELDER");
+        int potions = state.PotionSlots.Count(slot => slot != 0);
+        if (potions > 0)
+        {
+            rng.NextInt(0, potions);
+        }
+
         var tradable = Enumerable
             .Range(0, state.Relics.Count)
             .Where(i => IsTradableRelic(state, state.Relics[i]))
             .ToList();
-        return tradable.Count == 0 ? -1 : EventRng(state, "RANWID_THE_ELDER").NextItem(tradable);
+        state.EventValue0 = tradable.Count == 0 ? -1 : rng.NextItem(tradable);
     }
 
     /// <summary>
@@ -1059,6 +1151,24 @@ public static class RunNonCombatEffects
     /// deck bar Ascender's Bane -- so it is a roll, not a fixed pick.
     /// </summary>
     public static int SlipperyBridgeCardIndex(RunState state)
+    {
+        if (state.EventValue0 is null)
+        {
+            RollSlipperyBridgeCard(state);
+        }
+
+        return state.EventValue0!.Value;
+    }
+
+    /// <summary>
+    /// <c>SlipperyBridge.GetNewRandomCard</c>: called once from GenerateInitialOptions and
+    /// again from every Hold On, storing the result in <c>RandomCardToLose</c>. Recomputing
+    /// it per read drew a new card each time the mask or a test looked at it.
+    /// </summary>
+    public static void RollSlipperyBridgeCard(RunState state) =>
+        state.EventValue0 = PickSlipperyBridgeCard(state);
+
+    private static int PickSlipperyBridgeCard(RunState state)
     {
         var candidates = Enumerable
             .Range(0, state.Deck.Count)
@@ -1371,12 +1481,29 @@ public static class RunNonCombatEffects
     public static GameRng EventStream(RunState state, string eventEntry) =>
         EventRng(state, eventEntry);
 
+    /// <summary>
+    /// The event's own Rng stream -- one per event, not one per draw.
+    /// </summary>
+    /// <remarks>
+    /// An event holds a single <c>base.Rng</c>, so its draws are a sequence: the Endless
+    /// Conveyor rolls its dish in CalculateVars and then picks the card Observe the Chef
+    /// upgrades, and that pick reads the SECOND value. Building a fresh stream per call
+    /// handed it the first, which upgraded the wrong card against a live capture. Keyed
+    /// by entry so changing events starts a new stream rather than inheriting one.
+    /// </remarks>
     private static GameRng EventRng(RunState state, string eventEntry)
     {
+        if (state.EventRngStream is not null && state.EventRngName == eventEntry)
+        {
+            return state.EventRngStream;
+        }
+
         uint eventSeed = unchecked(
             state.Rng.Seed + (uint)DeterministicHash.GetDeterministicHashCode(eventEntry)
         );
-        return new GameRng(eventSeed);
+        state.EventRngName = eventEntry;
+        state.EventRngStream = new GameRng(eventSeed);
+        return state.EventRngStream;
     }
 
     public static void GainMaxHp(RunState state, int amount)
