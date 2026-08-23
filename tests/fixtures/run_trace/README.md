@@ -7,6 +7,9 @@ a per-step comparison of a real run rather than a single option in isolation.
 
     uv run python scripts/replay_full_run_trace.py tests/fixtures/run_trace/<file>
 
+Every divergence these have found, fixed or open, is catalogued in
+`docs/divergence-catalog.md` with its cause and its seed.
+
 Seeded capture requires custom mode (standard mode refuses a chosen seed), and the
 run's FIRST act is seed-dependent — roughly half of all seeds open in Underdocks
 rather than Overgrowth. "Act 1" in a trace means the run's first act, whichever it

@@ -2,7 +2,9 @@
 
 Orientation for a future agent. **PLAN.md** has the full design + chronological
 history and the _why_ behind every decision; **docs/replay-verification.md** has the
-full-run verification design. This file is the _current state + how-to + gotchas +
+full-run verification design; **docs/divergence-catalog.md** lists every
+emulator/game divergence found so far, with the metric that exposed it, the cause,
+and the seed to reproduce it on. This file is the _current state + how-to + gotchas +
 next steps_. Read this first, then PLAN.md for depth.
 
 ## What this is
