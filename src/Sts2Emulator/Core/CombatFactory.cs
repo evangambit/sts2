@@ -1449,7 +1449,14 @@ public static class CombatFactory
             moveIndex,
             fixedHp
         );
-        BuffSystem.Apply(enemy.Buffs, BuffId.Ravenous, 5);
+        // RavenousStr is GetValueIfAscension(DeadlyEnemies, 5, 4): the 5 is the A9
+        // branch, taken here as a bare literal. At A8 the slug gains 4 per dead ally,
+        // and a live capture announces "7x2" -- (3 + 4) twice -- where a 5 gives 8x2.
+        BuffSystem.Apply(
+            enemy.Buffs,
+            BuffId.Ravenous,
+            Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
+        );
         return enemy;
     }
 

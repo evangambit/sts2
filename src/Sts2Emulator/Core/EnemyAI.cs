@@ -1916,8 +1916,13 @@ public static class EnemyAI
             case KE.CorpseSlug:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    // WhipSlapDamage * WhipSlapRepeat (3 x 2), no ascension term
-                    0 => new Intent(IntentType.Attack, 3 * 2),
+                    // MultiAttackIntent(WhipSlapDamage, WhipSlapRepeat): 3, twice over,
+                    // no ascension term. Folding it into a single 6 is the same number
+                    // only while the slug has no Strength -- and Ravenous hands it
+                    // Strength every time an ally dies. The game adds Strength to EACH
+                    // hit, so at Strength 4 the game announces 14 and a single 6 gives
+                    // 10. A live Underdocks capture reads "7x2" on this intent.
+                    0 => new Intent(IntentType.Attack, 3, Hits: 2),
                     // GlompDamage
                     1 => new Intent(
                         IntentType.Attack,

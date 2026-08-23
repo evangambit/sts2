@@ -126,8 +126,18 @@ def is_boundary_transition(
 DEFAULT_PER_STEP_FIELDS = [
     "state_type",
     "player.hp",
+    "player.max_hp",
     "player.gold",
+    # Block and energy are the two combat numbers the snapshot already carried and
+    # never checked. The Fishing Rod bug's proximate symptom was BLOCK -- 8 where the
+    # emulator gave 5 -- and it went unnoticed until it turned into HP three steps on.
+    "player.block",
+    "player.energy",
     "player.hand",
+    # What the run HOLDS, not just what it is doing. A missing relic or a card that
+    # never got upgraded changes everything downstream, and both were invisible.
+    "player.deck",
+    "player.relics",
     "battle.enemies",
 ]
 
@@ -150,17 +160,57 @@ def normalise_for_compare(field: str, value: Any) -> Any:
             )
             for card in value or []
         ]
+    if field in {"player.deck", "player.relics"}:
+        # A deck or relic list compared as an unordered multiset: both sides agree on
+        # WHAT the run holds, but not on the order it is stored in.
+        return sorted(
+            (
+                (item.get("id"), bool(item.get("is_upgraded")))
+                if isinstance(item, dict)
+                else (item, False)
+            )
+            for item in value or []
+        )
     if field == "battle.enemies":
         # The emulator keeps a dead enemy in the roster at 0 HP so an agent's
         # observation has stable slots; the game removes the creature outright. Compare
         # the living ones, the same way combat_sweep.living_emu_enemies does, or every
         # fight where something dies reads as an extra attacker.
         return [
-            (enemy.get("hp"), enemy.get("block"))
+            (enemy.get("hp"), enemy.get("block"), _attack_intent(enemy))
             for enemy in value or []
             if isinstance(enemy, dict) and (enemy.get("hp") or 0) > 0
         ]
     return value
+
+
+def _attack_intent(enemy: dict[str, Any]) -> int | None:
+    """Return the damage an enemy is announcing, or None if it is not attacking.
+
+    Only the ATTACK intent is compared, and only its damage. The two sides name the
+    other kinds differently -- the game distinguishes StatusCard from Debuff where the
+    emulator does not -- so comparing those would be noise, and the observation does
+    not carry a hit count for the emulator side to answer with. Damage is the number
+    that has to agree to the point: an intent transcribed a point or two high is the
+    classic way an enemy diverges with nothing else looking wrong.
+    """
+    intents = enemy.get("intents")
+    if intents is not None:
+        # Reference side: a list of {type, label}, where a multi-hit reads "1x3".
+        for intent in intents:
+            if intent.get("type") != "Attack":
+                continue
+            # The game's label is per-hit by count ("1x3"); the emulator's observation
+            # announces the TOTAL, which is what AnnouncedDamage returns. Multiply out
+            # so the two sides are talking about the same number.
+            damage, _, hits = str(intent.get("label", "")).partition("x")
+            if not damage.isdigit():
+                return None
+            return int(damage) * (int(hits) if hits.isdigit() else 1)
+        return None
+    if int(enemy.get("intent_type", -1)) != 0:  # IntentType.Attack
+        return None
+    return int(enemy.get("intent_mag", 0))
 
 
 def first_divergences(
@@ -177,6 +227,11 @@ def first_divergences(
         for field in fields:
             if field in first:
                 continue
+            # A snapshot the capture took before the run had a deck records nothing
+            # rather than an empty one, and no run ever really holds zero cards. Read
+            # an absent deck as "not recorded" instead of as a divergence.
+            if field == "player.deck" and not compare_traces.get_path(ref, field):
+                continue
             ref_value = normalise_for_compare(
                 field,
                 compare_traces.get_path(ref, field),
@@ -185,12 +240,19 @@ def first_divergences(
                 field,
                 compare_traces.get_path(emu, field),
             )
-            if field == "player.hand":
+            if field in {"player.hand", "player.deck"}:
                 # Only the id half needs translating; the flag means the same thing
                 # on both sides.
                 ref_value = [
                     (slugs.get(card, card), upgraded) for card, upgraded in ref_value
                 ]
+            if field == "player.deck":
+                ref_value = sorted(ref_value)
+            if field == "player.relics":
+                relics = relic_slug_to_id()
+                ref_value = sorted(
+                    (relics.get(relic, relic), flag) for relic, flag in ref_value
+                )
             if ref_value != emu_value:
                 first[field] = (
                     f"first divergence in {field} at step {index}: "
@@ -208,6 +270,25 @@ def card_slug_to_id() -> dict[str, int]:
         / "Sts2Emulator"
         / "Generated"
         / "Cards.g.cs"
+    ).read_text()
+    return {
+        match.group(2): int(match.group(1))
+        for match in re.finditer(
+            r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"',
+            text,
+        )
+    }
+
+
+@functools.cache
+def relic_slug_to_id() -> dict[str, int]:
+    """Map the game's relic entry ids to ours, so relics can be compared."""
+    text = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "Sts2Emulator"
+        / "Generated"
+        / "Relics.g.cs"
     ).read_text()
     return {
         match.group(2): int(match.group(1))
@@ -523,6 +604,10 @@ def summarize_player(
         "energy": int(obs[3]) if in_combat else None,
         "gold": int(info["gold"]),
         "deck_size": int(info["deck_size"]),
+        "deck": [
+            {"id": int(card["card_id"]), "is_upgraded": bool(card["upgraded"])}
+            for card in info["deck"]
+        ],
         "relics": [{"id": int(relic_id)} for relic_id in info["relics"]],
         "potions": [
             {"id": int(potion_id)}

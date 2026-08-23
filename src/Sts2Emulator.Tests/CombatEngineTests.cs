@@ -629,7 +629,11 @@ public class CombatEngineTests
         EnemyAI.ChooseIntents(state.Enemies, state.Turn, new Random(0));
 
         Assert.Equal(IntentType.Attack, state.Enemies[1].CurrentIntent.Type);
-        Assert.Equal(6, state.Enemies[1].CurrentIntent.Magnitude);
+        // WHIP_SLAP is MultiAttackIntent(3, 2), not a single 6. Folded into one hit the
+        // two are the same number only while the slug has no Strength -- and Ravenous,
+        // which this very test just handed it, is how it gets some.
+        Assert.Equal(3, state.Enemies[1].CurrentIntent.Magnitude);
+        Assert.Equal(2, state.Enemies[1].CurrentIntent.Hits);
     }
 
     [Fact]
