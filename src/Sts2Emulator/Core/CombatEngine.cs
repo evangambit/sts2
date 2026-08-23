@@ -54,7 +54,7 @@ public static class CombatEngine
             AutoPlay(state, next, rng);
 
             // Re-check terminality after auto-play.
-            bool playerDead = state.PlayerHp <= 0;
+            bool playerDead = PlayerIsDead(state);
             bool allDead = state.Enemies.All(e => e.Hp <= 0);
             if (playerDead || allDead)
             {
@@ -257,7 +257,7 @@ public static class CombatEngine
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
-        bool playerDead = state.PlayerHp <= 0;
+        bool playerDead = PlayerIsDead(state);
         bool allDead = state.Enemies.All(e => e.Hp <= 0);
 
         return new StepResult(
@@ -513,7 +513,7 @@ public static class CombatEngine
         {
             state.PlayerHp -= playerPoison;
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Poison, -1);
-            if (state.PlayerHp <= 0)
+            if (PlayerIsDead(state))
             {
                 return new StepResult(
                     Terminal: true,
@@ -711,7 +711,7 @@ public static class CombatEngine
         EnemyAI.ChooseIntents(state.Enemies, state.Turn, rng, state.AiRng, state.AscensionLevel);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
-        bool playerDead = state.PlayerHp <= 0;
+        bool playerDead = PlayerIsDead(state);
         bool allDead = state.Enemies.All(e => e.Hp <= 0);
 
         return new StepResult(
@@ -737,6 +737,39 @@ public static class CombatEngine
 
     // Shaped reward: fraction of enemy HP dealt minus fraction of player HP lost,
     // plus ±1 terminal bonus for win/death.
+    /// <summary>FairyInABottle, looked up by name rather than pinned to an id.</summary>
+    private static readonly int FairyInABottlePotionId =
+        GeneratedData.Potions.FindId("FairyInABottle")
+        ?? throw new InvalidOperationException("No potion named FairyInABottle");
+
+    /// <summary>
+    /// Whether the player is really dead, after anything that refuses to let them be.
+    /// </summary>
+    /// <remarks>
+    /// FairyInABottle is an Automatic potion whose <c>ShouldDie</c> returns false for its
+    /// owner; <c>AfterPreventingDeath</c> then runs its <c>OnUse</c>, healing
+    /// <c>Max(MaxHp * 0.3, 1)</c>. Nothing modelled it, so a run holding one died where
+    /// the game had it stand back up -- a live capture shows the player go from 1 hp to
+    /// 24 in the middle of a boss fight, 30% of an 80 maximum.
+    /// </remarks>
+    private static bool PlayerIsDead(CombatState state)
+    {
+        if (state.PlayerHp > 0)
+        {
+            return false;
+        }
+
+        int slot = Array.IndexOf(state.PotionSlots, FairyInABottlePotionId);
+        if (slot < 0)
+        {
+            return true;
+        }
+
+        state.PotionSlots[slot] = 0;
+        state.PlayerHp = Math.Max((int)(state.PlayerMaxHp * 0.3m), 1);
+        return false;
+    }
+
     private static float ComputeReward(
         CombatState state,
         bool playerDead,

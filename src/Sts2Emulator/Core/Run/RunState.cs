@@ -158,6 +158,13 @@ public sealed class RunState
     public List<int> VisitedEventIds = [];
 
     /// <summary>
+    /// The event entry a pending deck selection belongs to, or null when it does not
+    /// come from an event. Every event passes its OWN Rng to CardCmd.TransformToRandom;
+    /// only NewLeaf uses Rng.Niche.
+    /// </summary>
+    public string? PendingSelectionEventEntry;
+
+    /// <summary>
     /// The run's relic queues, shuffled once at run start. Every relic reward pulls from
     /// the player's; the shared one exists so that a relic pulled by one player is gone
     /// for the others, and is kept because populating it consumes 112 UpFront draws that

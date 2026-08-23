@@ -263,6 +263,7 @@ public static class StateCloning
             EventRngName = state.EventRngName,
             EventRelicStock = state.EventRelicStock is null ? null : [.. state.EventRelicStock],
             VisitedEventIds = [.. state.VisitedEventIds],
+            PendingSelectionEventEntry = state.PendingSelectionEventEntry,
             PendingGoldRewards = [.. state.PendingGoldRewards],
             PendingCardOffers = [.. state.PendingCardOffers.Select(offer => (int[])offer.Clone())],
             PendingSelectionFollowUpCard = state.PendingSelectionFollowUpCard,

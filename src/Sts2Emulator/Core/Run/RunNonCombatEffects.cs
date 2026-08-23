@@ -592,9 +592,11 @@ public static class RunNonCombatEffects
         int count = 1,
         int followUpCard = 0,
         int followUpCount = 0,
-        int followUpHpLoss = 0
+        int followUpHpLoss = 0,
+        string? eventEntry = null
     )
     {
+        state.PendingSelectionEventEntry = eventEntry;
         state.PendingSelectionKind = kind;
         state.PendingSelectionArg = arg;
         state.PendingSelectionCount = count;
@@ -697,7 +699,17 @@ public static class RunNonCombatEffects
                 state.Deck[deckIndex] = card with { Upgraded = true };
                 break;
             case DeckSelection.TransformToRandom:
-                TransformCardAt(state, deckIndex, state.Rng.Niche);
+                // Every event hands CardCmd.TransformToRandom its OWN base.Rng; only
+                // NewLeaf, which does not come through here, uses Rng.Niche. Rolling the
+                // new card off Niche gave the event a card from a stream the game never
+                // touched for it.
+                TransformCardAt(
+                    state,
+                    deckIndex,
+                    state.PendingSelectionEventEntry is null
+                        ? state.Rng.Niche
+                        : EventRng(state, state.PendingSelectionEventEntry)
+                );
                 break;
             case DeckSelection.Remove:
                 state.Deck.RemoveAt(deckIndex);

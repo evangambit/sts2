@@ -17,7 +17,7 @@ is.
 | `QS2GYXRKWN-a8.json` | Overgrowth | 158 | clean |
 | `Y75EFT6EDV-a8.json` | Overgrowth | 183 | clean |
 | `4KJ7X2MQND-a8.json` | Underdocks | 100 | clean |
-| `DPUJR117FL-a8.json` | Overgrowth | 244 | **diverges** — at step 118 the Aroma of Chaos selection lands on a different card (the game takes Stone Armor, the emulator Expect a Fight). Everything after is downstream of that one pick. |
+| `DPUJR117FL-a8.json` | Overgrowth | 244 | clean |
 
 `QS2GYXRKWN-a0.json` was removed: it is an ascension-0 run, and the emulator models
 A8 only (`RunEngine.Reset` starts the player at 64/80), so it diverged from step 0

@@ -1575,7 +1575,8 @@ public sealed class RunEngine
                     return RunNonCombatEffects.BeginDeckSelection(
                         State,
                         action == 0 ? DeckSelection.TransformToRandom : DeckSelection.Upgrade,
-                        0
+                        0,
+                        eventEntry: action == 0 ? "AROMA_OF_CHAOS" : null
                     )
                         ? 0
                         : -1;
@@ -1620,7 +1621,8 @@ public sealed class RunEngine
                             State,
                             DeckSelection.TransformToRandom,
                             0,
-                            count: 2
+                            count: 2,
+                            eventEntry: "MORPHIC_GROVE"
                         )
                     )
                     {
@@ -2029,7 +2031,8 @@ public sealed class RunEngine
                         DeckSelection.TransformToRandom,
                         0,
                         count: 1,
-                        followUpHpLoss: 9
+                        followUpHpLoss: 9,
+                        eventEntry: "WHISPERING_HOLLOW"
                     )
                         ? 0
                         : -1;
@@ -2164,7 +2167,8 @@ public sealed class RunEngine
                             RunNonCombatEffects.BeginDeckSelection(
                                 State,
                                 DeckSelection.TransformToRandom,
-                                arg: 0
+                                arg: 0,
+                                eventEntry: "ENDLESS_CONVEYOR"
                             )
                         )
                         {
@@ -2671,7 +2675,8 @@ public sealed class RunEngine
                     return RunNonCombatEffects.BeginDeckSelection(
                         State,
                         DeckSelection.TransformToRandom,
-                        0
+                        0,
+                        eventEntry: "SYMBIOTE"
                     )
                         ? 0
                         : -1;
