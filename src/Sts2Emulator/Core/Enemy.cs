@@ -100,6 +100,9 @@ public sealed class EnemyState
     public int StolenGold;
     public int HeistGold;
 
+    /// <summary>This creature left the fight rather than dying; see CombatState.FatGremlinEscaped.</summary>
+    public bool Escaped;
+
     /// <summary>
     /// Which of the encounter's <c>Slots</c> this creature stands in, or -1 when the
     /// encounter does not place by slot.

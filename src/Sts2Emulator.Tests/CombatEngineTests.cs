@@ -812,7 +812,11 @@ public class CombatEngineTests
 
         CombatEngine.Step(state, 0, new Random(0));
 
-        Assert.Equal(99, state.PlayerGold);
+        // HeistPower.BeforeDeath adds an extra REWARD rather than paying out: the gold is
+        // banked for the screen that follows the fight, where a capture shows it as its
+        // own row reading "80 Gold (stolen back)". This used to assert 99 in hand.
+        Assert.Equal(59, state.PlayerGold);
+        Assert.Equal(40, state.StolenBackGold);
         Assert.Equal(0, state.Enemies[0].HeistGold);
     }
 

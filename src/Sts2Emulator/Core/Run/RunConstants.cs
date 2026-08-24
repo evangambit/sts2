@@ -120,6 +120,13 @@ public static class RunConstants
     public const int MapFinalRestRow = MapBossRow - 1;
     public const int MapStartCol = MapWidth / 2;
     public const int RewardSkipAction = 3;
+
+    /// <summary>
+    /// Commits the highlighted bundle on the Scroll Boxes screen. The game answers that
+    /// screen in two steps — `select_bundle` then `confirm_bundle_selection` — and a
+    /// capture spends an action on each, so the emulator does too.
+    /// </summary>
+    public const int BundleConfirmAction = 2;
     public const int RestHealAction = 0;
     public const int RestUpgradeAction = 1;
     public const int ShopRemoveAction = 13;

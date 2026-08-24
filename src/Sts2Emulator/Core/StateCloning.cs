@@ -61,6 +61,7 @@ public static class StateCloning
             Slot = enemy.Slot,
             StolenGold = enemy.StolenGold,
             HeistGold = enemy.HeistGold,
+            Escaped = enemy.Escaped,
         };
 
     public static PendingCardSelection Clone(this PendingCardSelection selection) =>
@@ -83,6 +84,9 @@ public static class StateCloning
             Energy = combat.Energy,
             MaxEnergy = combat.MaxEnergy,
             PlayerGold = combat.PlayerGold,
+            StolenBackGold = combat.StolenBackGold,
+            FatGremlinEscaped = combat.FatGremlinEscaped,
+            MercGoldWasStolen = combat.MercGoldWasStolen,
             Hand = [.. combat.Hand],
             DrawPile = [.. combat.DrawPile],
             DiscardPile = [.. combat.DiscardPile],
@@ -259,6 +263,8 @@ public static class StateCloning
             PendingSelectionArg = state.PendingSelectionArg,
             PendingSelectionCount = state.PendingSelectionCount,
             PendingOfferCards = (int[])state.PendingOfferCards.Clone(),
+            BundleOffer = (int[])state.BundleOffer.Clone(),
+            SelectedBundle = state.SelectedBundle,
             PendingOfferPicks = state.PendingOfferPicks,
             EventPage = state.EventPage,
             CrystalSphere = state.CrystalSphere?.Clone(),

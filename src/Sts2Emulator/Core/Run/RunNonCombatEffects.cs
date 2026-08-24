@@ -16,6 +16,9 @@ public enum RunFollowUp
     /// another offer over the top of them.
     /// </summary>
     PreRolledCardReward,
+
+    /// <summary>Scroll Boxes' choose-a-bundle screen.</summary>
+    BundleSelect,
 }
 
 public static class RunNonCombatEffects
@@ -287,10 +290,18 @@ public static class RunNonCombatEffects
                     ? RunFollowUp.TransformSelect
                     : RunFollowUp.None;
             case RunConstants.RelicScrollBoxes:
-                AddRandomRewardCard(state, state.Rng.UpFront);
-                AddRandomRewardCard(state, state.Rng.UpFront);
-                AddRandomRewardCard(state, state.Rng.UpFront);
-                break;
+                // GenerateRandomBundles on PlayerRng.Rewards, then
+                // CardSelectCmd.FromChooseABundleScreen: the player takes ONE bundle of
+                // three whole, and never sees the other three cards again. This handed
+                // over three cards rolled off Rng.UpFront -- the wrong stream, the wrong
+                // count of draws, six cards' worth of choice collapsed into none, and no
+                // screen at all.
+                state.BundleOffer =
+                [
+                    .. RunRewardGenerator.GenerateScrollBoxBundles(state).SelectMany(b => b),
+                ];
+                state.SelectedBundle = -1;
+                return RunFollowUp.BundleSelect;
             case RunConstants.RelicLeafyPoultice:
                 state.PlayerMaxHp = Math.Max(1, state.PlayerMaxHp - 12);
                 state.PlayerHp = Math.Min(state.PlayerHp, state.PlayerMaxHp);

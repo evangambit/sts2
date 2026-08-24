@@ -19,6 +19,32 @@ public sealed class CombatState
     public int MaxEnergy;
     public int PlayerGold;
 
+    /// <summary>
+    /// Gold a Heist gave back on its owner's death, waiting for the reward screen.
+    /// </summary>
+    /// <remarks>
+    /// <c>HeistPower.BeforeDeath</c> calls <c>combatRoom.AddExtraReward(new GoldReward(
+    /// Amount, wasGoldStolenBack: true))</c> — the player has to CLAIM it, and a capture
+    /// shows it as its own row reading "80 Gold (stolen back)" beside the fight's ordinary
+    /// gold. Handing it straight back mid-combat skipped that row.
+    /// </remarks>
+    public int StolenBackGold;
+
+    /// <summary>A Fat Gremlin left the fight under its own steam rather than dying.</summary>
+    /// <remarks>
+    /// The emulator ends its escape by setting <c>Hp = 0</c>, which makes it
+    /// indistinguishable from a kill — and the two owe the player opposite things.
+    /// <c>GremlinMercNormal.CalculateGoldProportion</c> pays the fight in full when
+    /// nothing escaped and nothing at all when a gremlin escaped carrying stolen gold.
+    /// </remarks>
+    public bool FatGremlinEscaped;
+
+    /// <summary>
+    /// <c>GremlinMercNormal.GoldWasStolen</c>: the merc died having taken something.
+    /// <c>SurprisePower.AfterDeath</c> only marks it when the total is above zero.
+    /// </summary>
+    public bool MercGoldWasStolen;
+
     // Cards
     public List<CardInstance> Hand = [];
     public List<CardInstance> DrawPile = [];

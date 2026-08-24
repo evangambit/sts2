@@ -2241,7 +2241,13 @@ public static class EnemyAI
                 break;
 
             case KE.FatGremlin:
+                // It runs off with whatever it is holding. Zeroing the HP is how the
+                // emulator takes a creature out of the fight, so the flag is what tells
+                // the reward screen this was an ESCAPE -- the gold does not come back,
+                // and the fight pays nothing.
                 enemy.Hp = 0;
+                enemy.Escaped = true;
+                state.FatGremlinEscaped = true;
                 break;
 
             case KE.ThievingHopper:

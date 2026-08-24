@@ -27,6 +27,12 @@ PHASE_ANCIENT = 8
 PHASE_TRANSFORM_SELECT = 9
 PHASE_TREASURE = 10
 PHASE_CRYSTAL_SPHERE = 11
+PHASE_BUNDLE_SELECT = 12
+
+# Commits the highlighted bundle on Scroll Boxes' choose-a-bundle screen. The game answers
+# that screen in two steps -- `select_bundle` then `confirm_bundle_selection` -- and the
+# emulator spends an action on each the same way.
+BUNDLE_CONFIRM_ACTION = 2
 
 NODE_NONE = 0
 NODE_NORMAL = 1

@@ -554,6 +554,21 @@ public sealed class RunEngine
 
                 break;
 
+            case RunPhase.BundleSelect:
+                for (int i = 0; i < BundleCount; i++)
+                {
+                    SetMask(mask, i);
+                }
+
+                // Confirm is only offered once something is highlighted, which is what
+                // the screen does -- its button is dead until a bundle is picked.
+                if (State.SelectedBundle >= 0)
+                {
+                    SetMask(mask, RunConstants.BundleConfirmAction);
+                }
+
+                break;
+
             case RunPhase.TransformSelect:
                 if (State.PendingOfferCards.Length > 0)
                 {
@@ -1058,6 +1073,11 @@ public sealed class RunEngine
             return StepCrystalSphere(action, out terminal);
         }
 
+        if (State.Phase == RunPhase.BundleSelect)
+        {
+            return StepBundleSelect(action, out terminal);
+        }
+
         if (State.Phase == RunPhase.Treasure)
         {
             if (action != RunConstants.RewardSkipAction)
@@ -1165,6 +1185,14 @@ public sealed class RunEngine
             RunRewardGenerator.OfferNextBonusRelic(State);
             State.NeowAwaitingProceed = true;
             State.Phase = RunPhase.RelicReward;
+            return;
+        }
+        if (followUp == RunFollowUp.BundleSelect)
+        {
+            // Neow stays on screen for its Proceed once the bundle is taken, the way it
+            // does after every other blessing.
+            State.NeowAwaitingProceed = true;
+            State.Phase = RunPhase.BundleSelect;
             return;
         }
         if (followUp == RunFollowUp.TransformSelect)
@@ -3675,6 +3703,56 @@ public sealed class RunEngine
         State.Phase = RunPhase.RelicReward;
         terminal = false;
         return 0;
+    }
+
+    /// <summary>How many bundles Scroll Boxes puts on the screen.</summary>
+    private const int BundleCount = 2;
+
+    /// <summary>Cards per bundle: two Commons and an Uncommon.</summary>
+    private const int BundleSize = 3;
+
+    /// <summary>
+    /// The choose-a-bundle screen, answered the way the game's is: highlight a bundle,
+    /// then confirm it. A capture spends one action on each, and re-selecting before
+    /// confirming just moves the highlight.
+    /// </summary>
+    private int StepBundleSelect(int action, out bool terminal)
+    {
+        terminal = false;
+        if (
+            action >= 0
+            && action < BundleCount
+            && State.BundleOffer.Length >= BundleSize * BundleCount
+        )
+        {
+            State.SelectedBundle = action;
+            return 0;
+        }
+
+        if (action != RunConstants.BundleConfirmAction || State.SelectedBundle < 0)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < BundleSize; i++)
+        {
+            RunNonCombatEffects.AddCardToDeck(
+                State,
+                new CardInstance(State.BundleOffer[State.SelectedBundle * BundleSize + i], false)
+            );
+        }
+
+        State.BundleOffer = [];
+        State.SelectedBundle = -1;
+
+        // A screen Neow opened returns to Neow, which stays up for one more Proceed.
+        if (State.NeowAwaitingProceed)
+        {
+            State.Phase = RunPhase.Ancient;
+            return 0;
+        }
+
+        return AdvanceAfterNode(out terminal);
     }
 
     private int StepTransformSelect(int action, out bool terminal)

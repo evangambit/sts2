@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1731 pass, ~3m)
+# C# unit tests (currently 1744 pass, ~3m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -849,6 +849,64 @@ Cage — and both are blocked on the same missing piece: `BeginDeckSelection`'s 
 path always returns to `RunPhase.Event`, so a selection opened from a shop or a relic
 pickup has nowhere correct to land. That return needs generalising the way E53 generalised
 the rewards screen's.
+
+### The last two blessings, and the first screen built from scratch
+
+Neow's Talisman and Scroll Boxes. That closes the seam: **all twenty-five blessings the
+screener knows about are now captured and replay clean**, so the next capture has to be
+chosen on some other axis — an act 2, an unwalked event, a fight nobody has lost yet.
+
+**The Talisman run found nothing to do with the Talisman.** Its fight against the Gremlin
+Merc paid no gold at all, because `GoldRewardForCurrentNode` returned a flat 0 for that
+encounter (E55). `GremlinMercNormal.CalculateGoldProportion` pays in FULL when nothing
+escaped, half when a Fat Gremlin escaped having stolen nothing, and nothing when one
+escaped with the loot — and this capture kills the gremlin and is paid 9 in full.
+
+**My first fix was worse than the bug, and the way it went wrong is the useful part.** I
+searched for an escape flag, found none, concluded "nothing escapes in the emulator", and
+deleted the case — which broke `WK1DEGZD8P`, `J09SPL8Y3V` and `NXV45HW43K` all at once,
+three traces that had been clean for days. The escape IS modelled: the Fat Gremlin's move
+sets its own `Hp = 0`, which is how the emulator takes anything out of a fight. So a
+gremlin that fled and one that was killed were the same state, and they owe the player
+opposite things. `EnemyState.Escaped` plus `CombatState.FatGremlinEscaped` and
+`MercGoldWasStolen` now distinguish them. **Absence of a flag is not absence of the
+behaviour** — and a special case with three green traces behind it is evidence about
+something, even when its stated reason is wrong.
+
+**Zero is not the same as nothing**: the missing gold was the visible half, and the missing
+DRAW was the expensive one, putting every rewards-stream value after that fight off by one
+and changing the card reward four steps later. A zero proportion genuinely skips the draw —
+`RewardsSet` guards the row behind `if (GoldProportion > 0f)` — which is exactly why the
+flat 0 survived so long. That is a third route to the same lesson as E48's short-circuit
+and the White Beast Statue comment in `CheckPotionRoll`: when a special case answers "none
+of this", check whether the general path would still have spent randomness saying it.
+
+**E56** was in the same fight: `HeistPower.BeforeDeath` calls `AddExtraReward(new
+GoldReward(Amount, wasGoldStolenBack: true))`, so the stolen gold is a row the player
+claims — the capture shows "80 Gold (stolen back)" beside the fight's ordinary 9. The
+emulator added it to the run's gold mid-combat, and only OUTSIDE the merc's own encounter,
+which is the one fight the power exists for.
+
+**E57 — Scroll Boxes needed a screen that did not exist.** `GenerateRandomBundles` draws
+six cards off `PlayerRng.Rewards` (two Commons and an Uncommon per bundle, all six distinct
+because the used set spans both) and `FromChooseABundleScreen` offers two bundles, of which
+the player takes one whole. This is the first screen modelled from scratch rather than
+reused, and it touches every layer, so it is the template for the next one:
+
+- `RunPhase.BundleSelect = 12`, plus `RunState.BundleOffer` (six ids, flat) and
+  `SelectedBundle`.
+- Answered in TWO actions the way the game's is — a capture spends one on `select_bundle`
+  and one on `confirm_bundle_selection` — so `RunConstants.BundleConfirmAction` and a mask
+  that only offers confirm once something is highlighted.
+- State list **18** in `RunNativeExports`, surfaced as `info["bundle_offer"]`, because an
+  agent choosing between bundles needs all six cards.
+- `PHASE_BUNDLE_SELECT` in `run_constants.py`, the two action names in `commands.py`, and
+  the `bundle_select` entry in the replay's `PHASE_STATE_TYPES`.
+- The Neow return every other blessing already had.
+
+The generation reproduced the capture's two bundles exactly on first contact, which is the
+part that would have been expensive to get wrong — worth writing the generator and probing
+it against the capture BEFORE building any of the screen around it.
 
 **H13: a divergence can be the harness declining to look.** The Stone Humidifier trace's
 only divergence was a Gas Bomb announcing `("DeathBlow", "8")`, which `_attack_intent` read
@@ -1722,7 +1780,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1731 pass
+dotnet test src/Sts2Emulator.Tests/        # 1744 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```

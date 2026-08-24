@@ -1158,14 +1158,15 @@ public static class CombatEngine
             }
             else if (
                 state.Enemies[i].DefId == KE.FatGremlin
-                && state.EncounterId != Run.RunConstants.GremlinMercEncounterId
+                && !state.Enemies[i].Escaped
                 && state.Enemies[i].HeistGold > 0
             )
             {
-                state.PlayerGold += Effects.RelicEffects.ModifyGoldGained(
-                    state.Relics,
-                    state.Enemies[i].HeistGold
-                );
+                // HeistPower.BeforeDeath adds an extra REWARD, and it does so in every
+                // encounter -- the merc's own fight was excluded here, which is the one
+                // fight the power exists for. ModifyGoldGained is applied when the row is
+                // claimed, the way it is for the fight's ordinary gold.
+                state.StolenBackGold += state.Enemies[i].HeistGold;
                 state.Enemies[i].HeistGold = 0;
             }
 
@@ -1361,6 +1362,10 @@ public static class CombatEngine
             state: state
         );
         fatGremlin.HeistGold = stolenGold;
+        // SurprisePower.AfterDeath marks the encounter only when the total taken is above
+        // zero, and the mark is what separates "escaped with nothing" (half gold) from
+        // "escaped with the loot" (none).
+        state.MercGoldWasStolen |= stolenGold > 0;
         state.Enemies.Add(Effects.RelicEffects.Spawned(state, fatGremlin));
     }
 

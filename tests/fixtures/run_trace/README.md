@@ -45,6 +45,8 @@ is.
 | `P14DQ9GNPW-a8-smallcapsule.json` | Overgrowth | 85 | clean — found E51: a relic granted where the game offers it on a screen |
 | `N11HWGCNUN-a8-newleaf.json` | Overgrowth | 106 | clean — found E50, the last blessing still riding the pre-`BeginDeckSelection` transform path |
 | `P5E6EWCMDW-a8-stonehumidifier.json` | Overgrowth | 91 | clean — the blessing itself (E52) was not modelled at all, and the trace's own divergence was H13: a Gas Bomb's DeathBlow intent, which the comparison had been declining to read |
+| `9V9WN98106-a8-neowstalisman.json` | Overgrowth | 129 | clean — the blessing was fine and the run was not. Found E55 (the Gremlin Merc's fight paying no gold, and skipping the DRAW for it) and E56 (stolen gold handed back mid-combat instead of claimed from the screen) |
+| `ZY1E5128P6-a8-scrollboxes.json` | Overgrowth | 112 | clean — the last of the twenty-five blessings, and the only one that needed a screen built from scratch (E57): `RunPhase.BundleSelect`, two bundles of three, answered with a select and then a confirm |
 
 Twenty of the twenty-one replay clean. Every capture taken after the set first went green
 has found something — thirteen defects and six harness gaps between them.
@@ -82,9 +84,10 @@ Most of the forced-option traces are not in it: `25TS4F5T37-leadpaperweight`,
 `XTLVVPKFBF-heftytablet`, `SAM9XS24LM-goldenpearl`, `J09SPL8Y3V-precisescissors`,
 `SAM9XS24LM-precariousshears`, `NXV45HW43K-cursedpearl`, `25TS4F5T37-leafypoultice` and
 `RRRR6WR3C4-pomander` each take a different blessing on a seed that already appears here,
-which is the point of them. Twelve blessings covered that no auto-played run would ever
-have reached, twenty-five in all. **Two the screener still finds uncaptured**: Neow's
-Talisman (`9V9WN98106 --neow-option 1`) and Scroll Boxes (`ZY1E5128P6 --neow-option 0`).
+which is the point of them. Fourteen blessings covered that no auto-played run would ever
+have reached. **All twenty-five the screener knows about are now captured and replay
+clean**, so the screener finds nothing new and the next capture has to be chosen on some
+other axis — an act 2, an unwalked event, a fight nobody has lost yet.
 
 | trace | Neow relic |
 | --- | --- |
@@ -108,6 +111,8 @@ Talisman (`9V9WN98106 --neow-option 1`) and Scroll Boxes (`ZY1E5128P6 --neow-opt
 | `P14DQ9GNPW` | Small Capsule |
 | `N11HWGCNUN` | New Leaf |
 | `P5E6EWCMDW` | Stone Humidifier |
+| `9V9WN98106` | Neow's Talisman |
+| `ZY1E5128P6` | Scroll Boxes |
 
 `QS2GYXRKWN-a0.json` was removed: it is an ascension-0 run, and the emulator models
 A8 only (`RunEngine.Reset` starts the player at 64/80), so it diverged from step 0

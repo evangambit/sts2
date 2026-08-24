@@ -31,6 +31,7 @@ from sts2_gym.run_env import (
     NODE_ELITE,
     NODE_NORMAL,
     PHASE_ANCIENT,
+    PHASE_BUNDLE_SELECT,
     PHASE_CARD_REWARD,
     PHASE_COMBAT,
     PHASE_COMPLETE,
@@ -44,6 +45,10 @@ from sts2_gym.run_env import (
 )
 
 COMBAT_STATES = {"monster", "elite", "boss"}
+# The intent types that announce DAMAGE. DeathBlowIntent derives from SingleAttackIntent
+# and reports its own name, so matching on "Attack" alone read a Gas Bomb as not
+# attacking at all.
+ATTACK_INTENTS = {"Attack", "DeathBlow"}
 DEFAULT_BOUNDARY_FIELDS = [
     "state_type",
     "run.floor",
@@ -68,6 +73,7 @@ PHASE_STATE_TYPES = {
     PHASE_SHOP: "shop",
     PHASE_TREASURE: "treasure",
     PHASE_TRANSFORM_SELECT: "card_select",
+    PHASE_BUNDLE_SELECT: "bundle_select",
 }
 COMBAT_NODE_STATE_TYPES = {
     NODE_NORMAL: "monster",
@@ -200,7 +206,6 @@ def _attack_intent(enemy: dict[str, Any]) -> int | None:
     emulator said 8 and the two disagreed about nothing. It carries real damage in the
     same label format, so it is compared like any other attack.
     """
-    ATTACK_INTENTS = {"Attack", "DeathBlow"}
     intents = enemy.get("intents")
     if intents is not None:
         # Reference side: a list of {type, label}, where a multi-hit reads "1x3".

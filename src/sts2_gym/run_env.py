@@ -32,6 +32,8 @@ PHASE_EVENT = constants.PHASE_EVENT
 PHASE_ANCIENT = constants.PHASE_ANCIENT
 PHASE_TRANSFORM_SELECT = constants.PHASE_TRANSFORM_SELECT
 PHASE_TREASURE = constants.PHASE_TREASURE
+PHASE_CRYSTAL_SPHERE = constants.PHASE_CRYSTAL_SPHERE
+PHASE_BUNDLE_SELECT = constants.PHASE_BUNDLE_SELECT
 
 NODE_NONE = constants.NODE_NONE
 NODE_NORMAL = constants.NODE_NORMAL
@@ -293,6 +295,8 @@ class Sts2RunEnv(gym.Env):
             # the click, a deck selection on a confirm after it -- so a replay has to know
             # which screen it is looking at.
             "offer_cards": native.run_state_list(self._run_handle, 17, 16),
+            # Scroll Boxes' two bundles, flat: three cards each.
+            "bundle_offer": native.run_state_list(self._run_handle, 18, 6),
             "potion_reward_odds": 0.4,
             "event_id": int(info_buf[9]),
             "map_choices": (

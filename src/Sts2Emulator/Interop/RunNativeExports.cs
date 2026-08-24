@@ -280,6 +280,10 @@ public static class RunNativeExports
             // whether an answer needs a confirm after it, and guessing from a screen
             // message is not the same as asking the run.
             17 => WriteIntArray(run.State.PendingOfferCards, output),
+            // 18: Scroll Boxes' bundles, flat -- bundle 0's three cards then bundle 1's.
+            // The screen offers a WHOLE bundle, so an agent needs all six to choose
+            // between them, and a replay needs them to map the live screen's indexes.
+            18 => WriteIntArray(run.State.BundleOffer, output),
             _ => -3,
         };
     }

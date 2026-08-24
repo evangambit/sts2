@@ -10,6 +10,7 @@ import numpy as np
 
 from . import native
 from .run_constants import (
+    BUNDLE_CONFIRM_ACTION,
     EVENT_SKIP_ACTION,
     MAP_CHOICES,
     PHASE_ANCIENT,
@@ -128,6 +129,12 @@ def translate_command(
     if action_name == "ChooseRestSiteOption":
         action_name = "choose_rest_site_option"
     phase = int(info["phase"])
+    # Scroll Boxes' bundle screen is answered in two actions, and the live capture spends
+    # one on each: `select_bundle` highlights, `confirm_bundle_selection` takes it.
+    if action_name == "select_bundle":
+        return int(command.get("index", 0))
+    if action_name == "confirm_bundle_selection":
+        return BUNDLE_CONFIRM_ACTION
     if phase != PHASE_TRANSFORM_SELECT:
         # The card-select screen is behind us, so nothing it held back is still live.
         clear_deferred_selection(env)

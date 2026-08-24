@@ -246,6 +246,15 @@ public sealed class RunState
     /// deck. A picked card leaves the offer, the way it leaves the game's grid.
     /// </summary>
     public int[] PendingOfferCards = [];
+
+    /// <summary>
+    /// Scroll Boxes' two bundles, three card ids each, flat: bundle 0 then bundle 1.
+    /// Empty when no bundle screen is up.
+    /// </summary>
+    public int[] BundleOffer = [];
+
+    /// <summary>The bundle the player has highlighted, or -1 for none yet.</summary>
+    public int SelectedBundle = -1;
     public int PendingOfferPicks;
 
     /// <summary>

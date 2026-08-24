@@ -33,15 +33,18 @@ rather than Overgrowth.
 
 None.
 
-All twenty-eight committed traces replay with no divergence on any compared field, and
-the two stand-in draw counts E30 left behind are gone.
+All thirty committed traces replay with no divergence on any compared field, the two
+stand-in draw counts E30 left behind are gone, and **every one of the twenty-five Neow
+blessings the screener knows about has now been captured and replayed**.
 
-That is a stronger statement than the last time this table was empty: eighteen of the
-twenty-eight were captured specifically to walk paths the others did not — most of them by
+That is a stronger statement than the last time this table was empty: twenty of the
+thirty were captured specifically to walk paths the others did not — most of them by
 screening seeds for a Neow blessing no committed trace had taken — and closing what they
-found took twenty-four engine fixes. It is still a statement about these twenty-eight runs,
-not about the emulator: the last seven captures were taken after the set had gone green
-and six of the seven found something. See the note under "Patterns" about what a green
+found took twenty-seven engine fixes. It is still a statement about these thirty runs,
+not about the emulator: the last nine captures were taken after the set had gone green and
+eight of the nine found something. The blessing seam is now exhausted, which means the next
+capture has to be chosen on some other axis — an act 2, an unwalked event, a fight nobody
+has lost yet. See the note under "Patterns" about what a green
 set does and does not measure.
 
 The two that stood here last are E22 to E26 below; E27 and E28 came out of reading the
@@ -121,6 +124,9 @@ that failed could not have.
 | E52 | (no capture) Stone Humidifier did nothing at all | read from `StoneHumidifier.cs` | `AfterRestSiteHeal` grants `MaxHpVar(5)`, and the relic had a constant in `RunConstants` and no implementation anywhere. It ignores the hook's `isMimicked` flag, so the event that heals you like a rest pays it too. |
 | E53 | `state_type` step 113: game `event`, emulator `map` | `RRRR6WR3C4-a8-pomander` | **An event that hands out rewards gets its result page back, and the SKIP path walked past that.** Every one of the four such events awaits `RewardsCmd.OfferCustom` and calls `SetEventFinished` on the line below, so the run spends one more Proceed than the emulator did. Neow already had this return; the reason nobody noticed the gap is that Neow's rewards are `WithSkippingDisallowed`, so the skip branch — which returned straight to the map from underneath both checks — was only ever reachable from an event. Whispering Hollow offers TWO potions and a run with a full belt declines the second, which is exactly the path that exposed it. Both exits share one `LeaveRewardScreen` now. |
 | E54 | (no capture) both options of two events belonged to other events | read from `FieldOfManSizedHoles.cs`, `SpiritGrafter.cs` | Found by chasing E44's closing note that four sites still called `RemoveLowestPriorityCard`. The removal was the least of it. **Field of Man-Sized Holes**: Resist is `FromDeckForRemoval` at CardsVar(**2**) followed by `AddCursesToDeck(Normality)` — two cards the player picks and a curse for them, against one card of the emulator's choosing and no curse. **Spirit Grafter**: LetItIn heals 25 and adds a Metamorphosis; Rejection is `FromDeckForUpgrade` and then 10 unblockable damage. The emulator removed a card and granted 3 max HP for the first, and transformed-then-upgraded the deck's first card for the second. Neither event's numbers appear anywhere in its own source. **Two sites still call `RemoveLowestPriorityCard`** — the shop's removal service and Empty Cage — and both need a return-phase concept the deck selection does not have yet, since its completion path always lands on `RunPhase.Event`. |
+| E55 | `player.gold` step 90: 151 live, 142 here | `9V9WN98106-a8-neowstalisman` | **The Gremlin Merc's fight paid no gold, because a flat 0 stood in for a rule.** `GremlinMercNormal.CalculateGoldProportion` pays in FULL when nothing escaped, half when a Fat Gremlin escaped having stolen nothing, and nothing when one escaped with the loot. The flat 0 was fitted to three traces that had all captured the escape, and this capture — which kills the gremlin — is paid 9 in full. **The first fix was worse than the bug**: reading "nothing escapes in the emulator" off the absence of an escape FLAG, when the escape is modelled by zeroing the gremlin's HP, broke all three of those traces at once. A Fat Gremlin that leaves and one that dies were indistinguishable, and they owe the player opposite things, so `EnemyState.Escaped` and `CombatState.FatGremlinEscaped`/`MercGoldWasStolen` now say which happened. Missing the gold was the visible half; missing the DRAW was the expensive one, and changed the card reward four steps later. A zero proportion really does skip the draw — `RewardsSet` guards the row behind `if (GoldProportion > 0f)` — which is why the flat 0 passed for as long as it did. |
+| E56 | (same trace) `state_type` step 91: game `rewards`, emulator `card_reward` | `9V9WN98106-a8-neowstalisman` | **Stolen gold came back mid-combat instead of on the screen.** `HeistPower.BeforeDeath` calls `combatRoom.AddExtraReward(new GoldReward(Amount, wasGoldStolenBack: true))` — the player CLAIMS it, and the capture shows it as its own row, "80 Gold (stolen back)", beside the fight's ordinary 9. The emulator added it straight to the run's gold, and only outside the merc's own encounter, which is the one fight the power exists for. |
+| E57 | `state_type` step 1: game `bundle_select`, emulator `event` | `ZY1E5128P6-a8-scrollboxes` | **Scroll Boxes needed a screen the emulator did not have.** `GenerateRandomBundles` draws six cards off `PlayerRng.Rewards` — two Commons and an Uncommon per bundle, all six distinct because the used set spans both — and `FromChooseABundleScreen` offers the two bundles, of which the player takes one WHOLE. The emulator granted three cards rolled off `Rng.UpFront`. This is the first screen modelled from scratch rather than reused: `RunPhase.BundleSelect`, answered in two actions the way the game's is (`select_bundle`, then `confirm_bundle_selection`), state list 18 so an agent can see all six cards, and the Neow return every other blessing already had. The generation reproduced the capture's two bundles exactly on first contact, which is the part that would have been expensive to get wrong. |
 
 
 
@@ -228,6 +234,15 @@ Barrier. The branch that dealt the damage should not get to decide which effects
 damage has — anything that answers a hit belongs in the helper that lands the hit, next
 to Thorns. When adding a `break` to a long `if` chain, the question is not "does my case
 work" but "what did I just exclude".
+
+**Zero is not the same as nothing.** E55 returned a flat 0 gold for one encounter, which
+was right about the amount for the case somebody had observed and wrong about the DRAW —
+the game rolls the reward and multiplies by a proportion, so the value is spent whatever
+the proportion is. That put every rewards-stream value after that fight off by one, and it
+surfaced four steps later as a different card. Whenever a special case answers "none of
+this", check whether the general path would still have consumed randomness on the way to
+saying the same thing. It is the same lesson as the short-circuit in E48 and the White
+Beast Statue comment in `CheckPotionRoll`, arrived at from a third direction.
 
 **The screen the effect opens is part of the effect.** Six blessings now (E43, E44, E49,
 E50, E51, and Neow's Bones in E42) turned out to be the same defect: the game asks the

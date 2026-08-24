@@ -190,6 +190,14 @@ public static class RunRewardGenerator
         bool hasPotionReward = CheckPotionRoll(state, state.PlayerRng.Rewards.NextDouble());
         ClearRewardScreen(state);
         state.RewardGold = GoldRewardForCurrentNode(state);
+        // A Heist's gold is its own row, claimed separately and shown after the fight's
+        // ordinary gold.
+        if (state.ActiveCombat?.StolenBackGold > 0)
+        {
+            state.PendingGoldRewards.Add(state.ActiveCombat.StolenBackGold);
+            state.ActiveCombat.StolenBackGold = 0;
+        }
+
         if (hasPotionReward)
         {
             state.RewardPotion = NextPotion(state, state.PlayerRng.Rewards);
@@ -896,13 +904,66 @@ public static class RunRewardGenerator
         GeneratedData.Relics.FindId("Circlet")
         ?? throw new InvalidOperationException("No relic named Circlet");
 
-    private static int GoldRewardForCurrentNode(RunState state)
+    /// <summary>
+    /// <c>ScrollBoxes.GenerateRandomBundles</c>: two bundles of two Commons and one
+    /// Uncommon, all six distinct, drawn from the character's pool on
+    /// <c>PlayerRng.Rewards</c>.
+    /// </summary>
+    /// <remarks>
+    /// Uniform odds with <c>NoRarityModification</c>, so there is no rarity roll and no
+    /// upgrade roll: the only draws are the six <c>NextItem</c> picks, in bundle order,
+    /// two Commons then the Uncommon. The <c>usedCardIds</c> set spans BOTH bundles, so
+    /// the second bundle draws from a pool three cards smaller. The 1% all-Claw bundle is
+    /// Defect's alone and its <c>NextInt(100)</c> sits behind a <c>flag &amp;&amp;</c> that
+    /// never runs for anyone else, so it costs no draw here.
+    /// </remarks>
+    public static int[][] GenerateScrollBoxBundles(RunState state)
     {
-        if (state.ActiveCombat?.EncounterId == RunConstants.GremlinMercEncounterId)
+        var rng = state.PlayerRng.Rewards;
+        var used = new List<int>();
+        var bundles = new int[2][];
+        for (int bundle = 0; bundle < 2; bundle++)
         {
-            return 0;
+            var cards = new int[3];
+            for (int card = 0; card < 2; card++)
+            {
+                cards[card] = rng.NextItem(BundleCandidates(used, RarityCommon));
+                used.Add(cards[card]);
+            }
+
+            cards[2] = rng.NextItem(BundleCandidates(used, RarityUncommon));
+            used.Add(cards[2]);
+            bundles[bundle] = cards;
         }
 
+        return bundles;
+    }
+
+    private static int[] BundleCandidates(List<int> used, int rarity) =>
+        IroncladRewardPool
+            .ToArray()
+            .Where(cardId =>
+                IsAllowedSolo(cardId) && RarityOf(cardId) == rarity && !used.Contains(cardId)
+            )
+            .ToArray();
+
+    /// <summary>
+    /// <c>RewardsSet</c>: <c>GoldReward(Encounter.MinGoldReward * GoldProportion,
+    /// Encounter.MaxGoldReward * GoldProportion)</c>. A monster room's 10-20 becomes 7-15
+    /// once A8's Poverty multiplier is applied, which is the range below.
+    /// </summary>
+    /// <remarks>
+    /// The Gremlin Merc encounter used to return a flat 0 here, which was right for the
+    /// runs it was fitted to and wrong about why. Its <c>CalculateGoldProportion</c> pays
+    /// in FULL when nothing escaped — `9V9WN98106` kills the fat gremlin and is paid 9 —
+    /// half when a gremlin escaped having stolen nothing, and nothing at all when one
+    /// escaped with the loot, which is what `WK1DEGZD8P`, `J09SPL8Y3V` and `NXV45HW43K`
+    /// each captured. A zero proportion means no reward and therefore **no draw**:
+    /// <c>RewardsSet</c> guards the whole row behind <c>if (GoldProportion > 0f)</c>, so a
+    /// run that rolls one anyway is off by a value for the rest of the act.
+    /// </remarks>
+    private static int GoldRewardForCurrentNode(RunState state)
+    {
         if (state.CurrentNodeType == RunConstants.NodeElite)
         {
             return state.PlayerRng.Rewards.NextInt(26, 34);
@@ -913,7 +974,36 @@ public static class RunRewardGenerator
             state.PlayerRng.Rewards.NextInt(100, 101);
             return 100;
         }
-        return state.PlayerRng.Rewards.NextInt(7, 16);
+
+        double proportion = CombatGoldProportion(state);
+        if (proportion <= 0)
+        {
+            return 0;
+        }
+
+        // Math.Round on the SCALED bounds, the way RewardsSet does it -- not a scaled roll.
+        int min = (int)Math.Round(7 * proportion, MidpointRounding.AwayFromZero);
+        int max = (int)Math.Round(15 * proportion, MidpointRounding.AwayFromZero);
+        return state.PlayerRng.Rewards.NextInt(min, max + 1);
+    }
+
+    /// <summary>
+    /// <c>CombatRoom.GoldProportion</c>. Every encounter is 1 except the Gremlin Merc's,
+    /// the only one that overrides <c>CalculateGoldProportion</c>.
+    /// </summary>
+    private static double CombatGoldProportion(RunState state)
+    {
+        var combat = state.ActiveCombat;
+        if (
+            combat is null
+            || combat.EncounterId != RunConstants.GremlinMercEncounterId
+            || !combat.FatGremlinEscaped
+        )
+        {
+            return 1;
+        }
+
+        return combat.MercGoldWasStolen ? 0 : 0.5;
     }
 
     /// <summary>The RegularEncounter rarity odds: rare, then uncommon.</summary>
