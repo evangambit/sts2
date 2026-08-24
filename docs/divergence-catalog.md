@@ -31,7 +31,13 @@ rather than Overgrowth.
 
 ## Open
 
-Nothing. All eighteen committed run traces replay with no divergence on any compared field,
+One, in a capture taken minutes ago.
+
+| # | Metric | Seed | What is known |
+| --- | --- | --- | --- |
+| O9 | `player.gold` step 111: 121 live, 101 here | `J09SPL8Y3V-a8-precisescissors` | Twenty gold, more than a hundred clean steps into the run. Nothing before it disagrees. |
+
+Twenty of the twenty-one committed traces replay with no divergence on any compared field,
 and the two stand-in draw counts E30 left behind are gone.
 
 That is a stronger statement than the last time this table was empty: six of the sixteen
@@ -105,6 +111,9 @@ that failed could not have.
 | E41 | `player.hand` step 87: seven cards and four energy live, five and three here | `L9R346P3YD` | **A range over an enum stopped being true.** `IsEliteEncounter` was `>= BygoneEffigy and <= WaterfallGiant`, which was correct when WaterfallGiant was the last name declared and silently wrong once `Architect` and `SkulkingColony` were appended after it — so a Skulking Colony elite did not read as one and Booming Conch never fired. The same range also swept in every boss, which the game excludes: BoomingConch asks for `RoomType.Elite`, and a boss room is `RoomType.Boss`. The six act-1 elites are named now. |
 | E42 | `state_type` step 1: game `rewards`, emulator `event` (was **O8**) | `J09SPL8Y3V` | **Neow's Bones was four things at once.** `AfterObtained` shuffles `GetValidRelics` on `PlayerRng.Rewards` and takes two, offers them as a `RewardsSet(...).WithSkippingDisallowed()` the player answers twice, and adds its curse only after. The emulator took two independent `Rng.UpFront.NextItem` draws and applied them on the spot: the wrong stream, a draw that can repeat itself where a shuffle-and-take cannot, no screen, and a candidate list of only the positives rather than all 26 valid Neow relics in `AllPossibleOptions` declaration order — which is load-bearing, because the shuffle is over that exact sequence. Two more fell out of building the screen: a relic claimed from a reward screen is obtained through `RelicCmd.Obtain` and so **runs its pickup effect** (the capture's Silken Tress zeroes the run's gold the moment it is taken), and the claim that EMPTIES the screen returns to Neow by itself, with no separate action, the way the card-reward path already did. |
 | E43 | `state_type` step 1: game `card_select`, emulator `event` | `25TS4F5T37` (Lead Paperweight), `XTLVVPKFBF` (Hefty Tablet) | **Both of E30's stand-in draw counts are gone, replaced by the screens they were standing in for.** Each relic offers cards on a `CardSelectCmd.FromChooseACardScreen` grid and the emulator granted one card off `Rng.UpFront` instead: Lead Paperweight offers TWO from the Colourless pool at `CardCreationSource.Other`/RegularEncounter odds (rarity, card, upgrade — three draws each, so **six**, exactly its old fudge), Hefty Tablet THREE from the owner's pool filtered to Rare at Uniform odds with `NoUpgradeRoll` (one draw each, so **three**, exactly its old fudge). That the counts matched is why nothing downstream moved when they were replaced — the fudges were right about the arithmetic and wrong about everything else. Hefty Tablet's Injury also arrives WITH the card the grid hands over, not before it: `CardPileCmd.Add` takes one list holding the curse with the chosen card inserted at its front, and the capture shows both land in the same snapshot. |
+| E44 | `state_type` step 1: game `card_select`, emulator `event` | `J09SPL8Y3V-a8-precisescissors`, `SAM9XS24LM-a8-precariousshears` | **Precise Scissors and Precarious Shears chose the card for the player.** Both are `CardSelectCmd.FromDeckForRemoval` — CardsVar(1) and CardsVar(2), the second followed by DamageVar(16) — and the emulator called `RemoveLowestPriorityCard`, whose priority list starts with the curse placeholder: **Ascender's Bane**, which `IsRemovable` excludes outright, so it removed a card the game will not even offer. `BeginDeckSelection` already models this (Luminous Choir's comment says why: "the emulator choosing for them, which is the whole cost of the option"), including the count and the follow-up HP loss. Precarious Shears also took its 16 damage BEFORE the removal rather than after. **Four other sites still call `RemoveLowestPriorityCard`** and are the same defect waiting for a capture. |
+| E45 | (same fix) a Neow selection left a flag set for the rest of the run | `J09SPL8Y3V-a8-precisescissors` | A selection Neow opens must return to Neow, which stays up for one more Proceed — and the deck-selection completion path did not, so `NeowAwaitingProceed` stayed set forever. That is worse than landing on the wrong screen once: the flag is read again by the NEXT card reward the run claims, so a combat's reward screen went back to the ancient two floors later. Caught because the divergence moved from step 1 to step 25 rather than disappearing. |
+
 
 
 
@@ -132,6 +141,8 @@ They are catalogued because each one cost more than the engine bug it concealed.
 | H9 | The abandon crash wedged the game, and the harness blamed the clock | `SaveManager.DeleteCurrentRun` deletes `current_run.save.backup` unconditionally and `CloudSaveStore.DeleteFile` THROWS when it is absent. The exception escapes `NAbandonRunConfirmPopup.OnYesButtonPressed` half way through: the run is gone from disk but the main menu never finishes coming back, reporting `menu_screen: main` with no enabled buttons, forever. Every capture after that dies on "Timed out waiting for menu screen 'main'" — a message that had already sent one investigation after the lobby instead of the state it names (see HANDOFF's embark notes). The workaround was known and written down as a manual step, which is exactly how it stayed a gotcha; `ensure_run_save_backup()` now does it before every abandon. `wait_for_menu` also went from 10s to 60s, because an abandon that saves and then preloads 126 assets does not reliably fit in ten. |
 | H10 | An unbounded "proceed until the map" loop turned a divergence into a hang | `commands.py` walked `while phase != PHASE_MAP`, posting a proceed each time. When the emulator sat on a screen the reference had already left, the proceed changed nothing, the loop posted it again, and the replay spun at 99% CPU forever — reading for all the world like a hang in the ENGINE, which is where the first hour of looking went. It is bounded now, and gives up when a proceed does not change the phase, so the caller reports the mismatch it actually has. Same lesson as H8: a harness that cannot make progress must say so rather than keep trying. |
 | H11 | Every card-select screen was assumed to be the toggling kind | A card-select phase is TWO screens wearing one name. An offer grid (`FromChooseACardScreen`) resolves on the click — the game says "Choosing card: X" and leaves — while a selection over the DECK toggles and waits for a confirm. The replay only ever modelled the second, because **no committed trace had ever replayed a grid**: Brain Leech and Room Full of Cheese roll them, and no capture had reached either. So the answer was deferred waiting for a confirm that never came, and the emulator sat on the screen while the reference walked on. It asks the run which screen is open now (state list 17, run API v16) rather than reading the mod's message text — the same reason target ids are resolved against the emulator's own roster instead of being parsed out of a name. |
+| H12 | Neither side of the harness could answer a screen wanting TWO cards | The capture policy picks a card by priority and the screen reports **no selection state at all** — its cards carry an index and nothing to say one is already ticked. So a two-card screen picked the same card every time, toggling it on and off; and because a toggle DOES change the snapshot, the settle-wait never timed out and the capture hung outright rather than failing. The replay had the mirror of it: `select_card` held one deferred index and "a later toggle replaces an earlier one", so a two-card answer applied one card. Both now track the set. The replay applies them **highest index first**, because a removal takes its card out of the deck as it goes and a lower index applied first shifts every index above it. Precarious Shears ("Choose 2 cards to Remove") is the first blessing that asks for two, which is why neither gap had ever been met. |
+
 
 
 
@@ -179,6 +190,13 @@ sat correct for as long as nobody appended to the enum, and then went quietly wr
 not with an error, but by answering "no" for one elite out of six. Anything shaped like
 `>= First and <= Last` over a list other people extend wants to be an explicit set, and
 the test wants to name every member rather than sample one.
+
+**A capture is evidence only up to the point the game stopped behaving.** The Precarious
+Shears run wedged partway through, and its last three steps record a `monster` state with
+an empty enemy list and a Burning Blood heal already applied — a broken game, not ground
+truth, and the emulator was right where the "reference" was wrong. It is committed cut to
+its trustworthy prefix. Read the tail of any capture whose run did not end cleanly before
+believing a divergence in it.
 
 **A green fixture set measures the fixtures, not the emulator.** The nine traces went
 clean, and the tenth — taken for no reason except that it would hold a relic none of them

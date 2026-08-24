@@ -1169,6 +1169,9 @@ public sealed class RunEngine
         }
         if (followUp == RunFollowUp.TransformSelect)
         {
+            // Neow stays on screen for its Proceed once the selection is answered, the way
+            // it does after every other blessing.
+            State.NeowAwaitingProceed = true;
             State.Phase = RunPhase.TransformSelect;
             return;
         }
@@ -3608,6 +3611,17 @@ public sealed class RunEngine
             RunNonCombatEffects.ResolveDeckSelectionFollowUp(State);
             bool returnsToEvent = State.PendingSelectionReturnsToEvent;
             RunNonCombatEffects.ClearDeckSelection(State);
+
+            // A selection NEOW opened returns to Neow, which stays up for one more
+            // Proceed. Leaving the flag set instead is worse than landing on the wrong
+            // screen once: it is read again by the next card reward the run claims, which
+            // sends a combat's reward screen back to the ancient floors later.
+            if (State.NeowAwaitingProceed)
+            {
+                State.Phase = RunPhase.Ancient;
+                return 0;
+            }
+
             // Most selections finish the event that opened them; the belt's Jelly Liver
             // does not, because the belt turns and offers the next dish.
             if (!returnsToEvent)

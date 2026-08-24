@@ -35,9 +35,12 @@ is.
 | `J09SPL8Y3V-a8.json` | Overgrowth | 190 | clean — the longest trace here, and it was blocked at step 1 until Neow's Bones was modelled properly (E42) |
 | `25TS4F5T37-a8-leadpaperweight.json` | Overgrowth | 100 | clean — the SAME seed as `25TS4F5T37-a8.json`, captured with `--neow-option 1` to take a blessing the auto-player will never pick. Settled half of E30's debt (E43) |
 | `XTLVVPKFBF-a8-heftytablet.json` | Overgrowth | 148 | clean — likewise `--neow-option 2` on the seed of `XTLVVPKFBF-a8.json`. Settled the other half, and found H11 on the way |
+| `SAM9XS24LM-a8-goldenpearl.json` | Overgrowth | 118 | clean on first contact — Golden Pearl's 150 gold was already right |
+| `J09SPL8Y3V-a8-precisescissors.json` | Overgrowth | 112 | **diverges** at step 111 on 20 gold (O9), after finding E44 and E45 |
+| `SAM9XS24LM-a8-precariousshears.json` | Overgrowth | 25 | clean — **cut to its trustworthy prefix**: the game wedged mid-run and steps 26-28 record a broken game rather than ground truth. Found E44 and H12 |
 
-All sixteen replay clean. The six newest were captured after the set had last gone green,
-and every one of them found something — ten defects between them.
+Twenty of the twenty-one replay clean. Every capture taken after the set first went green
+has found something — thirteen defects and six harness gaps between them.
 
 `1UL0BRX8WC` is the pattern. It was taken specifically because the nine before it held
 only nine of Neow's relics between them; it drew a tenth, Phial Holster, and diverged on

@@ -265,8 +265,14 @@ public static class RunNonCombatEffects
                 );
                 break;
             case RunConstants.RelicPreciseScissors:
-                RemoveLowestPriorityCard(state);
-                break;
+                // CardsVar(1) through CardSelectCmd.FromDeckForRemoval -- the PLAYER picks
+                // which card goes, and picking is the whole of the blessing.
+                // RemoveLowestPriorityCard was the emulator choosing instead, and choosing
+                // badly: its priority list starts with the curse placeholder, which is
+                // Ascender's Bane, a card the game will not even offer for removal.
+                return BeginDeckSelection(state, DeckSelection.Remove, 0, count: 1)
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
             case RunConstants.RelicScrollBoxes:
                 AddRandomRewardCard(state, state.Rng.UpFront);
                 AddRandomRewardCard(state, state.Rng.UpFront);
@@ -279,10 +285,18 @@ public static class RunNonCombatEffects
                 TransformFirstCardMatching(state, 131);
                 break;
             case RunConstants.RelicPrecariousShears:
-                RemoveLowestPriorityCard(state);
-                RemoveLowestPriorityCard(state);
-                state.PlayerHp = Math.Max(0, state.PlayerHp - 16);
-                break;
+                // CardsVar(2) through the same removal screen, then DamageVar(16). The
+                // damage is owed only once the cards are gone, which BeginDeckSelection's
+                // follow-up already models -- the same shape Luminous Choir uses.
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Remove,
+                    0,
+                    count: 2,
+                    followUpHpLoss: 16
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
             case RunConstants.RelicSilkenTress:
                 state.Gold = 0;
                 break;

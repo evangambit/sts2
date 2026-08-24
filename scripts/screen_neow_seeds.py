@@ -58,6 +58,17 @@ def neow_options(seed: str, names: dict[int, str]) -> list[str]:
         env.close()
 
 
+def squash(name: str) -> str:
+    """Reduce a relic name to letters and digits, for comparing across spellings.
+
+    The traces record a blessing by its DISPLAY name ("Neow's Bones") and the generated
+    table by its class name ("NeowsBones"). Stripping spaces alone leaves the apostrophe,
+    so both Neow relics read as uncaptured however many times they had been taken -- which
+    is a screener that sends you to re-capture ground you already hold.
+    """
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
 def captured_relics() -> set[str]:
     """Which blessings the committed traces actually TOOK, by their own record."""
     taken: set[str] = set()
@@ -66,7 +77,7 @@ def captured_relics() -> set[str]:
         for step in trace[:4]:
             message = (step.get("post_result") or {}).get("message") or ""
             if "event option" in message:
-                taken.add(message.split(": ", 1)[-1].replace(" ", ""))
+                taken.add(squash(message.split(": ", 1)[-1]))
                 break
     return taken
 
@@ -92,7 +103,7 @@ def main() -> None:
     wanted = set(args.want.split(",")) if args.want else None
     covered = captured_relics()
     if wanted is None:
-        print(f"already captured: {sorted(covered) or '(none)'}\n")
+        print(f"already captured ({len(covered)}): {sorted(covered) or '(none)'}\n")
 
     rng = random.Random(args.random_seed)  # noqa: S311 - picking test seeds, not crypto
     fresh_seen: set[str] = set()
@@ -103,12 +114,16 @@ def main() -> None:
         seed = "".join(rng.choice(SEED_ALPHABET) for _ in range(SEED_LENGTH))
         offered = neow_options(seed, names)
         if wanted is not None:
-            fresh = [r for r in offered if r in wanted]
+            fresh = [r for r in offered if squash(r) in {squash(w) for w in wanted}]
         else:
-            fresh = [r for r in offered if r not in covered and r not in fresh_seen]
+            fresh = [
+                r
+                for r in offered
+                if squash(r) not in covered and squash(r) not in fresh_seen
+            ]
         if not fresh:
             continue
-        fresh_seen.update(fresh)
+        fresh_seen.update(squash(r) for r in fresh)
         found += 1
         picks = ", ".join(
             f"--neow-option {i} -> {relic}" for i, relic in enumerate(offered)

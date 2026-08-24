@@ -82,6 +82,23 @@ def execute_command(
             return reward, terminated, truncated, obs, info
         action = translated_action
 
+    # A confirm that answers a MULTI-card selection is several emulator actions: the
+    # translate above returned the first (the highest index), and the rest follow here in
+    # descending order so no removal shifts one that has not been applied yet.
+    if (
+        command is not None
+        and command.get("action") == "confirm_selection"
+        and int(info["phase"]) == PHASE_TRANSFORM_SELECT
+    ):
+        held = peek_deferred_selection(env)
+        if held is not None and len(held) > 1:
+            for card_action in sorted(held, reverse=True):
+                obs, reward, terminated, truncated, info = env.step(card_action)
+                if terminated or truncated:
+                    break
+            clear_deferred_selection(env)
+            return reward, terminated, truncated, obs, info
+
     target = (
         translate_target(command, target_map, reference_step)
         if int(info["phase"]) == PHASE_COMBAT
@@ -304,7 +321,13 @@ def translate_command(
     if action_name == "confirm_selection":
         if phase == PHASE_TRANSFORM_SELECT:
             deferred = peek_deferred_selection(env)
-            return REWARD_SKIP_ACTION if deferred is None else deferred
+            if deferred is None:
+                return REWARD_SKIP_ACTION
+            # Highest index first. The emulator answers a selection one card at a time and
+            # a removal takes the card out of the deck as it goes, so applying the lower
+            # index first shifts every index above it and the second answer names a
+            # different card. execute_command steps the rest.
+            return max(deferred)
         return None
 
     raise UnsupportedCommandError(
@@ -662,11 +685,24 @@ _DEFERRED_SELECTION_ATTR = "_sts2_deferred_card_selection"
 
 
 def set_deferred_selection(env: Any, action: int) -> None:
-    setattr(env, _DEFERRED_SELECTION_ATTR, int(action))
+    """Toggle one card into or out of the held-back selection.
+
+    A screen may want more than one card -- Precarious Shears asks for two -- and the game
+    toggles them one at a time before a single confirm. Holding only the LAST one, which
+    is what this used to do, quietly answered a two-card screen with one card. Clicking
+    the same card twice still unticks it, which is why this toggles rather than appends.
+    """
+    held = list(getattr(env, _DEFERRED_SELECTION_ATTR, None) or [])
+    value = int(action)
+    if value in held:
+        held.remove(value)
+    else:
+        held.append(value)
+    setattr(env, _DEFERRED_SELECTION_ATTR, held)
 
 
-def peek_deferred_selection(env: Any | None) -> int | None:
-    """Return the held-back action, without consuming it.
+def peek_deferred_selection(env: Any | None) -> list[int] | None:
+    """Return the held-back actions, without consuming them.
 
     Callers translate the same command more than once -- the replay asks whether a
     command is supported before executing it -- so reading this must not change it.
@@ -674,12 +710,12 @@ def peek_deferred_selection(env: Any | None) -> int | None:
     """
     if env is None:
         return None
-    return getattr(env, _DEFERRED_SELECTION_ATTR, None)
+    return getattr(env, _DEFERRED_SELECTION_ATTR, None) or None
 
 
 def clear_deferred_selection(env: Any | None) -> None:
-    if env is not None and getattr(env, _DEFERRED_SELECTION_ATTR, None) is not None:
-        setattr(env, _DEFERRED_SELECTION_ATTR, None)
+    if env is not None and getattr(env, _DEFERRED_SELECTION_ATTR, None):
+        setattr(env, _DEFERRED_SELECTION_ATTR, [])
 
 
 # Backwards-compatible aliases while trace tooling migrates to command terminology.

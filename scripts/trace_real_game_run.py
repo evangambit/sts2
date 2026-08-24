@@ -267,8 +267,12 @@ def choose_action(
     state: dict[str, Any],
     map_index: int,
     neow_option: int | None = None,
+    chosen_cards: set[int] | None = None,
 ) -> dict[str, Any] | None:
     state_type = state.get("state_type")
+    if state_type != "card_select" and chosen_cards is not None:
+        # Left the screen, so the memory of what was ticked on it goes with it.
+        chosen_cards.clear()
     if state_type in COMBAT_STATES:
         return choose_combat_action(state)
     if state_type == "event":
@@ -284,7 +288,7 @@ def choose_action(
     if state_type in {"rest", "rest_site"}:
         return choose_rest_action(state)
     if state_type == "card_select":
-        return choose_card_select_action(state)
+        return choose_card_select_action(state, chosen_cards)
     if state_type == "bundle_select":
         return choose_bundle_select_action(state)
     if state_type == "card_reward":
@@ -613,10 +617,24 @@ def node_type_score(node_type: str, *, low_hp: bool) -> int:
     return 0
 
 
-def choose_card_select_action(state: dict[str, Any]) -> dict[str, Any]:
+def choose_card_select_action(
+    state: dict[str, Any],
+    already_chosen: set[int] | None = None,
+) -> dict[str, Any]:
+    """Answer a card-select screen, one toggle per call.
+
+    The screen reports no selection state at all -- its cards carry an index and nothing
+    to say whether one is already ticked -- so the caller has to remember what it has
+    toggled. Without that, a screen asking for more than ONE card picks the same card by
+    the same priority every time, toggling it on and off forever; and because a toggle
+    does change the snapshot, the settle-wait never times out and the capture hangs rather
+    than failing. Precarious Shears ("Choose 2 cards to Remove") is the first blessing that
+    asks for two, which is why no capture had ever met this.
+    """
     card_select = state.get("card_select") or {}
     if card_select.get("can_confirm"):
         return {"action": "confirm_selection"}
+    chosen = already_chosen if already_chosen is not None else set()
     cards = card_select.get("cards") or []
     prompt = str(card_select.get("prompt") or "").lower()
     priority = (
@@ -628,11 +646,13 @@ def choose_card_select_action(state: dict[str, Any]) -> dict[str, Any]:
         for card in cards:
             if not isinstance(card, dict):
                 continue
+            index = card.get("index")
+            if not isinstance(index, int) or index in chosen:
+                continue
             card_text = f"{card.get('id') or ''} {card.get('name') or ''}".lower()
             if wanted in card_text:
-                index = card.get("index")
-                if isinstance(index, int):
-                    return {"action": "select_card", "index": index}
+                chosen.add(index)
+                return {"action": "select_card", "index": index}
     return {"action": "confirm_selection"}
 
 
@@ -810,11 +830,14 @@ def capture_run(
     state = wait_for_actionable_state(base_url)
     trace: list[dict[str, Any]] = []
     skipped = 0
+    # Which card indices have been ticked on the card-select screen currently open. The
+    # screen does not report its own selection, so this is the only record of it.
+    chosen_cards: set[int] = set()
     append_snapshot(trace, 0, None, None, state)
 
     for step in range(1, max_steps + 1):
         payload = (
-            choose_action(state, map_index, neow_option)
+            choose_action(state, map_index, neow_option, chosen_cards)
             if scripted_actions is None
             else next_scripted_action(scripted_actions, step)
         )
@@ -838,7 +861,7 @@ def capture_run(
             # was wrong, so a scripted run re-posts the same action rather than picking
             # a new one -- picking again would walk a different run.
             retry = (
-                choose_action(state, map_index, neow_option)
+                choose_action(state, map_index, neow_option, chosen_cards)
                 if scripted_actions is None
                 else payload
             )

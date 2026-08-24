@@ -141,6 +141,74 @@ class NeowOptionTests(unittest.TestCase):
         self.assertEqual(0, action["index"])
 
 
+def card_select(prompt: str, count: int, can_confirm: bool = False) -> dict:
+    """Build a card-select screen holding `count` Strikes and no selection state."""
+    return {
+        "state_type": "card_select",
+        "run": {"act": 1, "floor": 1, "ascension": 8},
+        "card_select": {
+            "prompt": prompt,
+            "can_confirm": can_confirm,
+            "cards": [
+                {"id": "STRIKE_IRONCLAD", "name": "Strike", "index": i}
+                for i in range(count)
+            ],
+        },
+    }
+
+
+class CardSelectMemoryTests(unittest.TestCase):
+    """A card-select screen reports no selection state, so the caller has to remember.
+
+    Its cards carry an index and nothing to say whether one is already ticked. A screen
+    asking for more than ONE card therefore picks the same card by the same priority every
+    time, toggling it on and off forever -- and because a toggle DOES change the snapshot,
+    the settle-wait never times out, so the capture hangs rather than failing. Precarious
+    Shears ("Choose 2 cards to Remove") is the first blessing that asks for two, which is
+    why no capture had ever met this.
+    """
+
+    def test_a_second_call_picks_a_different_card(self):
+        chosen: set[int] = set()
+        state = card_select("Choose 2 cards to Remove.", 5)
+
+        first = trace_real_game_run.choose_card_select_action(state, chosen)
+        second = trace_real_game_run.choose_card_select_action(state, chosen)
+
+        self.assertEqual("select_card", first["action"])
+        self.assertEqual("select_card", second["action"])
+        self.assertNotEqual(first["index"], second["index"])
+
+    def test_it_confirms_once_the_screen_says_it_can(self):
+        chosen = {0, 1}
+        state = card_select("Choose 2 cards to Remove.", 5, can_confirm=True)
+
+        action = trace_real_game_run.choose_card_select_action(state, chosen)
+
+        self.assertEqual({"action": "confirm_selection"}, action)
+
+    def test_it_gives_up_rather_than_repeating_when_every_card_is_taken(self):
+        """With nothing left to tick it confirms, instead of re-toggling forever."""
+        chosen = {0, 1}
+        state = card_select("Choose 2 cards to Remove.", 2)
+
+        action = trace_real_game_run.choose_card_select_action(state, chosen)
+
+        self.assertEqual({"action": "confirm_selection"}, action)
+
+    def test_leaving_the_screen_forgets_what_was_ticked(self):
+        chosen = {0, 1}
+
+        trace_real_game_run.choose_action(
+            {"state_type": "map", "run": {"act": 1, "floor": 1}},
+            0,
+            None,
+            chosen,
+        )
+
+        self.assertEqual(set(), chosen)
+
+
 class ScriptedActionTests(unittest.TestCase):
     def test_recorded_actions_keeps_order_and_drops_the_opening_snapshot(self):
         fixture = (
