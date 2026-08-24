@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1805 pass, ~2m)
+# C# unit tests (currently 1813 pass, ~2m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -1995,7 +1995,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1805 pass
+dotnet test src/Sts2Emulator.Tests/        # 1813 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```

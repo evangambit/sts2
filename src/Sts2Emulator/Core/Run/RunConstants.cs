@@ -382,6 +382,15 @@ public static class RunConstants
     public static ReadOnlySpan<int> OrobasPool1 => [71, 101, 229];
     public static ReadOnlySpan<int> OrobasPool2 => [2, 68, 211];
     public static ReadOnlySpan<int> OrobasPool3 => [268, 6];
+
+    // The ancients' blessings that DO something when taken.
+    public const int RelicSandCastle = 229;
+    public const int RelicAlchemicalCoffer = 2;
+    public const int RelicPaelsHorn = 180;
+    public const int RelicYummyCookie = 296;
+    public const int RelicBiiigHug = 17;
+    public const int RelicStorybook = 251;
+
     public const int RelicPrismaticGemOption = 208;
     public const int RelicSeaGlass = 232;
 

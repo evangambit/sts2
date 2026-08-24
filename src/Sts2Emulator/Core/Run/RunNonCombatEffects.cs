@@ -280,6 +280,51 @@ public static class RunNonCombatEffects
                     RunRewardGenerator.NextPotion(state, state.Rng.CombatPotionGeneration)
                 );
                 break;
+            // ---- the act ancients' blessings -------------------------------------
+            case RunConstants.RelicPaelsHorn:
+                // Two Relax into the deck. The one ancient blessing a live capture pins:
+                // `ACT2TEST01` takes it and comes away with two.
+                AddCardToDeck(state, new CardInstance(NamedCard("Relax"), Upgraded: false));
+                AddCardToDeck(state, new CardInstance(NamedCard("Relax"), Upgraded: false));
+                break;
+            case RunConstants.RelicStorybook:
+                AddCardToDeck(
+                    state,
+                    new CardInstance(NamedCard("BrightestFlame"), Upgraded: false)
+                );
+                break;
+            case RunConstants.RelicSandCastle:
+                // CardsVar(6), StableShuffled on Rng.NICHE -- not the event's own stream
+                // and not UpFront. Same shape as Doors of Light and Dark's light door,
+                // which is worth knowing because that one taught the lesson twice: sort
+                // by ModelId before shuffling, and only upgradable cards are candidates.
+                UpgradeRandomCards(state, 6, state.Rng.Niche);
+                break;
+            case RunConstants.RelicAlchemicalCoffer:
+                // PotionSlots(4): GainMaxPotionCount FIRST so all four potions have
+                // somewhere to go, then four rolled off CombatPotionGeneration. Phial
+                // Holster is the same shape, and the stream is the point -- rolling these
+                // off PlayerRng.Rewards would move every card reward after it.
+                state.MaxPotionSlots += 4;
+                for (int i = 0; i < 4; i++)
+                {
+                    RunRewardGenerator.AddPotion(
+                        state,
+                        RunRewardGenerator.NextPotion(state, state.Rng.CombatPotionGeneration)
+                    );
+                }
+
+                break;
+            case RunConstants.RelicYummyCookie:
+                // CardsVar(4) through FromDeckForUpgrade: four cards the PLAYER picks.
+                return BeginDeckSelection(state, DeckSelection.Upgrade, 0, count: 4)
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+            case RunConstants.RelicBiiigHug:
+                // CardsVar(4) through FromDeckForRemoval.
+                return BeginDeckSelection(state, DeckSelection.Remove, 0, count: 4)
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
             case RunConstants.RelicPreciseScissors:
                 // CardsVar(1) through CardSelectCmd.FromDeckForRemoval -- the PLAYER picks
                 // which card goes, and picking is the whole of the blessing.
@@ -1935,6 +1980,33 @@ public static class RunNonCombatEffects
     /// ordinal string; sorting by the emulator's own numeric ids puts a different card
     /// under the same draw. A live capture upgraded Whirlwind where this took Shrug It Off.
     /// </remarks>
+    /// <summary>
+    /// <c>Deck.Where(IsUpgradable).StableShuffle(rng).Take(count)</c>, upgraded.
+    /// </summary>
+    /// <remarks>
+    /// The two things that matter are the STREAM, which differs per caller, and the sort:
+    /// <c>StableShuffle</c> orders by ModelId — the slugified class name, compared
+    /// ordinally — before it shuffles, so sorting by the emulator's own numeric ids puts a
+    /// different card under the same draw. Both were wrong in the Light Door once (E40).
+    /// </remarks>
+    public static void UpgradeRandomCards(RunState state, int count, GameRng rng)
+    {
+        var indexes = state
+            .Deck.Select((card, index) => (card, index))
+            .Where(item => RunConstants.IsRunCardUpgradable(item.card))
+            .Select(item => item.index)
+            .OrderBy(
+                index => GeneratedData.Cards.Get(state.Deck[index].DefId).Entry,
+                StringComparer.Ordinal
+            )
+            .ToList();
+        rng.Shuffle(indexes);
+        foreach (int index in indexes.Take(count))
+        {
+            state.Deck[index] = state.Deck[index] with { Upgraded = true };
+        }
+    }
+
     public static void UpgradeTwoRandomCardsForLightDoor(RunState state)
     {
         var indexes = state
