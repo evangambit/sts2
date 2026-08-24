@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1761 pass, ~2m)
+# C# unit tests (currently 1767 pass, ~2m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -849,6 +849,45 @@ Cage — and both are blocked on the same missing piece: `BeginDeckSelection`'s 
 path always returns to `RunPhase.Event`, so a selection opened from a shop or a relic
 pickup has nowhere correct to land. That return needs generalising the way E53 generalised
 the rewards screen's.
+
+### Reaching act 2 without playing act 1
+
+**The testing problem, before the fix.** Every act-2 data point cost a heavily buffed run
+that had to WIN act 1 — six minutes, and the boss fight can lose. That is not a loop you
+can iterate on, and act 2 has never been compared against the game at all, so there will
+be a lot to iterate on.
+
+**`debug_enter_next_act`.** The mod calls `RunManager.EnterNextAct()`, which is exactly
+what proceeding from the boss reward calls — so this is the real transition, not a
+shortcut around it. What it skips is having to win the act. The emulator mirrors it with
+`Sts2Run_DebugEnterNextAct`, and **both routes go through the one
+`RunEngine.EnterNextAct`**, so the shortcut cannot drift from the thing it stands in for.
+
+```bash
+# an act 2 capture, no act 1 required
+uv run python scripts/trace_real_game_run.py SEED --ascension 8 --abandon-existing \
+    --buff-max-hp 200 --upgrade-deck --enter-acts 1 --max-steps 200 \
+    --format compact --output act2.json
+```
+
+`--enter-acts N` is spent AFTER the buffs, so the run arrives in act 2 already buffed. The
+capture records it as an ordinary step and the replay applies the same jump to the
+emulator, the same way the buffs work.
+
+**The transition itself** (`RunMapGenerator.AdvanceToNextAct`, from `SetActInternal`):
+move `CurrentActIndex`, clear the visited coords, **reset the unknown-map-point odds** —
+they climb as a run walks question marks and start each act fresh — and generate the map
+off `act_{index + 1}_map`. Two things are deliberately NOT there: the floor does not reset
+(a live capture crosses into act 2 still on floor 17), and the rooms are not generated,
+because every act's were rolled at run start. `AdvanceAfterRelicReward` now ends the RUN
+only in the last act.
+
+**First thing act 2 found, in seconds:** its map opens with a single **Ancient** node —
+the capture travels to it and is offered Pael's Horn, one of Hive's three ancients — where
+the emulator's act-2 map row 0 holds monsters. Act 1's Neow is a PHASE at run start, not a
+map node, so this is a different shape and is the next thing to model. `ActModel.GenerateRooms`
+ends with `Ancient = rng.NextItem(GetUnlockedAncients().Concat(sharedAncientSubset))`; the
+emulator spends that draw but throws the result away.
 
 ### Act 2, phase A: every act's rooms are generated now
 
@@ -1888,7 +1927,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1761 pass
+dotnet test src/Sts2Emulator.Tests/        # 1767 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```

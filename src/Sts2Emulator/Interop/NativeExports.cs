@@ -747,6 +747,10 @@ public static class NativeExports
     public static unsafe int Sts2Run_DebugGainMaxHp(int handle, int amount, int* obsBuf) =>
         RunNativeExports.Sts2Run_DebugGainMaxHp(handle, amount, obsBuf);
 
+    [UnmanagedCallersOnly(EntryPoint = "Sts2Run_DebugEnterNextAct")]
+    public static unsafe int Sts2Run_DebugEnterNextAct(int handle, int* obsBuf) =>
+        RunNativeExports.Sts2Run_DebugEnterNextAct(handle, obsBuf);
+
     [UnmanagedCallersOnly(EntryPoint = "Sts2Run_DebugUpgradeDeck")]
     public static unsafe int Sts2Run_DebugUpgradeDeck(int handle, int* obsBuf) =>
         RunNativeExports.Sts2Run_DebugUpgradeDeck(handle, obsBuf);

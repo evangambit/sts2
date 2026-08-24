@@ -335,6 +335,27 @@ public static class RunNativeExports
         return 0;
     }
 
+    /// <summary>
+    /// <c>RunManager.EnterNextAct</c> on demand — the mod's <c>debug_enter_next_act</c>.
+    /// </summary>
+    /// <remarks>
+    /// Not a shortcut around the rules: it calls the same <c>RunEngine.EnterNextAct</c>
+    /// the boss reward does. What it skips is having to WIN act 1 first, which is several
+    /// minutes of buffed run per act-2 data point and a boss fight that can lose.
+    /// Returns 1 when an act was entered and 0 when the run was already in its last.
+    /// </remarks>
+    public static unsafe int Sts2Run_DebugEnterNextAct(int handle, int* obsBuf)
+    {
+        if (!TryGet(handle, out var run))
+        {
+            return -1;
+        }
+
+        bool entered = run.EnterNextAct();
+        run.WriteObservation(new Span<int>(obsBuf, RunConstants.RunObsSize));
+        return entered ? 1 : 0;
+    }
+
     /// <summary>Upgrade every upgradable card in the deck. Debug hook, as above.</summary>
     /// <remarks>
     /// Every mutating export refreshes the observation before returning, and these three

@@ -46,7 +46,7 @@ from sts2_gym.run_env import (
 
 COMBAT_STATES = {"monster", "elite", "boss"}
 # Out-of-band buffs a capture may have applied to the live run; see apply_debug_buff.
-DEBUG_BUFF_ACTIONS = {"debug_gain_max_hp", "debug_upgrade_deck"}
+DEBUG_BUFF_ACTIONS = {"debug_gain_max_hp", "debug_upgrade_deck", "debug_enter_next_act"}
 # The intent types that announce DAMAGE. DeathBlowIntent derives from SingleAttackIntent
 # and reports its own name, so matching on "Attack" alone read a Gas Bomb as not
 # attacking at all.
@@ -158,6 +158,8 @@ def apply_debug_buff(env: Any, payload: dict[str, Any]) -> tuple[Any, dict[str, 
     """
     if payload["action"] == "debug_gain_max_hp":
         return env.debug_gain_max_hp(int(payload.get("amount", 0)))
+    if payload["action"] == "debug_enter_next_act":
+        return env.debug_enter_next_act()
     return env.debug_upgrade_deck()
 
 

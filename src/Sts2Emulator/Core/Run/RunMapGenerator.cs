@@ -343,6 +343,36 @@ public static class RunMapGenerator
         return eventPool.Where(eventId => eventId != 0).ToArray();
     }
 
+    /// <summary>
+    /// <c>RunManager.SetActInternal</c>: move to the next act and lay out its map.
+    /// </summary>
+    /// <remarks>
+    /// Four things, and the two easy to miss are the ones that are not there. The FLOOR
+    /// does not reset — a live capture crosses into act 2 still on floor 17 and counts on
+    /// from there — and the deck, relics and gold carry over untouched. What does reset is
+    /// the unknown-map-point odds (<c>Odds.UnknownMapPoint.ResetToBase()</c>), which climb
+    /// as a run walks question marks and start each act fresh. The rooms themselves are
+    /// not generated here: every act's were rolled at run start, so this only points
+    /// <c>CurrentActIndex</c> at them.
+    /// </remarks>
+    public static bool AdvanceToNextAct(RunState state)
+    {
+        if (state.CurrentActIndex >= state.Acts.Count - 1)
+        {
+            return false;
+        }
+
+        state.CurrentActIndex++;
+        state.EventSequenceIndex = 0;
+        state.UnknownMapPointsVisited = 0;
+        state.UnknownMapPointMonsterOdds = 0.1;
+        state.UnknownMapPointEliteOdds = -1.0;
+        state.UnknownMapPointTreasureOdds = 0.02;
+        state.UnknownMapPointShopOdds = 0.03;
+        GenerateActMap(state);
+        return true;
+    }
+
     public static void GenerateActMap(RunState state)
     {
         state.MapNodes = [];
@@ -355,9 +385,8 @@ public static class RunMapGenerator
         // The game keys this stream on the act *index* — `act_{CurrentActIndex + 1}_map`
         // — not on which act was rolled. This used to pass `state.Act - 1`, conflating
         // the two: an Underdocks act 1 would have read "act_2_map" instead of
-        // "act_1_map" and desynced the entire map. The emulator only models act 1, so
-        // the index is always 0.
-        var mapRng = state.Rng.ActMapRng(0);
+        // "act_1_map" and desynced the entire map.
+        var mapRng = state.Rng.ActMapRng(state.CurrentActIndex);
         int restCount = mapRng.NextGaussianInt(7, 1, 6, 7);
         int unknownCount = mapRng.NextGaussianInt(12, 1, 10, 14);
 

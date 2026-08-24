@@ -829,6 +829,7 @@ def capture_run(
     neow_option: int | None = None,
     buff_max_hp: int = 0,
     upgrade_deck: bool = False,
+    enter_acts: int = 0,
 ) -> dict[str, Any]:
     state = start_real_game_run.start_seeded_run(
         base_url,
@@ -853,6 +854,12 @@ def capture_run(
         pending_buffs.append({"action": "debug_gain_max_hp", "amount": buff_max_hp})
     if upgrade_deck:
         pending_buffs.append({"action": "debug_upgrade_deck"})
+    # Jumping acts goes LAST, so the buffs land while the run is still in act 1 and the
+    # act it arrives in is played with them. Reaching act 2 by winning act 1 costs a
+    # heavily buffed run and several minutes, and can lose the boss fight; this is the
+    # same RunManager.EnterNextAct the boss reward calls, without the run.
+    for _ in range(enter_acts):
+        pending_buffs.append({"action": "debug_enter_next_act"})
     append_snapshot(trace, 0, None, None, state)
 
     for step in range(1, max_steps + 1):
@@ -1039,6 +1046,15 @@ def main() -> None:
         help="Upgrade every upgradable card in the deck once the run reaches the map.",
     )
     parser.add_argument(
+        "--enter-acts",
+        type=int,
+        default=0,
+        help=(
+            "Skip straight past this many acts once the run reaches the map. "
+            "--enter-acts 1 starts the capture in act 2 without playing act 1."
+        ),
+    )
+    parser.add_argument(
         "--ascension",
         type=int,
         default=0,
@@ -1086,6 +1102,7 @@ def main() -> None:
         neow_option=args.neow_option,
         buff_max_hp=args.buff_max_hp,
         upgrade_deck=args.upgrade_deck,
+        enter_acts=args.enter_acts,
     )
     text = json.dumps(trace, indent=None if args.format == "compact" else 2)
     if args.output is not None:

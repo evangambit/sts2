@@ -1644,11 +1644,45 @@ public sealed class RunEngine
     {
         if (State.CurrentNodeType == RunConstants.NodeBoss)
         {
+            // RunManager.EnterNextAct: a boss is the end of the RUN only in the last act.
+            // Anywhere else it is the end of an ACT, and the run walks onto the next act's
+            // map — a live capture proceeds from the act 1 boss reward straight onto act
+            // 2's map, still on floor 17. Treating every boss as terminal is what made act
+            // 2 unreachable.
+            if (EnterNextAct())
+            {
+                terminal = false;
+                return 0;
+            }
+
             State.Phase = RunPhase.Complete;
+            State.LastPlayerWon = true;
             terminal = true;
             return 0;
         }
         return AdvanceAfterNode(out terminal);
+    }
+
+    /// <summary>
+    /// Move to the next act, if there is one, and land on its map.
+    /// </summary>
+    /// <remarks>
+    /// Shared by the real boss path and the debug hook, deliberately: reaching act 2 the
+    /// honest way costs a buffed run that wins a boss fight, several minutes a go, so
+    /// every act-2 test would otherwise be gated behind completing act 1. The debug hook
+    /// makes it a couple of seconds — and because both routes are this one function, the
+    /// shortcut cannot drift from the thing it is standing in for.
+    /// </remarks>
+    public bool EnterNextAct()
+    {
+        if (!RunMapGenerator.AdvanceToNextAct(State))
+        {
+            return false;
+        }
+
+        RunRewardGenerator.ClearRewardScreen(State);
+        State.Phase = RunPhase.Map;
+        return true;
     }
 
     private int AdvanceAfterNode(out bool terminal)

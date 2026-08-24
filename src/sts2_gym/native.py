@@ -375,6 +375,9 @@ _lib.Sts2Run_DebugGainMaxHp.argtypes = [
     ctypes.POINTER(ctypes.c_int),
 ]
 
+_lib.Sts2Run_DebugEnterNextAct.restype = ctypes.c_int
+_lib.Sts2Run_DebugEnterNextAct.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_int)]
+
 _lib.Sts2Run_DebugUpgradeDeck.restype = ctypes.c_int
 _lib.Sts2Run_DebugUpgradeDeck.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_int)]
 
@@ -811,7 +814,7 @@ def run_get_niche_rng_call_count(handle: int) -> int:
 
 
 def run_debug_set_hp(
-    handle: int, hp: int, max_hp: int, obs_buf: ctypes.Array
+    handle: int, hp: int, max_hp: int, obs_buf: ctypes.Array,
 ) -> None:
     """Soak-only: hand a run extra HP so it can reach the act's boss.
 
@@ -836,6 +839,22 @@ def run_debug_gain_max_hp(handle: int, amount: int, obs_buf: ctypes.Array) -> No
     """
     if _lib.Sts2Run_DebugGainMaxHp(handle, amount, obs_buf) != 0:
         raise RuntimeError("Sts2Run_DebugGainMaxHp failed")
+
+
+def run_debug_enter_next_act(handle: int, obs_buf: ctypes.Array) -> bool:
+    """Enter the next act, as the mod's debug_enter_next_act does.
+
+    Returns False when the run is already in its last act. This runs the same transition
+    the boss reward does — what it skips is having to win act 1 to get there.
+
+    Raises:
+        RuntimeError: if the handle is not a live run.
+
+    """
+    result = int(_lib.Sts2Run_DebugEnterNextAct(handle, obs_buf))
+    if result < 0:
+        raise RuntimeError("Sts2Run_DebugEnterNextAct failed")
+    return result == 1
 
 
 def run_debug_upgrade_deck(handle: int, obs_buf: ctypes.Array) -> None:

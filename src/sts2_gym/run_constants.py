@@ -45,3 +45,14 @@ NODE_EVENT = 7
 
 ACT_OVERGROWTH = 1
 ACT_UNDERDOCKS = 2
+ACT_HIVE = 3
+ACT_GLORY = 4
+
+# The emulator's act ids are REGIONS, not ordinals: a run's first act is Overgrowth or
+# Underdocks depending on the seed, and Hive and Glory follow in that order.
+ACT_NAMES = {
+    ACT_OVERGROWTH: "overgrowth",
+    ACT_UNDERDOCKS: "underdocks",
+    ACT_HIVE: "hive",
+    ACT_GLORY: "glory",
+}

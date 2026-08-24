@@ -188,6 +188,16 @@ class Sts2RunEnv(gym.Env):
         native.run_debug_gain_max_hp(self._run_handle, amount, self._run_obs_buf)
         return self._obs(), self._info()
 
+    def debug_enter_next_act(self) -> tuple[np.ndarray, dict]:
+        """Enter the next act, as the mod's debug_enter_next_act does.
+
+        The point is testability: reaching act 2 honestly costs a buffed run that wins a
+        boss fight. This is the same transition, without the run.
+        """
+        assert self._run_handle is not None, "Call reset() before debug_enter_next_act()"
+        native.run_debug_enter_next_act(self._run_handle, self._run_obs_buf)
+        return self._obs(), self._info()
+
     def debug_upgrade_deck(self) -> tuple[np.ndarray, dict]:
         """Mirror the mod's debug_upgrade_deck. See debug_gain_max_hp."""
         assert self._run_handle is not None, "Call reset() before debug_upgrade_deck()"
@@ -279,7 +289,9 @@ class Sts2RunEnv(gym.Env):
         obs = np.ctypeslib.as_array(self._run_obs_buf)
         run_offset = native.OBS_SIZE
         phase = int(info_buf[0])
-        act = "overgrowth" if int(info_buf[2]) == ACT_OVERGROWTH else "underdocks"
+        # A two-way guess here reported every act after the first as "underdocks",
+        # which would have quietly mislabelled act 2 in every trace it appears in.
+        act = constants.ACT_NAMES.get(int(info_buf[2]), "unknown")
         map_option_coords = native.run_state_list(self._run_handle, 7, MAP_CHOICES * 2)
         layout = native.RUN_OBS_LAYOUT
         node_types = run_offset + layout["map_node_type_offset"]
