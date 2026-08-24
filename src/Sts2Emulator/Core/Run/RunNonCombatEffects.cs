@@ -320,6 +320,34 @@ public static class RunNonCombatEffects
                 }
 
                 break;
+            case RunConstants.RelicSeaGlass:
+                // CardsVar(15) / 3 = five cards of each rarity from the OTHER character's
+                // pool, all fifteen offered on one grid. Uniform odds with
+                // NoRarityModification, so each card is a pick and an upgrade roll: thirty
+                // draws, the same budget as Glass Eye.
+                //
+                // The screen is a 0-to-15 multi-select with a confirm
+                // (`CardSelectorPrefs(prompt, 0, list.Count)`), and the emulator's offer
+                // grid cannot express "stop early" -- it hands over picks until they run
+                // out. A run that wanted only some of the fifteen will diverge here; one
+                // that takes them all will not. See O16.
+                state.PendingOfferCards =
+                [
+                    .. new[] { CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare }.SelectMany(
+                        rarity =>
+                            RunRewardGenerator.GenerateFixedRarityCardOffer(
+                                state,
+                                5,
+                                rarity,
+                                state.PlayerRng.Rewards,
+                                RunConstants.OtherCharacterPoolFor(
+                                    Math.Max(0, state.SeaGlassCharacter)
+                                )
+                            )
+                    ),
+                ];
+                state.PendingOfferPicks = state.PendingOfferCards.Length;
+                return RunFollowUp.PreRolledCardReward;
             case RunConstants.RelicGlassEye:
                 // FIVE card rewards on one screen — Common, Common, Uncommon, Uncommon,
                 // Rare — each offering three of that rarity. Uniform odds with
@@ -1868,7 +1896,9 @@ public static class RunNonCombatEffects
     /// </remarks>
     private static int[] OrobasOptions(RunState state, GameRng rng)
     {
-        rng.NextInt(RunConstants.OtherCharacterCount);
+        // The character is kept, not just spent: if the Sea Glass is offered AND taken,
+        // its cards come from that character's pool.
+        state.SeaGlassCharacter = rng.NextInt(RunConstants.OtherCharacterCount);
         bool prismaticGem = rng.NextDouble() < 1.0 / 3.0;
 
         var pool1 = RunConstants.OrobasPool1.ToArray().ToList();

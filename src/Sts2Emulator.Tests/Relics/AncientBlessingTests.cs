@@ -224,6 +224,76 @@ public class AncientBlessingTests
         Assert.Equal(before + 30, engine.State.PlayerRng.Rewards.CallCount);
     }
 
+    /// <summary>
+    /// CardsVar(15) / 3: five cards of each rarity, from the OTHER character's pool.
+    /// </summary>
+    /// <remarks>
+    /// Which character is decided by Orobas, in the first draw it spends — a draw the
+    /// emulator used to make and throw away. Ironclad's own pool must not appear.
+    /// </remarks>
+    [Fact]
+    public void SeaGlassOffersFifteenFromAnotherCharactersPool()
+    {
+        var engine = Pristine.Clone();
+        RunNonCombatEffects.GenerateAncientOptions(engine.State, RunConstants.AncientOrobas);
+        Assert.InRange(engine.State.SeaGlassCharacter, 0, RunConstants.OtherCharacterCount - 1);
+
+        RunNonCombatEffects.ApplyRelicPickup(engine.State, RunConstants.RelicSeaGlass);
+
+        Assert.Equal(15, engine.State.PendingOfferCards.Length);
+        var ironclad = GeneratedData.CardPools.Ironclad.ToArray();
+        Assert.All(engine.State.PendingOfferCards, card => Assert.DoesNotContain(card, ironclad));
+    }
+
+    [Fact]
+    public void SeaGlassOffersFiveOfEachRarityInOrder()
+    {
+        var engine = Pristine.Clone();
+        RunNonCombatEffects.GenerateAncientOptions(engine.State, RunConstants.AncientOrobas);
+        RunNonCombatEffects.ApplyRelicPickup(engine.State, RunConstants.RelicSeaGlass);
+
+        var offered = engine.State.PendingOfferCards;
+        var expected = new[] { CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare };
+        for (int batch = 0; batch < 3; batch++)
+        {
+            var slice = offered.Skip(batch * 5).Take(5).ToArray();
+            Assert.All(
+                slice,
+                card => Assert.Equal(expected[batch], GeneratedData.Cards.Get(card).Rarity)
+            );
+            // Distinct within a batch: each is blacklisted as it is drawn.
+            Assert.Equal(5, slice.Distinct().Count());
+        }
+    }
+
+    /// <summary>Thirty draws, the same budget as Glass Eye: a pick and an upgrade roll each.</summary>
+    [Fact]
+    public void SeaGlassSpendsTwoDrawsPerCard()
+    {
+        var engine = Pristine.Clone();
+        RunNonCombatEffects.GenerateAncientOptions(engine.State, RunConstants.AncientOrobas);
+        int before = engine.State.PlayerRng.Rewards.CallCount;
+
+        RunNonCombatEffects.ApplyRelicPickup(engine.State, RunConstants.RelicSeaGlass);
+
+        Assert.Equal(before + 30, engine.State.PlayerRng.Rewards.CallCount);
+    }
+
+    /// <summary>
+    /// Orobas keeps the character rather than only spending the draw — the two options it
+    /// can put in pool 1 are the Prismatic Gem and a Sea Glass, and only one of them cares.
+    /// </summary>
+    [Fact]
+    public void OrobasRecordsWhichCharacterTheSeaGlassIsBrandedWith()
+    {
+        var engine = Pristine.Clone();
+        Assert.Equal(-1, engine.State.SeaGlassCharacter);
+
+        RunNonCombatEffects.GenerateAncientOptions(engine.State, RunConstants.AncientOrobas);
+
+        Assert.InRange(engine.State.SeaGlassCharacter, 0, RunConstants.OtherCharacterCount - 1);
+    }
+
     [Fact]
     public void BiiigHugRemovesTheFourTheChoiceNames()
     {

@@ -351,6 +351,21 @@ public static class RunConstants
     /// </summary>
     public const int OtherCharacterCount = 4;
 
+    /// <summary>
+    /// The characters Orobas may brand a Sea Glass with, in the order it draws over them:
+    /// <c>ModelDb.AllCharacters</c> is Ironclad, Silent, Regent, Necrobinder, Defect, and
+    /// Orobas takes <c>Where(c => c.Id != Owner.Character.Id)</c> — so for an Ironclad run
+    /// that is these four, in this order.
+    /// </summary>
+    public static ReadOnlySpan<int> OtherCharacterPoolFor(int index) =>
+        index switch
+        {
+            0 => GeneratedData.CardPools.Silent,
+            1 => GeneratedData.CardPools.Regent,
+            2 => GeneratedData.CardPools.Necrobinder,
+            _ => GeneratedData.CardPools.Defect,
+        };
+
     public const string AncientNeow = "NEOW";
 
     public const string AncientDarv = "DARV";

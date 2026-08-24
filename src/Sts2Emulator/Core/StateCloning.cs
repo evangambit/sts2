@@ -261,6 +261,7 @@ public static class StateCloning
                 ),
             ],
             CurrentActIndex = state.CurrentActIndex,
+            SeaGlassCharacter = state.SeaGlassCharacter,
             NormalEncountersVisited = state.NormalEncountersVisited,
             EliteEncountersVisited = state.EliteEncountersVisited,
             EventSequenceIndex = state.EventSequenceIndex,

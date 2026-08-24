@@ -192,6 +192,17 @@ public sealed class RunState
     /// rewards were listed, and those draws all come off the same stream.
     /// </summary>
     public List<int[]> PendingCardOffers = [];
+
+    /// <summary>
+    /// Which character Orobas branded its Sea Glass with, as an index into
+    /// <c>RunConstants.OtherCharacterPools</c>, or -1 before Orobas has been seen.
+    /// </summary>
+    /// <remarks>
+    /// The draw happens whether or not the Sea Glass is ever offered or taken — it is the
+    /// first thing Orobas spends — but the RESULT only matters if it is, which is why it
+    /// is carried rather than recomputed.
+    /// </remarks>
+    public int SeaGlassCharacter = -1;
     public CombatState? ActiveCombat;
     public CountingRandom? ActiveCombatRng;
     public bool LastPlayerWon;

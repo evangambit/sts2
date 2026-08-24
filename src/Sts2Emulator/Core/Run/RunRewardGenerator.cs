@@ -553,6 +553,17 @@ public static class RunRewardGenerator
         int count,
         CardRarity rarity,
         GameRng rng
+    ) => GenerateFixedRarityCardOffer(state, count, rarity, rng, IroncladRewardPool);
+
+    /// <summary>
+    /// As above, over a NAMED pool — Sea Glass draws from another character's.
+    /// </summary>
+    public static int[] GenerateFixedRarityCardOffer(
+        RunState state,
+        int count,
+        CardRarity rarity,
+        GameRng rng,
+        ReadOnlySpan<int> pool
     )
     {
         int rarityValue = rarity switch
@@ -565,7 +576,7 @@ public static class RunRewardGenerator
         var offer = new int[count];
         for (int i = 0; i < count; i++)
         {
-            offer[i] = ChooseCardWithRarity(IroncladRewardPool, rarityValue, blacklist, rng);
+            offer[i] = ChooseCardWithRarity(pool, rarityValue, blacklist, rng);
             blacklist.Add(offer[i]);
             RollCardUpgrade(state, offer[i], rng);
         }
