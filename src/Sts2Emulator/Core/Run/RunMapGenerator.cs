@@ -187,7 +187,10 @@ public static class RunMapGenerator
         // on. Both act-1 regions declare Neow alone, so act 1 is a one-item pick that
         // still costs its draw.
         string[] ancients = [.. RunConstants.AncientsFor(act), .. sharedSubset];
-        string ancient = upFront.NextItem(ancients);
+        // NextItem spelled out: it is `items[(int)(NextDouble() * count)]`, and having the
+        // raw roll is what lets a mismatch be solved rather than guessed at.
+        double ancientRoll = upFront.NextDouble();
+        string ancient = ancients[(int)(ancientRoll * ancients.Length)];
 
         return new ActRooms(
             act,
@@ -1521,6 +1524,21 @@ public static class RunMapGenerator
     private static HashSet<string> Tags(int encounterId) =>
         encounterId switch
         {
+            // Hive. Without these the tag-avoidance had nothing to avoid in act 2, which
+            // is worse than a wrong sequence: GrabIndex REJECTION-SAMPLES, so a missing
+            // tag changes how many draws a grab costs, and every draw after it — the
+            // boss, the ancient, the next act — lands somewhere else. A live capture
+            // (`ACT2TEST01`) opens act 2 on Pael where the emulator drew Tezcatara, and
+            // no list size or ordering could explain it because the ROLL itself was from
+            // the wrong position.
+            31 => ["Workers"], // BowlbugsWeak
+            32 => ["Workers"], // BowlbugsNormal
+            37 => ["Workers"], // SlumberingBeetleNormal
+            1 => ["Chomper"], // ChompersNormal
+            4 => ["Exoskeletons"], // ExoskeletonsWeak
+            RunConstants.ExoskeletonsNormalEncounterId => ["Exoskeletons"],
+            33 => ["Burrower"], // TunnelerWeak
+            35 => ["Thieves"], // ThievingHopperWeak
             2 => ["Nibbit"], // NibbitsWeak
             3 => ["Slimes"], // SlimesWeak
             8 => ["Crawler"], // FuzzyWurmCrawlerWeak

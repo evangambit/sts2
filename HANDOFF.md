@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1797 pass, ~2m)
+# C# unit tests (currently 1805 pass, ~2m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -849,6 +849,32 @@ Cage — and both are blocked on the same missing piece: `BeginDeckSelection`'s 
 path always returns to `RunPhase.Event`, so a selection opened from a shop or a relic
 pickup has nowhere correct to land. That return needs generalising the way E53 generalised
 the rewards screen's.
+
+### Hive's encounter tags, and why a missing tag is worse than a wrong order
+
+Seven act-2 captures now agree with the emulator on which ancient act 2 opens on. Five did
+before Hive's encounter TAGS were extracted, and the two that did not are what pointed at
+them.
+
+**`GrabBag.GrabIndex` rejection-samples.** It redraws until the tag predicate is satisfied
+(and returns -1 without drawing at all when nothing can satisfy it, which is when
+`AddWithoutRepeatingTags` makes its second, unfiltered grab). So an encounter the game tags
+and the emulator does not changes **how many draws a grab costs** — and every draw after
+it, the boss and the ancient and the whole of the next act's generation, lands somewhere
+else. The ancient was reading the right list at the wrong stream position, which is exactly
+why no list size or ordering could be made to explain it.
+
+Hive's tags: Bowlbugs weak and normal are both `Workers`, as is the Slumbering Beetle;
+Exoskeletons weak and normal share `Exoskeletons`; Chompers, the Tunneler and the Thieving
+Hopper have one each. **Glory's are not extracted yet** and will have the same effect on
+act 3 that this had on act 2.
+
+**The debugging that found it is worth copying.** Printing the raw `NextDouble` behind each
+ancient pick, alongside the list size, turned a guessing game into arithmetic: with the
+roll in hand you can ask "what list would have to exist for the game's answer to be right?"
+and get a contradiction rather than a hunch. Two hypotheses died that way in a minute each
+— a one-item `UnstableShuffle` costing a draw (fixes one seed, breaks two) and the shared
+subset being ordered before the act's own list (breaks the DARV seed).
 
 ### The ancients, and what is approximated in them
 
@@ -1969,7 +1995,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1797 pass
+dotnet test src/Sts2Emulator.Tests/        # 1805 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```

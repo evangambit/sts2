@@ -157,24 +157,58 @@ public class ActGenerationTests
     }
 
     /// <summary>
-    /// Two live captures pin the act-2 ancient. `3PFLW9XC5D` is the one that matters most:
-    /// it opens act 2 on DARV, which belongs to no act's own list, and reproducing that
-    /// is what showed the shared-ancient pool is <em>not</em> empty. Both were captured
-    /// twice over — once by winning act 1 and once by jumping with `--enter-acts` — and
-    /// agree, which is also what shows the jump does not change what act 2 holds.
+    /// Seven live captures pin the act-2 ancient, and all seven agree.
+    /// </summary>
+    /// <remarks>
+    /// `3PFLW9XC5D` is the one that matters most: it opens act 2 on DARV, which belongs to
+    /// no act's own list, and reproducing that is what showed the shared-ancient pool is
+    /// not empty. It was captured twice over — once by winning act 1 and once by jumping
+    /// with `--enter-acts` — and both agree, which is also what shows the jump does not
+    /// change what act 2 holds.
     ///
     /// <para>
-    /// `ACT2TEST01` is NOT here: the game gives it Pael and the emulator computes
-    /// Tezcatara. See O14 — the mechanism reproduces two seeds exactly and misses that
-    /// one, and the cause is not yet found.
+    /// Five of these matched before Hive's encounter TAGS were extracted and two did not,
+    /// which is what pointed at the tags: `GrabIndex` rejection-samples, so an encounter
+    /// with no tag where the game has one changes how many draws a grab costs, and every
+    /// draw after it lands somewhere else. The ancient was reading the right list at the
+    /// wrong stream position.
     /// </para>
-    /// </summary>
+    /// </remarks>
     [Theory]
     [InlineData("3PFLW9XC5D", RunConstants.AncientDarv)]
     [InlineData("7WGQ2VNJ4M", RunConstants.AncientPael)]
+    [InlineData("ACT2TEST01", RunConstants.AncientPael)]
+    [InlineData("41TJ3T2Y0Q", RunConstants.AncientPael)]
+    [InlineData("QD1DQCJU2K", RunConstants.AncientTezcatara)]
+    [InlineData("4KJ7X2MQND", RunConstants.AncientOrobas)]
+    [InlineData("CF32ERF3DH", RunConstants.AncientOrobas)]
     public void TheActTwoAncientMatchesTheCapture(string seed, string expected)
     {
         Assert.Equal(expected, Generated(seed).Acts[1].Ancient);
+    }
+
+    /// <summary>
+    /// Hive's encounters carry tags and the tag-avoidance has to see them. Bowlbugs weak
+    /// and normal both being Workers is the sharpest case: the game will not follow one
+    /// with the other, and an emulator that does not know that draws a different number
+    /// of times getting there.
+    /// </summary>
+    [Theory]
+    [InlineData("3PFLW9XC5D")]
+    [InlineData("ACT2TEST01")]
+    [InlineData("41TJ3T2Y0Q")]
+    public void HivesEncountersDoNotRepeatATagBackToBack(string seed)
+    {
+        var hive = Generated(seed).Acts.Single(a => a.Act == RunConstants.ActHive);
+        int[] workers = [31, 32, 37];
+
+        for (int i = 1; i < hive.NormalEncounters.Length; i++)
+        {
+            bool bothWorkers =
+                workers.Contains(hive.NormalEncounters[i - 1])
+                && workers.Contains(hive.NormalEncounters[i]);
+            Assert.False(bothWorkers, $"two Workers encounters at {i - 1} and {i}");
+        }
     }
 
     /// <summary>
