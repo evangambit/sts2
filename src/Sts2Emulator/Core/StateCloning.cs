@@ -211,6 +211,8 @@ public static class StateCloning
             Relics = [.. state.Relics],
             UsedUpRelics = [.. state.UsedUpRelics],
             MaxPotionSlots = state.MaxPotionSlots,
+            PendingBonusRelicRewards = [.. state.PendingBonusRelicRewards],
+            PendingNeowsBonesCurse = state.PendingNeowsBonesCurse,
             PendingPotionRewards = [.. state.PendingPotionRewards],
             PotionSlots = (int[])state.PotionSlots.Clone(),
             CurrentNodeType = state.CurrentNodeType,

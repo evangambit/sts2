@@ -58,13 +58,25 @@ def execute_command(
     ):
         if int(info["phase"]) == PHASE_COMBAT:
             return reward, terminated, truncated, obs, info
-        while int(info["phase"]) != PHASE_MAP:
+        # Bounded, because a proceed that does not change the phase would otherwise
+        # spin here forever at full tilt: the emulator gets stepped, reports the same
+        # phase, and gets stepped again. That turned one ordinary divergence -- an
+        # emulator sitting on a screen the reference had already left -- into a replay
+        # that never returned and looked for all the world like a hang in the engine.
+        # Sixteen is far more proceeds than any screen stack needs; giving up here lets
+        # the caller report the mismatch it actually has.
+        for _ in range(16):
+            if int(info["phase"]) == PHASE_MAP:
+                break
             proceed = proceed_action(int(info["phase"]))
             if proceed is None:
                 break
+            before_phase = int(info["phase"])
             obs, reward, terminated, truncated, info = env.step(proceed)
             if terminated or truncated:
                 return reward, terminated, truncated, obs, info
+            if int(info["phase"]) == before_phase:
+                break
         translated_action = translate_command(command, obs, info, env, reference_step)
         if translated_action is None:
             return reward, terminated, truncated, obs, info

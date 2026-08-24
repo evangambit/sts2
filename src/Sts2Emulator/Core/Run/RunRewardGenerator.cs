@@ -274,6 +274,28 @@ public static class RunRewardGenerator
         ];
     }
 
+    /// <summary>
+    /// Moves the next owed relic onto the screen, which carries one at a time. When the
+    /// queue runs dry, anything waiting on the whole screen being answered happens here --
+    /// which for Neow's Bones is its curse.
+    /// </summary>
+    public static void OfferNextBonusRelic(RunState state)
+    {
+        if (state.RelicReward != 0)
+        {
+            return;
+        }
+
+        if (state.PendingBonusRelicRewards.Count > 0)
+        {
+            state.RelicReward = state.PendingBonusRelicRewards[0];
+            state.PendingBonusRelicRewards.RemoveAt(0);
+            return;
+        }
+
+        RunNonCombatEffects.AddNeowsBonesCurse(state);
+    }
+
     public static bool HasPendingRewards(RunState state)
     {
         return state.RewardGold != 0
@@ -281,7 +303,8 @@ public static class RunRewardGenerator
             || state.RelicReward != 0
             || state.RewardCardPending
             || state.PendingCardOffers.Count > 0
-            || state.PendingOtherCharacterCardRewards > 0;
+            || state.PendingOtherCharacterCardRewards > 0
+            || state.PendingBonusRelicRewards.Count > 0;
     }
 
     public static bool ClaimNextReward(RunState state)
@@ -318,12 +341,14 @@ public static class RunRewardGenerator
         {
             if (itemIndex == 0)
             {
-                if (state.Relics.All(relic => relic.DefId != state.RelicReward))
-                {
-                    state.Relics.Add(new RelicInstance(state.RelicReward));
-                }
-
+                int claimed = state.RelicReward;
                 state.RelicReward = 0;
+                // A relic claimed off a reward screen is obtained through RelicCmd.Obtain,
+                // which runs its AfterObtained -- a live capture's Silken Tress zeroed the
+                // player's gold the moment it was taken. Adding it to the list and
+                // stopping there is what this used to do.
+                RunNonCombatEffects.ApplyRelicPickup(state, claimed);
+                OfferNextBonusRelic(state);
                 return true;
             }
             itemIndex--;

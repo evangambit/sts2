@@ -361,6 +361,14 @@ public static class RunConstants
 
     public static ReadOnlySpan<int> NeowCurseOptions => [54, 111, 129, 134, 161, 205, 239, 240];
 
+    /// <summary>
+    /// The six blessings Neow offers as one of a PAIR rather than from a flat list --
+    /// LavaRock/SmallCapsule, NeowsTalisman/Pomander, NutritiousOyster/StoneHumidifier.
+    /// In <c>Neow.AllPossibleOptions</c> they are appended after the curse and positive
+    /// groups, in this order, which is the order anything shuffling that list depends on.
+    /// </summary>
+    public static ReadOnlySpan<int> NeowPairedOptions => [132, 162, 167, 201, 242, 250];
+
     public static ReadOnlySpan<int> NeowPositiveOptions =>
         [5, 29, 89, 105, 124, 133, 140, 163, 164, 195, 206, 231, 293];
 

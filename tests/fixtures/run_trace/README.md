@@ -32,17 +32,17 @@ is.
 | `L9R346P3YD-a8.json` | Overgrowth | 110 | clean — found two on its own: E40 (Doors of Light and Dark upgrading off the wrong stream AND the wrong sort key) and E41 (a Skulking Colony that did not read as an elite, so Booming Conch never fired) |
 | `SAM9XS24LM-a8.json` | Overgrowth | 134 | clean — found E36 and E37, a Sewer Clam gaining its Plating block twice and then decaying it a turn early |
 | `NXV45HW43K-a8.json` | Overgrowth | 149 | clean — the narrowest divergence in the set, one point of HP at step 126, and it was E38: The Chosen Cheese did nothing at all |
-| `J09SPL8Y3V-a8.json` | Overgrowth | 190 | **diverges** at step 1: the game opens on `rewards`, the emulator on `event`. Neow's Bones, whose pickup puts something on a reward screen the emulator does not raise. The longest trace here, and blocked at its first step. |
+| `J09SPL8Y3V-a8.json` | Overgrowth | 190 | clean — the longest trace here, and it was blocked at step 1 until Neow's Bones was modelled properly (E42) |
 
-Fifteen of these replay clean and one does not. The six newest were captured after the
-set had gone green, and every one of them found something — nine defects between them.
+All sixteen replay clean. The six newest were captured after the set had last gone green,
+and every one of them found something — ten defects between them.
 
 `1UL0BRX8WC` is the pattern. It was taken specifically because the nine before it held
 only nine of Neow's relics between them; it drew a tenth, Phial Holster, and diverged on
 the very first combat reward. Four defects came out of one run, and three of them had
 nothing to do with the relic — they were simply on paths no earlier capture had walked.
 The batch of six after it did the same again, and then some: E33-E35, E36-E37, E38, E39,
-E40 and E41 all came out of those six runs. Only Neow's Bones (O8) is still open.
+E40, E41 and E42 all came out of those six runs.
 
 So the cheapest next captures are the ones that walk somewhere new: a Neow relic not in
 the list below, an event none of these hit, or an act 2 (all ten of these die on floors

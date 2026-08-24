@@ -7,6 +7,9 @@ public enum RunFollowUp
     None,
     CardReward,
     TransformSelect,
+
+    /// <summary>A rewards screen holding relics the player must claim one at a time.</summary>
+    BonusRelicRewards,
 }
 
 public static class RunNonCombatEffects
@@ -138,19 +141,25 @@ public static class RunNonCombatEffects
                 AddCardToDeck(state, new CardInstance(RunConstants.NeowsFuryCard, Upgraded: false));
                 break;
             case RunConstants.RelicNeowsBones:
-                for (int i = 0; i < 2; i++)
-                {
-                    ApplyRelicPickup(
-                        state,
-                        state.Rng.UpFront.NextItem(RunConstants.NeowPositiveOptions.ToArray())
-                    );
-                }
-
-                AddCardToDeck(
-                    state,
-                    new CardInstance(RollGeneratableCurse(state), Upgraded: false)
-                );
-                break;
+                // NeowsBones.AfterObtained: shuffle every relic Neow could offer except
+                // itself on PlayerRng.Rewards, take two, and OFFER them -- a RewardsSet
+                // with WithSkippingDisallowed, so the player claims both -- and only then
+                // add the curse.
+                //
+                // This used to be two Rng.UpFront.NextItem draws applied on the spot: the
+                // wrong stream, a draw that can hand out the SAME relic twice where a
+                // shuffle-and-take cannot, no screen at all, and a candidate list of only
+                // the positives. A live capture answers a rewards screen twice here and
+                // comes away with Winged Boots and Silken Tress.
+                state.PendingBonusRelicRewards.Clear();
+                state.PendingBonusRelicRewards.AddRange(NeowsBonesRelicOffer(state));
+                state.PendingNeowsBonesCurse = true;
+                // Put the first one ON the screen here rather than leaving that to the
+                // caller: the pickup should leave a state that makes sense however it was
+                // reached, and a queue with nothing offered from it is a screen that
+                // reports rewards it will not hand over.
+                RunRewardGenerator.OfferNextBonusRelic(state);
+                return RunFollowUp.BonusRelicRewards;
             case RunConstants.RelicNutritiousOyster:
                 GainMaxHp(state, 11);
                 break;
@@ -287,6 +296,50 @@ public static class RunNonCombatEffects
         }
 
         return RunFollowUp.None;
+    }
+
+    /// <summary>
+    /// <c>NeowsBones.GetValidRelics</c>, shuffled and cut to two.
+    /// </summary>
+    /// <remarks>
+    /// The list is <c>Neow.AllPossibleOptions</c> in DECLARATION order -- curse options,
+    /// then positive ones, then the six that are offered as one of a pair -- minus Neow's
+    /// Bones itself and anything <c>IsAllowedAtNeow</c> refuses. Order is load-bearing:
+    /// the shuffle that follows is over this exact sequence, so a list assembled any other
+    /// way draws different relics from the same stream position. MassiveScroll is absent
+    /// for the same reason it is absent from Neow's own offer -- its IsAllowed is
+    /// <c>Players.Count > 1</c>.
+    /// </remarks>
+    private static List<int> NeowsBonesRelicOffer(RunState state)
+    {
+        var candidates = new List<int>();
+        foreach (int relicId in RunConstants.NeowCurseOptions)
+        {
+            if (relicId != RunConstants.RelicNeowsBones)
+            {
+                candidates.Add(relicId);
+            }
+        }
+
+        candidates.AddRange(RunConstants.NeowPositiveOptions);
+        candidates.AddRange(RunConstants.NeowPairedOptions);
+        state.PlayerRng.Rewards.Shuffle(candidates);
+        return candidates.Take(2).ToList();
+    }
+
+    /// <summary>
+    /// The curse Neow's Bones adds once its relics are claimed:
+    /// <c>Rng.Niche.NextItem</c> over the generatable curses, ordered by id.
+    /// </summary>
+    public static void AddNeowsBonesCurse(RunState state)
+    {
+        if (!state.PendingNeowsBonesCurse)
+        {
+            return;
+        }
+
+        state.PendingNeowsBonesCurse = false;
+        AddCardToDeck(state, new CardInstance(RollGeneratableCurse(state), Upgraded: false));
     }
 
     private static int StartingRelicCounter(int relicId)

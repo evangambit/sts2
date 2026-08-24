@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1708 pass)
+# C# unit tests (currently 1714 pass, ~1m40s)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -691,11 +691,31 @@ the fixes:
   Booming Conch never fired. The same range swept in every boss, which the game excludes.
   The six act-1 elites are named explicitly now.
 
-**One divergence is still open.** `J09SPL8Y3V` — **Neow's Bones is diagnosed and not
-fixed**: the game shuffles the valid relic list on `PlayerRng.Rewards`, takes two, and
-offers them on a rewards screen that cannot be skipped; the emulator takes two independent
-`Rng.UpFront.NextItem` draws from the wrong candidate list and grants them silently. It
-needs the two-relic reward screen, which is the Lost Coffer shape (E18).
+**Neow's Bones closed the set** (E42), and was four defects wearing one name: the wrong
+stream, a draw that can repeat itself where the game's shuffle-and-take cannot, no reward
+screen at all, and a candidate list of only the positives rather than all 26 valid Neow
+relics *in `AllPossibleOptions` declaration order* — which is load-bearing, since the
+shuffle is over that exact sequence. Building the screen turned up two more: a relic
+claimed from a reward screen is obtained through `RelicCmd.Obtain` and **runs its pickup
+effect**, and the claim that empties the screen returns to Neow by itself.
+
+**All sixteen traces now replay clean.**
+
+### The suite went from ~10 minutes to 1m40
+
+Worth knowing before the next session, because it was most of the wall-clock cost of the
+last one. `EventMaskAgreesWithStepTests` sweeps every event across every situation and
+option, and its helper called `RunEngine.Reset` for each probe — **~2,000 full run
+generations at 149ms apiece**, 304 seconds of a 420-second sample, three quarters of the
+whole suite, all to rebuild the same run and then overwrite two fields. It clones one
+pristine run now: `RunEngine.Clone` is ~0.07ms, three orders of magnitude cheaper, and it
+is the same fork the tree search already depends on. That class went from blowing a
+300-second timeout to **171 tests in 1 second**.
+
+The lesson generalises past this one class: `Reset` is expensive (map generation plus the
+grab bags' 230 shuffle draws), so any test that wants "a fresh run" many times over should
+clone one rather than generate each. The full trace sweep is now the slow half of a
+verification pass at ~8 minutes, not the suite.
 
 **One thing the screener exposed that matters for every future capture: offered is not
 taken.** The auto-player's Neow policy skips any option whose text mentions a choice, so
@@ -1577,7 +1597,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1708 pass
+dotnet test src/Sts2Emulator.Tests/        # 1714 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```

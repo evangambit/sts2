@@ -1150,6 +1150,16 @@ public sealed class RunEngine
             State.Phase = RunPhase.RelicReward;
             return;
         }
+        if (followUp == RunFollowUp.BonusRelicRewards)
+        {
+            // Neow's Bones: two relic rewards on one screen, claimed one at a time, and
+            // the curse only once both are gone. Neow itself stays on screen afterwards
+            // the way it does for every other blessing.
+            RunRewardGenerator.OfferNextBonusRelic(State);
+            State.NeowAwaitingProceed = true;
+            State.Phase = RunPhase.RelicReward;
+            return;
+        }
         if (followUp == RunFollowUp.TransformSelect)
         {
             State.Phase = RunPhase.TransformSelect;
@@ -1391,6 +1401,16 @@ public sealed class RunEngine
         {
             if (action is 0 or RunConstants.RewardSkipAction)
             {
+                // Neow stays on screen once its rewards are answered, waiting for one
+                // more Proceed -- the same return the card-reward path already made, and
+                // the only one a relic-only screen (Neow's Bones) could not. Advancing
+                // straight to the map from here skips a decision the run really makes.
+                if (State.NeowAwaitingProceed)
+                {
+                    State.Phase = RunPhase.Ancient;
+                    return 0;
+                }
+
                 return AdvanceAfterRelicReward(out terminal);
             }
 
@@ -1403,6 +1423,19 @@ public sealed class RunEngine
         }
 
         OfferNextRestPotion();
+        // The claim that empties the screen returns to Neow by itself -- a live capture's
+        // second relic lands and the very same snapshot is already back on the ancient,
+        // with no separate action between them. Only when the claim did not open a screen
+        // of its own: a card reward sets its own phase and owns the return.
+        if (
+            State.Phase == RunPhase.RelicReward
+            && State.NeowAwaitingProceed
+            && !RunRewardGenerator.HasPendingRewards(State)
+        )
+        {
+            State.Phase = RunPhase.Ancient;
+        }
+
         return 0;
     }
 

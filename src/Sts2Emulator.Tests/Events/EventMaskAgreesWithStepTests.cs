@@ -114,10 +114,36 @@ public class EventMaskAgreesWithStepTests
         return data;
     }
 
-    private static RunEngine At(int eventId, Action<RunState> situation)
+    /// <summary>
+    /// One generated run, cloned per probe rather than generated per probe.
+    /// </summary>
+    /// <remarks>
+    /// This sweep asks for a fresh run several thousand times -- every event, in every
+    /// situation, for every option, three times over -- and <c>Reset</c> is not cheap:
+    /// it generates the map, the encounter sequences and the relic grab bags' 230 shuffle
+    /// draws, at ~149ms a time. That was 304 seconds of a 420-second suite sample, about
+    /// three quarters of the whole run, to build the same run over and over and then
+    /// overwrite two fields of it.
+    ///
+    /// <para>
+    /// <c>RunEngine.Clone</c> is the same state for ~0.07ms, three orders of magnitude
+    /// cheaper, and it is the fork the tree search already relies on. Cloning a pristine
+    /// run is exactly as isolated as resetting one: every probe still gets its own state
+    /// and nothing it does can reach another.
+    /// </para>
+    /// </remarks>
+    private static readonly RunEngine Pristine = GeneratePristineRun();
+
+    private static RunEngine GeneratePristineRun()
     {
         var engine = new RunEngine();
         engine.Reset("ABCDEF");
+        return engine;
+    }
+
+    private static RunEngine At(int eventId, Action<RunState> situation)
+    {
+        var engine = Pristine.Clone();
         situation(engine.State);
         engine.State.EventId = eventId;
         engine.State.Phase = RunPhase.Event;

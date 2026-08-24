@@ -189,6 +189,21 @@ public sealed class RunState
     public double CardRarityOffset;
     public double PotionRewardOdds = 0.4;
     public bool PendingRelicReward;
+
+    /// <summary>
+    /// Relic rewards still owed, each already rolled. The screen carries one at a time,
+    /// the way it carries one potion at a time, so anything past the first waits here.
+    /// </summary>
+    public List<int> PendingBonusRelicRewards = [];
+
+    /// <summary>
+    /// Neow's Bones adds its curse only once its two relics have been claimed:
+    /// <c>AfterObtained</c> awaits the RewardsSet's <c>Offer()</c> and adds the curse on
+    /// the line after. Rolling it up front would be the same two streams in the same order
+    /// -- the relics come off Rewards and the curse off Niche -- but only until a claimed
+    /// relic's own pickup draws from Niche, which several of the candidates do.
+    /// </summary>
+    public bool PendingNeowsBonesCurse;
     public int ShopRemovalsUsed;
     public int? TransformSelectedDeckIndex;
 

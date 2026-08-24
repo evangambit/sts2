@@ -177,6 +177,17 @@ public class EventCombatTests
         int deck = engine.State.Deck.Count;
 
         RunNonCombatEffects.ApplyRelicPickup(engine.State, RunConstants.RelicNeowsBones);
+        // The curse comes AFTER the two relics are claimed, not with the pickup:
+        // AfterObtained awaits the RewardsSet's Offer() and adds it on the line below.
+        // This used to assert it landed immediately, which is a turn of the run earlier
+        // than the game does it. NeowsBonesTests walks the screen properly; here it is
+        // enough to drain it.
+        Assert.True(engine.State.PendingNeowsBonesCurse);
+        Assert.Equal(deck, engine.State.Deck.Count);
+        while (RunRewardGenerator.HasPendingRewards(engine.State))
+        {
+            Assert.True(RunRewardGenerator.ClaimNextReward(engine.State));
+        }
 
         var added = engine
             .State.Deck.Skip(deck)
