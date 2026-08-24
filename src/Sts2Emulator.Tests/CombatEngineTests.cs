@@ -729,6 +729,35 @@ public class CombatEngineTests
         Assert.Equal(20, merc.StolenGold);
     }
 
+    /// <summary>
+    /// <c>ThieveryPower.Steal</c> opens with <c>Target != null &amp;&amp; !Target.IsDead</c>,
+    /// and a Merc's move attacks BEFORE it steals — so the blow that kills the player takes
+    /// no gold with it. A live run (`J09SPL8Y3V`) ends holding 121; the emulator robbed the
+    /// corpse for a last 20 and ended on 101.
+    /// </summary>
+    [Fact]
+    public void GremlinMerc_DoesNotStealFromAPlayerItsAttackKilled()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.PlayerGold = 99;
+        state.PlayerBlock = 0;
+        state.PlayerHp = 10;
+        var merc = new EnemyState
+        {
+            DefId = 37,
+            Hp = 53,
+            MaxHp = 53,
+            CurrentIntent = new Intent(IntentType.Attack, 16),
+            Buffs = [],
+        };
+
+        EnemyAI.ExecuteIntent(merc, state, new Random(0));
+
+        Assert.True(state.PlayerHp <= 0);
+        Assert.Equal(99, state.PlayerGold);
+        Assert.Equal(0, merc.StolenGold);
+    }
+
     [Fact]
     public void GremlinMerc_TransfersStolenGoldToFatGremlinHeist()
     {

@@ -2832,8 +2832,23 @@ public static class EnemyAI
         enemy.Hp = Math.Max(0, enemy.Hp - (thorns - absorbed));
     }
 
+    /// <summary>
+    /// <c>ThieveryPower.Steal</c>: <c>Min(Amount, Gold)</c> off a target that is
+    /// <c>!IsDead</c> and holds any.
+    /// </summary>
+    /// <remarks>
+    /// The dead check is the whole of what was missing. A Gremlin Merc's move attacks and
+    /// THEN steals, so on the blow that kills the player the game takes nothing and the
+    /// emulator robbed the corpse — twenty gold that only shows up in the run's final
+    /// snapshot, where it is easy to read as a rounding difference rather than a rule.
+    /// </remarks>
     private static void StealGremlinMercGold(EnemyState enemy, CombatState state)
     {
+        if (state.PlayerHp <= 0)
+        {
+            return;
+        }
+
         int amount = Math.Min(20, state.PlayerGold);
         if (amount <= 0)
         {

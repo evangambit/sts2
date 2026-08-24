@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1714 pass, ~1m40s)
+# C# unit tests (currently 1724 pass, ~2m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -699,8 +699,9 @@ shuffle is over that exact sequence. Building the screen turned up two more: a r
 claimed from a reward screen is obtained through `RelicCmd.Obtain` and **runs its pickup
 effect**, and the claim that empties the screen returns to Neow by itself.
 
-**All eighteen traces now replay clean**, and E30's two stand-in draw counts are gone
-with them — see below.
+**All eighteen traces then replayed clean**, and E30's two stand-in draw counts are gone
+with them — see below. Six more captures have landed since; see "Three more blessings,
+three more defects".
 
 ### The debt E30 left, settled by two captures nobody had taken
 
@@ -759,11 +760,50 @@ them against, and the batch confirmed the pattern by refusing them again. **`--n
 N` takes the one you name**; `25TS4F5T37 --neow-option 1` and `XTLVVPKFBF --neow-option 2`
 are the two captures that would settle E30.
 
-**What is still uncovered.** All sixteen traces die on floors 5-17, so no committed trace
+**What is still uncovered.** All twenty-four traces die on floors 5-17, so no committed trace
 covers an act 2 — reaching one needs either a better auto-player or the run layer taking
 an ascension (`RunEngine.Reset` hardcodes 64/80, which is why the A0 trace was deleted).
 The relic table in `tests/fixtures/run_trace/README.md` says which blessings are covered;
 anything not on it is a cheap capture away.
+
+### Three more blessings, three more defects
+
+Cursed Pearl, Silver Crucible and Leafy Poultice, screened for and captured with
+`--neow-option`. Leafy Poultice was clean on first contact; the other two were not, and
+neither defect had anything to do with the blessing that carried it there.
+
+**E47 — `IsUpgradable` was a list of fourteen ids where the game declares thirty-seven.**
+`CardModel.IsUpgradable` is `CurrentUpgradeLevel < MaxUpgradeLevel`, and the cards that
+override `MaxUpgradeLevel` to zero are every curse and status. `RunConstants` held a
+hand-written subset. That is invisible while an upgrade is CHOSEN, and decisive the moment
+one is RANDOM: Doors of Light and Dark shuffles the upgradable cards and takes two, so
+Cursed Pearl's Greed sitting in the candidate list made it fourteen names instead of
+thirteen — a different shuffle, a different pick, and two Strikes became a Strike and a
+Defend. `MaxUpgradeLevel => 0` is extracted into `Cards.g.cs` now (`extract_data.py`
+emits `Upgradable: false`, 37 cards) and the hand list is deleted.
+
+**E48 — one `||` short-circuited a draw the game always makes.** `CardFactory.RollForUpgrade`
+draws its float on its first line, BEFORE it asks whether the card is upgradable, and
+`CreateForReward` calls it for every reward card unless `NoUpgradeRoll` is set. The
+emulator wrote the answer as `silverCrucibleUpgrade || RollCardUpgrade(...) || eggs`, so a
+run holding Silver Crucible — whose upgrade is `TryModifyCardRewardOptionsLate`, applied
+after the rolls and changing nothing about them — spent two rewards-stream values per card
+where the game spends three. Every card the stream produced after the first was somebody
+else's. **Any boolean built from an override and a roll needs the roll in a local first**;
+`CheckPotionRoll` one file away already carries a comment saying exactly this about White
+Beast Statue.
+
+**E46 — the last open row (O9) was a missing clause, not drift.** `ThieveryPower.Steal`
+guards on `!Target.IsDead`, and a Gremlin Merc's move attacks and THEN steals, so the blow
+that kills the player takes no gold. The emulator robbed the corpse for a final 20. It
+presented as twenty gold in the run's very last snapshot with a hundred clean steps in
+front of it, which reads like accumulated drift and was a single missing condition.
+
+**Read the whole divergence list, sorted by step.** E47 and E48 both surfaced first as
+`player.deck` — dozens of steps before the HP and block differences the batch summary
+printed. `replay_full_run_trace.py` reports a first divergence PER FIELD and does not
+order them, so `grep 'first divergence' | head -2` shows the symptom rather than the
+cause. Both times the deck row named the real event.
 
 ## Next work (prioritized, with pointers)
 
@@ -1630,7 +1670,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1714 pass
+dotnet test src/Sts2Emulator.Tests/        # 1724 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```

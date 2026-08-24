@@ -372,27 +372,20 @@ public static class RunConstants
     public static ReadOnlySpan<int> NeowPositiveOptions =>
         [5, 29, 89, 105, 124, 133, 140, 163, 164, 195, 206, 231, 293];
 
+    /// <summary>
+    /// The game's <c>CardModel.IsUpgradable</c>: <c>CurrentUpgradeLevel &lt; MaxUpgradeLevel</c>.
+    /// </summary>
+    /// <remarks>
+    /// This used to hold fourteen card ids written out by hand, against the thirty-seven
+    /// that actually override <c>MaxUpgradeLevel</c> to zero. The twenty-three it missed
+    /// were curses and statuses, which is invisible until something upgrades AT RANDOM:
+    /// Doors of Light and Dark shuffles the upgradable cards and takes two, so one extra
+    /// name in the candidate list is a different shuffle and a different pick. A live
+    /// capture (`NXV45HW43K`) upgraded two Strikes where the emulator, counting Greed
+    /// among the candidates, upgraded a Strike and a Defend.
+    /// </remarks>
     public static bool IsRunCardUpgradable(CardInstance card)
     {
-        return !card.Upgraded && !IsNonUpgradableCard(card.DefId);
-    }
-
-    private static bool IsNonUpgradableCard(int cardId)
-    {
-        return cardId
-            is 36
-                or 128
-                or 166
-                or 206
-                or 440
-                or 457
-                or 512
-                or 10001
-                or SpoilsMapCard
-                or 10008
-                or 10009
-                or 10010
-                or 10011
-                or 10012;
+        return !card.Upgraded && GeneratedData.Cards.Get(Math.Abs(card.DefId)).Upgradable;
     }
 }

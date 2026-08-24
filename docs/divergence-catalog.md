@@ -31,19 +31,18 @@ rather than Overgrowth.
 
 ## Open
 
-One, in a capture taken minutes ago.
+None.
 
-| # | Metric | Seed | What is known |
-| --- | --- | --- | --- |
-| O9 | `player.gold` step 111: 121 live, 101 here | `J09SPL8Y3V-a8-precisescissors` | Twenty gold, more than a hundred clean steps into the run. Nothing before it disagrees. |
+All twenty-four committed traces replay with no divergence on any compared field, and the
+two stand-in draw counts E30 left behind are gone.
 
-Twenty of the twenty-one committed traces replay with no divergence on any compared field,
-and the two stand-in draw counts E30 left behind are gone.
-
-That is a stronger statement than the last time this table was empty: six of the sixteen
-were captured specifically to walk paths the others did not, and closing them took ten
-engine fixes. It is still a statement about these sixteen runs, not about the emulator —
-see the note under "Patterns" about what a green set does and does not measure.
+That is a stronger statement than the last time this table was empty: fourteen of the
+twenty-four were captured specifically to walk paths the others did not — most of them by
+screening seeds for a Neow blessing no committed trace had taken — and closing what they
+found took eighteen engine fixes. It is still a statement about these twenty-four runs,
+not about the emulator: the last three captures were taken after the set had gone green
+and every one of them found something. See the note under "Patterns" about what a green
+set does and does not measure.
 
 The two that stood here last are E22 to E26 below; E27 and E28 came out of reading the
 code they touched, not out of a capture. What closed them is worth knowing
@@ -113,6 +112,9 @@ that failed could not have.
 | E43 | `state_type` step 1: game `card_select`, emulator `event` | `25TS4F5T37` (Lead Paperweight), `XTLVVPKFBF` (Hefty Tablet) | **Both of E30's stand-in draw counts are gone, replaced by the screens they were standing in for.** Each relic offers cards on a `CardSelectCmd.FromChooseACardScreen` grid and the emulator granted one card off `Rng.UpFront` instead: Lead Paperweight offers TWO from the Colourless pool at `CardCreationSource.Other`/RegularEncounter odds (rarity, card, upgrade — three draws each, so **six**, exactly its old fudge), Hefty Tablet THREE from the owner's pool filtered to Rare at Uniform odds with `NoUpgradeRoll` (one draw each, so **three**, exactly its old fudge). That the counts matched is why nothing downstream moved when they were replaced — the fudges were right about the arithmetic and wrong about everything else. Hefty Tablet's Injury also arrives WITH the card the grid hands over, not before it: `CardPileCmd.Add` takes one list holding the curse with the chosen card inserted at its front, and the capture shows both land in the same snapshot. |
 | E44 | `state_type` step 1: game `card_select`, emulator `event` | `J09SPL8Y3V-a8-precisescissors`, `SAM9XS24LM-a8-precariousshears` | **Precise Scissors and Precarious Shears chose the card for the player.** Both are `CardSelectCmd.FromDeckForRemoval` — CardsVar(1) and CardsVar(2), the second followed by DamageVar(16) — and the emulator called `RemoveLowestPriorityCard`, whose priority list starts with the curse placeholder: **Ascender's Bane**, which `IsRemovable` excludes outright, so it removed a card the game will not even offer. `BeginDeckSelection` already models this (Luminous Choir's comment says why: "the emulator choosing for them, which is the whole cost of the option"), including the count and the follow-up HP loss. Precarious Shears also took its 16 damage BEFORE the removal rather than after. **Four other sites still call `RemoveLowestPriorityCard`** and are the same defect waiting for a capture. |
 | E45 | (same fix) a Neow selection left a flag set for the rest of the run | `J09SPL8Y3V-a8-precisescissors` | A selection Neow opens must return to Neow, which stays up for one more Proceed — and the deck-selection completion path did not, so `NeowAwaitingProceed` stayed set forever. That is worse than landing on the wrong screen once: the flag is read again by the NEXT card reward the run claims, so a combat's reward screen went back to the ancient two floors later. Caught because the divergence moved from step 1 to step 25 rather than disappearing. |
+| E46 | `player.gold` step 111: 121 live, 101 here (was **O9**) | `J09SPL8Y3V-a8-precisescissors` | **The emulator robbed a corpse.** `ThieveryPower.Steal` opens `if (Target != null && !Target.IsDead && Target.Player.Gold > 0)`, and a Gremlin Merc's move attacks BEFORE it steals — so the blow that kills the player takes no gold with it. The emulator's steal checked only that the player had gold. Worth noting how this presented: twenty gold, in the last snapshot of the run, a hundred clean steps in, with every field before it agreeing. It reads like drift and it was a missing clause. |
+| E47 | `player.deck` step 62: the game upgraded two Strikes, the emulator a Strike and a Defend | `NXV45HW43K-a8-cursedpearl` | **`IsUpgradable` was a hand-kept list of fourteen card ids against the thirty-seven the game actually declares.** `CardModel.IsUpgradable` is `CurrentUpgradeLevel < MaxUpgradeLevel`, and the cards that override `MaxUpgradeLevel` are every curse and status; the emulator's list held fourteen of them. The twenty-three it missed were eligible for every upgrade in the game, which is invisible while an upgrade is CHOSEN and decisive the moment one is RANDOM — Doors of Light and Dark shuffles the upgradable cards and takes two, so Greed sitting in a Cursed Pearl run's candidate list made it fourteen names instead of thirteen, a different shuffle, and a different pick. `MaxUpgradeLevel => 0` is extracted into `Cards.g.cs` now and the list is gone. |
+| E48 | `player.deck` step 27: the game offered Sword Boomerang+, the emulator Body Slam+ | `RRRR6WR3C4-a8-silvercrucible` | **`||` short-circuited a draw the game always makes.** `CardFactory.CreateForReward` calls `RollForUpgrade` for every reward card unless `NoUpgradeRoll` is set, and `RollForUpgrade` draws its float on its FIRST line, before it asks whether the card is upgradable. The emulator wrote the answer as `silverCrucibleUpgrade || RollCardUpgrade(...) || UpgradedByEggs(...)`, so a run holding Silver Crucible — whose upgrade is `TryModifyCardRewardOptionsLate`, applied after the rolls and changing nothing about them — spent two rewards-stream values per card where the game spends three. Every card the stream produced from the second one on was somebody else's. |
 
 
 
@@ -219,6 +221,30 @@ Barrier. The branch that dealt the damage should not get to decide which effects
 damage has — anything that answers a hit belongs in the helper that lands the hit, next
 to Thorns. When adding a `break` to a long `if` chain, the question is not "does my case
 work" but "what did I just exclude".
+
+**A short-circuit is a decision not to draw.** E48 was one `||`. The game's reward
+upgrade draws its float and THEN decides what to do with it, so the draw is part of the
+stream whatever the answer; writing the cheap override first meant the expensive term was
+never evaluated and the value was never spent. Any boolean built from an override and a
+ROLL has to evaluate the roll into a local first — `||` and `&&` are control flow, and
+control flow over a random stream changes the stream. The same lesson is already written
+into `CheckPotionRoll`, one file away, in a comment saying exactly this about White Beast
+Statue.
+
+**A hand-kept list of ids is a claim about the game that nothing rechecks.** E47's
+`IsNonUpgradableCard` held fourteen entries where the game declares thirty-seven, and it
+had presumably been right about whatever prompted each addition. There is no moment at
+which such a list is discovered to be short — it fails only on the paths that touch the
+missing members. Anything expressible as a property the decompiled source states outright
+(`MaxUpgradeLevel => 0`) belongs in `extract_data.py`, generated, where being short is a
+diff rather than a divergence a hundred steps downstream.
+
+**Two of the three defects in this round were found by a field the capture compares
+almost by accident.** E47 and E48 both surfaced as `player.deck` — a multiset compared at
+every step — dozens of steps before they showed up as HP or block, which is what the
+batch summary printed first. The summary's "first divergence" lines are per-field and
+unordered; reading only the first two got the symptom and not the cause both times. Sort
+the divergence list by step before believing where a run went wrong.
 
 **A rule read off one observation is a rule fitted to one state.** E26's "a summoned rat
 goes to the FRONT" was true, and true for the reason given — it just happened to be the

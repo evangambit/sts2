@@ -626,9 +626,17 @@ public static class RunRewardGenerator
             );
             state.RewardCards[i] = cardId;
             blacklist.Add(cardId);
+            // The roll comes FIRST and unconditionally: CardFactory.CreateForReward calls
+            // RollForUpgrade for every card unless NoUpgradeRoll is set, and RollForUpgrade
+            // draws its float before it even asks whether the card is upgradable. Written
+            // as one `||` chain with silverCrucibleUpgrade in front, C# short-circuits and
+            // the draw never happens -- so a run holding Silver Crucible spent two values
+            // per reward card where the game spends three, and every card the rewards
+            // stream produced from the second one on was a different card.
+            bool rolledUpgrade = RollCardUpgrade(state, cardId, state.PlayerRng.Rewards);
             state.RewardUpgraded[i] =
                 silverCrucibleUpgrade
-                || RollCardUpgrade(state, cardId, state.PlayerRng.Rewards)
+                || rolledUpgrade
                 // TryModifyCardRewardOptionsLate: an egg upgrades the option on the screen,
                 // not just the copy that reaches the deck.
                 || RunNonCombatEffects

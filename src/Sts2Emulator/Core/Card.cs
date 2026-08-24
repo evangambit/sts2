@@ -69,7 +69,13 @@ public readonly record struct CardDef(
     string Entry = "",
     // CardModel.CanBeGeneratedByModifiers: eight curses refuse to be handed out by
     // anything that rolls one, so a curse roll has to filter on it.
-    bool CanBeGeneratedByModifiers = true
+    bool CanBeGeneratedByModifiers = true,
+    // CardModel.IsUpgradable is CurrentUpgradeLevel < MaxUpgradeLevel, and 38 cards
+    // override MaxUpgradeLevel to zero -- every curse and status. This is that override,
+    // read from the source rather than restated: the hand-kept list of ids it replaces
+    // had 14 of the 38, and the dozen curses missing from it were silently eligible for
+    // every upgrade in the game.
+    bool Upgradable = true
 );
 
 /// <summary>

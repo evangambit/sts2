@@ -299,6 +299,10 @@ def extract_cards() -> str:
         # anything that rolls one -- Neow's Bones among them -- so the roll has to read it.
         if "CanBeGeneratedByModifiers => false" in text:
             flags.append("CanBeGeneratedByModifiers: false")
+        # CardModel.MaxUpgradeLevel. The base is 1; the cards that override it all
+        # override it to 0, which is what IsUpgradable reads to refuse an upgrade.
+        if "MaxUpgradeLevel => 0" in text:
+            flags.append("Upgradable: false")
         flags_cs = f", {', '.join(flags)}" if flags else ""
 
         entries.append(

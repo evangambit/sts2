@@ -36,8 +36,11 @@ is.
 | `25TS4F5T37-a8-leadpaperweight.json` | Overgrowth | 100 | clean — the SAME seed as `25TS4F5T37-a8.json`, captured with `--neow-option 1` to take a blessing the auto-player will never pick. Settled half of E30's debt (E43) |
 | `XTLVVPKFBF-a8-heftytablet.json` | Overgrowth | 148 | clean — likewise `--neow-option 2` on the seed of `XTLVVPKFBF-a8.json`. Settled the other half, and found H11 on the way |
 | `SAM9XS24LM-a8-goldenpearl.json` | Overgrowth | 118 | clean on first contact — Golden Pearl's 150 gold was already right |
-| `J09SPL8Y3V-a8-precisescissors.json` | Overgrowth | 112 | **diverges** at step 111 on 20 gold (O9), after finding E44 and E45 |
+| `J09SPL8Y3V-a8-precisescissors.json` | Overgrowth | 112 | clean — found E44 and E45, and then E46: a Gremlin Merc stealing 20 gold from a player its own attack had just killed, which showed up only in the run's final snapshot |
 | `SAM9XS24LM-a8-precariousshears.json` | Overgrowth | 25 | clean — **cut to its trustworthy prefix**: the game wedged mid-run and steps 26-28 record a broken game rather than ground truth. Found E44 and H12 |
+| `25TS4F5T37-a8-leafypoultice.json` | Overgrowth | 101 | clean on first contact — Leafy Poultice needed no fix |
+| `NXV45HW43K-a8-cursedpearl.json` | Overgrowth | 101 | clean — found E47. Cursed Pearl's Greed sat in the deck from floor one, and it was Doors of Light and Dark that made that visible: one extra name in a shuffled candidate list is a different pick |
+| `RRRR6WR3C4-a8-silvercrucible.json` | Overgrowth | 113 | clean — found E48, a `||` that short-circuited the reward upgrade roll, so every card the rewards stream produced after the first was somebody else's |
 
 Twenty of the twenty-one replay clean. Every capture taken after the set first went green
 has found something — thirteen defects and six harness gaps between them.
@@ -70,6 +73,14 @@ taken, three defects, and the end of E30's standing debt. **A seed can be captur
 than once** this way -- those two share their seeds with the plain captures above, and the
 runs diverge from the first decision onward.
 
+The table below is keyed by SEED and names the blessing that seed's plain capture took.
+Most of the forced-option traces are not in it: `25TS4F5T37-leadpaperweight`,
+`XTLVVPKFBF-heftytablet`, `SAM9XS24LM-goldenpearl`, `J09SPL8Y3V-precisescissors`,
+`SAM9XS24LM-precariousshears`, `NXV45HW43K-cursedpearl` and `25TS4F5T37-leafypoultice`
+each take a different blessing on a seed that already appears here, which is the point of
+them. `RRRR6WR3C4` is the exception and does have a row, because its only capture is the
+forced one. Eight blessings covered that no auto-played run would ever have reached.
+
 | trace | Neow relic |
 | --- | --- |
 | `41TJ3T2Y0Q` | Silken Tress |
@@ -88,6 +99,7 @@ runs diverge from the first decision onward.
 | `SAM9XS24LM` | Nutritious Oyster |
 | `NXV45HW43K` | Winged Boots |
 | `J09SPL8Y3V` | Neow's Bones |
+| `RRRR6WR3C4` | Silver Crucible |
 
 `QS2GYXRKWN-a0.json` was removed: it is an ascension-0 run, and the emulator models
 A8 only (`RunEngine.Reset` starts the player at 64/80), so it diverged from step 0
