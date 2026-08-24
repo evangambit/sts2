@@ -335,6 +335,51 @@ public static class RunConstants
     /// <summary>Every act's elite list is fifteen long, whatever the act.</summary>
     public const int EliteSequenceLength = 15;
 
+    /// <summary>
+    /// The ancients, by the entry name their own Rng stream is keyed on. Act 1's is Neow;
+    /// Hive's three are below, one of which each act draws in the last line of
+    /// <c>ActModel.GenerateRooms</c>.
+    /// </summary>
+    /// <summary>Ascender's Bane, which the game refuses to remove from a deck.</summary>
+    public const int CardAscendersBane = 10001;
+
+    /// <summary>
+    /// How many characters Orobas may brand a Sea Glass with: everyone unlocked except
+    /// the player's own, which is four on the mature profile the captures are taken on.
+    /// Only the DRAW matters — the chosen character brands a relic the emulator does not
+    /// model — but skipping it would shift every pool pick after it.
+    /// </summary>
+    public const int OtherCharacterCount = 4;
+
+    public const string AncientNeow = "NEOW";
+    public const string AncientOrobas = "OROBAS";
+    public const string AncientPael = "PAEL";
+    public const string AncientTezcatara = "TEZCATARA";
+
+    // Orobas: ElectricShrymp, GlassEye, SandCastle; AlchemicalCoffer, Driftwood,
+    // RadiantPearl; TouchOfOrobas and ArchaicTooth.
+    public static ReadOnlySpan<int> OrobasPool1 => [71, 101, 229];
+    public static ReadOnlySpan<int> OrobasPool2 => [2, 68, 211];
+    public static ReadOnlySpan<int> OrobasPool3 => [268, 6];
+    public const int RelicPrismaticGemOption = 208;
+    public const int RelicSeaGlass = 232;
+
+    // Pael: PaelsFlesh, PaelsHorn, PaelsTears; PaelsWing; PaelsEye, PaelsBlood.
+    public static ReadOnlySpan<int> PaelPool1 => [178, 180, 182];
+    public static ReadOnlySpan<int> PaelPool2 => [184];
+    public static ReadOnlySpan<int> PaelPool3 => [177, 175];
+    public const int RelicPaelsClaw = 176;
+    public const int RelicPaelsTooth = 183;
+    public const int RelicPaelsGrowth = 179;
+    public const int RelicPaelsLegion = 181;
+
+    // Tezcatara: VeryHotCocoa, YummyCookie; BiiigHug, Storybook, ToastyMittens;
+    // GoldenCompass, PumpkinCandle, ToyBox, SealOfGold.
+    public static ReadOnlySpan<int> TezcataraPool1 => [283, 296];
+    public static ReadOnlySpan<int> TezcataraPool2 => [17, 251, 266];
+    public static ReadOnlySpan<int> TezcataraPool3 => [104, 209, 271, 233];
+    public const int RelicNutritiousSoup = 168;
+
     public const int RelicBurningBlood = 36;
     public const int RelicFrozenEgg = 93;
     public const int RelicLizardTail = 137;

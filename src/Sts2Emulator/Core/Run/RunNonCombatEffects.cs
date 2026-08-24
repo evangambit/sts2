@@ -1744,6 +1744,152 @@ public static class RunNonCombatEffects
         return state.EventRngStream;
     }
 
+    /// <summary>
+    /// An ancient's three blessings: one drawn from each of its pools, off the ancient's
+    /// own Rng, in pool order.
+    /// </summary>
+    /// <remarks>
+    /// All three of Hive's ancients share this shape and differ only in their pools and
+    /// in which entries are CONDITIONAL on the run. Neow does not come through here — it
+    /// has its own generator, and a different shape (a curse plus a shuffled positive
+    /// list) rather than three pools.
+    /// </remarks>
+    public static int[] GenerateAncientOptions(RunState state, string ancient)
+    {
+        var rng = EventStream(state, ancient);
+        return ancient switch
+        {
+            RunConstants.AncientOrobas => OrobasOptions(state, rng),
+            RunConstants.AncientPael => PaelOptions(state, rng),
+            RunConstants.AncientTezcatara => TezcataraOptions(state, rng),
+            _ => [],
+        };
+    }
+
+    /// <summary>
+    /// Orobas spends TWO draws before its pools: one picking a character other than the
+    /// player's, to brand a Sea Glass with, and one deciding whether pool 1 gets the Sea
+    /// Glass or a Prismatic Gem instead — <c>NextFloat() &lt; 1/3</c> for the gem.
+    /// </summary>
+    /// <remarks>
+    /// The character draw's RESULT does not matter here (it only brands the relic, which
+    /// the emulator does not model), but the draw does: skipping it would shift every pool
+    /// pick after it. The list it chooses from is the unlocked characters minus the
+    /// player's own, which is four on a mature profile.
+    /// </remarks>
+    private static int[] OrobasOptions(RunState state, GameRng rng)
+    {
+        rng.NextInt(RunConstants.OtherCharacterCount);
+        bool prismaticGem = rng.NextDouble() < 1.0 / 3.0;
+
+        var pool1 = RunConstants.OrobasPool1.ToArray().ToList();
+        pool1.Add(prismaticGem ? RunConstants.RelicPrismaticGemOption : RunConstants.RelicSeaGlass);
+
+        // Pool 3 holds Touch of Orobas and Archaic Tooth, each present only if it can be
+        // set up for the player -- one needs a starter relic, the other a transcendable
+        // starter card, and the Ironclad has both.
+        return
+        [
+            rng.NextItem(pool1),
+            rng.NextItem(RunConstants.OrobasPool2.ToArray()),
+            rng.NextItem(RunConstants.OrobasPool3.ToArray()),
+        ];
+    }
+
+    /// <summary>
+    /// Pael's second pool is a weighting trick: the conditional entries are added, then
+    /// <c>list.AddRange(list)</c> DOUBLES everything so far, and only then is Growth
+    /// appended — so Growth is half as likely as anything else in the pool.
+    /// </summary>
+    private static int[] PaelOptions(RunState state, GameRng rng)
+    {
+        var pool2 = RunConstants.PaelPool2.ToArray().ToList();
+        if (state.Deck.Count(CanTakeAnEnchantment) >= 3)
+        {
+            pool2.Add(RunConstants.RelicPaelsClaw);
+        }
+
+        if (state.Deck.Count(IsRemovableCard) >= 5)
+        {
+            pool2.Add(RunConstants.RelicPaelsTooth);
+        }
+
+        pool2.AddRange(pool2);
+        pool2.Add(RunConstants.RelicPaelsGrowth);
+
+        var pool3 = RunConstants.PaelPool3.ToArray().ToList();
+        // HasEventPet is not modelled, and no run has one yet.
+        pool3.Add(RunConstants.RelicPaelsLegion);
+
+        return
+        [
+            rng.NextItem(RunConstants.PaelPool1.ToArray()),
+            rng.NextItem(pool2),
+            rng.NextItem(pool3),
+        ];
+    }
+
+    /// <summary>
+    /// Tezcatara adds Nutritious Soup to its first pool when the deck holds a BASIC
+    /// Strike — which every starting deck does, and keeps doing unless every Strike is
+    /// removed or transformed.
+    /// </summary>
+    private static int[] TezcataraOptions(RunState state, GameRng rng)
+    {
+        var pool1 = RunConstants.TezcataraPool1.ToArray().ToList();
+        if (state.Deck.Any(IsBasicStrike))
+        {
+            pool1.Add(RunConstants.RelicNutritiousSoup);
+        }
+
+        return
+        [
+            rng.NextItem(pool1),
+            rng.NextItem(RunConstants.TezcataraPool2.ToArray()),
+            rng.NextItem(RunConstants.TezcataraPool3.ToArray()),
+        ];
+    }
+
+    /// <summary>
+    /// <c>c.Tags.Contains(CardTag.Strike) &amp;&amp; c.Rarity == Basic</c>. Card tags are
+    /// not extracted, so this reads the entry name instead — every Strike-tagged card the
+    /// game has is named for it, and at Basic rarity there is only the starter Strike.
+    /// </summary>
+    private static bool IsBasicStrike(CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(Math.Abs(card.DefId));
+        return def.Rarity == CardRarity.Basic
+            && def.Entry.Contains("STRIKE", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Stands in for <c>Goopy.CanEnchant</c>, which is not modelled — the emulator has no
+    /// Goopy enchantment at all.
+    /// </summary>
+    /// <remarks>
+    /// Only ever used as a COUNT against a threshold of three, and every deck a run can
+    /// hold clears that on its starting cards alone, so the approximation has no reachable
+    /// effect on which option Pael offers. It is still an approximation: if Goopy turns
+    /// out to refuse a card type this counts, a deck stripped down to two enchantable
+    /// cards would disagree.
+    /// </remarks>
+    private static bool CanTakeAnEnchantment(CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(Math.Abs(card.DefId));
+        return def.Type is not (CardType.Curse or CardType.Status);
+    }
+
+    /// <summary>
+    /// Stands in for <c>CardModel.IsRemovable</c>, which is not extracted.
+    /// </summary>
+    /// <remarks>
+    /// Ascender's Bane is the one card every run carries that the game refuses to remove;
+    /// Eternal cards are the other case and are not modelled. Same caveat as above: the
+    /// threshold is five and a starting deck has ten removable cards.
+    /// </remarks>
+    private static bool IsRemovableCard(CardInstance card) =>
+        Math.Abs(card.DefId) != RunConstants.CardAscendersBane;
+
     public static void GainMaxHp(RunState state, int amount)
     {
         state.PlayerMaxHp += amount;

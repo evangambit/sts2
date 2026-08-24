@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1771 pass, ~2m)
+# C# unit tests (currently 1786 pass, ~2m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -849,6 +849,48 @@ Cage — and both are blocked on the same missing piece: `BeginDeckSelection`'s 
 path always returns to `RunPhase.Event`, so a selection opened from a shop or a relic
 pickup has nowhere correct to land. That return needs generalising the way E53 generalised
 the rewards screen's.
+
+### The ancients, and what is approximated in them
+
+Every act opens on an ancient. Act 1's is Neow, which has its own generator (a curse plus
+a shuffled positive list). **Hive's three — Orobas, Pael, Tezcatara — all share one
+shape**: three blessings, one drawn from each of three pools, off the ancient's own Rng
+(`Seed + hash(NAME)`, the same formula as `NeowRng`) in pool order. They differ only in
+their pools and in which entries are conditional on the run.
+
+- **Orobas** spends TWO draws before its pools — a character other than the player's to
+  brand a Sea Glass with, then `NextFloat() < 1/3` deciding whether pool 1 gains a
+  Prismatic Gem or that Sea Glass. The character's identity does not matter to the
+  emulator; the DRAW does, and skipping it would shift all three picks.
+- **Pael**'s second pool is a weighting trick: the conditional entries are added, then
+  `list.AddRange(list)` DOUBLES everything, and only then is Growth appended — so Growth is
+  half as likely as anything else in the pool.
+- **Tezcatara** adds Nutritious Soup to pool 1 while the deck holds a Basic Strike.
+
+**Three approximations, all documented at their call sites, all currently unreachable:**
+
+1. `CanTakeAnEnchantment` stands in for `Goopy.CanEnchant` — the emulator has no Goopy
+   enchantment at all. Used only as a count against a threshold of THREE.
+2. `IsRemovableCard` stands in for `CardModel.IsRemovable`, which is still not extracted;
+   it knows about Ascender's Bane and not about Eternal cards. Threshold of FIVE.
+3. `HasEventPet` is not modelled, so Pael's Legion is always in pool 3.
+
+The first two are counts against thresholds that a STARTING deck already clears with ten
+removable cards, so no reachable run disagrees — but they are approximations and will bite
+whenever a deck gets small or strange. The third is a straight omission waiting on pets.
+
+**Not yet wired:** which ancient an act actually gets. `ActModel.GenerateRooms` ends with
+`Ancient = rng.NextItem(GetUnlockedAncients().Concat(sharedAncientSubset))`, and the
+emulator spends that draw and discards the result. The shared-ancient SUBSET is also not
+modelled, and it changes the list the pick indexes into, so getting this right needs the
+subset first.
+
+**A test-speed trap worth not falling into twice.** These tests sweep hundreds of seeds,
+and the first version called `RunEngine.Reset` for each — ~150ms apiece, which made one
+class take 1m20. Cloning a single pristine run and replacing `State.Rng` with a fresh
+`RunRngSet` is ~0.07ms and gets the same coverage in 0.66s. Clear `EventRngStream` and
+`EventRngName` when you do: the event stream is cached on the state and a clone will
+otherwise answer with the stream built for the seed it was cloned from.
 
 ### Reaching act 2 without playing act 1
 
@@ -1927,7 +1969,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1771 pass
+dotnet test src/Sts2Emulator.Tests/        # 1786 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```
