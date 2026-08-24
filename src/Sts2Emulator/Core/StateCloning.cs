@@ -209,7 +209,6 @@ public static class StateCloning
             PlayerMaxHp = state.PlayerMaxHp,
             Gold = state.Gold,
             Floor = state.Floor,
-            Act = state.Act,
             Phase = state.Phase,
             Deck = [.. state.Deck],
             Relics = [.. state.Relics],
@@ -247,12 +246,23 @@ public static class StateCloning
             MapNodes = mapNodes,
             CurrentMapCoord = state.CurrentMapCoord,
             MapOptionCoords = ((int Col, int Row)?[])state.MapOptionCoords.Clone(),
-            NormalEncounterSequence = (int[])state.NormalEncounterSequence.Clone(),
-            EliteEncounterSequence = (int[])state.EliteEncounterSequence.Clone(),
-            BossEncounterId = state.BossEncounterId,
+            // The act list carries the sequences and the boss for EVERY act, and the
+            // per-act properties are views on it — so cloning the list is what clones
+            // them. Copying the views instead would silently drop acts 2 and 3.
+            Acts =
+            [
+                .. state.Acts.Select(act =>
+                    act with
+                    {
+                        Events = (int[])act.Events.Clone(),
+                        NormalEncounters = (int[])act.NormalEncounters.Clone(),
+                        EliteEncounters = (int[])act.EliteEncounters.Clone(),
+                    }
+                ),
+            ],
+            CurrentActIndex = state.CurrentActIndex,
             NormalEncountersVisited = state.NormalEncountersVisited,
             EliteEncountersVisited = state.EliteEncountersVisited,
-            EventSequence = (int[])state.EventSequence.Clone(),
             EventSequenceIndex = state.EventSequenceIndex,
             CardRarityOffset = state.CardRarityOffset,
             PotionRewardOdds = state.PotionRewardOdds,

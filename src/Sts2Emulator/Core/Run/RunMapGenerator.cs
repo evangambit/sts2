@@ -56,8 +56,12 @@ public static class RunMapGenerator
         // which is what the differential captures are taken on. A profile without
         // Underdocks unlocked would always get Overgrowth.
         var actRng = new GameRng(state.Rng.Seed, "act_selection");
-        bool underdocks = actRng.NextInt(0, 2) == 1;
-        state.Act = underdocks ? RunConstants.ActUnderdocks : RunConstants.ActOvergrowth;
+        int[] acts =
+        [
+            .. RunConstants.ActCandidatesByIndex.Select(candidates =>
+                candidates[actRng.NextInt(candidates.Length)]
+            ),
+        ];
         // RunManager.GenerateRooms drives one UpFront stream in a fixed order:
         // it shuffles the shared ancients, draws one subset size per act after the
         // first, and only then calls ActModel.GenerateRooms for each act. That
@@ -82,34 +86,15 @@ public static class RunMapGenerator
         // acts' worth of draws behind the game's for the rest of the run -- invisible so
         // far because nothing a committed trace does reads UpFront after generation, and
         // wrong the moment anything did.
-        state.LaterActRooms.Clear();
-        foreach (int act in ActSequence(state))
+        state.Acts.Clear();
+        state.CurrentActIndex = 0;
+        foreach (int act in acts)
         {
-            var rooms = GenerateRoomsForAct(act, upFront);
-            if (act == state.Act)
-            {
-                state.EventSequence = rooms.Events;
-                state.EventSequenceIndex = 0;
-                state.NormalEncounterSequence = rooms.NormalEncounters;
-                state.EliteEncounterSequence = rooms.EliteEncounters;
-                state.BossEncounterId = rooms.BossEncounterId;
-            }
-            else
-            {
-                state.LaterActRooms.Add(rooms);
-            }
+            state.Acts.Add(GenerateRoomsForAct(act, upFront));
         }
-    }
 
-    /// <summary>
-    /// The acts this run will play, in order. <c>ActModel.GetRandomList</c> takes one act
-    /// per INDEX off the act_selection stream: index 0 is Overgrowth or Underdocks, index
-    /// 1 is always Hive and index 2 always Glory. The later two spend a draw each even
-    /// though they have nothing to choose between, which is why they are rolled here
-    /// rather than assumed -- and why act 1's own roll, which comes first, is unmoved.
-    /// </summary>
-    private static int[] ActSequence(RunState state) =>
-        [state.Act, RunConstants.ActHive, RunConstants.ActGlory];
+        state.EventSequenceIndex = 0;
+    }
 
     /// <summary>
     /// <c>ActModel.GenerateRooms</c>, which is the same six steps for every act: shuffle

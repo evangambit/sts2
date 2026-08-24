@@ -301,6 +301,28 @@ public static class RunConstants
     public const int ActHive = 3;
     public const int ActGlory = 4;
 
+    /// <summary>
+    /// <c>ModelDb.ActsByIndex</c>: the acts a run may play at each index, in the order the
+    /// game declares them. <c>ActModel.GetRandomList</c> takes ONE per index off the
+    /// act_selection stream — including where there is only one candidate, which still
+    /// spends a draw.
+    /// </summary>
+    /// <remarks>
+    /// This is the extension point, and it is deliberately data. The devs have said act 2
+    /// and act 3 will get alternates the way act 1 has Overgrowth and Underdocks: that is
+    /// a new entry in an existing row, and the selection already rolls over whatever the
+    /// row holds. A fourth act is a new row. Neither needs the generator touched — though
+    /// a new act does need its pools and its <see cref="ActRoomCounts"/> entry, and an
+    /// alternate needs the same, because those are the act's own data and not something
+    /// that can be inferred.
+    /// </remarks>
+    public static readonly int[][] ActCandidatesByIndex =
+    [
+        [ActOvergrowth, ActUnderdocks],
+        [ActHive],
+        [ActGlory],
+    ];
+
     /// <summary>Every act's elite list is fifteen long, whatever the act.</summary>
     public const int EliteSequenceLength = 15;
 

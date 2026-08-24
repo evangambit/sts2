@@ -27,15 +27,20 @@ public class ActGenerationTests
     [InlineData("3PFLW9XC5D")]
     [InlineData("7WGQ2VNJ4M")]
     [InlineData("J09SPL8Y3V")]
-    public void TheLaterActsAreGeneratedUpFront(string seed)
+    public void EveryActIsGeneratedUpFront(string seed)
     {
         var state = Generated(seed);
 
-        // Hive then Glory, whichever region act 1 turned out to be.
-        Assert.Equal(
-            [RunConstants.ActHive, RunConstants.ActGlory],
-            state.LaterActRooms.Select(rooms => rooms.Act)
+        // Every act, in index order: whichever region act 1 turned out to be, then
+        // Hive, then Glory.
+        Assert.Equal(3, state.Acts.Count);
+        Assert.Equal(0, state.CurrentActIndex);
+        Assert.Contains(
+            state.Acts[0].Act,
+            new[] { RunConstants.ActOvergrowth, RunConstants.ActUnderdocks }
         );
+        Assert.Equal(RunConstants.ActHive, state.Acts[1].Act);
+        Assert.Equal(RunConstants.ActGlory, state.Acts[2].Act);
     }
 
     /// <summary>
@@ -47,7 +52,7 @@ public class ActGenerationTests
     public void HiveHasItsOwnRoomCountsAndPools()
     {
         var state = Generated("3PFLW9XC5D");
-        var hive = state.LaterActRooms.Single(rooms => rooms.Act == RunConstants.ActHive);
+        var hive = state.Acts.Single(rooms => rooms.Act == RunConstants.ActHive);
 
         Assert.Equal(14, hive.NormalEncounters.Length);
         Assert.Equal(RunConstants.EliteSequenceLength, hive.EliteEncounters.Length);
@@ -71,10 +76,34 @@ public class ActGenerationTests
     public void HivesEventPoolIsItsOwnPlusTheSharedBlock()
     {
         var state = Generated("3PFLW9XC5D");
-        var hive = state.LaterActRooms.Single(rooms => rooms.Act == RunConstants.ActHive);
+        var hive = state.Acts.Single(rooms => rooms.Act == RunConstants.ActHive);
 
         Assert.Equal(28, hive.Events.Length);
         Assert.Equal(hive.Events.Length, hive.Events.Distinct().Count());
+    }
+
+    /// <summary>
+    /// The act list is the only copy: the per-act sequences are views on
+    /// <c>Acts[CurrentActIndex]</c>, so pointing the index at another act swaps all of
+    /// them at once. That is what the transition will do, and it is why adding a fourth
+    /// act — or an alternate act 2, which the devs have said is coming — is a data change
+    /// rather than a structural one.
+    /// </summary>
+    [Fact]
+    public void TheCurrentActIndexSelectsWhichSequencesAreLive()
+    {
+        var state = Generated("3PFLW9XC5D");
+        int[] firstActNormals = state.NormalEncounterSequence;
+        var hive = state.Acts[1];
+
+        state.CurrentActIndex = 1;
+
+        Assert.Equal(RunConstants.ActHive, state.Act);
+        Assert.Equal(hive.NormalEncounters, state.NormalEncounterSequence);
+        Assert.Equal(hive.EliteEncounters, state.EliteEncounterSequence);
+        Assert.Equal(hive.BossEncounterId, state.BossEncounterId);
+        Assert.Equal(hive.Events, state.EventSequence);
+        Assert.NotEqual(firstActNormals, state.NormalEncounterSequence);
     }
 
     /// <summary>
@@ -93,9 +122,6 @@ public class ActGenerationTests
         Assert.Equal(15, state.NormalEncounterSequence.Length);
         Assert.Equal(RunConstants.EliteSequenceLength, state.EliteEncounterSequence.Length);
         Assert.NotEqual(0, state.BossEncounterId);
-        Assert.DoesNotContain(
-            state.BossEncounterId,
-            RunConstants.HiveBossEncounters.ToArray()
-        );
+        Assert.DoesNotContain(state.BossEncounterId, RunConstants.HiveBossEncounters.ToArray());
     }
 }

@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1753 pass, ~2m)
+# C# unit tests (currently 1761 pass, ~2m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -884,8 +884,23 @@ those ROSTERS still disagree with the game's — the emulator's Tunneler holds o
 TunnelerWeak holds two. That is a fight-time problem, not a generation one: a pool needs
 identity and order, nothing else.
 
-Act 2's rooms are kept in `RunState.LaterActRooms` so the transition can install them
-rather than generate from a stream that has moved on. **Phase B is the transition itself**
+**The acts live in one list, shaped like the game's.** `RunState.Acts` holds every act in
+index order and `CurrentActIndex` says which one the run is in — the game's own two fields.
+The four per-act sequences (`EventSequence`, `NormalEncounterSequence`,
+`EliteEncounterSequence`, `BossEncounterId`) and `Act` itself are **views** on
+`Acts[CurrentActIndex]`, not copies, so the transition swaps all of them by moving the
+index and nothing can drift out of step. The first cut of this had act 1 in loose fields
+and "the acts after it" in a separate list, which quietly assumed there are exactly three
+acts and that the first is special; both assumptions are going to break.
+
+**Adding an act, or an alternate act.** `RunConstants.ActCandidatesByIndex` is the table —
+`[[Overgrowth, Underdocks], [Hive], [Glory]]` — and selection is one `NextItem` per row off
+`act_selection`, including where a row has a single candidate, which still spends a draw.
+The devs have said act 2 and act 3 will get alternates the way act 1 has two: **that is a
+new entry in an existing row**. A fourth act is **a new row**. Neither needs the generator
+touched. What a new act DOES need is its own data, because none of it is inferable: four
+encounter pools, an event pool, and an `ActRoomCounts` entry (weak-encounter count and base
+room count — 3/15 for the act-1 regions, 2/14 for Hive, 2/13 for Glory). **Phase B is the transition itself**
 (advance the act, install its rooms, generate its map, continue the floor counter, land on
 the Ancient node act 2 opens with); phase C is whatever act 2 then finds, with ~140
 captured act-2 steps as the test.
@@ -1873,7 +1888,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1753 pass
+dotnet test src/Sts2Emulator.Tests/        # 1761 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```

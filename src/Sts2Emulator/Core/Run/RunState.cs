@@ -29,7 +29,11 @@ public sealed record ActRooms(
     int[] NormalEncounters,
     int[] EliteEncounters,
     int BossEncounterId
-);
+)
+{
+    /// <summary>Stands in before a run has been generated.</summary>
+    public static readonly ActRooms None = new(RunConstants.ActOvergrowth, [], [], [], 0);
+}
 
 public sealed class RunState
 {
@@ -40,7 +44,6 @@ public sealed class RunState
     public int PlayerMaxHp;
     public int Gold;
     public int Floor;
-    public int Act;
     public RunPhase Phase;
     public List<CardInstance> Deck = [];
     public List<RelicInstance> Relics = [];
@@ -179,22 +182,77 @@ public sealed class RunState
     public (int Col, int Row)?[] MapOptionCoords = new (int Col, int Row)?[RunConstants.MapChoices];
 
     /// <summary>
-    /// The rooms generated for the acts this run has not reached yet.
+    /// Every act of the run, in order, as <c>RunState.Acts</c> holds them.
     /// </summary>
     /// <remarks>
     /// The game rolls every act's rooms at run start, off one UpFront stream, in index
-    /// order — so act 2's encounters were decided before the player left Neow. Keeping
-    /// them is what lets the act transition install them rather than generate from a
-    /// stream that has moved on.
+    /// order — act 2's encounters were decided before the player left Neow. This is that
+    /// list, and it is the ONLY copy: the four per-act fields below are views on
+    /// <c>Acts[CurrentActIndex]</c> rather than a second copy that has to be kept in step.
+    /// An earlier version split act 1 into loose fields and put "the acts after it" in a
+    /// separate list, which quietly assumed there are exactly three acts and that the
+    /// first is special. Neither is safe: a fourth act is a new row in
+    /// <c>RunConstants.ActCandidatesByIndex</c>, and an alternate act 2 is a new entry in
+    /// an existing row. Both should cost nothing here.
     /// </remarks>
-    public List<ActRooms> LaterActRooms = [];
+    public List<ActRooms> Acts = [];
 
-    public int[] NormalEncounterSequence = [];
-    public int[] EliteEncounterSequence = [];
-    public int BossEncounterId;
+    /// <summary>Which of <see cref="Acts"/> the run is in — the game's own field name.</summary>
+    public int CurrentActIndex;
+
+    private ActRooms CurrentAct
+    {
+        get => (uint)CurrentActIndex < (uint)Acts.Count ? Acts[CurrentActIndex] : ActRooms.None;
+        set
+        {
+            if ((uint)CurrentActIndex < (uint)Acts.Count)
+            {
+                Acts[CurrentActIndex] = value;
+                return;
+            }
+
+            Acts.Clear();
+            Acts.Add(value);
+            CurrentActIndex = 0;
+        }
+    }
+
+    /// <summary>The REGION the run is currently in — Overgrowth, Underdocks, Hive…</summary>
+    /// <remarks>
+    /// Settable so a test can put a run in an act without generating one, which several do
+    /// to check act-gated events. It rewrites the CURRENT act's region rather than moving
+    /// the run between acts — advancing is <c>CurrentActIndex</c>'s job.
+    /// </remarks>
+    public int Act
+    {
+        get => CurrentAct.Act;
+        set => CurrentAct = CurrentAct with { Act = value };
+    }
+
+    public int[] NormalEncounterSequence
+    {
+        get => CurrentAct.NormalEncounters;
+        set => CurrentAct = CurrentAct with { NormalEncounters = value };
+    }
+
+    public int[] EliteEncounterSequence
+    {
+        get => CurrentAct.EliteEncounters;
+        set => CurrentAct = CurrentAct with { EliteEncounters = value };
+    }
+
+    public int BossEncounterId
+    {
+        get => CurrentAct.BossEncounterId;
+        set => CurrentAct = CurrentAct with { BossEncounterId = value };
+    }
     public int NormalEncountersVisited;
     public int EliteEncountersVisited;
-    public int[] EventSequence = [];
+    public int[] EventSequence
+    {
+        get => CurrentAct.Events;
+        set => CurrentAct = CurrentAct with { Events = value };
+    }
     public int EventSequenceIndex;
 
     /// <summary>

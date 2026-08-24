@@ -18,7 +18,6 @@ public sealed class RunEngine
         State.PlayerMaxHp = 80;
         State.Gold = 99;
         State.Floor = 1;
-        State.Act = RunConstants.ActOvergrowth;
         State.Phase = RunPhase.Ancient;
         State.Deck = [];
         foreach (int cardId in RunConstants.StarterDeckIds)
