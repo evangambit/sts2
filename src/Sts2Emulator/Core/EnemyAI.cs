@@ -15,6 +15,13 @@ public static class EnemyAI
         var effectiveAiRng = aiRng ?? rng;
         foreach (var enemy in enemies.Where(e => e.Hp > 0))
         {
+            // A killed illusion announces the revive it is about to spend the turn on, and
+            // does not roll a move for a turn it will not act in.
+            if (BuffSystem.Get(enemy.Buffs, BuffId.Reviving) > 0)
+            {
+                continue;
+            }
+
             enemy.CurrentIntent = SelectIntent(enemy, effectiveAiRng, ascension, enemies);
             enemy.SecondaryIntent = SecondaryIntentFor(enemy);
         }
@@ -120,11 +127,12 @@ public static class EnemyAI
                     // what the emulator granted. Vigor is spent by its next attack, so the
                     // Crash after a Thrash announces six higher and the one after that
                     // does not.
-                    for (int i = 0; i < enemy.CurrentIntent.Hits; i++)
-                    {
-                        DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    }
-
+                    DealAttack(
+                        enemy,
+                        state,
+                        enemy.CurrentIntent.Magnitude,
+                        enemy.CurrentIntent.Hits
+                    );
                     BuffSystem.Apply(enemy.Buffs, BuffId.Vigor, 6);
                     break;
                 }
@@ -164,11 +172,12 @@ public static class EnemyAI
                     // Every Merc move steals through ThieveryPower; DOUBLE_SMASH adds
                     // WeakPower(2) and HEHE adds StrengthPower(2) to itself. The hits
                     // themselves come from the intent's Hits.
-                    for (int i = 0; i < enemy.CurrentIntent.Hits; i++)
-                    {
-                        DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    }
-
+                    DealAttack(
+                        enemy,
+                        state,
+                        enemy.CurrentIntent.Magnitude,
+                        enemy.CurrentIntent.Hits
+                    );
                     StealGremlinMercGold(enemy, state);
                     if (enemy.MoveIndex % 3 == 1)
                     {
@@ -222,76 +231,12 @@ public static class EnemyAI
                     break;
                 }
 
-                // A declared multi-hit lands one hit at a time, so block, Thorns and
-                // every per-instance effect see each of them. Enemies whose intent still
-                // carries a pre-multiplied total fall through to the single-hit path below.
-                if (enemy.CurrentIntent.Hits > 1)
-                {
-                    for (int i = 0; i < enemy.CurrentIntent.Hits; i++)
-                    {
-                        DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    }
-
-                    break;
-                }
-
-                if (enemy.DefId == KE.Byrdonis && enemy.MoveIndex % 2 == 1)
-                {
-                    // PeckDamage x PeckRepeat (repeat is 3 at every ascension).
-                    for (int i = 0; i < 3; i++)
-                    {
-                        DealAttackDamage(
-                            enemy,
-                            state,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
-                        );
-                    }
-
-                    break;
-                }
-
-                if (enemy.DefId == KE.PhrogParasite && enemy.MoveIndex % 2 == 1)
-                {
-                    // LashDamage x 4.
-                    for (int i = 0; i < 4; i++)
-                    {
-                        DealAttackDamage(
-                            enemy,
-                            state,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
-                        );
-                    }
-
-                    break;
-                }
-
-                if (enemy.DefId == KE.SkulkingColony && enemy.MoveIndex % 4 == 3)
-                {
-                    // PiercingStabsDamage x PiercingStabsRepeat (2).
-                    DealAttackDamage(
-                        enemy,
-                        state,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
-                    );
-                    DealAttackDamage(
-                        enemy,
-                        state,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
-                    );
-                    break;
-                }
-
                 if (
                     enemy.DefId == KE.TestSubject
                     && BuffSystem.Get(enemy.Buffs, BuffId.PainfulStabs) > 0
                 )
                 {
-                    int hits = 3 + Math.Max(0, enemy.LastMove);
-                    for (int i = 0; i < hits; i++)
-                    {
-                        DealAttackDamage(enemy, state, 11);
-                    }
-
+                    DealAttack(enemy, state, 11, 3 + Math.Max(0, enemy.LastMove));
                     enemy.LastMove++;
                     break;
                 }
@@ -302,103 +247,7 @@ public static class EnemyAI
                     && (enemy.MoveIndex - 4) % 3 == 0
                 )
                 {
-                    for (int i = 0; i < 3; i++)
-                    {
-                        DealAttackDamage(enemy, state, 11);
-                    }
-
-                    break;
-                }
-
-                if (enemy.DefId == KE.SnappingJaxfruit)
-                {
-                    // ENERGY_ORB is an attack plus StrengthPower(2), and it loops on
-                    // itself — so the jaxfruit's announcement climbs 3, 5, 7. The buff sat
-                    // in the debuff branch, which its attack intent no longer reaches, so
-                    // it never grew at all.
-                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
-                    break;
-                }
-
-                if (enemy.DefId == KE.LivingFog && enemy.MoveIndex % 2 == 1)
-                {
-                    // BLOAT: an attack plus a SummonIntent. GetNextSlot decides whether a
-                    // bomb fits — LivingFogNormal declares five bomb slots.
-                    if (state.Enemies.Count(e => e.Hp > 0 && e.DefId == KE.GasBomb) < 5)
-                    {
-                        // Not stunned: LivingFog.BloatMove adds the bomb with a plain
-                        // CreatureCmd.Add, where a monster that means to sit out the
-                        // turn it arrives sets StartStunned (Wriggler does). The bomb
-                        // goes off in the enemy phase that summoned it.
-                        var bloatBomb = CreateEnemy(
-                            KE.GasBomb,
-                            rng,
-                            new Intent(
-                                IntentType.Attack,
-                                Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
-                            ),
-                            state: state
-                        );
-                        BuffSystem.Apply(bloatBomb.Buffs, BuffId.Minion, 1);
-                        state.Enemies.Add(Effects.RelicEffects.Spawned(state, bloatBomb));
-                    }
-
-                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    break;
-                }
-
-                if (enemy.DefId == KE.TerrorEel && enemy.MoveIndex % 2 == 1)
-                {
-                    // THRASH_MOVE: three hits, then VigorPower(6) — not Strength, which is
-                    // what the emulator granted. Vigor is spent by its next attack, so the
-                    // Crash after a Thrash announces six higher and the one after that
-                    // does not.
-                    for (int i = 0; i < enemy.CurrentIntent.Hits; i++)
-                    {
-                        DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    }
-
-                    BuffSystem.Apply(enemy.Buffs, BuffId.Vigor, 6);
-                    break;
-                }
-
-                if (enemy.DefId == KE.SkulkingColony && enemy.MoveIndex % 4 == 2)
-                {
-                    // INERTIA_MOVE: the attack the intent announces, plus the Strength its
-                    // BuffIntent stands for.
-                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    BuffSystem.Apply(
-                        enemy.Buffs,
-                        BuffId.Strength,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 2)
-                    );
-                    break;
-                }
-
-                if (enemy.DefId == KE.CubexConstruct && (enemy.MoveIndex - 1) % 3 is 0 or 1)
-                {
-                    // REPEATER_BLAST: the attack the intent announces, plus the
-                    // StrengthPower(2) its BuffIntent stands for.
-                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
-                    break;
-                }
-
-                if (enemy.DefId == KE.Fogmog && enemy.LastMove is 1 or 2)
-                {
-                    // SWIPE: attack plus StrengthPower(1) to itself.
-                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 1);
-                    break;
-                }
-
-                if (enemy.DefId == KE.GremlinMerc)
-                {
-                    int hitDamage = enemy.CurrentIntent.Magnitude / 2;
-                    DealAttackDamage(enemy, state, hitDamage);
-                    DealAttackDamage(enemy, state, hitDamage);
-                    StealGremlinMercGold(enemy, state);
+                    DealAttack(enemy, state, 11, 3);
                     break;
                 }
 
@@ -407,13 +256,6 @@ public static class EnemyAI
                 // damage regardless of the move the machine had chosen — which also
                 // doubled the Strength its SuckPower grants, since Suck triggers per hit.
                 // The intent's own Hits carries this now.
-
-                if (enemy.DefId == KE.CorpseSlug && enemy.MoveIndex % 3 == 0)
-                {
-                    DealAttackDamage(enemy, state, 3);
-                    DealAttackDamage(enemy, state, 3);
-                    break;
-                }
 
                 int baseDamage = enemy.CurrentIntent.Magnitude;
                 if (enemy.DefId == KE.FlailKnight)
@@ -424,16 +266,11 @@ public static class EnemyAI
                     );
                 }
 
-                DealAttackDamage(enemy, state, baseDamage);
+                // Hits, not one: the riders below belong to the attack as a whole, and a
+                // multi-hit intent used to break out above them -- which is how Punch
+                // Construct's FAST_PUNCH lost the Frail its DebuffIntent declares.
+                DealAttack(enemy, state, baseDamage, Math.Max(1, enemy.CurrentIntent.Hits));
 
-                // FlameBarrier: retaliate with flat unpowered damage.
-                int fb = BuffSystem.Get(state.PlayerBuffs, BuffId.FlameBarrier);
-                if (fb > 0)
-                {
-                    int fbAbs = Math.Min(enemy.Block, fb);
-                    enemy.Block -= fbAbs;
-                    enemy.Hp = Math.Max(0, enemy.Hp - (fb - fbAbs));
-                }
                 if (enemy.DefId == KE.GasBomb)
                 {
                     enemy.Hp = 0;
@@ -465,6 +302,17 @@ public static class EnemyAI
                 }
 
                 if (enemy.DefId == KE.PunchConstruct && enemy.MoveIndex % 3 == 1)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
+                }
+
+                // TACKLE_MOVE is an attack plus a DebuffIntent -- FrailPower(1) on the
+                // target -- and the readout follows the attack, so it resolves here. It
+                // sat in the debuff branch, which the stalker's Attack intent never
+                // reaches, so the Frail was never applied at all and every Defend after
+                // it blocked five where the game blocked three. LastMove, not MoveIndex:
+                // this monster rolls its move rather than cycling.
+                if (enemy.DefId == KE.FossilStalker && enemy.LastMove == 1)
                 {
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
                 }
@@ -602,14 +450,26 @@ public static class EnemyAI
             TickRatSummonCooldown(enemy);
         }
 
-        int plating = BuffSystem.Get(enemy.Buffs, BuffId.Plating);
-        if (plating > 0)
+        // PlatingPower decrements on AfterSideTurnStart and grants its block on
+        // BeforeSideTurnEndEarly -- in that order -- so the block a turn ends with is the
+        // ALREADY decremented amount. Granting first and decrementing after left every
+        // plated enemy a point of block ahead of the game for the whole fight.
+        if (BuffSystem.Get(enemy.Buffs, BuffId.Plating) > 0)
         {
-            enemy.Block += BuffSystem.IncomingBlock(plating, enemy.Buffs);
-            if (enemy.DefId != KE.LagavulinMatriarch)
+            // ...except on round one, which AfterSideTurnStart skips for enemies. So a
+            // plated enemy ends its first turn on the full amount and only starts giving
+            // ground on its second: a live Sewer Clam holds 9 block at Plating 9, then 8
+            // at Plating 8. CombatState.Turn counts from ZERO, so the first enemy phase of
+            // a fight is Turn 0 -- reading it as 1 puts the whole decay a turn late.
+            if (enemy.DefId != KE.LagavulinMatriarch && state.Turn > 0)
             {
                 BuffSystem.Apply(enemy.Buffs, BuffId.Plating, -1);
             }
+
+            enemy.Block += BuffSystem.IncomingBlock(
+                BuffSystem.Get(enemy.Buffs, BuffId.Plating),
+                enemy.Buffs
+            );
         }
 
         if (enemy.DefId == KE.LagavulinMatriarch && BuffSystem.Get(enemy.Buffs, BuffId.Asleep) > 0)
@@ -2322,18 +2182,24 @@ public static class EnemyAI
                 break;
 
             case KE.SewerClam:
-                enemy.Block += BuffSystem.IncomingBlock(
-                    BuffSystem.Get(enemy.Buffs, BuffId.Plating),
-                    enemy.Buffs
-                );
+                // PRESSURIZE_MOVE is StrengthPower(4) and nothing else. The block it also
+                // used to gain here was invented: the clam's block comes from PlatingPower
+                // alone, which grants it to every owner at the end of its side's turn, so
+                // adding it a second time on the clam's buff turn gave it twice what the
+                // game shows.
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 4);
                 break;
 
             case KE.Fogmog:
-                // SWIPE executes in the attack branch now; what is left here is ILLUSION.
-                if (!state.Enemies.Any(e => e.Hp > 0 && e.DefId == KE.EyeWithTeeth))
+            {
+                // SWIPE executes in the attack branch now; what is left here is ILLUSION,
+                // and ILLUSION_MOVE is the machine's INITIAL state with nothing leading
+                // back to it -- it happens once per combat and the eye persists from then
+                // on by reviving. This used to be guarded on "no eye is alive" and to
+                // sweep away any dead one first, which was standing in for the revive:
+                // with IllusionPower modelled that guard deletes an eye in the middle of
+                // coming back and hands the fight a fresh one in its place.
                 {
-                    state.Enemies.RemoveAll(e => e.Hp <= 0 && e.DefId == KE.EyeWithTeeth);
                     // Fogmog's ILLUSION_MOVE adds the eye with a plain CreatureCmd.Add.
                     // In the whole monster set only Wriggler sets StartStunned, so nothing
                     // else arrives stunned — and the enemy phase iterates a snapshot of
@@ -2352,7 +2218,9 @@ public static class EnemyAI
                         Effects.RelicEffects.Spawned(state, eye)
                     );
                 }
+
                 break;
+            }
 
             case KE.BruteRubyRaider:
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
@@ -2794,11 +2662,6 @@ public static class EnemyAI
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
                 break;
 
-            case KE.FossilStalker:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
-                break;
-
             case KE.PunchConstruct:
                 DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
@@ -2823,6 +2686,31 @@ public static class EnemyAI
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
                 break;
         }
+    }
+
+    /// <summary>
+    /// One attack of <paramref name="hits"/> hits, as a single <c>AttackCommand</c>.
+    /// </summary>
+    /// <remarks>
+    /// The hits land one at a time so block, Thorns and every per-instance effect see each
+    /// of them -- but <c>SuckPower.AfterAttack</c> fires ONCE for the whole command, with
+    /// <c>Amount x</c> the number of hits that dealt unblocked damage. Triggering it per
+    /// hit instead fed the Strength it grants back into the SAME attack's later hits: a
+    /// Fossil Stalker's two-hit Lash landed its second swing three higher than the game's,
+    /// and every announcement after it followed.
+    /// </remarks>
+    private static void DealAttack(EnemyState enemy, CombatState state, int baseDamage, int hits)
+    {
+        int landed = 0;
+        for (int i = 0; i < hits; i++)
+        {
+            if (DealAttackDamage(enemy, state, baseDamage, triggerSuck: false))
+            {
+                landed++;
+            }
+        }
+
+        TriggerSuck(enemy, landed);
     }
 
     private static bool DealAttackDamage(
@@ -2873,7 +2761,47 @@ public static class EnemyAI
         }
 
         ApplyPlayerThorns(enemy, state);
+        ApplyPlayerFlameBarrier(enemy, state);
         return unblocked > 0;
+    }
+
+    /// <summary>
+    /// <c>FlameBarrierPower.AfterDamageReceived</c>: the attacker takes <c>Amount</c>
+    /// unpowered damage back for every instance of damage the player receives from a
+    /// powered attack.
+    /// </summary>
+    /// <remarks>
+    /// Three things about that hook, each of which this used to get wrong. It fires PER
+    /// HIT, so a multi-hit attack pays for every swing. It fires whether or not block
+    /// absorbed the hit -- <c>CreatureCmd</c> guards <c>AfterCurrentHpChanged</c> on
+    /// <c>UnblockedDamage > 0</c> and pointedly does NOT guard this one. And it is skipped
+    /// when the hit killed its target (<c>!WasTargetKilled || !IsDead</c>), so a player who
+    /// dies to the blow does not retaliate -- one a relic revives does.
+    ///
+    /// <para>
+    /// It lived in the attack branch's generic tail, past eighteen <c>break</c>s, so it
+    /// answered only single-hit attacks by monsters with no special case: zero retaliation
+    /// against a multi-hit intent, and none against a Snapping Jaxfruit or a Sludge Spinner
+    /// either. Here it is per hit for every attack, the way Thorns already was.
+    /// </para>
+    /// <para>
+    /// Thorns is the near neighbour and NOT the same hook -- <c>ThornsPower</c> is
+    /// <c>BeforeDamageReceived</c>, so in the game it resolves before the blow lands and
+    /// can kill an attacker mid-attack. <c>ApplyPlayerThorns</c> runs after. That gap is
+    /// separate from this one and is not addressed here.
+    /// </para>
+    /// </remarks>
+    private static void ApplyPlayerFlameBarrier(EnemyState enemy, CombatState state)
+    {
+        int flameBarrier = BuffSystem.Get(state.PlayerBuffs, BuffId.FlameBarrier);
+        if (flameBarrier <= 0 || state.PlayerHp <= 0)
+        {
+            return;
+        }
+
+        int absorbed = Math.Min(enemy.Block, flameBarrier);
+        enemy.Block -= absorbed;
+        enemy.Hp = Math.Max(0, enemy.Hp - (flameBarrier - absorbed));
     }
 
     private static void TriggerSuck(EnemyState enemy, int hitCount = 1)
@@ -3055,6 +2983,36 @@ public static class EnemyAI
         );
     }
 
+    /// <summary>
+    /// The highest of <c>TwoTailedRatsNormal.Slots</c> no living creature stands in, or
+    /// -1 when the pack has filled them.
+    /// </summary>
+    private static int LastFreeRatSlot(CombatState state)
+    {
+        for (int slot = RatSlots - 1; slot >= 0; slot--)
+        {
+            if (!state.Enemies.Any(e => e.Hp > 0 && e.Slot == slot))
+            {
+                return slot;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>Puts a slotted creature into the roster in slot order.</summary>
+    private static void InsertBySlot(CombatState state, EnemyState enemy)
+    {
+        int at = state.Enemies.FindIndex(other => other.Slot > enemy.Slot);
+        if (at < 0)
+        {
+            state.Enemies.Add(enemy);
+            return;
+        }
+
+        state.Enemies.Insert(at, enemy);
+    }
+
     private static bool CanRatSummon(EnemyState enemy, Random rng)
     {
         return BuffSystem.Get(enemy.Buffs, BuffId.SummonCooldown) <= 0
@@ -3078,10 +3036,11 @@ public static class EnemyAI
 
     private static void SummonRatBackup(EnemyState enemy, CombatState state, Random rng)
     {
-        // TwoTailedRatsNormal declares five slots — "first".."fifth" — and starts its
-        // three rats in slots 2, 3 and 4, so a summon has exactly two places to go.
-        // CanSummon() fails when GetNextSlot finds none. The cap here was six.
-        if (state.Enemies.Count(e => e.DefId == KE.TwoTailedRat) >= RatSlots)
+        // CallForBackup: Slots.LastOrDefault(s => no creature holds s). The slots a dead
+        // rat leaves behind are free again, so the answer moves during the fight -- and
+        // CanSummon() fails outright when there is none.
+        int slot = LastFreeRatSlot(state);
+        if (slot < 0)
         {
             return;
         }
@@ -3100,11 +3059,13 @@ public static class EnemyAI
             state: state
         );
         summoned.StartsOnBranch = true;
-        // TwoTailedRatsNormal starts its three rats in Slots[2..4] and CallForBackup takes
-        // the LAST free slot, so the first summon fills "second" and the second fills
-        // "first" — both ahead of the rats already fighting. The roster reads in slot
-        // order, so a summoned rat goes to the FRONT, shifting every other rat right.
-        state.Enemies.Insert(0, Effects.RelicEffects.Spawned(state, summoned));
+        summoned.Slot = slot;
+        // The roster reads in slot order. With the three starters alive the last free
+        // slot is "second" and the newcomer leads the pack, which is what this used to
+        // assume unconditionally; once the rat in "fifth" has died the last free slot is
+        // "fifth" and the newcomer joins the BACK, so a hardcoded front insert named a
+        // different creature than the game on every target index from then on.
+        InsertBySlot(state, Effects.RelicEffects.Spawned(state, summoned));
 
         int nextBackupCount =
             state

@@ -921,6 +921,43 @@ public static class RunMapGenerator
         node.NodeType = nodeType;
     }
 
+    /// <summary>
+    /// <c>Hook.ShouldAllowFreeTravel</c>: true while anything the run carries answers yes.
+    /// Winged Boots is the only one a solo run can hold -- the other implementor is the
+    /// Flight modifier -- and it answers yes until its third charge is spent.
+    /// </summary>
+    public static bool AllowsFreeTravel(RunState state) =>
+        state.Relics.Any(relic =>
+            relic.DefId == RunConstants.RelicWingedBoots
+            && relic.Counter < RunConstants.WingedBootsTravels
+        );
+
+    /// <summary>
+    /// <c>MapTravel.GetTravelablePointsFrom</c>: the current node's children, or the whole
+    /// of the next row while free travel is allowed.
+    /// </summary>
+    /// <remarks>
+    /// The boss is deliberately not covered by the free-travel branch. It is not in the
+    /// game's <c>Grid</c>, so <c>GetPointsInRow</c> never returns it and free travel from
+    /// the last grid row would offer nothing at all; <c>NMapScreen</c> makes the boss
+    /// travelable outright from there instead, which is what the children are.
+    /// </remarks>
+    private static IEnumerable<(int Col, int Row)> TravelableCoords(
+        RunState state,
+        RunMapNode current
+    )
+    {
+        if (current.Row >= RunConstants.MapFinalRestRow || !AllowsFreeTravel(state))
+        {
+            return current.Children;
+        }
+
+        int row = current.Row + 1;
+        return state
+            .MapNodes.Values.Where(node => node.Row == row)
+            .Select(node => (node.Col, node.Row));
+    }
+
     public static void RefreshMapOptions(RunState state)
     {
         Array.Clear(state.MapNodeTypes);
@@ -931,8 +968,8 @@ public static class RunMapGenerator
             return;
         }
 
-        var options = current
-            .Children.OrderBy(coord => coord.Row)
+        var options = TravelableCoords(state, current)
+            .OrderBy(coord => coord.Row)
             .ThenBy(coord => coord.Col)
             .Take(RunConstants.MapChoices)
             .ToArray();
@@ -981,6 +1018,7 @@ public static class RunMapGenerator
 
         nodeType = state.MapNodeTypes[action];
         encounterId = state.MapChoices[action];
+        SpendFreeTravelIfUnconnected(state, coord.Value);
         state.CurrentMapCoord = coord.Value;
         state.CurrentNodeType = nodeType;
         state.Floor++;
@@ -997,6 +1035,34 @@ public static class RunMapGenerator
         Array.Clear(state.MapChoices);
         Array.Clear(state.MapOptionCoords);
         return true;
+    }
+
+    /// <summary>
+    /// <c>WingedBoots.AfterRoomEntered</c>: a charge is spent only when the node just
+    /// entered was NOT a child of the one left behind. Walking an edge the map already
+    /// draws is free however many charges are left, which is why the relic can be held
+    /// for a whole act without moving its counter.
+    /// </summary>
+    private static void SpendFreeTravelIfUnconnected(RunState state, (int Col, int Row) coord)
+    {
+        if (
+            !state.MapNodes.TryGetValue(state.CurrentMapCoord, out var from)
+            || from.Children.Contains(coord)
+        )
+        {
+            return;
+        }
+
+        int index = state.Relics.FindIndex(relic => relic.DefId == RunConstants.RelicWingedBoots);
+        if (index < 0 || state.Relics[index].Counter >= RunConstants.WingedBootsTravels)
+        {
+            return;
+        }
+
+        state.Relics[index] = state.Relics[index] with
+        {
+            Counter = state.Relics[index].Counter + 1,
+        };
     }
 
     private static void GeneratePath(RunState state, GameRng rng, RunMapNode start)

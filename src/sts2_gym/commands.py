@@ -292,9 +292,17 @@ def translate_command(
 
 
 def _normalize_enemy_name(name: str) -> str:
+    """Slugify a display name the way the game's entity ids are spelled.
+
+    Every run of non-alphanumeric characters folds to one underscore -- a hyphen as
+    much as a space. Folding only whitespace made "Two-Tailed Rat" come out
+    ``TWO-TAILED_RAT`` where the game says ``TWO_TAILED_RAT``, so the lookup missed and
+    the caller fell back to the entity id's numeric suffix: exactly the renumbering
+    that build_target_map exists to stop trusting.
+    """
     name = re.sub(r"[()]", "", name)
     name = name.strip().upper()
-    return re.sub(r"\s+", "_", name)
+    return re.sub(r"[^A-Z0-9]+", "_", name).strip("_")
 
 
 def build_target_map(enemies: list[dict[str, Any]]) -> dict[str, int]:
@@ -320,6 +328,13 @@ def build_target_map(enemies: list[dict[str, Any]]) -> dict[str, int]:
         count = type_counters.get(normalized, 0)
         result[f"{normalized}_{count}"] = ordinal
         type_counters[normalized] = count + 1
+        # The capture's own entity_id, when it carries one. It is the id the action
+        # names, so it needs no transcription from the display name at all -- and a
+        # transcription that comes out even one character different does not fail, it
+        # silently falls through to the suffix.
+        entity_id = enemy.get("entity_id")
+        if isinstance(entity_id, str) and entity_id:
+            result[entity_id] = ordinal
         ordinal += 1
     return result
 

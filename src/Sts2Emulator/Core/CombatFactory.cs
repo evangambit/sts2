@@ -387,7 +387,10 @@ public static class CombatFactory
 
         for (int i = 0; i < handDraw && state.DrawPile.Count > 0; i++)
         {
-            state.Hand.Add(state.DrawPile[0]);
+            // Through the same roll the ordinary draw path uses: the opening hand is a
+            // draw, so a Slither-enchanted card in it costs what the stream says rather
+            // than what it is printed at.
+            state.Hand.Add(CardEffects.RollSlitherCost(state, state.DrawPile[0], rng));
             state.RemoveFromDrawPileAt(0);
         }
 
@@ -1295,11 +1298,13 @@ public static class CombatFactory
         int firstMove = encounterRngSeed.HasValue
             ? EncounterRng.Stream(encounterRngSeed.Value).NextInt(0, 3)
             : rng.Next(3);
+        // TwoTailedRatsNormal places its three in Slots[2..4] of five, which is what
+        // decides where a summoned rat joins the roster.
         return
         [
-            CreateTwoTailedRat(rng, firstMove),
-            CreateTwoTailedRat(rng, (firstMove + 1) % 3),
-            CreateTwoTailedRat(rng, (firstMove + 2) % 3),
+            CreateTwoTailedRat(rng, firstMove, slot: 2),
+            CreateTwoTailedRat(rng, (firstMove + 1) % 3, slot: 3),
+            CreateTwoTailedRat(rng, (firstMove + 2) % 3, slot: 4),
         ];
     }
 
@@ -1395,9 +1400,10 @@ public static class CombatFactory
         return raiders;
     }
 
-    private static EnemyState CreateTwoTailedRat(Random rng, int moveIndex)
+    private static EnemyState CreateTwoTailedRat(Random rng, int moveIndex, int slot = -1)
     {
         var enemy = CreateEnemy(KE.TwoTailedRat, rng, RatIntent(moveIndex), moveIndex);
+        enemy.Slot = slot;
         BuffSystem.Apply(enemy.Buffs, BuffId.SummonCooldown, 2);
         return enemy;
     }

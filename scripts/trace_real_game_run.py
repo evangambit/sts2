@@ -263,12 +263,16 @@ def is_actionable_state(state: dict[str, Any], *, min_combat_hand: int = 1) -> b
     return state_type in {"card_select", "map"}
 
 
-def choose_action(state: dict[str, Any], map_index: int) -> dict[str, Any] | None:
+def choose_action(
+    state: dict[str, Any],
+    map_index: int,
+    neow_option: int | None = None,
+) -> dict[str, Any] | None:
     state_type = state.get("state_type")
     if state_type in COMBAT_STATES:
         return choose_combat_action(state)
     if state_type == "event":
-        return choose_event_action(state)
+        return choose_event_action(state, neow_option)
     if state_type == "rewards":
         return choose_reward_action(state)
     if state_type == "map":
@@ -424,12 +428,25 @@ def first_living_enemy_id(state: dict[str, Any]) -> str | None:
     return None
 
 
-def choose_event_action(state: dict[str, Any]) -> dict[str, Any] | None:
+def choose_event_action(
+    state: dict[str, Any],
+    neow_option: int | None = None,
+) -> dict[str, Any] | None:
     options = (state.get("event") or {}).get("options") or []
     proceed = first_option_index(options, is_proceed=True)
     if proceed is not None:
         return {"action": "choose_event_option", "index": proceed}
     if (state.get("event") or {}).get("event_id") == "NEOW":
+        # A caller may name the blessing to take. The default policy picks the first
+        # option whose text avoids a list of blocked terms -- "choose", "transform",
+        # "upgrade" and so on -- which quietly makes every relic with a pickup CHOICE
+        # unreachable. Lead Paperweight and Hefty Tablet are both in that set, both were
+        # offered by traces already committed, and neither has ever been captured:
+        # the runs took the safe option beside them instead. Their stand-in draw counts
+        # in RunEngine.AdvanceRewardRngForNeowRelic cannot be checked against anything
+        # until one of them is.
+        if neow_option is not None:
+            return {"action": "choose_event_option", "index": neow_option}
         try:
             return {
                 "action": "choose_event_option",
@@ -707,6 +724,70 @@ def first_named_option(options: list[Any], names: tuple[str, ...]) -> int | None
     return None
 
 
+def recover_stranded_run(
+    base_url: str,
+    payload: dict[str, Any],
+    before: dict[str, Any],
+    state: dict[str, Any],
+    delay: float,
+    *,
+    min_combat_hand: int,
+    attempts: int = MAX_ACTION_ATTEMPTS,
+) -> tuple[dict[str, Any], int]:
+    """Re-drive an action the game ACCEPTED and then did nothing with.
+
+    The retry loop above only catches an action the game refused. This is the other
+    failure, and it is the one that strands a capture: the post comes back ``ok`` and the
+    run goes nowhere. It happened on a shop -- ``proceed`` opened the map screen while the
+    merchant room was still the run's current room, so ``state_type`` read ``map`` and the
+    map really was drawn, with the right options on it. The travel vote registered in the
+    game's own log and then no room ever loaded. The state settles on ``unknown``: no
+    screen at all, and every later action refused, so the capture ends there holding a run
+    that is still alive.
+
+    It is a race rather than a rule -- the committed traces all travel out of their shops
+    without trouble -- which is exactly why it needs handling instead of avoiding. The
+    recovery is what unsticks it by hand: nudge the run with a ``proceed`` until it is
+    back on a screen it can act from, then post the same action again. Nothing is recorded
+    until the run has actually moved, so a recovered step looks like any other step; the
+    count goes on the snapshot's note so a capture that needed several says so.
+    """
+    recoveries = 0
+    # A finished run is not a stranded one. `game_over` is not an actionable state, so
+    # without this every capture ended by posting six pointless proceeds into a dead run
+    # and labelling its last step `recovered_6` -- which buries the note under noise
+    # exactly where it is meant to mean something.
+    while (
+        not is_actionable_state(state)
+        and not is_terminal_state(state)
+        and recoveries < attempts
+    ):
+        recoveries += 1
+        # Harmless when there is nothing to proceed from: the mod answers "No proceed
+        # button available or enabled" and the state is read again either way.
+        trace_real_game.post_action(base_url, {"action": "proceed"})
+        time.sleep(max(delay, 0.5))
+        state = start_real_game_run.get_state(base_url)
+        if not is_actionable_state(state):
+            continue
+
+        result = trace_real_game.post_action(base_url, payload)
+        if result.get("status") == "error":
+            # Back on a screen, but not one this action belongs to. Leave it to the
+            # caller's own handling rather than guessing a different action here.
+            return state, recoveries
+
+        state = wait_for_state_to_change(
+            base_url,
+            before,
+            delay,
+            min_combat_hand=min_combat_hand,
+            require_new_state_type=payload["action"] == "choose_map_node",
+        )
+
+    return state, recoveries
+
+
 def capture_run(
     base_url: str,
     seed: str,
@@ -717,6 +798,7 @@ def capture_run(
     delay: float,
     ascension: int = 0,
     scripted_actions: list[dict[str, Any]] | None = None,
+    neow_option: int | None = None,
 ) -> dict[str, Any]:
     state = start_real_game_run.start_seeded_run(
         base_url,
@@ -732,7 +814,7 @@ def capture_run(
 
     for step in range(1, max_steps + 1):
         payload = (
-            choose_action(state, map_index)
+            choose_action(state, map_index, neow_option)
             if scripted_actions is None
             else next_scripted_action(scripted_actions, step)
         )
@@ -756,7 +838,9 @@ def capture_run(
             # was wrong, so a scripted run re-posts the same action rather than picking
             # a new one -- picking again would walk a different run.
             retry = (
-                choose_action(state, map_index) if scripted_actions is None else payload
+                choose_action(state, map_index, neow_option)
+                if scripted_actions is None
+                else payload
             )
             if retry is None:
                 break
@@ -784,13 +868,28 @@ def capture_run(
             min_combat_hand=min_hand,
             require_new_state_type=payload["action"] == "choose_map_node",
         )
+
+        state, recoveries = recover_stranded_run(
+            base_url,
+            payload,
+            before,
+            state,
+            delay,
+            min_combat_hand=min_hand,
+        )
+
+        notes = []
+        if rejections:
+            notes.append(f"retried_{rejections}")
+        if recoveries:
+            notes.append(f"recovered_{recoveries}")
         append_snapshot(
             trace,
             len(trace),
             payload,
             result,
             state,
-            note=f"retried_{rejections}" if rejections else None,
+            note="+".join(notes) if notes else None,
         )
 
         if result.get("status") == "error":
@@ -889,6 +988,18 @@ def main() -> None:
             "a shallow trace."
         ),
     )
+    parser.add_argument(
+        "--neow-option",
+        type=int,
+        default=None,
+        help=(
+            "take this Neow option index instead of letting the auto-player pick. The "
+            "default policy avoids any blessing whose text mentions a choice, which "
+            "makes the relics with a pickup CHOICE -- Lead Paperweight, Hefty Tablet, "
+            "Scroll Boxes -- impossible to capture. Screen a seed's three options with "
+            "the emulator first: they are seed-deterministic and it models them exactly."
+        ),
+    )
     parser.add_argument("--format", choices=["pretty", "compact"], default="pretty")
     parser.add_argument(
         "--replay-trace",
@@ -912,6 +1023,7 @@ def main() -> None:
         args.delay,
         args.ascension,
         scripted_actions=scripted,
+        neow_option=args.neow_option,
     )
     text = json.dumps(trace, indent=None if args.format == "compact" else 2)
     if args.output is not None:

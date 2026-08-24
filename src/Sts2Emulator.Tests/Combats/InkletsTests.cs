@@ -66,7 +66,10 @@ public class InkletsTests
     [Fact]
     public void EveryRolledMoveIsFollowedByJab()
     {
-        var fight = Encounter();
+        // Six turns of three Inklets kills a 64 HP player, and the combat ends there --
+        // so the walk needs a player who can stand through it, or the last turns record
+        // whatever intent was up when the fight stopped.
+        var fight = Encounter().PlayerHp(999, 999);
         List<List<int>> perEnemy =
         [
             [],

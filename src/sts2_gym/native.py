@@ -12,7 +12,7 @@ _LIB_NAMES = {
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
 _REQUIRED_NATIVE_API_VERSION = 19
-_REQUIRED_RUN_NATIVE_API_VERSION = 14
+_REQUIRED_RUN_NATIVE_API_VERSION = 15
 
 
 def _repo_root() -> Path:
@@ -418,7 +418,7 @@ def _run_obs_layout() -> dict[str, int]:
         RuntimeError: if the native library reports a layout this build cannot read.
 
     """
-    size = 10
+    size = 13
     buf = (ctypes.c_int * size)()
     written = int(_lib.Sts2Run_ObsLayout(buf, size))
     if written != size:
@@ -437,6 +437,9 @@ def _run_obs_layout() -> dict[str, int]:
         "shop_offset",
         "shop_slots",
         "shop_slot_size",
+        "map_choices",
+        "map_node_type_offset",
+        "map_choice_offset",
     )
     return dict(zip(keys, (int(value) for value in buf), strict=True))
 

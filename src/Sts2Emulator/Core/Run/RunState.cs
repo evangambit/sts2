@@ -55,6 +55,19 @@ public sealed class RunState
     /// </summary>
     public List<int> PendingPotionRewards = [];
     public int[] PotionSlots = new int[3];
+
+    /// <summary>
+    /// How many of those slots the run may actually fill.
+    /// </summary>
+    /// <remarks>
+    /// <c>Player.CreateForNewRun</c> passes a literal 3 and
+    /// <c>Player.initialMaxPotionSlotCount</c> is 3, but every live capture at A8 reports
+    /// <c>max_potion_slots: 2</c> -- the emulator models A8, so 2 is the base here and the
+    /// decompiled constant is the un-ascended one. Phial Holster's
+    /// <c>GainMaxPotionCount(1)</c> is what moves it, and a capture holding three potions
+    /// is what proved it moves at all.
+    /// </remarks>
+    public int MaxPotionSlots = 2;
     public int CurrentNodeType;
     public int[] NeowOptions = new int[3];
     public int[] RewardCards = new int[3];
@@ -173,7 +186,6 @@ public sealed class RunState
     public RelicGrabBag RelicBag = new();
     public RelicGrabBag SharedRelicBag = new(refreshAllowed: true);
 
-    public int WingedBootsTimesUsed;
     public double CardRarityOffset;
     public double PotionRewardOdds = 0.4;
     public bool PendingRelicReward;

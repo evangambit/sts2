@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 sts2_gym = importlib.import_module("sts2_gym")
 native = importlib.import_module("sts2_gym.native")
 commands = importlib.import_module("sts2_gym.commands")
+run_constants = importlib.import_module("sts2_gym.run_constants")
 trace = importlib.import_module("trace")
 
 Sts2CombatEnv = sts2_gym.Sts2CombatEnv
@@ -100,6 +101,84 @@ class ObservationLayoutTests(unittest.TestCase):
         for enemy in enemies:
             self.assertGreater(enemy["max_hp"], 0)
             self.assertLessEqual(enemy["hp"], enemy["max_hp"])
+
+
+class MapChoiceLayoutTests(unittest.TestCase):
+    """The map's choice width comes from the emulator, not from a copy of it.
+
+    ``run_constants.MAP_CHOICES`` was a literal 4 while the emulator's arrays widened to
+    a whole row for Winged Boots' free travel. A stale copy does not fail: it reads the
+    first four options and drops the rest, so a run offered seven nodes silently could
+    not pick three of them.
+    """
+
+    def test_map_choices_matches_the_emulator(self):
+        self.assertEqual(
+            native.RUN_OBS_LAYOUT["map_choices"],
+            run_constants.MAP_CHOICES,
+        )
+
+    def test_the_map_blocks_sit_where_the_emulator_says(self):
+        layout = native.RUN_OBS_LAYOUT
+
+        self.assertEqual(
+            layout["map_node_type_offset"] + layout["map_choices"],
+            layout["map_choice_offset"],
+        )
+        self.assertLessEqual(
+            layout["map_choice_offset"] + layout["map_choices"],
+            layout["scalars"],
+        )
+
+
+class TargetMapTests(unittest.TestCase):
+    """A captured target id has to resolve through the map, never past it.
+
+    ``translate_target`` falls back to the entity id's numeric suffix when the map has no
+    key for it -- and that suffix is the game's position among LIVING creatures, which
+    stops matching the emulator's index the moment anything dies. So a key the map spells
+    even one character differently does not fail, it quietly names another creature.
+    """
+
+    def test_a_hyphenated_name_is_slugged_the_way_the_game_spells_it(self):
+        enemies = [
+            {"name": "Two-Tailed Rat", "entity_id": "TWO_TAILED_RAT_0", "hp": 22},
+            {"name": "Two-Tailed Rat", "entity_id": "TWO_TAILED_RAT_1", "hp": 21},
+        ]
+
+        target_map = commands.build_target_map(enemies)
+
+        self.assertEqual(0, target_map["TWO_TAILED_RAT_0"])
+        self.assertEqual(1, target_map["TWO_TAILED_RAT_1"])
+
+    def test_the_dead_are_skipped_so_the_value_is_an_ordinal(self):
+        enemies = [
+            {"name": "Two-Tailed Rat", "entity_id": "TWO_TAILED_RAT_0", "hp": 0},
+            {"name": "Two-Tailed Rat", "entity_id": "TWO_TAILED_RAT_0", "hp": 22},
+            {"name": "Two-Tailed Rat", "entity_id": "TWO_TAILED_RAT_1", "hp": 21},
+        ]
+
+        target_map = commands.build_target_map(enemies)
+
+        self.assertEqual(0, target_map["TWO_TAILED_RAT_0"])
+        self.assertEqual(1, target_map["TWO_TAILED_RAT_1"])
+
+    def test_a_mapped_target_never_falls_back_to_the_suffix(self):
+        enemies = [
+            {"name": "Two-Tailed Rat", "entity_id": "TWO_TAILED_RAT_0", "hp": 22},
+            {"name": "Two-Tailed Rat", "entity_id": "TWO_TAILED_RAT_1", "hp": 21},
+        ]
+        target_map = {
+            name: ordinal + 1
+            for name, ordinal in commands.build_target_map(enemies).items()
+        }
+
+        resolved = commands.translate_target(
+            {"target": "TWO_TAILED_RAT_1"},
+            target_map,
+        )
+
+        self.assertEqual(2, resolved)
 
 
 if __name__ == "__main__":

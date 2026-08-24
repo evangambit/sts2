@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 import time
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -86,8 +87,23 @@ def option_names(state: dict[str, Any]) -> set[str]:
 def wait_for_menu(
     base_url: str,
     menu_screen: str,
-    timeout: float = 10.0,
+    timeout: float = 60.0,
 ) -> dict[str, Any]:
+    """Wait for a named menu screen.
+
+    The timeout was 10s and abandoning a run does not reliably fit in it: the game logs
+    "Saving in progress, waiting for it to be finished before loading the main menu" and
+    then preloads ~126 Common assets, which is another two seconds on top of a save whose
+    Steam Cloud write is retrying. A capture that lost the race died with "Timed out
+    waiting for menu screen 'main'" while the game reached the menu perfectly well a
+    moment later -- and that message has already sent one investigation after the lobby
+    instead of the clock (see HANDOFF's embark-crash notes). Sixty seconds is longer than
+    any observed abandon and still short enough to fail rather than hang.
+
+    Raises:
+        RuntimeError: if the screen does not appear within the timeout.
+
+    """
     deadline = time.monotonic() + timeout
     state = get_state(base_url)
     while time.monotonic() < deadline:
@@ -276,7 +292,39 @@ def back_out_to_main_menu(base_url: str, max_hops: int = 6) -> None:
     raise RuntimeError(f"Could not reach the main menu within {max_hops} 'back' hops")
 
 
+SAVE_GLOB = (
+    "Library/Application Support/SlayTheSpire2/steam/*/profile*/saves/current_run.save"
+)
+
+
+def ensure_run_save_backup() -> Path | None:
+    """Give the game the backup file its abandon insists on deleting.
+
+    ``SaveManager.DeleteCurrentRun`` deletes ``current_run.save.backup`` unconditionally
+    and ``CloudSaveStore.DeleteFile`` THROWS when it is not there. The exception escapes
+    ``NAbandonRunConfirmPopup.OnYesButtonPressed`` half way through, so the run is gone
+    from disk but the main menu never finishes coming back: it reports ``menu_screen:
+    main`` with no enabled buttons at all, forever, and every later capture dies on
+    "Timed out waiting for menu screen 'main'" pointing at the clock rather than at this.
+
+    Copying the save over the backup first is the whole fix -- the game deletes a file
+    that exists and the handler runs to the end. This was already known and written down
+    as a manual step; doing it by hand is what kept it a gotcha.
+
+    Returns:
+        The backup path if one was written, else None.
+
+    """
+    for save in sorted(Path.home().glob(SAVE_GLOB)):
+        backup = save.with_suffix(save.suffix + ".backup")
+        if not backup.exists():
+            backup.write_bytes(save.read_bytes())
+        return backup
+    return None
+
+
 def abandon_existing_run(base_url: str) -> None:
+    ensure_run_save_backup()
     state = get_state(base_url)
     if state.get("state_type") != "menu":
         # Actually inside a run — save-and-quit out to the menu.

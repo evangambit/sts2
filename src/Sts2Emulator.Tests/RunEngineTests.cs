@@ -396,8 +396,11 @@ public class RunEngineTests
             RunConstants.NodeElite,
             RunConstants.NodeRest,
             RunConstants.NodeShop,
+            RunConstants.NodeEvent,
+            RunConstants.NodeRelic,
+            RunConstants.NodeBoss,
         ];
-        engine.State.MapChoices = [201, 202, 203, 204];
+        engine.State.MapChoices = [201, 202, 203, 204, 205, 206, 207];
         engine.State.ShopCards = [301, 302, 303, 304, 305, 306, 307];
         engine.State.RelicReward = 401;
         engine.State.EventId = RunConstants.EventBrainLeech;
@@ -428,10 +431,16 @@ public class RunEngineTests
                 RunConstants.NodeElite,
                 RunConstants.NodeRest,
                 RunConstants.NodeShop,
+                RunConstants.NodeEvent,
+                RunConstants.NodeRelic,
+                RunConstants.NodeBoss,
                 201,
                 202,
                 203,
                 204,
+                205,
+                206,
+                207,
                 401,
                 RunConstants.EventBrainLeech,
                 501,
@@ -636,7 +645,7 @@ public class RunEngineTests
         Assert.Equal(54, obs[offset + 5]);
         Assert.Equal(80, obs[offset + 6]);
         Assert.Equal(108, obs[offset + 4]);
-        Assert.Equal(1, obs[offset + 22]);
+        Assert.Equal(1, obs[offset + RunConstants.PotionObsOffset]);
         Assert.Equal(54, info[5]);
         Assert.Equal(80, info[6]);
         Assert.Equal(108, info[4]);
@@ -660,6 +669,9 @@ public class RunEngineTests
             RunConstants.NodeNormal,
             RunConstants.NodeNone,
             RunConstants.NodeEvent,
+            RunConstants.NodeNone,
+            RunConstants.NodeNone,
+            RunConstants.NodeNone,
             RunConstants.NodeNone,
         ];
         engine.WriteActionMask(mask);

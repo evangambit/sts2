@@ -178,7 +178,21 @@ public sealed class RunEngine
         }
 
         combat.CardSelectionRng = cardSelectionRng;
-        combat.EnergyCostRng = new CountingRandom(State.Rng.CombatEnergyCosts.RawSeed);
+
+        // Slither re-rolls its card's cost off Rng.CombatEnergyCosts every time the card
+        // is drawn, and that stream spans the RUN like every other named one. This was the
+        // only stream built without fast-forwarding to the run's position and the only one
+        // never written back after the combat (see SyncRunRngFromCombat), so it restarted
+        // at zero for every fight: two Slither draws in two different combats read the
+        // same value, where the game reads consecutive ones. A live capture whose Wood
+        // Carvings enchanted a Bash paid 1 energy for it where the emulator paid 2.
+        var energyCostRng = new CountingRandom(State.Rng.CombatEnergyCosts.RawSeed);
+        for (int i = 0; i < State.Rng.CombatEnergyCosts.CallCount; i++)
+        {
+            energyCostRng.Next();
+        }
+
+        combat.EnergyCostRng = energyCostRng;
 
         var cardGenerationRng = new CountingRandom(State.Rng.CombatCardGeneration.RawSeed);
         for (int i = 0; i < State.Rng.CombatCardGeneration.CallCount; i++)
@@ -739,19 +753,18 @@ public sealed class RunEngine
         obs[offset + 9] = State.RewardCards[0];
         obs[offset + 10] = State.RewardCards[1];
         obs[offset + 11] = State.RewardCards[2];
-        obs[offset + 12] = State.MapNodeTypes[0];
-        obs[offset + 13] = State.MapNodeTypes[1];
-        obs[offset + 14] = State.MapNodeTypes[2];
-        obs[offset + 15] = State.MapNodeTypes[3];
-        obs[offset + 16] = State.MapChoices[0];
-        obs[offset + 17] = State.MapChoices[1];
-        obs[offset + 18] = State.MapChoices[2];
-        obs[offset + 19] = State.MapChoices[3];
-        obs[offset + 20] = State.RelicReward;
-        obs[offset + 21] = State.EventId;
-        obs[offset + 22] = potionSlots[0];
-        obs[offset + 23] = potionSlots[1];
-        obs[offset + 24] = potionSlots[2];
+        for (int i = 0; i < RunConstants.MapChoices; i++)
+        {
+            obs[offset + RunConstants.MapNodeTypeObsOffset + i] = State.MapNodeTypes[i];
+            obs[offset + RunConstants.MapChoiceObsOffset + i] = State.MapChoices[i];
+        }
+
+        obs[offset + RunConstants.RelicRewardObsOffset] = State.RelicReward;
+        obs[offset + RunConstants.CurrentEventObsOffset] = State.EventId;
+        for (int i = 0; i < RunConstants.PotionObsSlots; i++)
+        {
+            obs[offset + RunConstants.PotionObsOffset + i] = potionSlots[i];
+        }
 
         WriteDeckObservation(obs[(offset + RunConstants.DeckObsOffset)..]);
         WriteRelicObservation(obs[(offset + RunConstants.RelicObsOffset)..]);
@@ -1160,11 +1173,30 @@ public sealed class RunEngine
         AdvanceRewardRngForNeowRelic(relicId);
     }
 
+    /// <summary>
+    /// Rewards draws a Neow relic's pickup makes in the game that the emulator's own
+    /// model of it does not.
+    /// </summary>
+    /// <remarks>
+    /// A standing debt, not a design. Hefty Tablet and Lead Paperweight both build their
+    /// offer with <c>CardFactory.CreateForReward</c>, which draws from the Rewards stream;
+    /// the emulator rolls their cards off <c>Rng.UpFront</c> instead, so the count here is
+    /// what keeps everything downstream aligned. Modelling either properly means rolling
+    /// its cards off Rewards and deleting its row -- and neither has a live capture yet,
+    /// so neither has a way to be checked.
+    ///
+    /// <para>
+    /// Phial Holster used to have a row of 4 and no longer does: its potions come off
+    /// <c>Rng.CombatPotionGeneration</c> and its slot grant is free, so the game makes NO
+    /// Rewards draws for it. Those four put the next combat's gold reward at stream
+    /// position 5 where the game had it at 1 -- 7 gold against the capture's 15 -- and
+    /// every card reward after it read from the wrong place too.
+    /// </para>
+    /// </remarks>
     private void AdvanceRewardRngForNeowRelic(int relicId)
     {
         int advances = relicId switch
         {
-            RunConstants.RelicPhialHolster => 4,
             RunConstants.RelicHeftyTablet => 3,
             RunConstants.RelicLeadPaperweight => 6,
             _ => 0,
@@ -1243,6 +1275,13 @@ public sealed class RunEngine
         {
             State.Rng.CombatPotionGeneration.AdvanceToCallCount(
                 State.ActiveCombat.PotionGenerationRng.CallCount
+            );
+        }
+
+        if (State.ActiveCombat.EnergyCostRng is not null)
+        {
+            State.Rng.CombatEnergyCosts.AdvanceToCallCount(
+                State.ActiveCombat.EnergyCostRng.CallCount
             );
         }
 

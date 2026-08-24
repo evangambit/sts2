@@ -692,7 +692,7 @@ public static class RunRewardGenerator
             return false;
         }
 
-        int maxPotionSlots = Math.Min(2, state.PotionSlots.Length);
+        int maxPotionSlots = Math.Min(state.MaxPotionSlots, state.PotionSlots.Length);
         for (int i = 0; i < maxPotionSlots; i++)
         {
             if (state.PotionSlots[i] != 0)

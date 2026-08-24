@@ -55,7 +55,7 @@ public static class CombatEngine
 
             // Re-check terminality after auto-play.
             bool playerDead = PlayerIsDead(state);
-            bool allDead = state.Enemies.All(e => e.Hp <= 0);
+            bool allDead = NoPrimaryEnemyLeft(state);
             if (playerDead || allDead)
             {
                 result = result with { Terminal = true, PlayerWon = allDead && !playerDead };
@@ -258,7 +258,7 @@ public static class CombatEngine
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         bool playerDead = PlayerIsDead(state);
-        bool allDead = state.Enemies.All(e => e.Hp <= 0);
+        bool allDead = NoPrimaryEnemyLeft(state);
 
         return new StepResult(
             Terminal: playerDead || allDead,
@@ -317,7 +317,7 @@ public static class CombatEngine
         // could be taxed, which made the debuff do nothing at all.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.Tangled);
 
-        bool allDeadAfterEndTurnPowers = state.Enemies.All(e => e.Hp <= 0);
+        bool allDeadAfterEndTurnPowers = NoPrimaryEnemyLeft(state);
         if (allDeadAfterEndTurnPowers)
         {
             return new StepResult(
@@ -418,8 +418,25 @@ public static class CombatEngine
         {
             BuffSystem.Remove(enemy.Buffs, BuffId.SkittishSpent);
         }
-        foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
+        // A reviving illusion is at 0 HP and still takes its turn -- that turn IS the
+        // revive. It has to stay in the roster's own order while it does, so it comes back
+        // where it stood rather than at one end.
+        foreach (
+            var enemy in state
+                .Enemies.Where(e => e.Hp > 0 || BuffSystem.Get(e.Buffs, BuffId.Reviving) > 0)
+                .ToArray()
+        )
         {
+            if (BuffSystem.Get(enemy.Buffs, BuffId.Reviving) > 0)
+            {
+                // IllusionPower.ReviveMove: Heal(MaxHp - CurrentHp), then back to the move
+                // it was on. It cannot be hit while reviving, which the emulator gets for
+                // free -- everything targets by "alive", and it is not yet.
+                BuffSystem.Remove(enemy.Buffs, BuffId.Reviving);
+                enemy.Hp = enemy.MaxHp;
+                continue;
+            }
+
             // Poison damage at start of enemy turn.
             int poison = BuffSystem.Get(enemy.Buffs, BuffId.Poison);
             if (poison > 0)
@@ -454,6 +471,33 @@ public static class CombatEngine
         TickDurationDebuffs(state);
 
         HandleEnemyDeaths(state, enemyHpsBefore, rng);
+
+        // The combat is over the moment the enemy phase leaves nobody standing.
+        // CombatManager.ExecuteEnemyTurn awaits CheckWinCondition after EVERY enemy and
+        // returns as soon as IsInProgress goes false, so the game never begins another
+        // player turn -- while this ran the whole of one, drew a hand and reshuffled to
+        // find it. That reshuffle is not free: Rng.Shuffle is a RUN-level stream, so a
+        // fight whose last enemy dies (or, as a Fat Gremlin does, escapes) on the enemy
+        // turn left it ahead of the game's by the size of a pile, and every hand dealt
+        // for the rest of the run came off the wrong position. The last thing that can
+        // add or remove an enemy is HandleEnemyDeaths -- Gremlin Merc reinforcements and
+        // Phrog Parasite wrigglers both arrive there -- so the check belongs after it.
+        bool playerDeadAfterEnemyTurn = PlayerIsDead(state);
+        bool allDeadAfterEnemyTurn = NoPrimaryEnemyLeft(state);
+        if (playerDeadAfterEnemyTurn || allDeadAfterEnemyTurn)
+        {
+            return new StepResult(
+                Terminal: true,
+                PlayerWon: allDeadAfterEnemyTurn && !playerDeadAfterEnemyTurn,
+                Reward: ComputeReward(
+                    state,
+                    playerDeadAfterEnemyTurn,
+                    allDeadAfterEnemyTurn,
+                    playerHpBefore,
+                    enemyHpsBefore
+                )
+            );
+        }
 
         // Restore temporary Strength debuffs applied this turn (e.g. DarkShackles).
         foreach (var enemy in state.Enemies)
@@ -712,7 +756,7 @@ public static class CombatEngine
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         bool playerDead = PlayerIsDead(state);
-        bool allDead = state.Enemies.All(e => e.Hp <= 0);
+        bool allDead = NoPrimaryEnemyLeft(state);
 
         return new StepResult(
             Terminal: playerDead || allDead,
@@ -1095,6 +1139,10 @@ public static class CombatEngine
             {
                 SpawnGremlinMercReinforcements(state, rng, state.Enemies[i].StolenGold);
             }
+            else if (TryReviveIllusion(state.Enemies[i]))
+            {
+                continue;
+            }
             else if (TryRespawnAxebot(state.Enemies[i], rng, state.AscensionLevel))
             {
                 continue;
@@ -1145,6 +1193,59 @@ public static class CombatEngine
                 enemy.SecondaryIntent = null;
             }
         }
+    }
+
+    /// <summary>
+    /// <c>Creature.IsPrimaryEnemy</c>: an enemy that can stay alive on its own. The game's
+    /// own words for the other kind are "a secondary enemy will automatically die unless
+    /// there's also a living primary enemy", and what makes one secondary is carrying
+    /// <c>MinionPower</c> or <c>IllusionPower</c>.
+    /// </summary>
+    private static bool IsPrimaryEnemy(EnemyState enemy) =>
+        BuffSystem.Get(enemy.Buffs, BuffId.Minion) <= 0
+        && BuffSystem.Get(enemy.Buffs, BuffId.Illusion) <= 0;
+
+    /// <summary>
+    /// Whether the combat is won, which <c>CombatManager.IsEnding</c> decides by asking
+    /// whether any PRIMARY enemy is still alive.
+    /// </summary>
+    /// <remarks>
+    /// Counting every creature instead is wrong in both directions. A Fogmog's eye revives
+    /// forever, so a fight it outlives could never be won; and a Gas Bomb left over after
+    /// the Living Fog dies would keep a finished fight running.
+    /// </remarks>
+    private static bool NoPrimaryEnemyLeft(CombatState state) =>
+        !state.Enemies.Any(enemy => enemy.Hp > 0 && IsPrimaryEnemy(enemy));
+
+    /// <summary>
+    /// <c>IllusionPower</c>: the owner is never removed from combat when it dies, keeps
+    /// its buffs through the death, and spends its next turn on a forced REVIVE_MOVE that
+    /// heals it back to full.
+    /// </summary>
+    /// <remarks>
+    /// So a Fogmog's Eye With Teeth cannot be killed off -- swing at it and it is back at
+    /// 6 HP a turn later, Distracting again. The emulator left it dead at 0, which is
+    /// worse than a missing attacker: the live run's next swing at the eye resolved
+    /// against the emulator's first LIVING enemy, so every blow the player spent on the
+    /// illusion landed on the Fogmog instead and the fight ended floors early.
+    /// </remarks>
+    private static bool TryReviveIllusion(EnemyState enemy)
+    {
+        if (BuffSystem.Get(enemy.Buffs, BuffId.Illusion) <= 0)
+        {
+            return false;
+        }
+
+        if (BuffSystem.Get(enemy.Buffs, BuffId.Reviving) > 0)
+        {
+            return true;
+        }
+
+        BuffSystem.Apply(enemy.Buffs, BuffId.Reviving, 1);
+        // A HealIntent, so the readout says what the turn will be spent on.
+        enemy.CurrentIntent = new Intent(IntentType.Buff, 0);
+        enemy.Block = 0;
+        return true;
     }
 
     private static bool TryRespawnAxebot(EnemyState enemy, Random rng, int ascension)
@@ -1302,7 +1403,7 @@ public static class CombatEngine
             var card in state.ExhaustPile.Where(c => c.DefId == Effects.IC.HowlFromBeyond).ToList()
         )
         {
-            if (state.Enemies.All(e => e.Hp <= 0))
+            if (NoPrimaryEnemyLeft(state))
             {
                 return;
             }

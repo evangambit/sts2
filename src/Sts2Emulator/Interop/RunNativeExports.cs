@@ -8,7 +8,8 @@ namespace Sts2Emulator.Interop;
 public static class RunNativeExports
 {
     // v13: the observation carries the shop's whole board, priced.
-    public const int RUN_NATIVE_API_VERSION = 14;
+    // v15: the map offers a whole row, not four children -- Winged Boots' free travel.
+    public const int RUN_NATIVE_API_VERSION = 15;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -20,14 +21,15 @@ public static class RunNativeExports
     public static int Sts2Run_InfoSize() => RunConstants.RunInfoSize;
 
     /// <summary>How many numbers <see cref="Sts2Run_ObsLayout"/> writes.</summary>
-    public const int RUN_OBS_LAYOUT_SIZE = 10;
+    public const int RUN_OBS_LAYOUT_SIZE = 13;
 
     /// <summary>
     /// Where the run observation's variable-length blocks sit, so a consumer does not have
     /// to hard-code offsets that move whenever a block grows:
     ///
     /// <c>[scalars, deck offset, deck slots, ints per card, relic offset, relic slots,
-    /// ints per relic, shop offset, shop slots, ints per shop slot]</c>
+    /// ints per relic, shop offset, shop slots, ints per shop slot, map choices, map node
+    /// type offset, map choice offset]</c>
     ///
     /// Offsets are relative to the start of the run block, which itself begins at the
     /// combat observation's own size.
@@ -51,6 +53,9 @@ public static class RunNativeExports
         layout[7] = RunConstants.ShopObsOffset;
         layout[8] = RunConstants.ShopSlots;
         layout[9] = RunConstants.ShopSlotSize;
+        layout[10] = RunConstants.MapChoices;
+        layout[11] = RunConstants.MapNodeTypeObsOffset;
+        layout[12] = RunConstants.MapChoiceObsOffset;
         return RUN_OBS_LAYOUT_SIZE;
     }
 

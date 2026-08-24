@@ -211,13 +211,24 @@ public static class RunNonCombatEffects
                 AddRandomRewardCard(state, state.Rng.UpFront);
                 break;
             case RunConstants.RelicPhialHolster:
+                // PhialHolster.AfterObtained: GainMaxPotionCount(PotionSlots=1) FIRST --
+                // so both of the potions it then rolls have somewhere to go -- and
+                // CreateRandomPotionsOutOfCombat(Potions=2, Rng.CombatPotionGeneration).
+                //
+                // The stream is the whole point. These rolled off PlayerRng.Rewards, which
+                // is the stream every card reward, shop and transformation in the run also
+                // draws from: two draws the game never makes there put the very next
+                // combat's gold reward and card offer at the wrong position, and every one
+                // after it. A live capture of a run that took this from Neow paid 15 gold
+                // where the emulator paid 9.
+                state.MaxPotionSlots++;
                 RunRewardGenerator.AddPotion(
                     state,
-                    RunRewardGenerator.NextPotion(state, state.PlayerRng.Rewards)
+                    RunRewardGenerator.NextPotion(state, state.Rng.CombatPotionGeneration)
                 );
                 RunRewardGenerator.AddPotion(
                     state,
-                    RunRewardGenerator.NextPotion(state, state.PlayerRng.Rewards)
+                    RunRewardGenerator.NextPotion(state, state.Rng.CombatPotionGeneration)
                 );
                 break;
             case RunConstants.RelicPreciseScissors:

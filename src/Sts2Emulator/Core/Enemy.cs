@@ -99,4 +99,17 @@ public sealed class EnemyState
     public bool StartsOnBranch;
     public int StolenGold;
     public int HeistGold;
+
+    /// <summary>
+    /// Which of the encounter's <c>Slots</c> this creature stands in, or -1 when the
+    /// encounter does not place by slot.
+    /// </summary>
+    /// <remarks>
+    /// The game's summons ask the ENCOUNTER for a slot rather than the roster for a
+    /// position: a Two-Tailed Rat's <c>CallForBackup</c> takes
+    /// <c>Slots.LastOrDefault(s => no living creature holds s)</c>. Which end of the
+    /// roster that lands on depends on which rats are still alive, so "the newcomer goes
+    /// to the front" is only the answer while the three starters are untouched.
+    /// </remarks>
+    public int Slot = -1;
 }

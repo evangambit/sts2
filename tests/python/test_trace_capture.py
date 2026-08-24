@@ -87,6 +87,60 @@ class WaitForStateToChangeTests(unittest.TestCase):
         self.assertIn("battle", result)
 
 
+def neow(*titles: str) -> dict:
+    """Build a Neow screen offering these blessings, in order."""
+    return {
+        "state_type": "event",
+        "run": {"act": 1, "floor": 1, "ascension": 8},
+        "event": {
+            "event_id": "NEOW",
+            "options": [
+                {"index": i, "title": t, "description": "", "is_locked": False}
+                for i, t in enumerate(titles)
+            ],
+        },
+    }
+
+
+class NeowOptionTests(unittest.TestCase):
+    """Which blessing a capture takes, and how to make it take another one.
+
+    The default policy skips any option whose text mentions a choice, so every relic with
+    a pickup CHOICE is unreachable by it -- Lead Paperweight and Hefty Tablet were each
+    offered to a trace that is already committed, and neither has ever been captured. That
+    matters beyond variety: their stand-in Rewards draw counts in
+    RunEngine.AdvanceRewardRngForNeowRelic have nothing to check them against until one of
+    them is captured.
+    """
+
+    def test_the_default_policy_skips_a_blessing_that_asks_for_a_choice(self):
+        action = trace_real_game_run.choose_event_action(
+            neow("Choose 1 of 2 colorless cards", "Winged Boots"),
+        )
+
+        self.assertEqual(1, action["index"])
+
+    def test_a_named_option_is_taken_however_it_reads(self):
+        action = trace_real_game_run.choose_event_action(
+            neow("Choose 1 of 2 colorless cards", "Winged Boots"),
+            neow_option=0,
+        )
+
+        self.assertEqual(
+            {"action": "choose_event_option", "index": 0},
+            action,
+        )
+
+    def test_naming_an_option_does_not_override_a_proceed(self):
+        """Neow's own Proceed page still has to be answered as a proceed."""
+        state = neow("Proceed")
+        state["event"]["options"][0]["is_proceed"] = True
+
+        action = trace_real_game_run.choose_event_action(state, neow_option=2)
+
+        self.assertEqual(0, action["index"])
+
+
 class ScriptedActionTests(unittest.TestCase):
     def test_recorded_actions_keeps_order_and_drops_the_opening_snapshot(self):
         fixture = (

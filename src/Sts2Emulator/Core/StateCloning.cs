@@ -58,6 +58,7 @@ public static class StateCloning
             OnceOnlyMoveUsed = enemy.OnceOnlyMoveUsed,
             MoveHistory = [.. enemy.MoveHistory],
             StartsOnBranch = enemy.StartsOnBranch,
+            Slot = enemy.Slot,
             StolenGold = enemy.StolenGold,
             HeistGold = enemy.HeistGold,
         };
@@ -209,6 +210,7 @@ public static class StateCloning
             Deck = [.. state.Deck],
             Relics = [.. state.Relics],
             UsedUpRelics = [.. state.UsedUpRelics],
+            MaxPotionSlots = state.MaxPotionSlots,
             PendingPotionRewards = [.. state.PendingPotionRewards],
             PotionSlots = (int[])state.PotionSlots.Clone(),
             CurrentNodeType = state.CurrentNodeType,
@@ -245,7 +247,6 @@ public static class StateCloning
             EliteEncountersVisited = state.EliteEncountersVisited,
             EventSequence = (int[])state.EventSequence.Clone(),
             EventSequenceIndex = state.EventSequenceIndex,
-            WingedBootsTimesUsed = state.WingedBootsTimesUsed,
             CardRarityOffset = state.CardRarityOffset,
             PotionRewardOdds = state.PotionRewardOdds,
             PendingRelicReward = state.PendingRelicReward,

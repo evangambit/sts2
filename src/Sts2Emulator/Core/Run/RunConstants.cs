@@ -9,8 +9,23 @@ public static class RunConstants
     // reserved the old width for it.
     public const int CombatObsSize = CombatObservation.ObsSize;
 
-    /// <summary>The run's flat scalars: phase, floor, gold, the screen in front of the player.</summary>
-    public const int RunScalarObsSize = 25;
+    /// <summary>Where the map's node types start in the scalar block; one slot per choice.</summary>
+    public const int MapNodeTypeObsOffset = 12;
+
+    /// <summary>Where the encounter behind each map choice starts; one slot per choice.</summary>
+    public const int MapChoiceObsOffset = MapNodeTypeObsOffset + MapChoices;
+
+    public const int RelicRewardObsOffset = MapChoiceObsOffset + MapChoices;
+    public const int CurrentEventObsOffset = RelicRewardObsOffset + 1;
+    public const int PotionObsOffset = CurrentEventObsOffset + 1;
+    public const int PotionObsSlots = 3;
+
+    /// <summary>
+    /// The run's flat scalars: phase, floor, gold, the screen in front of the player.
+    /// Derived from the blocks inside it rather than written down, because widening the
+    /// map's choice arrays moves everything after them.
+    /// </summary>
+    public const int RunScalarObsSize = PotionObsOffset + PotionObsSlots;
 
     /// <summary>
     /// How many of the deck's cards the observation carries. A run that grew past this
@@ -79,8 +94,16 @@ public static class RunConstants
     /// action is a cycle an agent can ride forever.
     /// </summary>
     public const int CrystalSphereSmallToolAction = CrystalSphereCells;
-    public const int MapChoices = 4;
     public const int MapWidth = 7;
+
+    /// <summary>
+    /// How many map nodes the player may be offered at once. Ordinarily that is the
+    /// current node's children -- never more than four -- but <c>MapTravel</c> offers the
+    /// WHOLE of the next row while <c>Hook.ShouldAllowFreeTravel</c> holds, and a row is
+    /// as wide as the map. It was 4, so a Winged Boots run could not even be handed its
+    /// options, let alone choose among them.
+    /// </summary>
+    public const int MapChoices = MapWidth;
     public const int MapBossRow = 16;
     public const int MapPathIterations = 7;
 
@@ -260,6 +283,12 @@ public static class RunConstants
     public const int RelicStrawberry = 252;
     public const int RelicStoneHumidifier = 250;
     public const int RelicWingedBoots = 293;
+
+    /// <summary>
+    /// Winged Boots' <c>DynamicVar("Rooms", 3m)</c>: how many times it will carry the
+    /// player to a node the map does not connect to before it is used up.
+    /// </summary>
+    public const int WingedBootsTravels = 3;
     public const int RelicPrismaticGem = 1533;
 
     public const int RelicAstrolabe = 1332;

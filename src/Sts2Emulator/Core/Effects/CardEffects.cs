@@ -1953,7 +1953,14 @@ public static class CardEffects
     /// Slither's cost: <c>Rng.CombatEnergyCosts.NextInt(4)</c>, so 0..3, re-rolled every
     /// time the card is drawn to hand.
     /// </summary>
-    private static CardInstance RollSlitherCost(CombatState state, CardInstance card, Random rng)
+    /// <remarks>
+    /// Every draw INTO HAND, which includes the opening one. <c>Slither.AfterCardDrawn</c>
+    /// has no exemption for it, and a live capture of a Wood Carvings run settles it: a
+    /// Bash enchanted at floor 8 opened the floor-9 fight costing 1 rather than its
+    /// printed 2. <c>CombatFactory</c> deals the opening hand straight off the draw pile,
+    /// so it has to call this itself.
+    /// </remarks>
+    public static CardInstance RollSlitherCost(CombatState state, CardInstance card, Random rng)
     {
         if (card.Enchantment != Enchantment.Slither)
         {

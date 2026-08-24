@@ -133,6 +133,14 @@ public enum BuffId
     FreeAttackPower, // player: next N Attacks cost 0; decrements on each Attack played
     FreeSkillPower, // player: next N Skills cost 0; decrements on each Skill played
     Doom,
+
+    /// <summary>
+    /// An illusion that has been killed and is spending its next turn coming back.
+    /// <c>IllusionPower.AfterDeath</c> forces a REVIVE_MOVE with
+    /// <c>MustPerformOnceBeforeTransitioning</c>, so the turn is spent healing rather
+    /// than acting, and <c>ShouldAllowHitting</c> is false for its owner meanwhile.
+    /// </summary>
+    Reviving,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

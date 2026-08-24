@@ -49,13 +49,13 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 800 pass)
+# C# unit tests (currently 1701 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (140 pass) — drives the live dylib via ctypes
+# Python gym tests (403 pass, 6 skipped) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -227,7 +227,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   native API v11). Version numbers quoted through this file are the version a feature
   _landed at_, not the current one — the current pair is whatever
   `NativeExports.NATIVE_API_VERSION` and `RunNativeExports.RUN_NATIVE_API_VERSION` say,
-  with `src/sts2_gym/native.py` pinned to match (v17 and v10 at the time of writing).
+  with `src/sts2_gym/native.py` pinned to match (v19 and v15 at the time of writing).
   A mismatch fails loudly on load rather than misreading the observation.
 - **Ascension:** the emulator models high ascension (`ToughEnemies` values). Live runs
   at A8 give player 64/80 HP and CorpseSlug 27–29, matching the emulator.
@@ -324,6 +324,11 @@ debug_start_encounter` cycling triggers an error popup (`report_bug`, needs rest
   self-contained mod action to add (see docs/replay-verification.md), NOT a RunReplays dep.
 
 ## The run layer is now honestly unverified
+
+**Read this with "All nine committed run traces now replay clean" further down.** The
+history below is why the run layer had no honest measurement; that section is the
+measurement it now has. Everything here still stands as the account of how it got there.
+
 
 Act-1 combat is verified end to end. The run layer around it was not — it was *fitted*.
 Removed in one pass: **1,530 lines** across `RunEngine`, `RunMapGenerator`,
@@ -533,6 +538,160 @@ Two things the capture turned up on the way:
 - **The auto-player stops at floor 10** with "No proceed button available or enabled" on a
   treasure screen. Not an emulator issue; the tracer's proceed handling for that screen
   needs the same treatment the map move just got.
+
+### The run traces, and what taking more of them costs
+
+The two entries that stood in the catalogue's **Open** table are closed, and the whole
+`tests/fixtures/run_trace/` set replays with no divergence on any compared field —
+including a tenth trace taken afterwards, on purpose, to break the tie (see below). Both
+were the run LAYER rather than a card or a monster, which is the part this file used to
+call honestly unverified — so this is the first evidence for it that is not a fitted one.
+
+Six defects and one harness gap came out of the two, and the ones worth carrying forward:
+
+- **Winged Boots' free travel** (`KFMKQQA7MS`). `MapTravel.GetTravelablePointsFrom` hands
+  back the WHOLE next row while any relic answers `ShouldAllowFreeTravel`, not the current
+  node's children. The blocker recorded against it was real and is gone:
+  `RunConstants.MapChoices` is `MapWidth` now, the run observation's scalar block is
+  derived from the blocks inside it rather than written down, `Sts2Run_ObsLayout` reports
+  the map offsets so Python reads them instead of restating them, and the run API is
+  **v15**. A charge is spent only on a move the map draws no edge for, and it lives on the
+  relic's own counter — `RunState.WingedBootsTimesUsed` was read by nothing and is gone.
+- **A combat the enemy phase ended kept playing** (`WK1DEGZD8P`, and the one to remember).
+  `CombatManager.ExecuteEnemyTurn` checks the win condition after every enemy; the
+  emulator checked once, at the very end of `EndTurn`, so a fight whose last enemy died —
+  or, here, fled with its Heist gold — still ran a whole player turn that never happens.
+  That turn drew a hand, which reshuffled a 13-card pile, which moved `Rng.Shuffle`. It is
+  a RUN-level stream, so every later fight was dealt from a position twelve draws ahead of
+  the game's. **The fight that paid was three floors after the fight that spent.**
+- **Suck fired per hit** rather than once per `AttackCommand`, so a Fossil Stalker's
+  two-hit Lash fed the first hit's Strength into the second. Every multi-hit enemy attack
+  now runs through one `EnemyAI.DealAttack(enemy, state, damage, hits)`.
+- **Fossil Stalker's TACKLE never applied its Frail** — an attack-plus-debuff resolved in
+  the debuff branch its Attack intent cannot reach. Fifth time for that shape; see the
+  catalogue's Grasping Vines note.
+- **A summoned Two-Tailed Rat always joined the front.** `CallForBackup` takes
+  `Slots.LastOrDefault(free)`, which is the front only while all three starters are alive;
+  once one has died it can be the back. `EnemyState.Slot` carries the encounter slot now.
+- **The target map spelled a hyphenated enemy differently from the game** — the harness
+  gap, and the expensive one. `TWO-TAILED_RAT` vs `TWO_TAILED_RAT` made the lookup miss,
+  and a miss does not fail: `translate_target` falls back to the entity id's numeric
+  suffix, which is exactly the renumbering H2 was written to stop trusting.
+
+Two more came out of reading the code those touched rather than out of a capture, and
+both were one line: **an early `break` for multi-hit attacks** skipped everything below
+it in the attack branch. That cost Punch Construct's FAST_PUNCH its Frail, and it cost
+**Flame Barrier its retaliation against every multi-hit attack** — and, because the
+retaliation sat past eighteen other `break`s too, against every monster with a special
+case of its own. `FlameBarrierPower.AfterDamageReceived` is a hook on the damage, so it
+now lives in the per-hit helper next to Thorns, where it fires per hit, fires through
+block, and is skipped only by the blow that kills. The 24 riders behind that break were
+audited rather than assumed: FAST_PUNCH was the only dead one.
+
+**How to measure a live stream position**, since it is what made the second one findable
+and it needs no game running: a combat's opening pile is `hand_ordered + draw_pile_ordered`
+and its input is the deck in run order, so the position the game was at is the one `k` for
+which `shuffle(deck, stream[k:])` reproduces the capture. Search `k` over the stream, read
+the emulator's own side off `Sts2Run_GetShuffleRngCallCount`, and compare per combat.
+
+**What a clean set means and does not.** It means the next run-layer defect needs a NEW
+capture, not another look at these — which was then tested directly, and held.
+
+### The tenth capture, and what taking one costs
+
+`1UL0BRX8WC` was taken for one reason: the nine held only nine of Neow's relics between
+them. It drew a tenth, **Phial Holster**, and diverged on the first combat reward of the
+run — 15 gold live against 9. Four defects came out of that one run (catalogue E29-E32),
+and only the first had anything to do with the relic; the rest sat on paths no earlier
+capture had walked:
+
+- **Phial Holster's potions rolled off the Rewards stream** instead of
+  `Rng.CombatPotionGeneration`, and its `+1` potion slot was unmodelled. The base is 2 at
+  A8, not the 3 the decompiled constant says — every capture agrees, which is how it was
+  settled.
+- **A four-draw fudge** in `AdvanceRewardRngForNeowRelic`, put there to paper over that
+  wrong stream, was all that remained once it was fixed. Its two surviving rows (Hefty
+  Tablet, Lead Paperweight) are a debt and are now documented as one.
+- **The opening hand skipped Slither's cost roll** — `CombatFactory` deals it with a bare
+  `Hand.Add`, so an enchanted card kept its printed cost for turn one.
+- **`combat_energy_costs` was neither fast-forwarded into a combat nor written back out**,
+  the only named stream missing both, so it restarted at zero every fight.
+
+Three harness fixes had to land before any of that was reachable, and they are the part
+worth knowing before the next capture session:
+
+- **An accepted action is not a done action.** The tracer retried refused actions and
+  nothing else. A `proceed` out of a shop returned `ok`, the map opened with the right
+  options, the travel vote registered in the game's log — and no room ever loaded, leaving
+  a live run the harness could not drive. `recover_stranded_run` re-drives until the run
+  actually moves. The first good capture needed six attempts at exactly that step.
+- **The abandon crash wedges the game.** `DeleteCurrentRun` throws on the missing
+  `current_run.save.backup`, the popup handler dies half way, and the main menu comes back
+  with no enabled buttons — forever. Every capture after it fails with "Timed out waiting
+  for menu screen 'main'", which points at the clock rather than the cause. The fix was
+  already written down as a manual step, which is how it stayed a gotcha;
+  `ensure_run_save_backup()` does it automatically now.
+- **Headless is the mode to capture in.** Boot to drivable is ~14s and the first capture
+  after switching ran to a natural game over with no intervention.
+
+### Then six more, chosen rather than rolled
+
+The tenth capture's lesson was that variety is where the defects are, so the next batch
+picked its seeds instead of rolling them. **Neow's three options are seed-deterministic
+and the emulator models the stream**, so which blessings a seed CAN offer is knowable with
+no game running — `scripts/screen_neow_seeds.py` does it, and it was checked against all
+ten existing traces first (10/10 exact, which is also an independent confirmation of the
+`NeowRng` fix). Six seeds were chosen to reach thirteen uncaptured relics.
+
+**All six diverged.** One batch, six new Act-1 runs (110-190 steps, every one a natural
+game over), and every single one found something. Three defects closed out of the first:
+
+- **A Fogmog's Eye With Teeth cannot be killed** (E33). `IllusionPower` is three rules the
+  emulator had none of — it is never removed from combat, its next turn is a forced revive
+  to full, and it keeps its powers through death, so it does it again forever. What made
+  it expensive is target resolution: with the eye dead here and alive there, every blow
+  the live run spent on the illusion landed on the Fogmog instead, and the fight ended
+  thirty-five steps early.
+- **No notion of a secondary enemy** (E34). `Creature.IsPrimaryEnemy` says it plainly —
+  "a secondary enemy will automatically die unless there's also a living primary enemy" —
+  and `MinionPower` or `IllusionPower` is what makes one. Counting the whole roster is
+  wrong in both directions: an eye that revives forever made a fight unwinnable, and a Gas
+  Bomb outliving its Living Fog held a finished one open.
+- **A guard standing in for the missing mechanic** (E35), the same shape as E30's fudge:
+  ILLUSION re-summoned whenever no eye was alive, which deleted one mid-revive. The move
+  is the machine's initial state with nothing leading back to it — once per combat, never
+  again.
+
+Two more closed out of a second capture, and they are a pair worth reading together
+(E36-E37): a **Sewer Clam gained its Plating block twice** — PRESSURIZE is `StrengthPower(4)`
+and nothing else, the block was invented — and underneath that, **Plating decayed a turn
+early and in the wrong order**. `PlatingPower` decrements on `AfterSideTurnStart` and
+grants block on `BeforeSideTurnEndEarly`, so a turn ends on the ALREADY decremented amount,
+and enemies skip the decrement entirely on round one. Note the counter while fixing
+anything like it: `CombatState.Turn` counts from ZERO, so the first enemy phase is Turn 0
+— reading it as 1 trades one off-by-one for another, which the first attempt did.
+
+**Five divergences are still open**, tabled at the top of `docs/divergence-catalog.md`.
+The narrowest is `NXV45HW43K`: a single point of player HP at step 126 and nothing else
+wrong in 149 steps. The best-understood is `J09SPL8Y3V` — **Neow's Bones is diagnosed and
+not fixed**: the game shuffles the valid relic list on `PlayerRng.Rewards`, takes two, and
+offers them on a rewards screen that cannot be skipped; the emulator takes two independent
+`Rng.UpFront.NextItem` draws from the wrong candidate list and grants them silently.
+
+**One thing the screener exposed that matters for every future capture: offered is not
+taken.** The auto-player's Neow policy skips any option whose text mentions a choice, so
+the blessings with a pickup CHOICE can never be captured — `DPUJR117FL` was offered Lead
+Paperweight and `KFMKQQA7MS` Hefty Tablet, and both took the safe option beside it. Those
+two are exactly the relics whose stand-in Rewards draw counts (E30) have nothing to check
+them against, and the batch confirmed the pattern by refusing them again. **`--neow-option
+N` takes the one you name**; `25TS4F5T37 --neow-option 1` and `XTLVVPKFBF --neow-option 2`
+are the two captures that would settle E30.
+
+**What is still uncovered.** All sixteen traces die on floors 5-17, so no committed trace
+covers an act 2 — reaching one needs either a better auto-player or the run layer taking
+an ascension (`RunEngine.Reset` hardcodes 64/80, which is why the A0 trace was deleted).
+The relic table in `tests/fixtures/run_trace/README.md` says which blessings are covered;
+anything not on it is a cheap capture away.
 
 ## Next work (prioritized, with pointers)
 
@@ -1305,7 +1464,7 @@ is a sweep-and-fix loop, not a research problem.
 - Emulator: `Sts2_GetPile` -> `env.get_pile(...)`; run-generation lists 11-14 on
   `Sts2Run_GetStateList` (normal/elite/event sequences, `[act, boss, map_nodes]`, the
   map as (col,row,type) triples, and — new — its **edges** as (col,row,childCol,childRow)
-  quadruples). Native API **v16**, run API **v9**.
+  quadruples). Native API **v19**, run API **v15**.
 - Live: our STS2MCP fork emits `draw_pile_ordered` / `discard_pile_ordered` /
   `hand_ordered` under `result["player"]`. The stock `draw_pile` is **sorted for
   display**, which is why ordered comparison was impossible before.
@@ -1399,7 +1558,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 208 pass
+dotnet test src/Sts2Emulator.Tests/        # 1701 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 119 pass
+uv run python -m unittest discover -s tests/python   # 403 pass
 ```
