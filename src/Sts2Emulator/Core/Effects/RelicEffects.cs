@@ -25,6 +25,7 @@ public static class RelicEffects
     public const int IvoryTile = 119;
     public const int Kunai = 126;
     public const int Kusarigama = 127;
+    public const int GremlinHorn = 108;
     public const int Lantern = 128;
     public const int LetterOpener = 136;
     public const int LizardTail = 137;

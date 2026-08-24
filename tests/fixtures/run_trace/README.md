@@ -47,6 +47,7 @@ is.
 | `P5E6EWCMDW-a8-stonehumidifier.json` | Overgrowth | 91 | clean — the blessing itself (E52) was not modelled at all, and the trace's own divergence was H13: a Gas Bomb's DeathBlow intent, which the comparison had been declining to read |
 | `9V9WN98106-a8-neowstalisman.json` | Overgrowth | 129 | clean — the blessing was fine and the run was not. Found E55 (the Gremlin Merc's fight paying no gold, and skipping the DRAW for it) and E56 (stolen gold handed back mid-combat instead of claimed from the screen) |
 | `ZY1E5128P6-a8-scrollboxes.json` | Overgrowth | 112 | clean — the last of the twenty-five blessings, and the only one that needed a screen built from scratch (E57): `RunPhase.BundleSelect`, two bundles of three, answered with a select and then a confirm |
+| `8QKMNR4T2W-a8-buff200.json` | Overgrowth | 216 | clean — the first BUFFED capture in the set (`--buff-max-hp 200 --upgrade-deck`), reaching floor 12. Found E59 at step 7: Gremlin Horn, handed over by Large Capsule on floor one, was not modelled at all |
 
 Twenty of the twenty-one replay clean. Every capture taken after the set first went green
 has found something — thirteen defects and six harness gaps between them.
@@ -78,6 +79,14 @@ name, and the last two rows above are what that bought: two blessings no run had
 taken, three defects, and the end of E30's standing debt. **A seed can be captured more
 than once** this way -- those two share their seeds with the plain captures above, and the
 runs diverge from the first decision onward.
+
+**Buffed captures.** `--buff-max-hp N --upgrade-deck` applies the same buff to the live
+run and to the emulator at the same step, so the run gets deep enough to reach screens the
+scripted player otherwise dies before seeing. It is honest differential evidence — the game
+is still the reference for every step, and neither buff rolls anything. The first three
+buffed runs found three defects after thirty unbuffed traces had gone green, including an
+elite reward-ordering bug (E58) that no committed trace could have caught, because not one
+of them had ever claimed a combat relic reward.
 
 The table below is keyed by SEED and names the blessing that seed's plain capture took.
 Most of the forced-option traces are not in it: `25TS4F5T37-leadpaperweight`,

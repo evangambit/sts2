@@ -1135,6 +1135,17 @@ public static class CombatEngine
                 continue;
             }
 
+            // GremlinHorn.AfterDeath: EnergyVar(1) and CardsVar(1) for any creature that
+            // dies on the other side. It checks only the SIDE -- not the
+            // wasRemovalPrevented flag it is handed -- so it pays out even for a death
+            // something else undoes, which is why it sits above the revive branches
+            // rather than after them.
+            if (Effects.RelicEffects.Has(state.Relics, Effects.RelicEffects.GremlinHorn))
+            {
+                state.Energy++;
+                Effects.CardEffects.DrawCards(state, 1, rng);
+            }
+
             if (BuffSystem.Get(state.Enemies[i].Buffs, BuffId.Surprise) > 0)
             {
                 SpawnGremlinMercReinforcements(state, rng, state.Enemies[i].StolenGold);

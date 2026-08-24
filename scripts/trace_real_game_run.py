@@ -234,10 +234,18 @@ def is_actionable_state(state: dict[str, Any], *, min_combat_hand: int = 1) -> b
     if state_type in COMBAT_STATES:
         battle = state.get("battle") or {}
         hand = (state.get("player") or {}).get("hand") or []
+        # An empty enemy list inside a COMBAT state is never a settled state: a fight
+        # with nothing left to kill has already become a rewards screen. What it really
+        # means is that the game is mid-resolution -- a Phrog Parasite's death removes it
+        # and then awaits CreatureCmd.Add for each of its four Wrigglers, and a snapshot
+        # taken between the two records a fight against nobody. The emulator resolves
+        # both halves in one step and looked wrong for it.
+        enemies = battle.get("enemies")
         return (
             battle.get("turn") == "player"
             and battle.get("is_play_phase") is True
             and len(hand) >= min_combat_hand
+            and bool(enemies)
         )
     if state_type == "event":
         return bool((state.get("event") or {}).get("options"))

@@ -205,12 +205,19 @@ public static class RunRewardGenerator
 
         state.PendingRelicReward =
             state.CurrentNodeType is RunConstants.NodeElite or RunConstants.NodeBoss;
+
+        // The CARDS are rolled before the relic. RewardsSet builds gold, potion, card,
+        // relic and then populates them in that order, and only sorts by RewardsSetIndex
+        // afterwards -- so the order the screen SHOWS them in (relic above the card) is
+        // not the order they were rolled in. The relic's rarity roll comes off
+        // PlayerRng.Rewards like everything else, so taking it early handed the card
+        // offer the relic's value and shifted all three cards by a draw.
+        PopulateCardReward(state);
         if (state.PendingRelicReward)
         {
             state.RelicReward = NextRelic(state);
         }
 
-        PopulateCardReward(state);
         state.RewardCardPending = true;
         state.Phase = RunPhase.RelicReward;
     }
