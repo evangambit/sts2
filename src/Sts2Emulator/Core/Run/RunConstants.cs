@@ -352,6 +352,27 @@ public static class RunConstants
     public const int OtherCharacterCount = 4;
 
     public const string AncientNeow = "NEOW";
+
+    public const string AncientDarv = "DARV";
+    public const string AncientNonupeipe = "NONUPEIPE";
+    public const string AncientTanx = "TANX";
+    public const string AncientVakuu = "VAKUU";
+
+    /// <summary>
+    /// <c>ActModel.GetUnlockedAncients</c>, act by act. Both act-1 regions declare exactly
+    /// ONE ancient and it is Neow, so act 1's pick is a one-item <c>NextItem</c> that
+    /// still spends its draw. Hive declares three and drops Orobas when its epoch is
+    /// unrevealed; Glory declares three of its own. The mature profile the captures are
+    /// taken on has everything revealed.
+    /// </summary>
+    public static string[] AncientsFor(int act) =>
+        act switch
+        {
+            ActHive => [AncientOrobas, AncientPael, AncientTezcatara],
+            ActGlory => [AncientNonupeipe, AncientTanx, AncientVakuu],
+            _ => [AncientNeow],
+        };
+
     public const string AncientOrobas = "OROBAS";
     public const string AncientPael = "PAEL";
     public const string AncientTezcatara = "TEZCATARA";

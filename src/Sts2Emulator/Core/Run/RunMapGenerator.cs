@@ -5,17 +5,17 @@ namespace Sts2Emulator.Core.Run;
 public static class RunMapGenerator
 {
     /// <summary>
-    /// UpFront draws RunManager.GenerateRooms makes before the first act's rooms are
-    /// generated: the shared-ancient shuffle plus one subset-size draw per act after the
-    /// first. Pinned to the mature profile the captures are taken on.
-    ///
-    /// This was 232 while the relic grab bags were unmodelled, because
-    /// RunManager.InitializeNewRun populates them off the same stream BEFORE
-    /// GenerateRooms runs, and their shuffles are 230 of those draws. Populating the bags
-    /// for real makes the same draws in the same order, so the map still lands where it
-    /// did -- and now the run knows which relics came out.
+    /// <c>UnlockState.SharedAncients</c> — ancients belonging to no act, dealt out to the
+    /// acts after the first. The game's own comment: "we only have 1 right now. That's
+    /// Darv."
     /// </summary>
-    private const int SharedAncientPrefixDraws = 2;
+    /// <remarks>
+    /// A one-item list is why the prefix ahead of the acts measured as exactly two draws:
+    /// <c>UnstableShuffle</c> over one element costs nothing, leaving the two subset-size
+    /// draws. That made "the shared pool is empty" look right, and it is not — a live
+    /// capture (`3PFLW9XC5D`) opens act 2 on DARV, which is in no act's own list.
+    /// </remarks>
+    private static readonly string[] SharedAncientPool = [RunConstants.AncientDarv];
 
     /// <summary>
     /// RunManager.InitializeNewRun: the shared bag from SharedRelicPool as-is, then the
@@ -76,9 +76,20 @@ public static class RunMapGenerator
         // Underdocks' 28.
         var upFront = state.Rng.UpFront;
         PopulateRelicGrabBags(state, upFront);
-        for (int i = 0; i < SharedAncientPrefixDraws; i++)
+
+        // RunManager.GenerateRooms shuffles the shared ancients and then deals each act
+        // AFTER the first a slice off the front: `count = NextInt(list.Count + 1)`, take
+        // that many, and remove them from what is left for the next act. With one shared
+        // ancient that is two draws, which is what this used to spend as a constant --
+        // but the VALUES matter, because taking it or not decides whether an act can open
+        // on Darv at all.
+        var remainingShared = SharedAncientPool.ToList();
+        var sharedSubsets = new List<string[]>();
+        for (int i = 1; i < RunConstants.ActCandidatesByIndex.Length; i++)
         {
-            upFront.NextDouble();
+            int take = upFront.NextInt(remainingShared.Count + 1);
+            sharedSubsets.Add([.. remainingShared.Take(take)]);
+            remainingShared = [.. remainingShared.Skip(take)];
         }
 
         // RunManager.GenerateRooms walks EVERY act, in index order, off this one stream.
@@ -88,9 +99,11 @@ public static class RunMapGenerator
         // wrong the moment anything did.
         state.Acts.Clear();
         state.CurrentActIndex = 0;
-        foreach (int act in acts)
+        for (int index = 0; index < acts.Length; index++)
         {
-            state.Acts.Add(GenerateRoomsForAct(act, upFront));
+            // The game's loop is `Acts.Skip(1)`, so act 1 is dealt no shared ancients.
+            string[] subset = index == 0 ? [] : sharedSubsets[index - 1];
+            state.Acts.Add(GenerateRoomsForAct(acts[index], upFront, subset));
         }
 
         state.EventSequenceIndex = 0;
@@ -108,7 +121,7 @@ public static class RunMapGenerator
     /// rolled from the act's own three plus whatever shared ones it was dealt -- but the
     /// DRAW has to happen either way, and that is what keeps everything after it aligned.
     /// </remarks>
-    private static ActRooms GenerateRoomsForAct(int act, GameRng upFront)
+    private static ActRooms GenerateRoomsForAct(int act, GameRng upFront, string[] sharedSubset)
     {
         var (weakCount, roomCount) = RunConstants.ActRoomCounts(act);
         int[] weakPool = WeakPoolFor(act);
@@ -165,8 +178,25 @@ public static class RunMapGenerator
         }
 
         int boss = bossPool[(int)(upFront.NextDouble() * bossPool.Length)];
-        upFront.NextDouble();
-        return new ActRooms(act, events, normalSequence.ToArray(), eliteSequence.ToArray(), boss);
+
+        // `_rooms.Ancient = rng.NextItem(GetUnlockedAncients().Concat(sharedSubset))`.
+        // The subset is empty on this profile -- SharedAncients is empty, so the two
+        // subset-size draws are NextInt(1) and both come back zero -- which leaves the
+        // act's own list. This draw used to be a bare NextDouble standing in for "spend a
+        // value"; it is the real pick now, so the run knows WHICH ancient each act opens
+        // on. Both act-1 regions declare Neow alone, so act 1 is a one-item pick that
+        // still costs its draw.
+        string[] ancients = [.. RunConstants.AncientsFor(act), .. sharedSubset];
+        string ancient = upFront.NextItem(ancients);
+
+        return new ActRooms(
+            act,
+            events,
+            normalSequence.ToArray(),
+            eliteSequence.ToArray(),
+            boss,
+            ancient
+        );
     }
 
     private static int[] WeakPoolFor(int act) =>

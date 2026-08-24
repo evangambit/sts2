@@ -28,11 +28,19 @@ public sealed record ActRooms(
     int[] Events,
     int[] NormalEncounters,
     int[] EliteEncounters,
-    int BossEncounterId
+    int BossEncounterId,
+    string Ancient
 )
 {
     /// <summary>Stands in before a run has been generated.</summary>
-    public static readonly ActRooms None = new(RunConstants.ActOvergrowth, [], [], [], 0);
+    public static readonly ActRooms None = new(
+        RunConstants.ActOvergrowth,
+        [],
+        [],
+        [],
+        0,
+        RunConstants.AncientNeow
+    );
 }
 
 public sealed class RunState
@@ -255,6 +263,13 @@ public sealed class RunState
     {
         get => CurrentAct.BossEncounterId;
         set => CurrentAct = CurrentAct with { BossEncounterId = value };
+    }
+
+    /// <summary>The ancient this act opens on — Neow in act 1, one of Hive's three after.</summary>
+    public string Ancient
+    {
+        get => CurrentAct.Ancient;
+        set => CurrentAct = CurrentAct with { Ancient = value };
     }
     public int NormalEncountersVisited;
     public int EliteEncountersVisited;

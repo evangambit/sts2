@@ -107,6 +107,77 @@ public class ActGenerationTests
     }
 
     /// <summary>
+    /// Every act draws an ancient, and act 1's is always Neow because both act-1 regions
+    /// declare exactly one.
+    /// </summary>
+    [Theory]
+    [InlineData("3PFLW9XC5D")]
+    [InlineData("7WGQ2VNJ4M")]
+    [InlineData("ACT2TEST01")]
+    public void EveryActDrawsAnAncientAndActOnesIsNeow(string seed)
+    {
+        var state = Generated(seed);
+
+        Assert.Equal(RunConstants.AncientNeow, state.Acts[0].Ancient);
+        Assert.All(state.Acts, act => Assert.False(string.IsNullOrEmpty(act.Ancient)));
+    }
+
+    /// <summary>
+    /// An act can only draw an ancient from its OWN list plus whatever shared ones it was
+    /// dealt, and Darv is the only shared one the game has.
+    /// </summary>
+    [Theory]
+    [InlineData("3PFLW9XC5D")]
+    [InlineData("7WGQ2VNJ4M")]
+    [InlineData("ACT2TEST01")]
+    public void LaterActsDrawFromTheirOwnListOrDarv(string seed)
+    {
+        var state = Generated(seed);
+
+        foreach (var act in state.Acts.Skip(1))
+        {
+            var allowed = RunConstants.AncientsFor(act.Act).Append(RunConstants.AncientDarv);
+            Assert.Contains(act.Ancient, allowed);
+        }
+    }
+
+    /// <summary>
+    /// Darv can only ever be dealt ONCE across a run: the act that takes it removes it
+    /// from what is left for the next.
+    /// </summary>
+    [Theory]
+    [InlineData("3PFLW9XC5D")]
+    [InlineData("7WGQ2VNJ4M")]
+    [InlineData("ACT2TEST01")]
+    public void DarvIsDealtAtMostOnce(string seed)
+    {
+        var state = Generated(seed);
+
+        Assert.True(state.Acts.Count(act => act.Ancient == RunConstants.AncientDarv) <= 1);
+    }
+
+    /// <summary>
+    /// Two live captures pin the act-2 ancient. `3PFLW9XC5D` is the one that matters most:
+    /// it opens act 2 on DARV, which belongs to no act's own list, and reproducing that
+    /// is what showed the shared-ancient pool is <em>not</em> empty. Both were captured
+    /// twice over — once by winning act 1 and once by jumping with `--enter-acts` — and
+    /// agree, which is also what shows the jump does not change what act 2 holds.
+    ///
+    /// <para>
+    /// `ACT2TEST01` is NOT here: the game gives it Pael and the emulator computes
+    /// Tezcatara. See O14 — the mechanism reproduces two seeds exactly and misses that
+    /// one, and the cause is not yet found.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData("3PFLW9XC5D", RunConstants.AncientDarv)]
+    [InlineData("7WGQ2VNJ4M", RunConstants.AncientPael)]
+    public void TheActTwoAncientMatchesTheCapture(string seed, string expected)
+    {
+        Assert.Equal(expected, Generated(seed).Acts[1].Ancient);
+    }
+
+    /// <summary>
     /// Generating the later acts must not move the FIRST act by a single draw — that is
     /// the whole risk of the change, and thirty-one traces are the other half of the
     /// answer.

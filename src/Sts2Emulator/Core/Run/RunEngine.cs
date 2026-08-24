@@ -286,7 +286,7 @@ public sealed class RunEngine
                 // blessings, then one more Proceed before the map.
                 State.LastResolvedRoomType = RunConstants.NodeEvent;
                 ApplyAncientHeal();
-                State.Phase = RunPhase.Ancient;
+                EnterActAncient();
                 return 0;
             default:
                 EnterMapPhase();
@@ -1008,7 +1008,7 @@ public sealed class RunEngine
                     // rooms entered another way, and the Ancient needs both.
                     State.LastResolvedRoomType = RunConstants.NodeEvent;
                     ApplyAncientHeal();
-                    State.Phase = RunPhase.Ancient;
+                    EnterActAncient();
                     break;
                 default:
                     EnterMapPhase();
@@ -1173,6 +1173,29 @@ public sealed class RunEngine
     /// ancient at whatever HP it finished the last one with, and is topped up the same
     /// way: a capture crosses into act 2 on 264/280 and stands on Pael at 276.
     /// </remarks>
+    /// <summary>
+    /// Put the act's own ancient on screen, with the three blessings it offers.
+    /// </summary>
+    /// <remarks>
+    /// Neow keeps the options generated at run start — it has its own generator and its
+    /// own shape. Every act after draws one of Orobas, Pael or Tezcatara (or Darv, the
+    /// one shared ancient) and offers three, one from each of its pools.
+    /// </remarks>
+    private void EnterActAncient()
+    {
+        if (State.Ancient != RunConstants.AncientNeow)
+        {
+            Array.Clear(State.NeowOptions);
+            int[] options = RunNonCombatEffects.GenerateAncientOptions(State, State.Ancient);
+            for (int i = 0; i < options.Length && i < State.NeowOptions.Length; i++)
+            {
+                State.NeowOptions[i] = options[i];
+            }
+        }
+
+        State.Phase = RunPhase.Ancient;
+    }
+
     private void ApplyAncientHeal()
     {
         int missing = State.PlayerMaxHp - State.PlayerHp;
