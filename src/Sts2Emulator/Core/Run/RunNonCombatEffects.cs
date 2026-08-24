@@ -320,6 +320,44 @@ public static class RunNonCombatEffects
                 }
 
                 break;
+            case RunConstants.RelicPaelsClaw:
+                // Goopy onto EVERY card in the deck that can take it — no screen, no
+                // choice. `CanEnchant` is the filter, which for Goopy is the Defend tag.
+                EnchantEveryCard(state, Enchantment.Goopy, 1);
+                break;
+            case RunConstants.RelicNutritiousSoup:
+                // Tezcatara's Ember onto every BASIC Strike. The rarity and tag checks
+                // are the relic's own, on top of the enchantment's CanEnchant.
+                EnchantEveryCard(
+                    state,
+                    Enchantment.TezcatarasEmber,
+                    1,
+                    card => IsBasicStrike(card)
+                );
+                break;
+            case RunConstants.RelicElectricShrymp:
+                // FromDeckForEnchantment with Imbued: ONE card the player picks, and
+                // Imbued takes skills only, so a deck with no skill left is offered
+                // nothing.
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.Imbued,
+                    count: 1
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+            case RunConstants.RelicPaelsGrowth:
+                // Likewise, with Clone at amount FOUR rather than one.
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.Clone,
+                    count: 1,
+                    enchantAmount: 4
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
             case RunConstants.RelicSeaGlass:
                 // CardsVar(15) / 3 = five cards of each rarity from the OTHER character's
                 // pool, all fifteen offered on one grid. Uniform odds with
@@ -841,7 +879,8 @@ public static class RunNonCombatEffects
         int followUpCard = 0,
         int followUpCount = 0,
         int followUpHpLoss = 0,
-        string? eventEntry = null
+        string? eventEntry = null,
+        int enchantAmount = 0
     )
     {
         state.PendingSelectionEventEntry = eventEntry;
@@ -851,6 +890,7 @@ public static class RunNonCombatEffects
         state.PendingSelectionFollowUpCard = followUpCard;
         state.PendingSelectionFollowUpCount = followUpCount;
         state.PendingSelectionFollowUpHpLoss = followUpHpLoss;
+        state.PendingSelectionEnchantAmount = enchantAmount;
         if (!Enumerable.Range(0, state.Deck.Count).Any(i => CanSelectCard(state, i)))
         {
             ClearDeckSelection(state);
@@ -869,6 +909,7 @@ public static class RunNonCombatEffects
         state.PendingSelectionFollowUpCard = 0;
         state.PendingSelectionFollowUpCount = 0;
         state.PendingSelectionFollowUpHpLoss = 0;
+        state.PendingSelectionEnchantAmount = 0;
         state.PendingSelectionReturnsToEvent = false;
     }
 
@@ -935,7 +976,10 @@ public static class RunNonCombatEffects
                     Enchantment = (Enchantment)state.PendingSelectionArg,
                     // Self-Help Book applies at 2 (its Enchantment*Amount vars); every
                     // event enchantment is CardCmd.Enchant<T>(card, 1m).
-                    EnchantAmount = SelfHelpBookAmount((Enchantment)state.PendingSelectionArg),
+                    EnchantAmount =
+                        state.PendingSelectionEnchantAmount > 0
+                            ? state.PendingSelectionEnchantAmount
+                            : SelfHelpBookAmount((Enchantment)state.PendingSelectionArg),
                 };
                 break;
             case DeckSelection.TransformTo:
@@ -972,6 +1016,15 @@ public static class RunNonCombatEffects
         return true;
     }
 
+    /// <summary>
+    /// What amount an enchantment lands at when nothing overrides it.
+    /// </summary>
+    /// <remarks>
+    /// Self-Help Book applies Sharp, Nimble and Swift at 2 (its Enchantment*Amount vars);
+    /// every event enchantment is <c>CardCmd.Enchant&lt;T&gt;(card, 1m)</c>. Pael's Growth
+    /// is the exception that made this an override rather than a rule — it applies Clone
+    /// at FOUR — so a caller that knows its own amount passes it.
+    /// </remarks>
     private static int SelfHelpBookAmount(Enchantment enchantment) =>
         enchantment is Enchantment.Sharp or Enchantment.Nimble or Enchantment.Swift ? 2 : 1;
 
@@ -2008,6 +2061,34 @@ public static class RunNonCombatEffects
     /// </remarks>
     private static bool IsRemovableCard(CardInstance card) =>
         Math.Abs(card.DefId) != RunConstants.CardAscendersBane;
+
+    /// <summary>
+    /// Enchant every card in the deck that will take it — the shape Pael's Claw and
+    /// Nutritious Soup share, where the relic offers no choice at all.
+    /// </summary>
+    private static void EnchantEveryCard(
+        RunState state,
+        Enchantment enchantment,
+        int amount,
+        Func<CardInstance, bool>? extraFilter = null
+    )
+    {
+        for (int i = 0; i < state.Deck.Count; i++)
+        {
+            var card = state.Deck[i];
+            if (!Enchantments.CanEnchant(card, enchantment))
+            {
+                continue;
+            }
+
+            if (extraFilter is not null && !extraFilter(card))
+            {
+                continue;
+            }
+
+            state.Deck[i] = card with { Enchantment = enchantment, EnchantAmount = amount };
+        }
+    }
 
     public static void GainMaxHp(RunState state, int amount)
     {

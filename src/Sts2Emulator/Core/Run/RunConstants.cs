@@ -399,6 +399,7 @@ public static class RunConstants
     public static ReadOnlySpan<int> OrobasPool3 => [268, 6];
 
     // The ancients' blessings that DO something when taken.
+    public const int RelicElectricShrymp = 71;
     public const int RelicGlassEye = 101;
     public const int RelicSandCastle = 229;
     public const int RelicAlchemicalCoffer = 2;

@@ -114,6 +114,21 @@ public enum Enchantment
 
     /// <summary>Attacks only; adds its amount to the FIRST powered attack, then stops.</summary>
     Vigorous,
+
+    // The four the act-2 ancients hand out. Appended, never inserted: the value is what
+    // the observation carries.
+
+    /// <summary>Skills only; starts at the bottom of the draw pile and auto-plays on turn 1.</summary>
+    Imbued,
+
+    /// <summary>Declares nothing of its own — an empty EnchantmentModel carrying an amount.</summary>
+    Clone,
+
+    /// <summary>Defend-tagged cards only; gains Exhaust.</summary>
+    Goopy,
+
+    /// <summary>Costs nothing, gains Eternal, and adds its amount to a powered attack.</summary>
+    TezcatarasEmber,
 }
 
 public readonly record struct CardInstance(
@@ -228,6 +243,15 @@ public static class Enchantments
 
             // Slither.CanEnchant also refuses an X-cost card.
             Enchantment.Slither => !def.HasEnergyCostX,
+
+            // Imbued.CanEnchantCardType: skills.
+            Enchantment.Imbued => def.Type == CardType.Skill,
+
+            // Goopy.CanEnchant: tagged Defend. The same stand-in as Spiral's -- among
+            // Basic cards the tag and the name agree -- so this is right for the Defends
+            // a run starts with and blind to any Defend-tagged card that is not Basic.
+            Enchantment.Goopy => IsStrikeOrDefend(def)
+                && def.Entry.StartsWith("DEFEND_", StringComparison.Ordinal),
 
             _ => true,
         };

@@ -891,6 +891,13 @@ public static class CombatEngine
             return 0;
         }
 
+        // TezcatarasEmber.OnEnchant does `EnergyCost.UpgradeBy(-cost)` -- it zeroes the
+        // card's printed cost for good, so this is not a "free this turn" flag.
+        if (card.Enchantment == Enchantment.TezcatarasEmber)
+        {
+            return 0;
+        }
+
         if (def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.Corruption) > 0)
         {
             return 0;

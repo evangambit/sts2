@@ -411,6 +411,9 @@ public sealed class RunState
     /// Jelly Liver transforms a card and then the belt turns and offers the next dish, so
     /// resolving the selection has to return to the event rather than end it.
     /// </summary>
+    /// <summary>The amount an Enchant selection lands at, or 0 for the enchantment's default.</summary>
+    public int PendingSelectionEnchantAmount;
+
     public bool PendingSelectionReturnsToEvent;
     public bool PendingRestUpgrade;
     public bool RestResultPending;

@@ -294,6 +294,84 @@ public class AncientBlessingTests
         Assert.InRange(engine.State.SeaGlassCharacter, 0, RunConstants.OtherCharacterCount - 1);
     }
 
+    // ---- the four that enchant --------------------------------------------------
+
+    /// <summary>
+    /// Pael's Claw puts Goopy on every card that will take it, with no screen at all.
+    /// Goopy takes Defend-tagged cards, so a starting deck's four Defends get it and its
+    /// Strikes and Bash do not.
+    /// </summary>
+    [Fact]
+    public void PaelsClawGoopsEveryDefend()
+    {
+        var state = Taking(RunConstants.RelicPaelsClaw).State;
+
+        var goopy = state.Deck.Where(c => c.Enchantment == Enchantment.Goopy).ToList();
+        Assert.Equal(4, goopy.Count);
+        Assert.All(
+            goopy,
+            card => Assert.StartsWith("DEFEND_", GeneratedData.Cards.Get(card.DefId).Entry)
+        );
+        Assert.All(goopy, card => Assert.Equal(1, card.EnchantAmount));
+    }
+
+    /// <summary>
+    /// Nutritious Soup embers every BASIC Strike — five in a starting deck — and nothing
+    /// else. Ember zeroes the card's cost and adds to a powered attack.
+    /// </summary>
+    [Fact]
+    public void NutritiousSoupEmbersEveryBasicStrike()
+    {
+        var state = Taking(RunConstants.RelicNutritiousSoup).State;
+
+        var embered = state.Deck.Where(c => c.Enchantment == Enchantment.TezcatarasEmber).ToList();
+        Assert.Equal(5, embered.Count);
+        Assert.All(
+            embered,
+            card => Assert.Equal("STRIKE_IRONCLAD", GeneratedData.Cards.Get(card.DefId).Entry)
+        );
+    }
+
+    /// <summary>
+    /// Electric Shrymp asks the player, and Imbued takes SKILLS — so a Strike cannot be
+    /// chosen and a Defend can.
+    /// </summary>
+    [Fact]
+    public void ElectricShrympOffersSkillsOnly()
+    {
+        var engine = Pristine.Clone();
+
+        var followUp = RunNonCombatEffects.ApplyRelicPickup(
+            engine.State,
+            RunConstants.RelicElectricShrymp
+        );
+
+        Assert.Equal(RunFollowUp.TransformSelect, followUp);
+        Assert.Equal(DeckSelection.Enchant, engine.State.PendingSelectionKind);
+        Assert.Equal((int)Enchantment.Imbued, engine.State.PendingSelectionArg);
+
+        int strike = engine.State.Deck.FindIndex(c => c.DefId == 472);
+        int defend = engine.State.Deck.FindIndex(c => c.DefId == 131);
+        Assert.False(RunNonCombatEffects.CanSelectCard(engine.State, strike));
+        Assert.True(RunNonCombatEffects.CanSelectCard(engine.State, defend));
+    }
+
+    /// <summary>
+    /// Pael's Growth applies Clone at FOUR, not the 1 every other event enchantment uses
+    /// — which is why the amount is something a caller can name.
+    /// </summary>
+    [Fact]
+    public void PaelsGrowthClonesAtFour()
+    {
+        var engine = Pristine.Clone();
+        RunNonCombatEffects.ApplyRelicPickup(engine.State, RunConstants.RelicPaelsGrowth);
+
+        engine.Step(0, -1, out _, out _, out _);
+
+        var cloned = engine.State.Deck.Single(c => c.Enchantment == Enchantment.Clone);
+        Assert.Equal(4, cloned.EnchantAmount);
+    }
+
     [Fact]
     public void BiiigHugRemovesTheFourTheChoiceNames()
     {

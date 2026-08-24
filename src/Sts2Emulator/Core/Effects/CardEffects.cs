@@ -4559,6 +4559,13 @@ public static class CardEffects
             damage += card.EnchantAmount;
         }
 
+        // TezcatarasEmber.EnchantDamageAdditive adds its amount to a powered attack, with
+        // no once-only status -- every play, like Sharp.
+        if (card.Enchantment == Enchantment.TezcatarasEmber)
+        {
+            damage += card.EnchantAmount;
+        }
+
         // Corrupted.EnchantDamageMultiplicative is 1.5x on a powered attack, every play --
         // it has no once-only status of its own.
         if (card.Enchantment == Enchantment.Corrupted)
