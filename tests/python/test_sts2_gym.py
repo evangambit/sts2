@@ -457,13 +457,19 @@ class Sts2GymTests(unittest.TestCase):
         result = replay_full_run_trace.replay_trace(payload, emulator_seed=3)
 
         self.assertIsNone(result.unsupported_action)
+        # One output per reference step, so this is the emulator's own sequence over the
+        # five the reference drives. It used to end "map, monster" and now ends "event,
+        # map": Neow stays on screen for one more Proceed once its rewards are answered,
+        # whether they were claimed or DECLINED, and the skip path used to return straight
+        # to the map from underneath that check (catalogue E53). The run is one step
+        # further back at every point after the rewards screen, which is the fix.
         self.assertEqual(
             [
                 "event",
                 "rewards",
                 "rewards",
+                "event",
                 "map",
-                "monster",
             ],
             [step["summary"]["state_type"] for step in result.payload["trace"]],
         )

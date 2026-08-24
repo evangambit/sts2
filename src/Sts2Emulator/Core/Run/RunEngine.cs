@@ -1401,8 +1401,13 @@ public sealed class RunEngine
         if (action == RunConstants.RewardSkipAction)
         {
             // Skipping the screen abandons everything still on it, queued potions included.
+            // It still LEAVES the screen the same way answering it does: this used to go
+            // straight to AdvanceAfterRelicReward and so walked past the returns below,
+            // which is invisible for Neow (its rewards are WithSkippingDisallowed) and
+            // wrong for every event, whose second queued potion is declined far more often
+            // than it is taken.
             State.PendingPotionRewards.Clear();
-            return AdvanceAfterRelicReward(out terminal);
+            return LeaveRewardScreen(out terminal);
         }
 
         if (!RunRewardGenerator.HasPendingRewards(State))
@@ -1413,13 +1418,7 @@ public sealed class RunEngine
                 // more Proceed -- the same return the card-reward path already made, and
                 // the only one a relic-only screen (Neow's Bones) could not. Advancing
                 // straight to the map from here skips a decision the run really makes.
-                if (State.NeowAwaitingProceed)
-                {
-                    State.Phase = RunPhase.Ancient;
-                    return 0;
-                }
-
-                return AdvanceAfterRelicReward(out terminal);
+                return LeaveRewardScreen(out terminal);
             }
 
             return -1;
@@ -1443,6 +1442,16 @@ public sealed class RunEngine
         {
             State.Phase = RunPhase.Ancient;
         }
+        else if (
+            State.Phase == RunPhase.RelicReward
+            && State.EventAwaitingProceed
+            && !RunRewardGenerator.HasPendingRewards(State)
+        )
+        {
+            State.EventAwaitingProceed = false;
+            State.EventId = RunConstants.EventResultPending;
+            State.Phase = RunPhase.Event;
+        }
 
         return 0;
     }
@@ -1453,8 +1462,56 @@ public sealed class RunEngine
     /// queued, because the screen carries one at a time. A 0 is rolled when it reaches
     /// the screen.
     /// </summary>
+    /// <summary>
+    /// The <c>AfterRestSiteHeal</c> hook. Stone Humidifier is its only holder here:
+    /// <c>MaxHpVar(5)</c> through <c>CreatureCmd.GainMaxHp</c>, and it ignores the hook's
+    /// <c>isMimicked</c> flag, so an event that heals you like a rest pays it too.
+    /// </summary>
+    /// <summary>
+    /// Leave the rewards screen for wherever opened it.
+    /// </summary>
+    /// <remarks>
+    /// Neow stays on screen once its rewards are answered, waiting for one more Proceed.
+    /// An event does the same for its own reason: every event that hands out rewards
+    /// awaits <c>RewardsCmd.OfferCustom</c> and calls <c>SetEventFinished</c> on the line
+    /// below, so the result page is shown once the screen is done with. Only a screen
+    /// nobody is waiting on advances to the map.
+    /// </remarks>
+    private int LeaveRewardScreen(out bool terminal)
+    {
+        terminal = false;
+        if (State.NeowAwaitingProceed)
+        {
+            State.Phase = RunPhase.Ancient;
+            return 0;
+        }
+
+        if (State.EventAwaitingProceed)
+        {
+            State.EventAwaitingProceed = false;
+            State.EventId = RunConstants.EventResultPending;
+            State.Phase = RunPhase.Event;
+            return 0;
+        }
+
+        return AdvanceAfterRelicReward(out terminal);
+    }
+
+    private void ApplyAfterRestSiteHeal()
+    {
+        if (State.Relics.Any(relic => relic.DefId == RunConstants.RelicStoneHumidifier))
+        {
+            RunNonCombatEffects.GainMaxHp(State, 5);
+        }
+    }
+
     private void OfferPotionRewards(params int[] potionIds)
     {
+        // Every caller is an event branch, and every one of those events awaits the offer
+        // and calls SetEventFinished on the next line -- so the screen owes the event a
+        // return. Read off the phase rather than passed in, so a new event that offers
+        // rewards gets the return without having to remember to ask for it.
+        State.EventAwaitingProceed = State.Phase == RunPhase.Event;
         State.RewardGold = 0;
         State.RelicReward = 0;
         State.RewardPotion = 0;
@@ -1596,6 +1653,7 @@ public sealed class RunEngine
         if (action == RunConstants.RestHealAction)
         {
             State.PlayerHp = Math.Min(State.PlayerMaxHp, State.PlayerHp + RestHealAmount());
+            ApplyAfterRestSiteHeal();
             // Tiny Mailbox's TryModifyRestSiteHealRewards adds two PotionRewards to the
             // rest, and a reward is offered rather than given: the player chooses whether
             // to take it, and may drop a held potion to make room.
@@ -1943,6 +2001,7 @@ public sealed class RunEngine
                     // Rest mimics a rest site and then wakes something up: the page it
                     // answers with has one option, and that option is the fight.
                     HealPlayer(RestHealAmount());
+                    ApplyAfterRestSiteHeal();
                     State.EventPage = 1;
                     return 0;
                 }
@@ -3069,12 +3128,42 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventFieldOfManSizedHoles:
+                // Resist is CardSelectCmd.FromDeckForRemoval at CardsVar(2) followed by
+                // AddCursesToDeck(Normality) -- TWO cards the player picks, and a curse for
+                // them. The emulator removed ONE card of its own choosing and charged
+                // nothing for it.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.RemoveLowestPriorityCard(State);
+                    // A deck with nothing removable does not REFUSE the option: the game
+                    // awaits an empty selection and runs AddCursesToDeck below it either
+                    // way, so the curse still lands.
+                    if (
+                        !RunNonCombatEffects.BeginDeckSelection(
+                            State,
+                            DeckSelection.Remove,
+                            0,
+                            count: 2,
+                            followUpCard: RunNonCombatEffects.NamedCard("Normality"),
+                            followUpCount: 1
+                        )
+                    )
+                    {
+                        RunNonCombatEffects.AddCardToDeck(
+                            State,
+                            new CardInstance(RunNonCombatEffects.NamedCard("Normality"), false)
+                        );
+                        State.EventId = RunConstants.EventResultPending;
+                    }
+
+                    return 0;
                 }
                 else if (action == 1)
                 {
+                    // TODO: EnterYourHole is FromDeckForEnchantment with PerfectFit, an
+                    // enchantment the emulator does not model yet (it moves its card to the
+                    // front of the draw pile on every reshuffle EXCEPT the initial one).
+                    // The 12 HP and a relic below are invented and belong to no option of
+                    // this event; they are left in place only so the branch answers at all.
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 12);
                     RunNonCombatEffects.ApplyRelicPickup(
                         State,
@@ -3123,15 +3212,40 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventSpiritGrafter:
+                // Neither option was this event. LetItIn heals HealVar(25) and adds a
+                // Metamorphosis to the deck; Rejection is FromDeckForUpgrade -- the player
+                // upgrades a card of their choosing -- and then takes HpLossVar(10)
+                // UNBLOCKABLE damage. The emulator removed a card and granted 3 max HP for
+                // the first, and transformed-then-upgraded the deck's first card for the
+                // second, charging nothing either way.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.RemoveLowestPriorityCard(State);
-                    RunNonCombatEffects.GainMaxHp(State, 3);
+                    HealPlayer(25);
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunNonCombatEffects.NamedCard("Metamorphosis"), false)
+                    );
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.TransformFirstCard(State);
-                    RunNonCombatEffects.UpgradeFirstCard(State);
+                    // FromDeckForUpgrade on a fully upgraded deck returns nothing and
+                    // Rejection carries on to the damage regardless -- so the option is
+                    // still takeable, and refusing it made the event's mask offer a move
+                    // its own step would not accept.
+                    if (
+                        !RunNonCombatEffects.BeginDeckSelection(
+                            State,
+                            DeckSelection.Upgrade,
+                            0,
+                            followUpHpLoss: 10
+                        )
+                    )
+                    {
+                        State.PlayerHp = Math.Max(0, State.PlayerHp - 10);
+                        State.EventId = RunConstants.EventResultPending;
+                    }
+
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {

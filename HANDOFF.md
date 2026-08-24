@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1724 pass, ~2m)
+# C# unit tests (currently 1731 pass, ~3m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -804,6 +804,58 @@ front of it, which reads like accumulated drift and was a single missing conditi
 printed. `replay_full_run_trace.py` reports a first divergence PER FIELD and does not
 order them, so `grep 'first divergence' | head -2` shows the symptom rather than the
 cause. Both times the deck row named the real event.
+
+### Four more blessings, and the screen is the effect
+
+Pomander, Small Capsule, New Leaf and Stone Humidifier. **All four diverged**, three of
+them at step 1, and the shape was the same one E43/E44 found: the game asks the player
+something and the emulator answers for them.
+
+- **Pomander** (E49) is `FromDeckForUpgrade` at CardsVar(1); it called `UpgradeFirstCard`,
+  which takes the deck's first upgradable card — a Strike, in any starting deck.
+- **New Leaf** (E50) was the last blessing still riding the pre-`BeginDeckSelection`
+  `TransformSelectedDeckIndex` path, which answers its screen a step later than the game.
+- **Small Capsule** (E51) granted its relic where `RewardsCmd.OfferCustom` offers it, which
+  also ran the relic's own pickup effect a step early.
+- **Stone Humidifier** (E52) had a constant and no implementation: `AfterRestSiteHeal` is
+  `MaxHpVar(5)`, and it ignores the hook's `isMimicked` flag, so the event that heals you
+  like a rest pays it too.
+
+**Treat a screen as part of the effect.** Six blessings have now been this same defect. Any
+relic or event whose text contains a choice — upgrade a card, remove a card, gain a relic —
+is worth opening with the suspicion that the emulator is deciding it. The wrong answer is
+only half the cost; the other half is that a screen is an ACTION, so skipping it leaves the
+run permanently one decision ahead and everything downstream reads as a state-machine
+divergence rather than the missing prompt it is.
+
+**E53 is the one worth reading twice.** Pomander's trace went clean at step 1 and then
+diverged at 113, on an event with nothing to do with the blessing: Whispering Hollow offers
+two potions, the run declined the second, and the emulator went to the map where the game
+went back to the event's result page. Every event that hands out rewards awaits
+`RewardsCmd.OfferCustom` and calls `SetEventFinished` on the next line, so it always owes a
+Proceed. Neow already had that return — but its rewards are `WithSkippingDisallowed`, so
+the SKIP branch, which returned to the map from underneath both checks, was reachable only
+from an event and only when a player declined something. Both exits go through one
+`LeaveRewardScreen` now.
+
+**E54 came from reading, not from a capture**, chasing E44's note that four sites still
+called `RemoveLowestPriorityCard`. The removal turned out to be the least of it: on both
+Field of Man-Sized Holes and Spirit Grafter, BOTH options belonged to some other event.
+Field of Man-Sized Holes removes **two** chosen cards and adds a Normality; Spirit Grafter
+heals 25 and adds a Metamorphosis, or upgrades a chosen card and then charges 10
+unblockable. None of the emulator's numbers appear anywhere in either event's source.
+**Two sites still call `RemoveLowestPriorityCard`** — the shop's removal service and Empty
+Cage — and both are blocked on the same missing piece: `BeginDeckSelection`'s completion
+path always returns to `RunPhase.Event`, so a selection opened from a shop or a relic
+pickup has nowhere correct to land. That return needs generalising the way E53 generalised
+the rewards screen's.
+
+**H13: a divergence can be the harness declining to look.** The Stone Humidifier trace's
+only divergence was a Gas Bomb announcing `("DeathBlow", "8")`, which `_attack_intent` read
+as not attacking at all because it matched on the literal string `"Attack"`.
+`DeathBlowIntent` derives from `SingleAttackIntent` and carries real damage in the same
+label format. It is compared like any other attack now — which makes the check stricter,
+not looser.
 
 ## Next work (prioritized, with pointers)
 
@@ -1670,7 +1722,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1724 pass
+dotnet test src/Sts2Emulator.Tests/        # 1731 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```

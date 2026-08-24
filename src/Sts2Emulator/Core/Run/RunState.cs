@@ -88,6 +88,18 @@ public sealed class RunState
     /// map; going straight to the map skips a decision the player actually makes.
     /// </summary>
     public bool NeowAwaitingProceed;
+
+    /// <summary>
+    /// An EVENT opened the reward screen currently up, so answering it returns to the
+    /// event's result page rather than to the map.
+    /// </summary>
+    /// <remarks>
+    /// Every event that hands out rewards does it the same way: <c>await
+    /// RewardsCmd.OfferCustom(...)</c> and then <c>SetEventFinished(...)</c> on the line
+    /// below, so the result page is shown once the screen is answered. Neow already had
+    /// this and events did not, which cost the run one Proceed every time.
+    /// </remarks>
+    public bool EventAwaitingProceed;
     public bool ReturnToRewardScreenAfterCardReward;
     public int[] MapNodeTypes = new int[RunConstants.MapChoices];
     public int[] MapChoices = new int[RunConstants.MapChoices];

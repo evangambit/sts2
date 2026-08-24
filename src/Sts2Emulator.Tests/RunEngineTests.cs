@@ -990,6 +990,12 @@ public class RunEngineTests
         engine.State.Phase = RunPhase.RelicReward;
         engine.State.CurrentNodeType = RunConstants.NodeRelic;
         engine.State.RelicReward = RunConstants.RelicMeatOnTheBone;
+        // A relic node is floors past Neow, so Neow is not still waiting on a Proceed.
+        // The step above took a blessing and left the flag set; leaving it set here builds
+        // a state no run reaches, and the screen would correctly go back to the ancient
+        // rather than to the map (which is what Small Capsule's skippable relic offer
+        // needs it to do).
+        engine.State.NeowAwaitingProceed = false;
 
         int status = engine.Step(0, -1, out _, out bool terminal, out _);
 
@@ -1224,16 +1230,20 @@ public class RunEngineTests
         Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
         Assert.Contains(engine.State.Relics, relic => relic.DefId == RunConstants.RelicNewLeaf);
 
-        status = engine.Step(0, -1, out _, out terminal, out _);
-        Assert.Equal(0, status);
-        Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
-
+        // The selection is answered directly. It used to take one step more than this --
+        // the older TransformSelectedDeckIndex path spent a step arriving at a screen it
+        // had already opened -- and a live capture (`N11HWGCNUN`) is back at the ancient
+        // with the card transformed on the step this one selects (catalogue E50).
         status = engine.Step(selectedDeckIndex, -1, out _, out terminal, out _);
 
         Assert.Equal(0, status);
         Assert.False(terminal);
-        Assert.Equal(RunPhase.Map, engine.State.Phase);
         Assert.NotEqual(originalCard, engine.State.Deck[selectedDeckIndex].DefId);
+
+        // And a selection Neow opened returns to Neow, which stays up for one Proceed.
+        Assert.Equal(RunPhase.Ancient, engine.State.Phase);
+        engine.Step(0, -1, out _, out terminal, out _);
+        Assert.Equal(RunPhase.Map, engine.State.Phase);
     }
 
     [Fact]

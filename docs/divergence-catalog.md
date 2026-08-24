@@ -33,15 +33,15 @@ rather than Overgrowth.
 
 None.
 
-All twenty-four committed traces replay with no divergence on any compared field, and the
-two stand-in draw counts E30 left behind are gone.
+All twenty-eight committed traces replay with no divergence on any compared field, and
+the two stand-in draw counts E30 left behind are gone.
 
-That is a stronger statement than the last time this table was empty: fourteen of the
-twenty-four were captured specifically to walk paths the others did not — most of them by
+That is a stronger statement than the last time this table was empty: eighteen of the
+twenty-eight were captured specifically to walk paths the others did not — most of them by
 screening seeds for a Neow blessing no committed trace had taken — and closing what they
-found took eighteen engine fixes. It is still a statement about these twenty-four runs,
-not about the emulator: the last three captures were taken after the set had gone green
-and every one of them found something. See the note under "Patterns" about what a green
+found took twenty-four engine fixes. It is still a statement about these twenty-eight runs,
+not about the emulator: the last seven captures were taken after the set had gone green
+and six of the seven found something. See the note under "Patterns" about what a green
 set does and does not measure.
 
 The two that stood here last are E22 to E26 below; E27 and E28 came out of reading the
@@ -115,6 +115,12 @@ that failed could not have.
 | E46 | `player.gold` step 111: 121 live, 101 here (was **O9**) | `J09SPL8Y3V-a8-precisescissors` | **The emulator robbed a corpse.** `ThieveryPower.Steal` opens `if (Target != null && !Target.IsDead && Target.Player.Gold > 0)`, and a Gremlin Merc's move attacks BEFORE it steals — so the blow that kills the player takes no gold with it. The emulator's steal checked only that the player had gold. Worth noting how this presented: twenty gold, in the last snapshot of the run, a hundred clean steps in, with every field before it agreeing. It reads like drift and it was a missing clause. |
 | E47 | `player.deck` step 62: the game upgraded two Strikes, the emulator a Strike and a Defend | `NXV45HW43K-a8-cursedpearl` | **`IsUpgradable` was a hand-kept list of fourteen card ids against the thirty-seven the game actually declares.** `CardModel.IsUpgradable` is `CurrentUpgradeLevel < MaxUpgradeLevel`, and the cards that override `MaxUpgradeLevel` are every curse and status; the emulator's list held fourteen of them. The twenty-three it missed were eligible for every upgrade in the game, which is invisible while an upgrade is CHOSEN and decisive the moment one is RANDOM — Doors of Light and Dark shuffles the upgradable cards and takes two, so Greed sitting in a Cursed Pearl run's candidate list made it fourteen names instead of thirteen, a different shuffle, and a different pick. `MaxUpgradeLevel => 0` is extracted into `Cards.g.cs` now and the list is gone. |
 | E48 | `player.deck` step 27: the game offered Sword Boomerang+, the emulator Body Slam+ | `RRRR6WR3C4-a8-silvercrucible` | **`||` short-circuited a draw the game always makes.** `CardFactory.CreateForReward` calls `RollForUpgrade` for every reward card unless `NoUpgradeRoll` is set, and `RollForUpgrade` draws its float on its FIRST line, before it asks whether the card is upgradable. The emulator wrote the answer as `silverCrucibleUpgrade || RollCardUpgrade(...) || UpgradedByEggs(...)`, so a run holding Silver Crucible — whose upgrade is `TryModifyCardRewardOptionsLate`, applied after the rolls and changing nothing about them — spent two rewards-stream values per card where the game spends three. Every card the stream produced from the second one on was somebody else's. |
+| E49 | `state_type` step 1: game `card_select`, emulator `event` | `RRRR6WR3C4-a8-pomander` | **Pomander picked the card for you.** `AfterObtained` is `CardSelectCmd.FromDeckForUpgrade` at CardsVar(1); the emulator called `UpgradeFirstCard`, which takes the deck's first upgradable card — a Strike, in every starting deck. Same shape as E44, different blessing. |
+| E50 | `state_type` step 3: game `event`, emulator `card_select` | `N11HWGCNUN-a8-newleaf` | **New Leaf answered its screen a step late.** It is `FromDeckForTransformation` then `TransformToRandom` on `Rng.Niche`, and it was still riding the older `TransformSelectedDeckIndex` path that predates `BeginDeckSelection` — so the game was back at the event with the card already transformed while the emulator still held the selector open. Converting it also removes one of the three remaining users of that path. |
+| E51 | `player.relics` step 1: game holds two, emulator three | `P14DQ9GNPW-a8-smallcapsule` | **Small Capsule granted its relic instead of offering it.** `AfterObtained` is `RewardsCmd.OfferCustom` with a single `RelicReward` — a SCREEN. Granting it outright also ran the relic's own pickup effect a step early, which is the same pair of consequences E42 found in Neow's Bones; the machinery that fix built (`PendingBonusRelicRewards`) is what this now uses. |
+| E52 | (no capture) Stone Humidifier did nothing at all | read from `StoneHumidifier.cs` | `AfterRestSiteHeal` grants `MaxHpVar(5)`, and the relic had a constant in `RunConstants` and no implementation anywhere. It ignores the hook's `isMimicked` flag, so the event that heals you like a rest pays it too. |
+| E53 | `state_type` step 113: game `event`, emulator `map` | `RRRR6WR3C4-a8-pomander` | **An event that hands out rewards gets its result page back, and the SKIP path walked past that.** Every one of the four such events awaits `RewardsCmd.OfferCustom` and calls `SetEventFinished` on the line below, so the run spends one more Proceed than the emulator did. Neow already had this return; the reason nobody noticed the gap is that Neow's rewards are `WithSkippingDisallowed`, so the skip branch — which returned straight to the map from underneath both checks — was only ever reachable from an event. Whispering Hollow offers TWO potions and a run with a full belt declines the second, which is exactly the path that exposed it. Both exits share one `LeaveRewardScreen` now. |
+| E54 | (no capture) both options of two events belonged to other events | read from `FieldOfManSizedHoles.cs`, `SpiritGrafter.cs` | Found by chasing E44's closing note that four sites still called `RemoveLowestPriorityCard`. The removal was the least of it. **Field of Man-Sized Holes**: Resist is `FromDeckForRemoval` at CardsVar(**2**) followed by `AddCursesToDeck(Normality)` — two cards the player picks and a curse for them, against one card of the emulator's choosing and no curse. **Spirit Grafter**: LetItIn heals 25 and adds a Metamorphosis; Rejection is `FromDeckForUpgrade` and then 10 unblockable damage. The emulator removed a card and granted 3 max HP for the first, and transformed-then-upgraded the deck's first card for the second. Neither event's numbers appear anywhere in its own source. **Two sites still call `RemoveLowestPriorityCard`** — the shop's removal service and Empty Cage — and both need a return-phase concept the deck selection does not have yet, since its completion path always lands on `RunPhase.Event`. |
 
 
 
@@ -144,6 +150,7 @@ They are catalogued because each one cost more than the engine bug it concealed.
 | H10 | An unbounded "proceed until the map" loop turned a divergence into a hang | `commands.py` walked `while phase != PHASE_MAP`, posting a proceed each time. When the emulator sat on a screen the reference had already left, the proceed changed nothing, the loop posted it again, and the replay spun at 99% CPU forever — reading for all the world like a hang in the ENGINE, which is where the first hour of looking went. It is bounded now, and gives up when a proceed does not change the phase, so the caller reports the mismatch it actually has. Same lesson as H8: a harness that cannot make progress must say so rather than keep trying. |
 | H11 | Every card-select screen was assumed to be the toggling kind | A card-select phase is TWO screens wearing one name. An offer grid (`FromChooseACardScreen`) resolves on the click — the game says "Choosing card: X" and leaves — while a selection over the DECK toggles and waits for a confirm. The replay only ever modelled the second, because **no committed trace had ever replayed a grid**: Brain Leech and Room Full of Cheese roll them, and no capture had reached either. So the answer was deferred waiting for a confirm that never came, and the emulator sat on the screen while the reference walked on. It asks the run which screen is open now (state list 17, run API v16) rather than reading the mod's message text — the same reason target ids are resolved against the emulator's own roster instead of being parsed out of a name. |
 | H12 | Neither side of the harness could answer a screen wanting TWO cards | The capture policy picks a card by priority and the screen reports **no selection state at all** — its cards carry an index and nothing to say one is already ticked. So a two-card screen picked the same card every time, toggling it on and off; and because a toggle DOES change the snapshot, the settle-wait never timed out and the capture hung outright rather than failing. The replay had the mirror of it: `select_card` held one deferred index and "a later toggle replaces an earlier one", so a two-card answer applied one card. Both now track the set. The replay applies them **highest index first**, because a removal takes its card out of the deck as it goes and a lower index applied first shifts every index above it. Precarious Shears ("Choose 2 cards to Remove") is the first blessing that asks for two, which is why neither gap had ever been met. |
+| H13 | `battle.enemies` step 81: reference intent `None`, emulator `8` | `P5E6EWCMDW-a8-stonehumidifier` | **The comparison was under-reading the reference.** `_attack_intent` counted an intent only when its type was the literal `"Attack"`, and a Gas Bomb announces `("DeathBlow", "8")` — `DeathBlowIntent` derives from `SingleAttackIntent` and carries real damage in the same label format. So the reference reported "not attacking" and the two sides disagreed about nothing. Compared like any other attack now, which makes the check STRICTER: the emulator's announced 8 has to match. Worth remembering that a divergence can be the harness declining to look. |
 
 
 
@@ -221,6 +228,22 @@ Barrier. The branch that dealt the damage should not get to decide which effects
 damage has — anything that answers a hit belongs in the helper that lands the hit, next
 to Thorns. When adding a `break` to a long `if` chain, the question is not "does my case
 work" but "what did I just exclude".
+
+**The screen the effect opens is part of the effect.** Six blessings now (E43, E44, E49,
+E50, E51, and Neow's Bones in E42) turned out to be the same defect: the game asks the
+player something and the emulator answered for them. It is worth treating as the DEFAULT
+suspicion for any relic or event whose text contains a choice — "upgrade a card", "remove
+a card", "gain a relic" — because the wrong answer is only half the cost. The other half
+is the step: a screen is an action the run takes, so an emulator that skips it is
+permanently one decision ahead, and everything downstream reads as a state-machine
+divergence rather than as the missing prompt it is.
+
+**A branch that leaves early has to leave the same way the others do.** E53's skip path
+cleared the queue and returned straight to the map, past both of the checks that decide
+where a rewards screen goes back to. It was unreachable for Neow — whose rewards cannot
+be skipped — so the gap sat in a branch only events could enter, and only when a player
+DECLINED something. When two paths exit the same screen, the exit belongs in one function
+they both call, not copied into the one you happened to be reading.
 
 **A short-circuit is a decision not to draw.** E48 was one `||`. The game's reward
 upgrade draws its float and THEN decides what to do with it, so the draw is part of the

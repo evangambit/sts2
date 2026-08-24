@@ -187,18 +187,25 @@ def normalise_for_compare(field: str, value: Any) -> Any:
 def _attack_intent(enemy: dict[str, Any]) -> int | None:
     """Return the damage an enemy is announcing, or None if it is not attacking.
 
-    Only the ATTACK intent is compared, and only its damage. The two sides name the
+    Only the ATTACK intents are compared, and only their damage. The two sides name the
     other kinds differently -- the game distinguishes StatusCard from Debuff where the
     emulator does not -- so comparing those would be noise, and the observation does
     not carry a hit count for the emulator side to answer with. Damage is the number
     that has to agree to the point: an intent transcribed a point or two high is the
     classic way an enemy diverges with nothing else looking wrong.
+
+    "Attack" is not the only name for one. `DeathBlowIntent` derives from
+    `SingleAttackIntent` and reports its own type, and a Gas Bomb announcing ("DeathBlow",
+    "8") was read here as not attacking at all -- so the reference said None where the
+    emulator said 8 and the two disagreed about nothing. It carries real damage in the
+    same label format, so it is compared like any other attack.
     """
+    ATTACK_INTENTS = {"Attack", "DeathBlow"}
     intents = enemy.get("intents")
     if intents is not None:
         # Reference side: a list of {type, label}, where a multi-hit reads "1x3".
         for intent in intents:
-            if intent.get("type") != "Attack":
+            if intent.get("type") not in ATTACK_INTENTS:
                 continue
             # The game's label is per-hit by count ("1x3"); the emulator's observation
             # announces the TOTAL, which is what AnnouncedDamage returns. Multiply out

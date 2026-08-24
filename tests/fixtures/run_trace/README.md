@@ -41,6 +41,10 @@ is.
 | `25TS4F5T37-a8-leafypoultice.json` | Overgrowth | 101 | clean on first contact — Leafy Poultice needed no fix |
 | `NXV45HW43K-a8-cursedpearl.json` | Overgrowth | 101 | clean — found E47. Cursed Pearl's Greed sat in the deck from floor one, and it was Doors of Light and Dark that made that visible: one extra name in a shuffled candidate list is a different pick |
 | `RRRR6WR3C4-a8-silvercrucible.json` | Overgrowth | 113 | clean — found E48, a `||` that short-circuited the reward upgrade roll, so every card the rewards stream produced after the first was somebody else's |
+| `RRRR6WR3C4-a8-pomander.json` | Overgrowth | 146 | clean — the same seed as `RRRR6WR3C4-a8-silvercrucible.json` on a different blessing. Found E49 at step 1 and then E53 at step 113, an event's reward screen that never gave the event its page back |
+| `P14DQ9GNPW-a8-smallcapsule.json` | Overgrowth | 85 | clean — found E51: a relic granted where the game offers it on a screen |
+| `N11HWGCNUN-a8-newleaf.json` | Overgrowth | 106 | clean — found E50, the last blessing still riding the pre-`BeginDeckSelection` transform path |
+| `P5E6EWCMDW-a8-stonehumidifier.json` | Overgrowth | 91 | clean — the blessing itself (E52) was not modelled at all, and the trace's own divergence was H13: a Gas Bomb's DeathBlow intent, which the comparison had been declining to read |
 
 Twenty of the twenty-one replay clean. Every capture taken after the set first went green
 has found something — thirteen defects and six harness gaps between them.
@@ -76,10 +80,11 @@ runs diverge from the first decision onward.
 The table below is keyed by SEED and names the blessing that seed's plain capture took.
 Most of the forced-option traces are not in it: `25TS4F5T37-leadpaperweight`,
 `XTLVVPKFBF-heftytablet`, `SAM9XS24LM-goldenpearl`, `J09SPL8Y3V-precisescissors`,
-`SAM9XS24LM-precariousshears`, `NXV45HW43K-cursedpearl` and `25TS4F5T37-leafypoultice`
-each take a different blessing on a seed that already appears here, which is the point of
-them. `RRRR6WR3C4` is the exception and does have a row, because its only capture is the
-forced one. Eight blessings covered that no auto-played run would ever have reached.
+`SAM9XS24LM-precariousshears`, `NXV45HW43K-cursedpearl`, `25TS4F5T37-leafypoultice` and
+`RRRR6WR3C4-pomander` each take a different blessing on a seed that already appears here,
+which is the point of them. Twelve blessings covered that no auto-played run would ever
+have reached, twenty-five in all. **Two the screener still finds uncaptured**: Neow's
+Talisman (`9V9WN98106 --neow-option 1`) and Scroll Boxes (`ZY1E5128P6 --neow-option 0`).
 
 | trace | Neow relic |
 | --- | --- |
@@ -100,6 +105,9 @@ forced one. Eight blessings covered that no auto-played run would ever have reac
 | `NXV45HW43K` | Winged Boots |
 | `J09SPL8Y3V` | Neow's Bones |
 | `RRRR6WR3C4` | Silver Crucible |
+| `P14DQ9GNPW` | Small Capsule |
+| `N11HWGCNUN` | New Leaf |
+| `P5E6EWCMDW` | Stone Humidifier |
 
 `QS2GYXRKWN-a0.json` was removed: it is an ascension-0 run, and the emulator models
 A8 only (`RunEngine.Reset` starts the player at 64/80), so it diverged from step 0

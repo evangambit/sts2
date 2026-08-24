@@ -186,8 +186,15 @@ public static class RunNonCombatEffects
                 state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 300);
                 break;
             case RunConstants.RelicSmallCapsule:
-                ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
-                break;
+                // RewardsCmd.OfferCustom with a single RelicReward: the relic goes on a
+                // SCREEN the player claims from, not straight into the run. Granting it
+                // outright also ran its pickup effect a step early, so a capture
+                // (`P14DQ9GNPW`) is on `rewards` holding two relics where the emulator
+                // was back on the ancient holding three.
+                state.PendingBonusRelicRewards.Clear();
+                state.PendingBonusRelicRewards.Add(RunRewardGenerator.NextRelic(state));
+                RunRewardGenerator.OfferNextBonusRelic(state);
+                return RunFollowUp.BonusRelicRewards;
             case RunConstants.RelicLargeCapsule:
                 ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
                 ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
@@ -195,8 +202,14 @@ public static class RunNonCombatEffects
                 AddCardToDeck(state, new CardInstance(131, Upgraded: false));
                 break;
             case RunConstants.RelicPomander:
-                UpgradeFirstCard(state);
-                break;
+                // CardsVar(1) through CardSelectCmd.FromDeckForUpgrade: the PLAYER picks
+                // which card is upgraded. UpgradeFirstCard upgraded the deck's first
+                // upgradable card, which in a starting deck is a Strike -- and a live
+                // capture (`RRRR6WR3C4`) shows the game opening a card_select screen at
+                // step 1 where the emulator had already silently upgraded one.
+                return BeginDeckSelection(state, DeckSelection.Upgrade, 0, count: 1)
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
             case RunConstants.RelicNeowsTalisman:
                 UpgradeLastCardMatching(state, 472);
                 UpgradeLastCardMatching(state, 131);
@@ -323,8 +336,15 @@ public static class RunNonCombatEffects
                 AddRandomRewardCard(state, state.Rng.UpFront);
                 break;
             case RunConstants.RelicNewLeaf:
-                state.TransformSelectedDeckIndex = null;
-                return RunFollowUp.TransformSelect;
+                // CardsVar(1) through CardSelectCmd.FromDeckForTransformation, then
+                // CardCmd.TransformToRandom on Rng.Niche. This used the older
+                // TransformSelectedDeckIndex path, which answers the screen a step later
+                // than the game does -- the `N11HWGCNUN` capture is back at the event on
+                // step 3 with the card already transformed while the emulator is still
+                // holding the selection open.
+                return BeginDeckSelection(state, DeckSelection.TransformToRandom, 0, count: 1)
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
             case RunConstants.RelicAstrolabe:
                 state.TransformSelectedDeckIndex = -3;
                 return RunFollowUp.TransformSelect;
