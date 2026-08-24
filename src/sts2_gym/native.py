@@ -361,10 +361,22 @@ _lib.Sts2Run_GetStateList.argtypes = [
 ]
 
 _lib.Sts2Run_DebugSetHp.restype = ctypes.c_int
-_lib.Sts2Run_DebugSetHp.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
+_lib.Sts2Run_DebugSetHp.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
+
+_lib.Sts2Run_DebugGainMaxHp.restype = ctypes.c_int
+_lib.Sts2Run_DebugGainMaxHp.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
 
 _lib.Sts2Run_DebugUpgradeDeck.restype = ctypes.c_int
-_lib.Sts2Run_DebugUpgradeDeck.argtypes = [ctypes.c_int]
+_lib.Sts2Run_DebugUpgradeDeck.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_int)]
 
 _lib.Sts2Run_GetPhase.restype = ctypes.c_int
 _lib.Sts2Run_GetPhase.argtypes = [ctypes.c_int]
@@ -798,25 +810,42 @@ def run_get_niche_rng_call_count(handle: int) -> int:
     return int(_lib.Sts2Run_GetNicheRngCallCount(handle))
 
 
-def run_debug_set_hp(handle: int, hp: int, max_hp: int) -> None:
+def run_debug_set_hp(
+    handle: int, hp: int, max_hp: int, obs_buf: ctypes.Array
+) -> None:
     """Soak-only: hand a run extra HP so it can reach the act's boss.
 
     Raises:
         RuntimeError: if the handle is not a live run.
 
     """
-    if _lib.Sts2Run_DebugSetHp(handle, hp, max_hp) != 0:
+    if _lib.Sts2Run_DebugSetHp(handle, hp, max_hp, obs_buf) != 0:
         raise RuntimeError("Sts2Run_DebugSetHp failed")
 
 
-def run_debug_upgrade_deck(handle: int) -> None:
+def run_debug_gain_max_hp(handle: int, amount: int, obs_buf: ctypes.Array) -> None:
+    """Mirror the mod's debug_gain_max_hp: raise the maximum AND heal by the amount.
+
+    This is the one to use when replaying a BUFFED capture. run_debug_set_hp sets
+    absolutes and does not heal, so a replay built on it diverges on HP one step after
+    the buff.
+
+    Raises:
+        RuntimeError: if the handle is not a live run.
+
+    """
+    if _lib.Sts2Run_DebugGainMaxHp(handle, amount, obs_buf) != 0:
+        raise RuntimeError("Sts2Run_DebugGainMaxHp failed")
+
+
+def run_debug_upgrade_deck(handle: int, obs_buf: ctypes.Array) -> None:
     """Soak-only: upgrade every upgradable card in the deck.
 
     Raises:
         RuntimeError: if the handle is not a live run.
 
     """
-    if _lib.Sts2Run_DebugUpgradeDeck(handle) != 0:
+    if _lib.Sts2Run_DebugUpgradeDeck(handle, obs_buf) != 0:
         raise RuntimeError("Sts2Run_DebugUpgradeDeck failed")
 
 

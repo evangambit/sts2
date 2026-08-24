@@ -120,8 +120,9 @@ def play(
                 handle,
                 info["player_hp"] + extra_hp,
                 info["player_max_hp"] + extra_hp,
+                env._run_obs_buf,
             )
-            native.run_debug_upgrade_deck(handle)
+            native.run_debug_upgrade_deck(handle, env._run_obs_buf)
             info = env._info()
         stuck = 0
         last_signature = None

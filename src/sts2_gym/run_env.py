@@ -175,6 +175,25 @@ class Sts2RunEnv(gym.Env):
         mask_buf = native.run_action_mask(self._run_handle, native.RUN_MAX_ACTIONS)
         return np.ctypeslib.as_array(mask_buf).astype(bool)
 
+    def debug_gain_max_hp(self, amount: int) -> tuple[np.ndarray, dict]:
+        """Mirror the mod's debug_gain_max_hp: raise the maximum AND heal by it.
+
+        Only for replaying a BUFFED live capture. The auto-player has never finished act
+        1 -- the two deepest runs both died to the boss on floor 17 -- so the boss reward
+        and the act transition are covered by nothing. Buffing both sides identically
+        buys that coverage; the rules under test are unchanged, because the game is still
+        the reference for every step.
+        """
+        assert self._run_handle is not None, "Call reset() before debug_gain_max_hp()"
+        native.run_debug_gain_max_hp(self._run_handle, amount, self._run_obs_buf)
+        return self._obs(), self._info()
+
+    def debug_upgrade_deck(self) -> tuple[np.ndarray, dict]:
+        """Mirror the mod's debug_upgrade_deck. See debug_gain_max_hp."""
+        assert self._run_handle is not None, "Call reset() before debug_upgrade_deck()"
+        native.run_debug_upgrade_deck(self._run_handle, self._run_obs_buf)
+        return self._obs(), self._info()
+
     def close(self):
         if self._run_handle is not None:
             native.run_destroy(self._run_handle)

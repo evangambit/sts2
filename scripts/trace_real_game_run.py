@@ -199,7 +199,7 @@ def wait_for_state_to_change(
         # then a second choose_map_node, which the game rejects. A move between rooms is
         # only done when the phase itself has changed.
         left_old_phase = not require_new_state_type or state.get(
-            "state_type"
+            "state_type",
         ) != before.get("state_type")
         if (
             left_old_phase
@@ -819,6 +819,8 @@ def capture_run(
     ascension: int = 0,
     scripted_actions: list[dict[str, Any]] | None = None,
     neow_option: int | None = None,
+    buff_max_hp: int = 0,
+    upgrade_deck: bool = False,
 ) -> dict[str, Any]:
     state = start_real_game_run.start_seeded_run(
         base_url,
@@ -833,14 +835,27 @@ def capture_run(
     # Which card indices have been ticked on the card-select screen currently open. The
     # screen does not report its own selection, so this is the only record of it.
     chosen_cards: set[int] = set()
+    # Buffs are spent the first time the run stands on the MAP -- after Neow has been
+    # answered and left, so the blessing offer is the one the seed really gives, and
+    # before the first room, so every floor of the run is played with them. They are
+    # posted as ordinary actions and RECORDED as ordinary steps, which is what lets the
+    # replay apply the identical change to the emulator at the identical point.
+    pending_buffs: list[dict[str, Any]] = []
+    if buff_max_hp:
+        pending_buffs.append({"action": "debug_gain_max_hp", "amount": buff_max_hp})
+    if upgrade_deck:
+        pending_buffs.append({"action": "debug_upgrade_deck"})
     append_snapshot(trace, 0, None, None, state)
 
     for step in range(1, max_steps + 1):
-        payload = (
-            choose_action(state, map_index, neow_option, chosen_cards)
-            if scripted_actions is None
-            else next_scripted_action(scripted_actions, step)
-        )
+        if pending_buffs and state.get("state_type") == "map":
+            payload = pending_buffs.pop(0)
+        else:
+            payload = (
+                choose_action(state, map_index, neow_option, chosen_cards)
+                if scripted_actions is None
+                else next_scripted_action(scripted_actions, step)
+            )
         if payload is None:
             append_snapshot(trace, len(trace), None, None, state, note="no_auto_action")
             break
@@ -961,7 +976,7 @@ def append_snapshot(
 
 
 def next_scripted_action(
-    actions: list[dict[str, Any]], step: int
+    actions: list[dict[str, Any]], step: int,
 ) -> dict[str, Any] | None:
     """Return the recorded action for this step, or None once the script runs out."""
     index = step - 1
@@ -1001,6 +1016,20 @@ def main() -> None:
     parser.add_argument("--delay", type=float, default=0.25)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--abandon-existing", action="store_true")
+    parser.add_argument(
+        "--buff-max-hp",
+        type=int,
+        default=0,
+        help=(
+            "Gain this much max HP (and heal it) once the run reaches the map. "
+            "For reaching the act 1 boss, which no unbuffed capture has survived."
+        ),
+    )
+    parser.add_argument(
+        "--upgrade-deck",
+        action="store_true",
+        help="Upgrade every upgradable card in the deck once the run reaches the map.",
+    )
     parser.add_argument(
         "--ascension",
         type=int,
@@ -1047,6 +1076,8 @@ def main() -> None:
         args.ascension,
         scripted_actions=scripted,
         neow_option=args.neow_option,
+        buff_max_hp=args.buff_max_hp,
+        upgrade_deck=args.upgrade_deck,
     )
     text = json.dumps(trace, indent=None if args.format == "compact" else 2)
     if args.output is not None:

@@ -850,6 +850,56 @@ path always returns to `RunPhase.Event`, so a selection opened from a shop or a 
 pickup has nowhere correct to land. That return needs generalising the way E53 generalised
 the rewards screen's.
 
+### Buffed captures, for the half of act 1 nothing has ever seen
+
+**No capture had ever finished act 1.** Twenty-nine of thirty end in `game_over`; the two
+deepest (`DPUJR117FL`, `WK1DEGZD8P`) both reached the act 1 boss on floor 17 and died to
+it. So the boss reward, the act transition, and everything past them were covered by
+nothing at all. Only two captures in thirty were ever clean on first contact, and both
+were short runs that died on floors 6-7 — depth is where the defects are.
+
+The fix is to buff BOTH sides identically and let the scripted player get further:
+
+```bash
+uv run python scripts/trace_real_game_run.py SEED --ascension 8 --abandon-existing \
+    --buff-max-hp 50 --upgrade-deck --max-steps 400 --format compact --output out.json
+```
+
+- **Mod** (`McpMod.Debug.cs`, needs a rebuild + reinstall + game restart):
+  `debug_gain_max_hp {amount}` and `debug_upgrade_deck`. Unlike the rest of that file they
+  are run-scoped, not combat-scoped — `debug_add_card` bails with "No combat state", which
+  is why they had to be new endpoints rather than a reuse.
+- **Emulator**: `Sts2Run_DebugGainMaxHp` mirrors `CreatureCmd.GainMaxHp` through the same
+  `RunNonCombatEffects.GainMaxHp` every relic uses. Do NOT reach for `DebugSetHp` here: the
+  game's command raises the maximum AND heals by the same amount, so a replay built on
+  absolutes diverges on HP one step later.
+- **When**: the buffs are spent the first time the run stands on the MAP — after Neow has
+  been answered and left, so the blessing offer is the one the seed really gives, and
+  before the first room, so every floor is played with them.
+- **How it replays**: the capture records them as ordinary steps, and
+  `replay_full_run_trace.py` recognises the two action names and applies the same change to
+  the emulator out of band (`DEBUG_BUFF_ACTIONS` / `apply_debug_buff`) rather than
+  translating them into a move.
+
+**Neither buff rolls anything** — `GainMaxHp` is `SetMaxHp` plus `Heal`, `CardCmd.Upgrade`
+touches no stream — which is the whole reason this is safe. A buffed capture is still
+honest differential evidence: the game is the reference for every step either way, and the
+rules under test are unchanged. That is a different situation from the note on
+`Sts2Run_DebugSetHp` about boosted SOAKS, which have no reference at all.
+
+**A bug this shook out, worth knowing before adding any other mutating export:** all three
+debug hooks changed state without refreshing the observation buffer. The deck is read out
+of that buffer while HP comes from the live info struct, so a buffed replay showed max HP
+moving and the upgrades silently not happening. It is invisible in a soak, which steps
+immediately afterwards and rewrites the buffer anyway. Every mutating export must call
+`run.WriteObservation` before returning; all three do now, and they take an `obsBuf`
+argument accordingly.
+
+**First result.** `BUFFTEST01` with `--buff-max-hp 50 --upgrade-deck` reached the floor-17
+boss and died with the Ceremonial Beast on 16 HP — 206 steps against a typical 100-120.
+The replay mirrors the buff exactly and then finds a **new divergence at step 87**, on a
+path no unbuffed capture has ever walked. 50 HP is not quite enough to win; go higher.
+
 ### The last two blessings, and the first screen built from scratch
 
 Neow's Talisman and Scroll Boxes. That closes the seam: **all twenty-five blessings the

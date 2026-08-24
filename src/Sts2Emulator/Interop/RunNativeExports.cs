@@ -299,7 +299,7 @@ public static class RunNativeExports
     /// uses this to reach the boss. It is a DEBUG hook and not a game rule: anything a
     /// boosted soak turns up has to be reproduced on an untouched run before it counts.
     /// </summary>
-    public static int Sts2Run_DebugSetHp(int handle, int hp, int maxHp)
+    public static unsafe int Sts2Run_DebugSetHp(int handle, int hp, int maxHp, int* obsBuf)
     {
         if (!TryGet(handle, out var run))
         {
@@ -308,11 +308,43 @@ public static class RunNativeExports
 
         run.State.PlayerMaxHp = Math.Max(1, maxHp);
         run.State.PlayerHp = Math.Clamp(hp, 1, run.State.PlayerMaxHp);
+        run.WriteObservation(new Span<int>(obsBuf, RunConstants.RunObsSize));
+        return 0;
+    }
+
+    /// <summary>
+    /// <c>CreatureCmd.GainMaxHp</c>: raise the maximum and heal by the same amount.
+    /// </summary>
+    /// <remarks>
+    /// The mirror of the mod's <c>debug_gain_max_hp</c>, and it exists so a BUFFED live
+    /// capture can be replayed. Not the same as <c>DebugSetHp</c>, which sets absolutes:
+    /// the game's command heals as it raises, so a replay that only moved the maximum
+    /// would diverge on HP one step after the buff. It routes through the same
+    /// <c>RunNonCombatEffects.GainMaxHp</c> that every relic uses, which is the version
+    /// captures have already checked.
+    /// </remarks>
+    public static unsafe int Sts2Run_DebugGainMaxHp(int handle, int amount, int* obsBuf)
+    {
+        if (!TryGet(handle, out var run))
+        {
+            return -1;
+        }
+
+        Core.Run.RunNonCombatEffects.GainMaxHp(run.State, amount);
+        run.WriteObservation(new Span<int>(obsBuf, RunConstants.RunObsSize));
         return 0;
     }
 
     /// <summary>Upgrade every upgradable card in the deck. Debug hook, as above.</summary>
-    public static int Sts2Run_DebugUpgradeDeck(int handle)
+    /// <remarks>
+    /// Every mutating export refreshes the observation before returning, and these three
+    /// did not — which is invisible for a soak, because it steps immediately afterwards
+    /// and the next step rewrites it anyway, and fatal for a replay, whose snapshot for
+    /// the buff step IS the buffed state. The deck is read out of the observation buffer
+    /// while HP is read from the live info struct, so an unrefreshed buffer showed the
+    /// max HP moving and the upgrades not happening at all.
+    /// </remarks>
+    public static unsafe int Sts2Run_DebugUpgradeDeck(int handle, int* obsBuf)
     {
         if (!TryGet(handle, out var run))
         {
@@ -327,6 +359,7 @@ public static class RunNativeExports
             }
         }
 
+        run.WriteObservation(new Span<int>(obsBuf, RunConstants.RunObsSize));
         return 0;
     }
 

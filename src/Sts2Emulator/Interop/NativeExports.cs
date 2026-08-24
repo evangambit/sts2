@@ -740,12 +740,16 @@ public static class NativeExports
     public static int Sts2Run_GetPhase(int handle) => RunNativeExports.Sts2Run_GetPhase(handle);
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2Run_DebugSetHp")]
-    public static int Sts2Run_DebugSetHp(int handle, int hp, int maxHp) =>
-        RunNativeExports.Sts2Run_DebugSetHp(handle, hp, maxHp);
+    public static unsafe int Sts2Run_DebugSetHp(int handle, int hp, int maxHp, int* obsBuf) =>
+        RunNativeExports.Sts2Run_DebugSetHp(handle, hp, maxHp, obsBuf);
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2Run_DebugGainMaxHp")]
+    public static unsafe int Sts2Run_DebugGainMaxHp(int handle, int amount, int* obsBuf) =>
+        RunNativeExports.Sts2Run_DebugGainMaxHp(handle, amount, obsBuf);
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2Run_DebugUpgradeDeck")]
-    public static int Sts2Run_DebugUpgradeDeck(int handle) =>
-        RunNativeExports.Sts2Run_DebugUpgradeDeck(handle);
+    public static unsafe int Sts2Run_DebugUpgradeDeck(int handle, int* obsBuf) =>
+        RunNativeExports.Sts2Run_DebugUpgradeDeck(handle, obsBuf);
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2Run_PlayerWon")]
     public static int Sts2Run_PlayerWon(int handle) => RunNativeExports.Sts2Run_PlayerWon(handle);

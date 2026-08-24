@@ -233,7 +233,7 @@ class Sts2CombatEnv(gym.Env):
         return self._obs(), reward, terminal, truncated, self._info()
 
     def debug_add_card_to_hand(
-        self, card_id: int, upgraded: bool = False
+        self, card_id: int, upgraded: bool = False,
     ) -> np.ndarray:
         """Put a card on top of the hand, as the mod's debug_add_card does live.
 

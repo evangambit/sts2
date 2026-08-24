@@ -45,6 +45,8 @@ from sts2_gym.run_env import (
 )
 
 COMBAT_STATES = {"monster", "elite", "boss"}
+# Out-of-band buffs a capture may have applied to the live run; see apply_debug_buff.
+DEBUG_BUFF_ACTIONS = {"debug_gain_max_hp", "debug_upgrade_deck"}
 # The intent types that announce DAMAGE. DeathBlowIntent derives from SingleAttackIntent
 # and reports its own name, so matching on "Attack" alone read a Gas Bomb as not
 # attacking at all.
@@ -146,6 +148,17 @@ DEFAULT_PER_STEP_FIELDS = [
     "player.relics",
     "battle.enemies",
 ]
+
+
+def apply_debug_buff(env: Any, payload: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
+    """Apply to the emulator the same buff the capture applied to the live game.
+
+    Returns the refreshed observation and info, because the snapshot recorded for this
+    step has to show the buffed state on both sides.
+    """
+    if payload["action"] == "debug_gain_max_hp":
+        return env.debug_gain_max_hp(int(payload.get("amount", 0)))
+    return env.debug_upgrade_deck()
 
 
 def normalise_for_compare(field: str, value: Any) -> Any:
@@ -484,6 +497,27 @@ def replay_trace(
             previous_reference_enemies = (
                 compare_traces.get_path(ref_summary, "battle.enemies") or []
             )
+
+            # The two run-scoped debug buffs are applied to the emulator directly rather
+            # than translated into an action: they are not moves the run makes, they are
+            # the same out-of-band change the capture made to the live game. Both sides
+            # must see it at the same step or everything after it diverges by
+            # construction, which is why the capture RECORDS them as steps.
+            if payload is not None and payload.get("action") in DEBUG_BUFF_ACTIONS:
+                obs, info = apply_debug_buff(env, payload)
+                emulator_trace.append(
+                    make_step(
+                        int(reference_step.get("step") or len(emulator_trace)),
+                        payload,
+                        0.0,
+                        False,
+                        False,
+                        obs,
+                        info,
+                        valid_actions(env),
+                    ),
+                )
+                continue
 
             try:
                 action = translate_command(payload, obs, info, env, reference_step)
