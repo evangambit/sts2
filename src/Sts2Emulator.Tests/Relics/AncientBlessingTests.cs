@@ -134,6 +134,96 @@ public class AncientBlessingTests
         Assert.Equal(before, engine.State.Deck.Count);
     }
 
+    /// <summary>
+    /// CardsVar(5) through FromDeckForRemoval with a filter of <c>IsUpgradable</c>: only
+    /// upgradable cards are OFFERED, which is a different screen from a plain removal
+    /// rather than a different answer to the same one.
+    /// </summary>
+    [Fact]
+    public void PaelsToothOffersOnlyUpgradableCards()
+    {
+        var engine = Pristine.Clone();
+
+        var followUp = RunNonCombatEffects.ApplyRelicPickup(
+            engine.State,
+            RunConstants.RelicPaelsTooth
+        );
+
+        Assert.Equal(RunFollowUp.TransformSelect, followUp);
+        Assert.Equal(DeckSelection.RemoveUpgradable, engine.State.PendingSelectionKind);
+        Assert.Equal(5, engine.State.PendingSelectionCount);
+
+        // Ascender's Bane is not upgradable, so the screen will not take it — where a
+        // plain removal would.
+        int bane = engine.State.Deck.FindIndex(c => c.DefId == RunConstants.CardAscendersBane);
+        Assert.True(bane >= 0, "the starting deck should carry Ascender's Bane");
+        Assert.False(RunNonCombatEffects.CanSelectCard(engine.State, bane));
+        Assert.True(RunNonCombatEffects.CanSelectCard(engine.State, 0));
+    }
+
+    /// <summary>
+    /// Glass Eye is FIVE card rewards on one screen — Common, Common, Uncommon, Uncommon,
+    /// Rare — each offering three of that rarity, claimed one after another.
+    /// </summary>
+    [Fact]
+    public void GlassEyeQueuesFiveCardOffersByRarity()
+    {
+        var engine = Pristine.Clone();
+
+        var followUp = RunNonCombatEffects.ApplyRelicPickup(
+            engine.State,
+            RunConstants.RelicGlassEye
+        );
+
+        Assert.Equal(RunFollowUp.BonusCardOffers, followUp);
+        // All five are QUEUED here; moving the first onto the screen is the caller's job,
+        // which is why this asserts five and not four.
+        Assert.Equal(5, engine.State.PendingCardOffers.Count);
+        Assert.All(engine.State.PendingCardOffers, offer => Assert.Equal(3, offer.Length));
+    }
+
+    [Fact]
+    public void GlassEyesOffersAreTheRaritiesItNames()
+    {
+        var engine = Pristine.Clone();
+        RunNonCombatEffects.ApplyRelicPickup(engine.State, RunConstants.RelicGlassEye);
+
+        var rarities = new[]
+        {
+            CardRarity.Common,
+            CardRarity.Common,
+            CardRarity.Uncommon,
+            CardRarity.Uncommon,
+            CardRarity.Rare,
+        };
+        for (int i = 0; i < rarities.Length; i++)
+        {
+            var offer = engine.State.PendingCardOffers[i];
+            Assert.Equal(3, offer.Length);
+            Assert.All(
+                offer,
+                card => Assert.Equal(rarities[i], GeneratedData.Cards.Get(card).Rarity)
+            );
+            // Three DISTINCT cards per screen: each is blacklisted as it is drawn.
+            Assert.Equal(3, offer.Distinct().Count());
+        }
+    }
+
+    /// <summary>
+    /// Uniform odds with NoRarityModification means no rarity roll, so each card costs a
+    /// pick and an upgrade roll — two draws, thirty across the five screens.
+    /// </summary>
+    [Fact]
+    public void GlassEyeSpendsTwoDrawsPerCard()
+    {
+        var engine = Pristine.Clone();
+        int before = engine.State.PlayerRng.Rewards.CallCount;
+
+        RunNonCombatEffects.ApplyRelicPickup(engine.State, RunConstants.RelicGlassEye);
+
+        Assert.Equal(before + 30, engine.State.PlayerRng.Rewards.CallCount);
+    }
+
     [Fact]
     public void BiiigHugRemovesTheFourTheChoiceNames()
     {

@@ -439,6 +439,17 @@ public static class RunRewardGenerator
         state.PendingGoldRewards.RemoveAt(0);
     }
 
+    /// <summary>
+    /// Put the head of the queue on the card screen, leaving the rest queued.
+    /// </summary>
+    public static void OfferFirstPendingCardOffer(RunState state)
+    {
+        if (state.PendingCardOffers.Count > 0)
+        {
+            OfferNextCardOffer(state);
+        }
+    }
+
     /// <summary>Moves the next queued card offer onto the card screen.</summary>
     private static void OfferNextCardOffer(RunState state)
     {

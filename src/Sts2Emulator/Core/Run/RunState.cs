@@ -20,6 +20,17 @@ public enum DeckSelection
 
     /// <summary>Remove the chosen card from the deck.</summary>
     Remove,
+
+    /// <summary>
+    /// Remove the chosen card, offering only UPGRADABLE ones.
+    /// </summary>
+    /// <remarks>
+    /// <c>FromDeckForRemoval</c> takes an optional filter and Pael's Tooth passes
+    /// <c>c.IsUpgradable</c>. It is a different screen from a plain removal, not a
+    /// different answer to the same one: a deck of nothing but curses offers this
+    /// nothing at all where a plain removal would offer everything.
+    /// </remarks>
+    RemoveUpgradable,
 }
 
 /// <summary>One act's generated rooms, as <c>ActModel._rooms</c> holds them.</summary>

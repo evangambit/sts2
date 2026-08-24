@@ -1259,6 +1259,17 @@ public sealed class RunEngine
             State.Phase = RunPhase.BundleSelect;
             return;
         }
+        if (followUp == RunFollowUp.BonusCardOffers)
+        {
+            // The first offer goes onto the screen and the rest queue behind it; Neow
+            // stays up for its Proceed once they are all answered, the way it does after
+            // every other blessing.
+            RunRewardGenerator.OfferFirstPendingCardOffer(State);
+            State.RewardCardPending = true;
+            State.NeowAwaitingProceed = true;
+            State.Phase = RunPhase.RelicReward;
+            return;
+        }
         if (followUp == RunFollowUp.TransformSelect)
         {
             // Neow stays on screen for its Proceed once the selection is answered, the way

@@ -19,6 +19,11 @@ public enum RunFollowUp
 
     /// <summary>Scroll Boxes' choose-a-bundle screen.</summary>
     BundleSelect,
+
+    /// <summary>
+    /// A queue of card-reward screens claimed one after another, as Glass Eye's five are.
+    /// </summary>
+    BonusCardOffers,
 }
 
 public static class RunNonCombatEffects
@@ -315,6 +320,43 @@ public static class RunNonCombatEffects
                 }
 
                 break;
+            case RunConstants.RelicGlassEye:
+                // FIVE card rewards on one screen — Common, Common, Uncommon, Uncommon,
+                // Rare — each offering three of that rarity. Uniform odds with
+                // NoRarityModification, so there is no rarity roll: each card is a pick
+                // and an upgrade roll, two draws, thirty in all. No RngOverride, so they
+                // come off PlayerRng.Rewards like any other card reward.
+                state.PendingCardOffers.Clear();
+                foreach (
+                    CardRarity rarity in new[]
+                    {
+                        CardRarity.Common,
+                        CardRarity.Common,
+                        CardRarity.Uncommon,
+                        CardRarity.Uncommon,
+                        CardRarity.Rare,
+                    }
+                )
+                {
+                    state.PendingCardOffers.Add(
+                        RunRewardGenerator.GenerateFixedRarityCardOffer(
+                            state,
+                            3,
+                            rarity,
+                            state.PlayerRng.Rewards
+                        )
+                    );
+                }
+
+                return RunFollowUp.BonusCardOffers;
+            case RunConstants.RelicPaelsTooth:
+                // CardsVar(5) through FromDeckForRemoval with a filter of `IsUpgradable`
+                // -- five cards the player picks, and only upgradable ones are offered.
+                // The relic keeps copies of what it took for its own combat effect, which
+                // the run layer does not need.
+                return BeginDeckSelection(state, DeckSelection.RemoveUpgradable, 0, count: 5)
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
             case RunConstants.RelicYummyCookie:
                 // CardsVar(4) through FromDeckForUpgrade: four cards the PLAYER picks.
                 return BeginDeckSelection(state, DeckSelection.Upgrade, 0, count: 4)
@@ -839,6 +881,7 @@ public static class RunNonCombatEffects
             DeckSelection.TransformTo => GeneratedData.Cards.Get(card.DefId).Rarity
                 == CardRarity.Basic,
             DeckSelection.Upgrade => RunConstants.IsRunCardUpgradable(card),
+            DeckSelection.RemoveUpgradable => RunConstants.IsRunCardUpgradable(card),
             DeckSelection.TransformToRandom or DeckSelection.Remove => true,
             _ => false,
         };
@@ -890,6 +933,7 @@ public static class RunNonCombatEffects
                 );
                 break;
             case DeckSelection.Remove:
+            case DeckSelection.RemoveUpgradable:
                 state.Deck.RemoveAt(deckIndex);
                 break;
             default:
