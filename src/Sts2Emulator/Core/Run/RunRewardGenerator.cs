@@ -203,8 +203,11 @@ public static class RunRewardGenerator
             state.RewardPotion = NextPotion(state, state.PlayerRng.Rewards);
         }
 
-        state.PendingRelicReward =
-            state.CurrentNodeType is RunConstants.NodeElite or RunConstants.NodeBoss;
+        // Only an ELITE hands over a relic. RewardsSet's Boss case is gold, potion, card
+        // and nothing else -- the relic in the Elite case has no counterpart there. The
+        // emulator gave one for both, so beating the act 1 boss handed over a Whetstone
+        // the run never earned, and its pickup upgraded two attacks in the deck.
+        state.PendingRelicReward = state.CurrentNodeType is RunConstants.NodeElite;
 
         // The CARDS are rolled before the relic. RewardsSet builds gold, potion, card,
         // relic and then populates them in that order, and only sorts by RewardsSetIndex
@@ -978,8 +981,12 @@ public static class RunRewardGenerator
 
         if (state.CurrentNodeType == RunConstants.NodeBoss)
         {
-            state.PlayerRng.Rewards.NextInt(100, 101);
-            return 100;
+            // A boss's Min and Max are both 100, and A8's Poverty multiplier takes a
+            // quarter off BEFORE the roll -- the same 0.75 already baked into the monster
+            // range (10-20 -> 7-15) and the elite one (35-45 -> 26-33). Only this branch
+            // was written as a flat 100, and no capture could contradict it until one
+            // finally won an act.
+            return state.PlayerRng.Rewards.NextInt(75, 76);
         }
 
         double proportion = CombatGoldProportion(state);

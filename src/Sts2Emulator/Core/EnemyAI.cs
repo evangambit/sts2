@@ -74,6 +74,22 @@ public static class EnemyAI
                     BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, -2);
                 }
 
+                if (
+                    enemy.DefId == KE.SlitheringStrangler
+                    && enemy.CurrentIntent.Magnitude
+                        == Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                )
+                {
+                    // ThwackMove attacks and THEN gains 5 block -- the move carries a
+                    // DefendIntent beside its attack, which the intent table already said
+                    // in a comment and nothing ever acted on. Lash is the same enemy's
+                    // other attack and gains nothing, so the damage is what tells them
+                    // apart at execution time.
+                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
+                    enemy.Block += BuffSystem.IncomingBlock(5, enemy.Buffs);
+                    break;
+                }
+
                 if (enemy.DefId == KE.SnappingJaxfruit)
                 {
                     // ENERGY_ORB is an attack plus StrengthPower(2), and it loops on
