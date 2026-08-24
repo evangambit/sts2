@@ -143,6 +143,15 @@ public static class RunConstants
     public const int NodeEvent = 7;
 
     /// <summary>
+    /// <c>MapPointType.Ancient</c>. <c>StandardActMap</c> stamps it onto the STARTING map
+    /// point of every act, after every other type has been assigned. Act 1's is Neow and
+    /// the run begins standing on it, which is why the emulator got away without the type
+    /// for so long; act 2 opens on the map with its ancient as the only thing to travel
+    /// to, and the run has to walk there like any other room.
+    /// </summary>
+    public const int NodeAncient = 8;
+
+    /// <summary>
     /// The emulator's own act ids. These are REGIONS, not ordinals: a run's first act is
     /// Overgrowth or Underdocks depending on the seed, and Hive and Glory always follow
     /// in that order.

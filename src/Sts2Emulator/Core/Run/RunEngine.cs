@@ -281,6 +281,13 @@ public sealed class RunEngine
                 return 0;
             case RunConstants.NodeEvent:
                 return EnterEventRoom();
+            case RunConstants.NodeAncient:
+                // The act's ancient, which behaves exactly as Neow does: a screen of
+                // blessings, then one more Proceed before the map.
+                State.LastResolvedRoomType = RunConstants.NodeEvent;
+                ApplyAncientHeal();
+                State.Phase = RunPhase.Ancient;
+                return 0;
             default:
                 EnterMapPhase();
                 return 0;
@@ -994,6 +1001,15 @@ public sealed class RunEngine
                 case RunConstants.NodeEvent:
 
                     return EnterUnknownMapPoint();
+                case RunConstants.NodeAncient:
+                    // The act's ancient, which behaves as Neow does: a screen of
+                    // blessings, then one more Proceed before the map. This is the
+                    // dispatch the map TRAVEL goes through -- there is a second one for
+                    // rooms entered another way, and the Ancient needs both.
+                    State.LastResolvedRoomType = RunConstants.NodeEvent;
+                    ApplyAncientHeal();
+                    State.Phase = RunPhase.Ancient;
+                    break;
                 default:
                     EnterMapPhase();
                     break;
@@ -1144,6 +1160,32 @@ public sealed class RunEngine
         State.NeowOptions[1] = positive[1];
         State.NeowOptions[2] = cursed;
     }
+
+    /// <summary>
+    /// <c>AncientEventModel.BeforeEventStarted</c>: entering an ancient heals the player
+    /// toward full, and at A8's <c>WearyTraveler</c> only 80% of what they are missing.
+    /// </summary>
+    /// <remarks>
+    /// This is the rule behind the run's own opening HP. Neow calls
+    /// <c>SetCurrentHpInternal(0)</c> first, so the heal is 80% of the whole 80 max — 64,
+    /// which the emulator has always hardcoded in <c>Reset</c> as a starting constant
+    /// without knowing where it came from. Every act after the first walks onto its own
+    /// ancient at whatever HP it finished the last one with, and is topped up the same
+    /// way: a capture crosses into act 2 on 264/280 and stands on Pael at 276.
+    /// </remarks>
+    private void ApplyAncientHeal()
+    {
+        int missing = State.PlayerMaxHp - State.PlayerHp;
+        if (missing <= 0)
+        {
+            return;
+        }
+
+        State.PlayerHp += (int)(missing * WearyTravelerHealFraction);
+    }
+
+    /// <summary>A8 has WearyTraveler, which pays 80% of a full heal.</summary>
+    private const double WearyTravelerHealFraction = 0.8;
 
     private void EnterMapPhase()
     {
@@ -1681,7 +1723,9 @@ public sealed class RunEngine
         }
 
         RunRewardGenerator.ClearRewardScreen(State);
-        State.Phase = RunPhase.Map;
+        // Through EnterMapPhase, not by setting the phase: the options have to be
+        // refreshed too, and on a new act the only one is the act's starting ancient.
+        EnterMapPhase();
         return true;
     }
 

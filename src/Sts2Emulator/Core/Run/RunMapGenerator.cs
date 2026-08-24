@@ -364,6 +364,7 @@ public static class RunMapGenerator
 
         state.CurrentActIndex++;
         state.EventSequenceIndex = 0;
+        state.AwaitingActStartNode = true;
         state.UnknownMapPointsVisited = 0;
         state.UnknownMapPointMonsterOdds = 0.1;
         state.UnknownMapPointEliteOdds = -1.0;
@@ -442,6 +443,16 @@ public static class RunMapGenerator
         SpreadAdjacentMapPoints(state);
         StraightenPaths(state);
         AssignEncounterIds(state);
+
+        // StandardActMap stamps the starting point LAST — `BossMapPoint.PointType =
+        // Boss; StartingMapPoint.PointType = Ancient;` come after every other assignment,
+        // so they win. Setting it at the top of this method instead let the type
+        // assignment pass overwrite it, and the node came out Unassigned.
+        //
+        // Act 1's ancient is Neow, which the run begins standing on rather than travels
+        // to, so the emulator got away without the type entirely. Every act after opens
+        // on the map with this node as the only thing to walk to.
+        GetOrCreate(state, RunConstants.MapStartCol, 0).NodeType = RunConstants.NodeAncient;
         RefreshMapOptions(state);
     }
 
@@ -1109,11 +1120,15 @@ public static class RunMapGenerator
             return;
         }
 
-        var options = TravelableCoords(state, current)
-            .OrderBy(coord => coord.Row)
-            .ThenBy(coord => coord.Col)
-            .Take(RunConstants.MapChoices)
-            .ToArray();
+        // A new act shows its map before the run has stepped onto it, so the only thing
+        // to travel to is the starting point -- the act's ancient.
+        var options = state.AwaitingActStartNode
+            ? [(RunConstants.MapStartCol, 0)]
+            : TravelableCoords(state, current)
+                .OrderBy(coord => coord.Row)
+                .ThenBy(coord => coord.Col)
+                .Take(RunConstants.MapChoices)
+                .ToArray();
         for (int i = 0; i < options.Length; i++)
         {
             var node = state.MapNodes[options[i]];
@@ -1159,7 +1174,17 @@ public static class RunMapGenerator
 
         nodeType = state.MapNodeTypes[action];
         encounterId = state.MapChoices[action];
-        SpendFreeTravelIfUnconnected(state, coord.Value);
+        if (state.AwaitingActStartNode)
+        {
+            // Stepping onto the act's first point, which is not connected to anything
+            // behind it -- there is nothing behind it.
+            state.AwaitingActStartNode = false;
+        }
+        else
+        {
+            SpendFreeTravelIfUnconnected(state, coord.Value);
+        }
+
         state.CurrentMapCoord = coord.Value;
         state.CurrentNodeType = nodeType;
         state.Floor++;

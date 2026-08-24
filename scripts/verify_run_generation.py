@@ -42,7 +42,10 @@ LIST_MAP_EDGES = 16  # (col, row, child_col, child_row) quadruples
 # The emulator carries the start node as NodeNone and calls the treasure row
 # NodeRelic; the save names them "ancient" and "treasure".
 NODE_TYPE_NAMES = {
-    0: "ancient",
+    # 0 used to stand in for the starting point, because the emulator had no Ancient node
+    # type and left the start Unassigned. The live saves have always called that point
+    # ancient; it is NodeAncient now and 0 means what it says.
+    0: "none",
     1: "monster",
     2: "elite",
     3: "rest_site",
@@ -50,9 +53,10 @@ NODE_TYPE_NAMES = {
     5: "treasure",
     6: "boss",
     7: "unknown",
+    8: "ancient",
 }
 
-ACT_NAMES = {1: "OVERGROWTH", 2: "UNDERDOCKS"}
+ACT_NAMES = {1: "OVERGROWTH", 2: "UNDERDOCKS", 3: "HIVE", 4: "GLORY"}
 
 
 def find_save(explicit: Path | None) -> Path:

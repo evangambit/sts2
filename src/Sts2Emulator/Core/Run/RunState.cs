@@ -200,6 +200,16 @@ public sealed class RunState
     /// <summary>Which of <see cref="Acts"/> the run is in — the game's own field name.</summary>
     public int CurrentActIndex;
 
+    /// <summary>The run is looking at a new act's map without having stepped onto it yet.</summary>
+    /// <remarks>
+    /// <c>RunManager.EnterAct</c> forks here: act 1 with Neow calls
+    /// <c>EnterMapCoord(StartingMapPoint.coord)</c> and the run BEGINS standing on its
+    /// ancient, while every other act opens a <c>MapRoom</c> with nothing entered — so the
+    /// starting point, which is an Ancient in every act, is the only thing to travel to.
+    /// Without this the emulator arrived already standing on it and offered row one.
+    /// </remarks>
+    public bool AwaitingActStartNode;
+
     private ActRooms CurrentAct
     {
         get => (uint)CurrentActIndex < (uint)Acts.Count ? Acts[CurrentActIndex] : ActRooms.None;
