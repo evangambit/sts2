@@ -142,6 +142,11 @@ public static class RunConstants
     public const int NodeBoss = 6;
     public const int NodeEvent = 7;
 
+    /// <summary>
+    /// The emulator's own act ids. These are REGIONS, not ordinals: a run's first act is
+    /// Overgrowth or Underdocks depending on the seed, and Hive and Glory always follow
+    /// in that order.
+    /// </summary>
     public const int ActOvergrowth = 1;
     public const int ActUnderdocks = 2;
 
@@ -243,6 +248,61 @@ public static class RunConstants
 
     // Underdocks bosses: LagavulinMatriarch, SoulFysh, WaterfallGiant.
     public static ReadOnlySpan<int> UnderdocksBossEncounters => [77, 79, 84];
+
+    // Hive is act 2 for every run: ActsByIndex has one candidate at index 1, and
+    // ActModel.GetRandomList still spends a draw picking it. The pools below are
+    // Hive.GenerateAllEncounters() filtered by kind, IN ITS DECLARATION ORDER, which is
+    // the same rule the two act-1 regions follow and the thing a shuffled bag depends on.
+    //
+    // Every one of these already had an id except ExoskeletonsNormal: the emulator's
+    // `Exoskeletons` is the four-monster roster, which is the game's WEAK variant.
+    // Several of the others carry the emulator's older shorter names (`Chompers` is
+    // ChompersNormal, `Obscura` is TheObscuraNormal, `Tunneler` is TunnelerWeak), and a
+    // few of those ROSTERS do not match the game's yet -- the emulator's Tunneler holds
+    // one where TunnelerWeak holds two. That is a fight-time problem, not a generation
+    // one: what a pool needs is identity and order.
+    // Hive weak: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak.
+    /// <summary>
+    /// <c>CombatFactory.ActOneEncounter.ExoskeletonsNormal</c>, appended at the end of
+    /// that enum — named here so the pool below does not carry a bare 87 that silently
+    /// means something else if anything is ever inserted.
+    /// </summary>
+    public const int ExoskeletonsNormalEncounterId = 87;
+
+    public static ReadOnlySpan<int> HiveWeakEncounters => [31, 4, 35, 33];
+
+    // Hive normals: BowlbugsNormal, ChompersNormal, ExoskeletonsNormal,
+    // HunterKillerNormal, LouseProgenitorNormal, MytesNormal, OvicopterNormal,
+    // SlumberingBeetleNormal, SpinyToadNormal, TheObscuraNormal.
+    public static ReadOnlySpan<int> HiveNormalEncounters =>
+        [32, 1, ExoskeletonsNormalEncounterId, 41, 40, 36, 39, 37, 38, 53];
+
+    // Hive elites: DecimillipedeElite, EntomancerElite, InfestedPrismsElite.
+    public static ReadOnlySpan<int> HiveEliteEncounters => [69, 63, 64];
+
+    // Hive bosses: KaiserCrabBoss, KnowledgeDemonBoss, TheInsatiableBoss -- declaration
+    // order, which puts KaiserCrab before KnowledgeDemon and TheInsatiable last.
+    public static ReadOnlySpan<int> HiveBossEncounters => [75, 76, 81];
+
+    /// <summary>
+    /// <c>ActModel.NumberOfWeakEncounters</c> and <c>BaseNumberOfRooms</c>. The base is
+    /// 3 weak, and Overgrowth and Underdocks both take it; Hive declares 2 and 14 rooms,
+    /// Glory 2 and 13. The emulator hardcoded act 1's numbers, which is correct for the
+    /// only act it generated and wrong for every act after.
+    /// </summary>
+    public static (int Weak, int Rooms) ActRoomCounts(int act) =>
+        act switch
+        {
+            ActHive => (2, 14),
+            ActGlory => (2, 13),
+            _ => (3, 15),
+        };
+
+    public const int ActHive = 3;
+    public const int ActGlory = 4;
+
+    /// <summary>Every act's elite list is fifteen long, whatever the act.</summary>
+    public const int EliteSequenceLength = 15;
 
     public const int RelicBurningBlood = 36;
     public const int RelicFrozenEgg = 93;

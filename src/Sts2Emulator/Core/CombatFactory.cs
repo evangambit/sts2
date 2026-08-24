@@ -121,6 +121,12 @@ public static class CombatFactory
         WaterfallGiant,
         Architect,
         SkulkingColony,
+
+        // Hive's five-Exoskeleton encounter. The emulator's `Exoskeletons` above is the
+        // FOUR-monster roster, which is the game's ExoskeletonsWeak -- so the Normal
+        // variant had no id at all. Appended rather than inserted beside its sibling:
+        // these ordinals are the encounter ids, and the act pools name them as literals.
+        ExoskeletonsNormal,
     }
 
     private static readonly ActOneEncounter[] OvergrowthWeakEncounters =

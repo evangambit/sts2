@@ -77,42 +77,79 @@ public static class RunMapGenerator
             upFront.NextDouble();
         }
 
-        state.EventSequence = GenerateEventSequence(underdocks, upFront);
-        state.EventSequenceIndex = 0;
+        // RunManager.GenerateRooms walks EVERY act, in index order, off this one stream.
+        // The emulator generated only the first and stopped, which left its UpFront two
+        // acts' worth of draws behind the game's for the rest of the run -- invisible so
+        // far because nothing a committed trace does reads UpFront after generation, and
+        // wrong the moment anything did.
+        state.LaterActRooms.Clear();
+        foreach (int act in ActSequence(state))
+        {
+            var rooms = GenerateRoomsForAct(act, upFront);
+            if (act == state.Act)
+            {
+                state.EventSequence = rooms.Events;
+                state.EventSequenceIndex = 0;
+                state.NormalEncounterSequence = rooms.NormalEncounters;
+                state.EliteEncounterSequence = rooms.EliteEncounters;
+                state.BossEncounterId = rooms.BossEncounterId;
+            }
+            else
+            {
+                state.LaterActRooms.Add(rooms);
+            }
+        }
+    }
 
-        int[] weakPool = (
-            underdocks
-                ? RunConstants.UnderdocksWeakEncounters
-                : RunConstants.OvergrowthWeakEncounters
-        ).ToArray();
-        int[] normalPool = (
-            underdocks
-                ? RunConstants.UnderdocksNormalEncounters
-                : RunConstants.OvergrowthNormalEncounters
-        ).ToArray();
-        int[] elitePool = (
-            underdocks
-                ? RunConstants.UnderdocksEliteEncounters
-                : RunConstants.OvergrowthEliteEncounters
-        ).ToArray();
-        int[] bossPool = (
-            underdocks
-                ? RunConstants.UnderdocksBossEncounters
-                : RunConstants.OvergrowthBossEncounters
-        ).ToArray();
+    /// <summary>
+    /// The acts this run will play, in order. <c>ActModel.GetRandomList</c> takes one act
+    /// per INDEX off the act_selection stream: index 0 is Overgrowth or Underdocks, index
+    /// 1 is always Hive and index 2 always Glory. The later two spend a draw each even
+    /// though they have nothing to choose between, which is why they are rolled here
+    /// rather than assumed -- and why act 1's own roll, which comes first, is unmoved.
+    /// </summary>
+    private static int[] ActSequence(RunState state) =>
+        [state.Act, RunConstants.ActHive, RunConstants.ActGlory];
+
+    /// <summary>
+    /// <c>ActModel.GenerateRooms</c>, which is the same six steps for every act: shuffle
+    /// the event pool, fill the weak encounters, fill the regular ones up to the act's
+    /// room count, fill fifteen elites, take a boss, take an ancient.
+    /// </summary>
+    /// <remarks>
+    /// The ANCIENT draw at the end is new. The emulator stopped at the boss, so every act
+    /// it generated left the stream one draw short of where the game leaves it. Which
+    /// ancient it picks is not modelled yet -- act 1's is Neow and the later acts' are
+    /// rolled from the act's own three plus whatever shared ones it was dealt -- but the
+    /// DRAW has to happen either way, and that is what keeps everything after it aligned.
+    /// </remarks>
+    private static ActRooms GenerateRoomsForAct(int act, GameRng upFront)
+    {
+        var (weakCount, roomCount) = RunConstants.ActRoomCounts(act);
+        int[] weakPool = WeakPoolFor(act);
+        int[] normalPool = NormalPoolFor(act);
+        int[] elitePool = ElitePoolFor(act);
+        int[] bossPool = BossPoolFor(act);
+
+        int[] events = GenerateEventSequence(act, upFront);
 
         var normalSequence = new List<int>();
         var weakBag = weakPool.ToList();
         int? last = null;
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < weakCount; i++)
         {
+            if (weakBag.Count == 0)
+            {
+                weakBag = weakPool.ToList();
+            }
+
             int enc = GrabWithoutRepeatingTags(weakBag, last, upFront);
             normalSequence.Add(enc);
             last = enc;
         }
 
         var normalBag = new List<int>();
-        for (int i = 0; i < 12; i++)
+        for (int i = weakCount; i < roomCount; i++)
         {
             if (normalBag.Count == 0)
             {
@@ -123,15 +160,14 @@ public static class RunMapGenerator
             normalSequence.Add(enc);
             last = enc;
         }
-        state.NormalEncounterSequence = normalSequence.ToArray();
 
         var eliteSequence = new List<int>();
         var eliteBag = new List<int>();
         // Elites go through the same AddWithoutRepeatingTags path as normals, and
-        // track their own "last" — the game passes _rooms.eliteEncounters, so the
+        // track their own "last" -- the game passes _rooms.eliteEncounters, so the
         // no-repeat rule looks at the previous *elite*, not the previous normal.
         int? lastElite = null;
-        for (int i = 0; i < 15; i++)
+        for (int k = 0; k < RunConstants.EliteSequenceLength; k++)
         {
             if (eliteBag.Count == 0)
             {
@@ -142,9 +178,47 @@ public static class RunMapGenerator
             eliteSequence.Add(enc);
             lastElite = enc;
         }
-        state.EliteEncounterSequence = eliteSequence.ToArray();
-        state.BossEncounterId = bossPool[(int)(upFront.NextDouble() * bossPool.Length)];
+
+        int boss = bossPool[(int)(upFront.NextDouble() * bossPool.Length)];
+        upFront.NextDouble();
+        return new ActRooms(act, events, normalSequence.ToArray(), eliteSequence.ToArray(), boss);
     }
+
+    private static int[] WeakPoolFor(int act) =>
+        act switch
+        {
+            RunConstants.ActUnderdocks => RunConstants.UnderdocksWeakEncounters.ToArray(),
+            RunConstants.ActHive => RunConstants.HiveWeakEncounters.ToArray(),
+            RunConstants.ActGlory => RunConstants.HiveWeakEncounters.ToArray(),
+            _ => RunConstants.OvergrowthWeakEncounters.ToArray(),
+        };
+
+    private static int[] NormalPoolFor(int act) =>
+        act switch
+        {
+            RunConstants.ActUnderdocks => RunConstants.UnderdocksNormalEncounters.ToArray(),
+            RunConstants.ActHive => RunConstants.HiveNormalEncounters.ToArray(),
+            RunConstants.ActGlory => RunConstants.HiveNormalEncounters.ToArray(),
+            _ => RunConstants.OvergrowthNormalEncounters.ToArray(),
+        };
+
+    private static int[] ElitePoolFor(int act) =>
+        act switch
+        {
+            RunConstants.ActUnderdocks => RunConstants.UnderdocksEliteEncounters.ToArray(),
+            RunConstants.ActHive => RunConstants.HiveEliteEncounters.ToArray(),
+            RunConstants.ActGlory => RunConstants.HiveEliteEncounters.ToArray(),
+            _ => RunConstants.OvergrowthEliteEncounters.ToArray(),
+        };
+
+    private static int[] BossPoolFor(int act) =>
+        act switch
+        {
+            RunConstants.ActUnderdocks => RunConstants.UnderdocksBossEncounters.ToArray(),
+            RunConstants.ActHive => RunConstants.HiveBossEncounters.ToArray(),
+            RunConstants.ActGlory => RunConstants.HiveBossEncounters.ToArray(),
+            _ => RunConstants.OvergrowthBossEncounters.ToArray(),
+        };
 
     /// <summary>
     /// The events a run can draw, in the order ActModel.GenerateRooms builds them:
@@ -158,8 +232,61 @@ public static class RunMapGenerator
     /// all run, which is what the deleted TryEnterRetainedInstant5Event hardcode was
     /// papering over.
     /// </summary>
-    private static int[] GenerateEventSequence(bool underdocks, GameRng rng)
+    /// <summary>
+    /// <c>ModelDb.AllSharedEvents</c>: the block every act appends to its own list before
+    /// the one shuffle. Eighteen of them, and the ORDER matters as much as the membership
+    /// — <c>UnstableShuffle</c> is order-dependent, so the same events in a different
+    /// sequence shuffle to a different run.
+    /// </summary>
+    private static readonly int[] SharedEventPool =
+    [
+        RunConstants.EventBrainLeech,
+        RunConstants.EventCrystalSphere,
+        RunConstants.EventDollRoom,
+        RunConstants.EventFakeMerchant,
+        RunConstants.EventPotionCourier,
+        RunConstants.EventRanwidTheElder,
+        RunConstants.EventRelicTrader,
+        RunConstants.EventRoomFullOfCheese,
+        RunConstants.EventSelfHelpBook,
+        RunConstants.EventSlipperyBridge,
+        RunConstants.EventStoneOfAllTime,
+        RunConstants.EventSymbiote,
+        RunConstants.EventTeaMaster,
+        RunConstants.EventTheFutureOfPotions,
+        RunConstants.EventTheLegendsWereTrue,
+        RunConstants.EventThisOrThat,
+        RunConstants.EventWarHistorianRepy,
+        RunConstants.EventWelcomeToWongos,
+    ];
+
+    private static int[] GenerateEventSequence(int act, GameRng rng)
     {
+        if (act == RunConstants.ActHive || act == RunConstants.ActGlory)
+        {
+            // Hive.AllEvents in its own declaration order, then the same shared block
+            // every act gets. Glory has its own list, which is not extracted yet -- it
+            // reuses Hive's so the DRAW COUNT is at least an act's worth rather than
+            // nothing, and act 3 is not reachable to be wrong about yet.
+            int[] hivePool =
+            [
+                RunConstants.EventAmalgamator,
+                RunConstants.EventBugslayer,
+                RunConstants.EventColorfulPhilosophers,
+                RunConstants.EventColossalFlower,
+                RunConstants.EventFieldOfManSizedHoles,
+                RunConstants.EventInfestedAutomaton,
+                RunConstants.EventLostWisp,
+                RunConstants.EventSpiritGrafter,
+                RunConstants.EventTheLanternKey,
+                RunConstants.EventZenWeaver,
+                .. SharedEventPool,
+            ];
+            rng.Shuffle(hivePool);
+            return hivePool.Where(eventId => eventId != 0).ToArray();
+        }
+
+        bool underdocks = act == RunConstants.ActUnderdocks;
         int[] eventPool = underdocks
             ?
             [

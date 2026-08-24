@@ -22,6 +22,15 @@ public enum DeckSelection
     Remove,
 }
 
+/// <summary>One act's generated rooms, as <c>ActModel._rooms</c> holds them.</summary>
+public sealed record ActRooms(
+    int Act,
+    int[] Events,
+    int[] NormalEncounters,
+    int[] EliteEncounters,
+    int BossEncounterId
+);
+
 public sealed class RunState
 {
     public string StringSeed = "";
@@ -168,6 +177,18 @@ public sealed class RunState
     public Dictionary<(int Col, int Row), RunMapNode> MapNodes = [];
     public (int Col, int Row) CurrentMapCoord;
     public (int Col, int Row)?[] MapOptionCoords = new (int Col, int Row)?[RunConstants.MapChoices];
+
+    /// <summary>
+    /// The rooms generated for the acts this run has not reached yet.
+    /// </summary>
+    /// <remarks>
+    /// The game rolls every act's rooms at run start, off one UpFront stream, in index
+    /// order — so act 2's encounters were decided before the player left Neow. Keeping
+    /// them is what lets the act transition install them rather than generate from a
+    /// stream that has moved on.
+    /// </remarks>
+    public List<ActRooms> LaterActRooms = [];
+
     public int[] NormalEncounterSequence = [];
     public int[] EliteEncounterSequence = [];
     public int BossEncounterId;

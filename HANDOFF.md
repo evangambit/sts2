@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1750 pass, ~2m)
+# C# unit tests (currently 1753 pass, ~2m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -849,6 +849,49 @@ Cage — and both are blocked on the same missing piece: `BeginDeckSelection`'s 
 path always returns to `RunPhase.Event`, so a selection opened from a shop or a relic
 pickup has nowhere correct to land. That return needs generalising the way E53 generalised
 the rewards screen's.
+
+### Act 2, phase A: every act's rooms are generated now
+
+**What the game does.** `ActModel.GetRandomList` takes one act per INDEX off the
+`act_selection` stream — index 0 is Overgrowth or Underdocks, index 1 is always **Hive**,
+index 2 always **Glory**. Only act 1 has anything to choose between; the other two spend a
+draw each anyway. Then `RunManager.GenerateRooms` shuffles the shared ancients, draws a
+subset size for each act after the first, and calls `ActModel.GenerateRooms` for EVERY act
+in order. Each act's generation is six steps: shuffle the event pool, fill the weak
+encounters, fill the regular ones up to the act's room count, fill fifteen elites, take a
+boss, **take an ancient**.
+
+**Two things the emulator had wrong, both latent.** It generated only act 1, so its
+UpFront sat two acts' worth of draws behind the game's for the rest of the run; and it
+never made the per-act ancient draw at all, so even act 1 left the stream one short. Safe
+to change because **no committed trace reads UpFront after generation** — Scroll Boxes,
+Hefty Tablet and Lead Paperweight all moved to `PlayerRng.Rewards` (E43, E57), and Lantern
+Key and Prismatic Gem have never come up in a capture. Check that again before assuming it
+still holds.
+
+**Act-specific numbers that used to be constants:** weak-encounter count is 3 for both act-1
+regions and **2** for Hive and Glory; base rooms 15, **14**, **13**. Elites are a flat 15
+everywhere. `RunConstants.ActRoomCounts` holds them.
+
+**Hive's pools** are `Hive.GenerateAllEncounters()` filtered by kind in DECLARATION order,
+same rule as the act-1 regions. Every one already had an emulator id except
+`ExoskeletonsNormal` — the emulator's `Exoskeletons` is the four-monster roster, which is
+the game's WEAK variant — so that one is appended at the END of `ActOneEncounter` (id 87).
+Append, never insert: those ordinals ARE the encounter ids and the pools name them as
+literals. Several others carry the emulator's older shorter names (`Chompers` is
+ChompersNormal, `Obscura` is TheObscuraNormal, `Tunneler` is TunnelerWeak) and a few of
+those ROSTERS still disagree with the game's — the emulator's Tunneler holds one where
+TunnelerWeak holds two. That is a fight-time problem, not a generation one: a pool needs
+identity and order, nothing else.
+
+Act 2's rooms are kept in `RunState.LaterActRooms` so the transition can install them
+rather than generate from a stream that has moved on. **Phase B is the transition itself**
+(advance the act, install its rooms, generate its map, continue the floor counter, land on
+the Ancient node act 2 opens with); phase C is whatever act 2 then finds, with ~140
+captured act-2 steps as the test.
+
+Verified by the five `verify_run_generation` fixtures (which compare against live saves)
+and the 31 traces, all unmoved.
 
 ### Buffed captures, for the half of act 1 nothing has ever seen
 
@@ -1830,7 +1873,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1750 pass
+dotnet test src/Sts2Emulator.Tests/        # 1753 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```
