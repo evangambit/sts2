@@ -33,6 +33,8 @@ is.
 | `SAM9XS24LM-a8.json` | Overgrowth | 134 | clean — found E36 and E37, a Sewer Clam gaining its Plating block twice and then decaying it a turn early |
 | `NXV45HW43K-a8.json` | Overgrowth | 149 | clean — the narrowest divergence in the set, one point of HP at step 126, and it was E38: The Chosen Cheese did nothing at all |
 | `J09SPL8Y3V-a8.json` | Overgrowth | 190 | clean — the longest trace here, and it was blocked at step 1 until Neow's Bones was modelled properly (E42) |
+| `25TS4F5T37-a8-leadpaperweight.json` | Overgrowth | 100 | clean — the SAME seed as `25TS4F5T37-a8.json`, captured with `--neow-option 1` to take a blessing the auto-player will never pick. Settled half of E30's debt (E43) |
+| `XTLVVPKFBF-a8-heftytablet.json` | Overgrowth | 148 | clean — likewise `--neow-option 2` on the seed of `XTLVVPKFBF-a8.json`. Settled the other half, and found H11 on the way |
 
 All sixteen replay clean. The six newest were captured after the set had last gone green,
 and every one of them found something — ten defects between them.
@@ -57,11 +59,13 @@ uv run python scripts/screen_neow_seeds.py --want LeadPaperweight,HeftyTablet
 ```
 
 **Offered is not taken.** The auto-player's Neow policy skips any option whose text
-mentions a choice, so the blessings with a pickup CHOICE never get picked up:
+mentions a choice, so the blessings with a pickup CHOICE never get picked up on their own:
 `DPUJR117FL` was offered Lead Paperweight and `KFMKQQA7MS` Hefty Tablet, and both runs
-took the safe option beside it. That is not just a variety problem -- those two are the
-relics whose stand-in Rewards draw counts (catalogue E30) have nothing to check them
-against. `trace_real_game_run.py --neow-option N` takes the one you name.
+took the safe option beside it. `trace_real_game_run.py --neow-option N` takes the one you
+name, and the last two rows above are what that bought: two blessings no run had ever
+taken, three defects, and the end of E30's standing debt. **A seed can be captured more
+than once** this way -- those two share their seeds with the plain captures above, and the
+runs diverge from the first decision onward.
 
 | trace | Neow relic |
 | --- | --- |

@@ -10,6 +10,12 @@ public enum RunFollowUp
 
     /// <summary>A rewards screen holding relics the player must claim one at a time.</summary>
     BonusRelicRewards,
+
+    /// <summary>
+    /// A choose-a-card screen whose cards are ALREADY rolled, so the caller must not roll
+    /// another offer over the top of them.
+    /// </summary>
+    PreRolledCardReward,
 }
 
 public static class RunNonCombatEffects
@@ -200,9 +206,17 @@ public static class RunNonCombatEffects
                 state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 333);
                 break;
             case RunConstants.RelicHeftyTablet:
-                AddRandomRewardCard(state, state.Rng.UpFront);
-                AddCardToDeck(state, new CardInstance(NamedCard("Injury"), Upgraded: false));
-                break;
+                // AfterObtained offers CardsVar(3) RARE cards from the owner's own pool --
+                // Uniform odds, NoUpgradeRoll -- on a choose-a-card screen, and adds its
+                // Injury together with whichever the player takes. It used to hand over
+                // one card rolled off Rng.UpFront and drop the Injury immediately: no
+                // screen, no choice, the wrong stream and the curse a decision early.
+                RunRewardGenerator.OfferPreRolledCards(
+                    state,
+                    RunRewardGenerator.GenerateRareOnlyCardOffer(state, 3)
+                );
+                state.PendingHeftyTabletCurse = true;
+                return RunFollowUp.PreRolledCardReward;
             case RunConstants.RelicKaleidoscope:
                 // Handled as two card rewards in RunEngine.ApplyAncientChoice; the relic
                 // offers screens to choose from, it does not put cards in the deck.
@@ -217,8 +231,18 @@ public static class RunNonCombatEffects
                 );
                 break;
             case RunConstants.RelicLeadPaperweight:
-                AddRandomRewardCard(state, state.Rng.UpFront);
-                break;
+                // Two COLOURLESS cards on a choose-a-card screen, RegularEncounter odds
+                // through CardCreationSource.Other. Same story as Hefty Tablet: one card
+                // off the wrong stream, granted rather than offered.
+                RunRewardGenerator.OfferPreRolledCards(
+                    state,
+                    RunRewardGenerator.GenerateOtherSourceCardOffer(
+                        state,
+                        RunRewardGenerator.ColorlessRewardPool,
+                        2
+                    )
+                );
+                return RunFollowUp.PreRolledCardReward;
             case RunConstants.RelicPhialHolster:
                 // PhialHolster.AfterObtained: GainMaxPotionCount(PotionSlots=1) FIRST --
                 // so both of the potions it then rolls have somewhere to go -- and

@@ -271,6 +271,15 @@ def translate_command(
             )
         return None
     if action_name == "select_card" and phase == PHASE_TRANSFORM_SELECT:
+        # An OFFER grid resolves on the click: the game says "Choosing card: X" and leaves
+        # the screen there and then, with no confirm after it. A selection over the DECK
+        # toggles instead and waits for one. Both wear the card-select phase, so the screen
+        # has to be told apart by asking the run which it has open -- and until Lead
+        # Paperweight and Hefty Tablet were captured, no trace had ever replayed a grid, so
+        # every card-select was assumed to be the toggling kind.
+        if info.get("offer_cards"):
+            return int(command.get("index", 0))
+
         # The game's card-select screen lists only the cards the effect can
         # legally target, so its index counts eligible cards. The emulator's
         # action is the deck index itself, masked to the same eligible set, so

@@ -288,6 +288,11 @@ class Sts2RunEnv(gym.Env):
             "relic_reward": int(info_buf[10]),
             "pending_rewards": native.run_state_list(self._run_handle, 6, 4),
             "neow_options": native.run_state_list(self._run_handle, 3, 3),
+            # The cards on an open choose-a-card grid, empty when the card-select phase is
+            # a selection over the deck instead. The two resolve differently -- a grid on
+            # the click, a deck selection on a confirm after it -- so a replay has to know
+            # which screen it is looking at.
+            "offer_cards": native.run_state_list(self._run_handle, 17, 16),
             "potion_reward_odds": 0.4,
             "event_id": int(info_buf[9]),
             "map_choices": (

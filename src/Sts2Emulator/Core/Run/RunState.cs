@@ -204,6 +204,14 @@ public sealed class RunState
     /// relic's own pickup draws from Niche, which several of the candidates do.
     /// </summary>
     public bool PendingNeowsBonesCurse;
+
+    /// <summary>
+    /// Hefty Tablet's Injury, which arrives WITH the card its screen offers rather than
+    /// before it: <c>AfterObtained</c> awaits the choice, then adds a list holding the
+    /// Injury with the chosen card inserted at its front. A live capture shows both land
+    /// in the same snapshot.
+    /// </summary>
+    public bool PendingHeftyTabletCurse;
     public int ShopRemovalsUsed;
     public int? TransformSelectedDeckIndex;
 

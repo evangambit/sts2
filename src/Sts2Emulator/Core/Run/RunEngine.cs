@@ -1150,6 +1150,13 @@ public sealed class RunEngine
             State.Phase = RunPhase.RelicReward;
             return;
         }
+        if (followUp == RunFollowUp.PreRolledCardReward)
+        {
+            // The grid is already up; Neow stays on screen for its Proceed once the choice
+            // is made, the way it does after every other blessing.
+            State.NeowAwaitingProceed = true;
+            return;
+        }
         if (followUp == RunFollowUp.BonusRelicRewards)
         {
             // Neow's Bones: two relic rewards on one screen, claimed one at a time, and
@@ -1207,8 +1214,6 @@ public sealed class RunEngine
     {
         int advances = relicId switch
         {
-            RunConstants.RelicHeftyTablet => 3,
-            RunConstants.RelicLeadPaperweight => 6,
             _ => 0,
         };
         for (int i = 0; i < advances; i++)
@@ -3390,6 +3395,27 @@ public sealed class RunEngine
 
         State.PendingOfferCards = [];
         State.PendingOfferPicks = 0;
+
+        // Hefty Tablet's Injury comes WITH the card the grid hands over, not before it:
+        // CardPileCmd.Add takes ONE list holding the curse with the chosen card inserted
+        // at its front, so a live capture shows both land in the same snapshot.
+        if (State.PendingHeftyTabletCurse)
+        {
+            State.PendingHeftyTabletCurse = false;
+            RunNonCombatEffects.AddCardToDeck(
+                State,
+                new CardInstance(RunNonCombatEffects.NamedCard("Injury"), Upgraded: false)
+            );
+        }
+
+        // A grid Neow opened returns to Neow, which stays up for one more Proceed. One an
+        // EVENT opened returns to the event's finished page.
+        if (State.NeowAwaitingProceed)
+        {
+            State.Phase = RunPhase.Ancient;
+            return 0;
+        }
+
         State.EventId = RunConstants.EventResultPending;
         State.Phase = RunPhase.Event;
         return 0;

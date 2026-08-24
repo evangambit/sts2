@@ -213,6 +213,7 @@ public static class StateCloning
             MaxPotionSlots = state.MaxPotionSlots,
             PendingBonusRelicRewards = [.. state.PendingBonusRelicRewards],
             PendingNeowsBonesCurse = state.PendingNeowsBonesCurse,
+            PendingHeftyTabletCurse = state.PendingHeftyTabletCurse,
             PendingPotionRewards = [.. state.PendingPotionRewards],
             PotionSlots = (int[])state.PotionSlots.Clone(),
             CurrentNodeType = state.CurrentNodeType,

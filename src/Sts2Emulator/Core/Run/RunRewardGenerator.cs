@@ -441,6 +441,84 @@ public static class RunRewardGenerator
     /// CreateForReward then rolls an upgrade per card whatever the odds, so each card is
     /// two draws.
     /// </summary>
+    /// <summary>
+    /// A relic's own "choose a card" screen: <c>CardFactory.CreateForReward</c> over one
+    /// pool, with <c>CardCreationSource.Other</c>.
+    /// </summary>
+    /// <remarks>
+    /// Source Other means <c>RollForRarity</c> goes down <c>RollWithBaseOdds</c> -- the
+    /// flat odds, with the running rare-chance offset neither read nor grown -- so a card
+    /// costs three draws: its rarity, itself, and an upgrade roll. Two cards is six draws,
+    /// which is exactly what Lead Paperweight's stand-in count in
+    /// <c>AdvanceRewardRngForNeowRelic</c> used to burn. That is the tell that the count
+    /// was right and only the CARDS were missing.
+    /// </remarks>
+    public static int[] GenerateOtherSourceCardOffer(
+        RunState state,
+        ReadOnlySpan<int> pool,
+        int count
+    )
+    {
+        var poolCards = pool.ToArray();
+        var blacklist = new List<int>();
+        var offer = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            int rarity = RollCardRarity(
+                state,
+                RegularEncounterCardOdds,
+                mutateOffset: false,
+                state.PlayerRng.Rewards,
+                useOffset: false
+            );
+            offer[i] = ChooseCardWithRarity(poolCards, rarity, blacklist, state.PlayerRng.Rewards);
+            blacklist.Add(offer[i]);
+            RollCardUpgrade(state, offer[i], state.PlayerRng.Rewards);
+        }
+
+        return offer;
+    }
+
+    /// <summary>
+    /// Hefty Tablet's three: the owner's pool filtered to Rare, <c>Uniform</c> odds and
+    /// the <c>NoUpgradeRoll</c> flag.
+    /// </summary>
+    /// <remarks>
+    /// Uniform skips <c>RollForRarity</c> outright and NoUpgradeRoll skips the upgrade, so
+    /// each card is a SINGLE draw -- three for the screen, which is what its stand-in
+    /// count burned.
+    /// </remarks>
+    public static int[] GenerateRareOnlyCardOffer(RunState state, int count)
+    {
+        var blacklist = new List<int>();
+        var offer = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            offer[i] = ChooseCardWithRarity(
+                IroncladRewardPool,
+                RarityRare,
+                blacklist,
+                state.PlayerRng.Rewards
+            );
+            blacklist.Add(offer[i]);
+        }
+
+        return offer;
+    }
+
+    /// <summary>
+    /// Puts a pre-rolled offer on a CHOOSE-A-CARD grid, which is what
+    /// <c>CardSelectCmd.FromChooseACardScreen</c> raises -- the live game calls this
+    /// screen <c>card_select</c>, not <c>card_reward</c>. The two are different screens
+    /// and the difference is visible in every capture.
+    /// </summary>
+    public static void OfferPreRolledCards(RunState state, int[] offer)
+    {
+        state.PendingOfferCards = offer;
+        state.PendingOfferPicks = 1;
+        state.Phase = RunPhase.TransformSelect;
+    }
+
     public static int[] GenerateFixedRarityCardOffer(
         RunState state,
         int count,

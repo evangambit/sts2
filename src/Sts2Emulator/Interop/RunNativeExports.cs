@@ -9,7 +9,8 @@ public static class RunNativeExports
 {
     // v13: the observation carries the shop's whole board, priced.
     // v15: the map offers a whole row, not four children -- Winged Boots' free travel.
-    public const int RUN_NATIVE_API_VERSION = 15;
+    // v16: state list 17 reports an open card-offer grid.
+    public const int RUN_NATIVE_API_VERSION = 16;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -271,6 +272,14 @@ public static class RunNativeExports
                 ],
                 output
             ),
+            // 17: the cards on an OFFER grid, if one is open. A card-select phase is two
+            // different screens wearing one phase -- a grid of cards the run has rolled
+            // and is offering (CardSelectCmd.FromChooseACardScreen, which the game calls
+            // `card_select` and resolves on the click) versus a selection over the deck
+            // (which toggles and needs a confirm). A replay has to tell them apart to know
+            // whether an answer needs a confirm after it, and guessing from a screen
+            // message is not the same as asking the run.
+            17 => WriteIntArray(run.State.PendingOfferCards, output),
             _ => -3,
         };
     }

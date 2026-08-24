@@ -227,7 +227,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   native API v11). Version numbers quoted through this file are the version a feature
   _landed at_, not the current one — the current pair is whatever
   `NativeExports.NATIVE_API_VERSION` and `RunNativeExports.RUN_NATIVE_API_VERSION` say,
-  with `src/sts2_gym/native.py` pinned to match (v19 and v15 at the time of writing).
+  with `src/sts2_gym/native.py` pinned to match (v19 and v16 at the time of writing).
   A mismatch fails loudly on load rather than misreading the observation.
 - **Ascension:** the emulator models high ascension (`ToughEnemies` values). Live runs
   at A8 give player 64/80 HP and CorpseSlug 27–29, matching the emulator.
@@ -699,7 +699,40 @@ shuffle is over that exact sequence. Building the screen turned up two more: a r
 claimed from a reward screen is obtained through `RelicCmd.Obtain` and **runs its pickup
 effect**, and the claim that empties the screen returns to Neow by itself.
 
-**All sixteen traces now replay clean.**
+**All eighteen traces now replay clean**, and E30's two stand-in draw counts are gone
+with them — see below.
+
+### The debt E30 left, settled by two captures nobody had taken
+
+`AdvanceRewardRngForNeowRelic` kept burning 6 Rewards draws for Lead Paperweight and 3 for
+Hefty Tablet, standing in for card offers the emulator did not model. Neither relic had
+ever been captured, because **the auto-player's Neow policy skips any blessing whose text
+mentions a choice** — both were offered to traces already committed and both times the run
+took the safe option beside it. `--neow-option N` takes the one you name, and a seed can be
+captured more than once that way: the two new fixtures share their seeds with the plain
+captures and diverge from the first decision on.
+
+What they bought (E43): each relic offers cards on a `FromChooseACardScreen` grid, and the
+emulator granted ONE card off `Rng.UpFront`. Lead Paperweight offers two Colourless at
+`CardCreationSource.Other`/RegularEncounter odds — rarity, card, upgrade, so three draws
+each, **six**, exactly its old fudge. Hefty Tablet offers three from the owner's pool
+filtered to Rare at Uniform odds with `NoUpgradeRoll` — one draw each, **three**, exactly
+its old fudge. That the counts already matched is why nothing downstream moved when the
+fudges came out: they were right about the arithmetic and wrong about everything else. Its
+Injury also arrives WITH the card the grid hands over, not before it.
+
+And one harness gap that had been invisible for the same reason (H11): **a card-select
+phase is two different screens**. An offer grid resolves on the click; a selection over the
+deck toggles and waits for a confirm. The replay only modelled the second, because no
+committed trace had ever replayed a grid — Brain Leech and Room Full of Cheese roll them
+and no capture had reached either. It asks the run which screen is open now (state list 17,
+run API **v16**) rather than reading the mod's message text.
+
+**One operational note worth having:** `dotnet csharpier format src/` touches the C#
+sources, which makes `out/Sts2Emulator.dylib` older than them — and `native.py`'s freshness
+guard then refuses every call, so the whole Python side and all eighteen replays fail at
+once. That is the guard working, not a regression. Rebuild after formatting, or format
+before building.
 
 ### The suite went from ~10 minutes to 1m40
 
