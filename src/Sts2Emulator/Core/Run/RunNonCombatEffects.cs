@@ -1655,15 +1655,30 @@ public static class RunNonCombatEffects
         return false;
     }
 
-    public static void UpgradeTwoRandomCardsWithNiche(RunState state)
+    /// <summary>
+    /// Doors of Light and Dark's Light door:
+    /// <c>Deck.Cards.Where(IsUpgradable).StableShuffle(base.Rng).Take(Cards)</c>.
+    /// </summary>
+    /// <remarks>
+    /// Two things here are the whole of it, and the emulator had both wrong. The stream is
+    /// the EVENT's own <c>base.Rng</c>, not <c>Rng.Niche</c> -- the same mistake as E14,
+    /// where every event's transform was rolled off Niche. And <c>StableShuffle</c> sorts
+    /// by ModelId before it shuffles, which compares the slugified class name as an
+    /// ordinal string; sorting by the emulator's own numeric ids puts a different card
+    /// under the same draw. A live capture upgraded Whirlwind where this took Shrug It Off.
+    /// </remarks>
+    public static void UpgradeTwoRandomCardsForLightDoor(RunState state)
     {
         var indexes = state
             .Deck.Select((card, index) => (card, index))
             .Where(item => RunConstants.IsRunCardUpgradable(item.card))
             .Select(item => item.index)
-            .OrderBy(index => Math.Abs(state.Deck[index].DefId))
+            .OrderBy(
+                index => GeneratedData.Cards.Get(state.Deck[index].DefId).Entry,
+                StringComparer.Ordinal
+            )
             .ToList();
-        state.Rng.Niche.Shuffle(indexes);
+        EventRng(state, "DOORS_OF_LIGHT_AND_DARK").Shuffle(indexes);
         foreach (int index in indexes.Take(2))
         {
             state.Deck[index] = state.Deck[index] with { Upgraded = true };

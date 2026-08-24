@@ -250,6 +250,7 @@ public static class RunConstants
     public const int RelicBlackBlood = 19;
     public const int RelicMeatOnTheBone = 149;
     public const int RelicArcaneScroll = 5;
+    public const int RelicChosenCheese = 48;
     public const int RelicCursedPearl = 54;
     public const int RelicFishingRod = 89;
 

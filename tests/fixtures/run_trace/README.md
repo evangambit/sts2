@@ -27,23 +27,22 @@ is.
 | `CF32ERF3DH-a8.json` | Underdocks | 99 | clean |
 | `QD1DQCJU2K-a8.json` | Underdocks | 85 | clean |
 | `1UL0BRX8WC-a8.json` | Overgrowth | 121 | clean — the first capture taken after the set went green, and it found four defects (catalogue E29-E32) |
-| `25TS4F5T37-a8.json` | Overgrowth | 125 | **diverges** at step 122 — `player.block` 3 live, 5 here, which is a Defend the game taxed for Frail and the emulator did not. The Frail itself is not a compared field, so the miscount is invisible until it changes a number. Found and largely fixed E33-E35 first: the Fogmog fight it turns on used to end 35 steps early. |
-| `XTLVVPKFBF-a8.json` | Overgrowth | 126 | **diverges** at step 75 (`player.hp` 57 live, 61 here) and never finishes its last fight. Same Fogmog/Eye encounter as `25TS4F5T37`. |
-| `L9R346P3YD-a8.json` | Overgrowth | 110 | **diverges** at step 75 (`player.hp` 21 live, 20 here), enemy HP at 91. A Skulking Colony elite, and no illusion involved — a separate cause. |
+| `25TS4F5T37-a8.json` | Overgrowth | 125 | clean — found E33-E35 (a Fogmog fight that ended 35 steps early) and then E39, a Flyconid's spores that dealt their damage without their Frail |
+| `XTLVVPKFBF-a8.json` | Overgrowth | 126 | clean — the same Fogmog/Eye encounter as `25TS4F5T37`, and closed by the same two fixes |
+| `L9R346P3YD-a8.json` | Overgrowth | 110 | clean — found two on its own: E40 (Doors of Light and Dark upgrading off the wrong stream AND the wrong sort key) and E41 (a Skulking Colony that did not read as an elite, so Booming Conch never fired) |
 | `SAM9XS24LM-a8.json` | Overgrowth | 134 | clean — found E36 and E37, a Sewer Clam gaining its Plating block twice and then decaying it a turn early |
-| `NXV45HW43K-a8.json` | Overgrowth | 149 | **diverges** at step 126 on a single point of `player.hp` (9 live, 8 here) and nothing else in 149 steps. The narrowest divergence in the set. |
+| `NXV45HW43K-a8.json` | Overgrowth | 149 | clean — the narrowest divergence in the set, one point of HP at step 126, and it was E38: The Chosen Cheese did nothing at all |
 | `J09SPL8Y3V-a8.json` | Overgrowth | 190 | **diverges** at step 1: the game opens on `rewards`, the emulator on `event`. Neow's Bones, whose pickup puts something on a reward screen the emulator does not raise. The longest trace here, and blocked at its first step. |
 
-Eleven of these replay clean and five do not, which is the point rather than a problem:
-the six newest were captured after the set had gone green, and every one of them found
-something.
+Fifteen of these replay clean and one does not. The six newest were captured after the
+set had gone green, and every one of them found something — nine defects between them.
 
 `1UL0BRX8WC` is the pattern. It was taken specifically because the nine before it held
 only nine of Neow's relics between them; it drew a tenth, Phial Holster, and diverged on
 the very first combat reward. Four defects came out of one run, and three of them had
 nothing to do with the relic — they were simply on paths no earlier capture had walked.
-The batch of six after it did the same again: five defects closed (E33-E35 from the first
-capture, E36-E37 from another) and five divergences still open across the rest.
+The batch of six after it did the same again, and then some: E33-E35, E36-E37, E38, E39,
+E40 and E41 all came out of those six runs. Only Neow's Bones (O8) is still open.
 
 So the cheapest next captures are the ones that walk somewhere new: a Neow relic not in
 the list below, an event none of these hit, or an act 2 (all ten of these die on floors

@@ -31,19 +31,14 @@ rather than Overgrowth.
 
 ## Open
 
-Five, all found by one batch of six captures taken after the set had gone green. A sixth
-(an enemy holding twice its block) is closed below as E36-E37.
+One.
 
 | # | Metric | Seed | What is known |
 | --- | --- | --- | --- |
-| O3 | `player.block` step 122: 3 live, 5 here | `25TS4F5T37` | A Defend the game taxed for Frail and the emulator did not, so the emulator is a stack short somewhere earlier. Frail is not a compared field, so the miscount is invisible until it changes a number — widening the comparison to player status would say where it starts. This is the only thing left in a run that used to end 35 steps early (E33-E35). |
-| O4 | `player.hp` step 75: 57 live, 61 here | `XTLVVPKFBF` | The same Fogmog/Eye encounter as O3, so start by asking whether it is the same cause. |
-| O5 | `player.hp` step 75: 21 live, 20 here; `battle.enemies` 91: 65 live, 74 here | `L9R346P3YD` | A Skulking Colony elite and no illusion anywhere in the run, so this is its own cause. Nine HP of enemy damage unaccounted for by step 91. |
-| O7 | `player.hp` step 126: 9 live, 8 here | `NXV45HW43K` | One point, after 126 clean steps, and nothing else wrong in 149. The narrowest lead in the set and probably the cheapest to chase. |
-| O8 | `state_type` step 1: game `rewards`, emulator `event` | `J09SPL8Y3V` | **Diagnosed, not fixed. Neow's Bones is three defects at once.** `AfterObtained` shuffles the valid relic list on `PlayerRng.Rewards` and takes 2, then offers them as a `RewardsSet(...).WithCustomRewards(...).WithSkippingDisallowed()` — a screen the player answers, twice, before the curse is added. The emulator draws two `Rng.UpFront.NextItem` instead: the wrong stream, a method that can hand out the SAME relic twice where a shuffle-and-take cannot, and no screen at all. Its candidate list is wrong too — the game takes every Neow option's relic except Neow's Bones itself (28 of them, `IsAllowedAtNeow`-filtered), the emulator only `NeowPositiveOptions`. Same shape as E18 (Lost Coffer). |
+| O8 | `state_type` step 1: game `rewards`, emulator `event` | `J09SPL8Y3V` | **Diagnosed, not fixed. Neow's Bones is three defects at once.** `AfterObtained` shuffles the valid relic list on `PlayerRng.Rewards` and takes 2, then offers them as a `RewardsSet(...).WithCustomRewards(...).WithSkippingDisallowed()` — a screen the player answers, twice, before the curse is added. The emulator draws two `Rng.UpFront.NextItem` instead: the wrong stream, a method that can hand out the SAME relic twice where a shuffle-and-take cannot, and no screen at all. Its candidate list is wrong too — the game takes every Neow option's relic except Neow's Bones itself (`IsAllowedAtNeow`-filtered), the emulator only `NeowPositiveOptions`. Same shape as E18 (Lost Coffer). |
 
-All sixteen committed traces are ground truth either way; `tests/fixtures/run_trace/README.md`
-tracks which replay clean. Eleven do.
+Fifteen of the sixteen committed traces replay with no divergence on any compared field;
+`tests/fixtures/run_trace/README.md` says which.
 
 The two that stood here last are E22 to E26 below; E27 and E28 came out of reading the
 code they touched, not out of a capture. What closed them is worth knowing
@@ -105,6 +100,11 @@ that failed could not have.
 | E35 | (same fix) ILLUSION re-summoned and the re-summon ate the revive | `25TS4F5T37` | **A guard standing in for the missing mechanic.** The emulator's ILLUSION branch ran only when no eye was alive, sweeping away any dead one first — which is a fair approximation of "the eye comes back" and becomes actively wrong once the eye really does. It deleted an eye in the middle of reviving and inserted a fresh one at the front of the roster, moving the creature a target index names. `ILLUSION_MOVE` is the move machine's INITIAL state with nothing leading back to it: it fires once per combat and never again. The same shape as E30 — a compensation that outlived what it compensated for. |
 | E36 | `battle.enemies` step 78: block 8 live, 16 here | `SAM9XS24LM` | **A Sewer Clam gained its Plating block twice.** `PRESSURIZE_MOVE` is `PowerCmd.Apply<StrengthPower>(4)` and nothing else — the block the emulator also gave it on that turn was invented. The clam's block comes from `PlatingPower` alone, which grants it to every owner at the end of its side's turn, so the buff turn paid out twice. |
 | E37 | (same seed) block 9 live, 8 here on the first turn, then 8 live and 9 here | `SAM9XS24LM` | **Plating decayed a turn early, and in the wrong order.** `PlatingPower` decrements on `AfterSideTurnStart` and grants its block on `BeforeSideTurnEndEarly`, so the block a turn ends with is the ALREADY decremented amount — and `AfterSideTurnStart` skips the decrement entirely for enemies on round one. The emulator granted first and decremented after, which is a point of block ahead of the game for the whole fight. Watch the counter: `CombatState.Turn` counts from ZERO, so the first enemy phase is Turn 0 and a `> 1` guard puts the decay a turn late — which is how the first attempt at this fix traded one off-by-one for another. |
+| E38 | `player.hp` step 126: 9 live, 8 here, after 126 clean steps | `NXV45HW43K` | **The Chosen Cheese did nothing.** `ChosenCheese.AfterCombatEnd` is `GainMaxHp(1)`, and gaining a maximum heals by the same amount — so a fight won at 2 HP ends at 3 before Burning Blood's six. The emulator could already be GIVEN the relic by Room Full of Cheese and then ignored it. One point per combat, compounding, and invisible until the arithmetic happened to be checked at a step where nothing else was wrong. |
+| E39 | `player.block` step 122: 3 live, 5 here | `25TS4F5T37`, `XTLVVPKFBF` | **A Flyconid's FRAIL_SPORES applied no Frail.** `FRAIL_SPORES_MOVE` is `SingleAttackIntent(SporeDamage)` then `DebuffIntent`, so the readout calls it an Attack — and the emulator's `PowerCmd.Apply<FrailPower>(2)` sat in the debuff branch, keyed on the intent's magnitude, where an Attack intent never arrives. The damage landed and the Frail did not, so every Defend after it blocked five where the game blocked three. **Third time for this exact shape** after E25 and E28; the emulator's own comment on the intent even said "announced as an attack". |
+| E40 | `player.deck` step 82: the game upgraded Whirlwind, the emulator Shrug It Off | `L9R346P3YD` | **Doors of Light and Dark's Light door rolled off the wrong stream, and sorted on the wrong key.** `Light()` is `Deck.Where(IsUpgradable).StableShuffle(base.Rng).Take(Cards)`: the EVENT's own Rng, not `Rng.Niche` (E14 again), and `StableShuffle` sorts by ModelId — the slugified class name, compared ordinally — where the emulator sorted by its own numeric ids. Either one alone puts a different card under the same draw. |
+| E41 | `player.hand` step 87: seven cards and four energy live, five and three here | `L9R346P3YD` | **A range over an enum stopped being true.** `IsEliteEncounter` was `>= BygoneEffigy and <= WaterfallGiant`, which was correct when WaterfallGiant was the last name declared and silently wrong once `Architect` and `SkulkingColony` were appended after it — so a Skulking Colony elite did not read as one and Booming Conch never fired. The same range also swept in every boss, which the game excludes: BoomingConch asks for `RoomType.Elite`, and a boss room is `RoomType.Boss`. The six act-1 elites are named now. |
+
 
 
 
@@ -166,6 +166,12 @@ has to be measured where it is spent, not where it hurts.
 out one extra player turn after a fight was already over. It drew cards, so it reshuffled,
 so it moved a run-level stream. Any code path that continues past a terminal state is a
 divergence in waiting, whatever it looks like it costs.
+
+**A range over an enum is a promise about declaration order that nothing enforces.** E41
+sat correct for as long as nobody appended to the enum, and then went quietly wrong —
+not with an error, but by answering "no" for one elite out of six. Anything shaped like
+`>= First and <= Last` over a list other people extend wants to be an explicit set, and
+the test wants to name every member rather than sample one.
 
 **A green fixture set measures the fixtures, not the emulator.** The nine traces went
 clean, and the tenth — taken for no reason except that it would hold a relic none of them

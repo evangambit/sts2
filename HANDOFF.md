@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1701 pass)
+# C# unit tests (currently 1708 pass)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -671,12 +671,31 @@ and enemies skip the decrement entirely on round one. Note the counter while fix
 anything like it: `CombatState.Turn` counts from ZERO, so the first enemy phase is Turn 0
 — reading it as 1 trades one off-by-one for another, which the first attempt did.
 
-**Five divergences are still open**, tabled at the top of `docs/divergence-catalog.md`.
-The narrowest is `NXV45HW43K`: a single point of player HP at step 126 and nothing else
-wrong in 149 steps. The best-understood is `J09SPL8Y3V` — **Neow's Bones is diagnosed and
-not fixed**: the game shuffles the valid relic list on `PlayerRng.Rewards`, takes two, and
+Four more fell out of the remaining captures, and the pattern in them is worth as much as
+the fixes:
+
+- **The Chosen Cheese did nothing** (E38). `AfterCombatEnd` is `GainMaxHp(1)` and gaining a
+  maximum heals with it, so a fight won at 2 HP ends at 3. The emulator could already be
+  given the relic and simply ignored it — one point per combat, compounding.
+- **A Flyconid's FRAIL_SPORES applied no Frail** (E39). Attack intent first, debuff second,
+  so it resolves in the attack branch; the rider sat in the debuff branch where an Attack
+  intent never arrives. **Third time for this shape** after E25 and E28 — and the
+  emulator's own comment on the intent already said "announced as an attack".
+- **Doors of Light and Dark upgraded off the wrong stream and the wrong sort key** (E40).
+  `StableShuffle(base.Rng)` is the event's own stream, not Niche (E14 again), and
+  StableShuffle sorts by ModelId — the slug, compared ordinally — not by the emulator's
+  numeric ids. Either alone puts a different card under the same draw.
+- **A range over an enum stopped being true** (E41). `IsEliteEncounter` was
+  `>= BygoneEffigy and <= WaterfallGiant`, correct until `Architect` and `SkulkingColony`
+  were appended after WaterfallGiant — so a Skulking Colony elite did not read as one and
+  Booming Conch never fired. The same range swept in every boss, which the game excludes.
+  The six act-1 elites are named explicitly now.
+
+**One divergence is still open.** `J09SPL8Y3V` — **Neow's Bones is diagnosed and not
+fixed**: the game shuffles the valid relic list on `PlayerRng.Rewards`, takes two, and
 offers them on a rewards screen that cannot be skipped; the emulator takes two independent
-`Rng.UpFront.NextItem` draws from the wrong candidate list and grants them silently.
+`Rng.UpFront.NextItem` draws from the wrong candidate list and grants them silently. It
+needs the two-relic reward screen, which is the Lost Coffer shape (E18).
 
 **One thing the screener exposed that matters for every future capture: offered is not
 taken.** The auto-player's Neow policy skips any option whose text mentions a choice, so
@@ -1558,7 +1577,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1701 pass
+dotnet test src/Sts2Emulator.Tests/        # 1708 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
 uv run python -m unittest discover -s tests/python   # 403 pass
 ```

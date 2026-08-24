@@ -1721,7 +1721,7 @@ public sealed class RunEngine
             case RunConstants.EventDoorsOfLightAndDark:
                 if (action == 0)
                 {
-                    RunNonCombatEffects.UpgradeTwoRandomCardsWithNiche(State);
+                    RunNonCombatEffects.UpgradeTwoRandomCardsForLightDoor(State);
                     State.EventId = RunConstants.EventResultPending;
                     return 0;
                 }

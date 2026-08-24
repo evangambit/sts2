@@ -137,4 +137,61 @@ public class IllusionAndMinionTests
 
         Assert.False(result.Terminal);
     }
+
+    /// <summary>
+    /// A Flyconid's FRAIL_SPORES_MOVE is <c>SingleAttackIntent(SporeDamage)</c> followed
+    /// by a <c>DebuffIntent</c> — so the readout calls it an Attack, and its
+    /// <c>PowerCmd.Apply&lt;FrailPower&gt;(2)</c> has to resolve with the attack.
+    /// </summary>
+    /// <remarks>
+    /// It used to sit in the debuff branch keyed on the intent's magnitude, which an
+    /// Attack intent never reaches: the damage landed and the Frail did not. Third time
+    /// for this exact shape after Fossil Stalker's TACKLE (E25) and Punch Construct's
+    /// FAST_PUNCH (E28) — a move that attacks AND does something else resolves where its
+    /// PRIMARY intent says, not where the secondary one would suggest.
+    /// </remarks>
+    [Fact]
+    public void FlyconidFrailSporesApplyFrailAlongsideTheirDamage()
+    {
+        var fight = Fight.Hand().PlayerHp(200, 200).Enemy(hp: 52, defId: KE.Flyconid);
+        var flyconid = fight.State.Enemies[0];
+        flyconid.CurrentIntent = new Intent(IntentType.Attack, 8);
+        flyconid.LastMove = 1;
+        int hpBefore = fight.State.PlayerHp;
+
+        EnemyAI.ExecuteIntent(flyconid, fight.State, new Random(0));
+
+        Assert.Equal(hpBefore - 8, fight.State.PlayerHp);
+        Assert.Equal(2, fight.PlayerBuffAmount(BuffId.Frail));
+    }
+
+    /// <summary>SMASH_MOVE is a bare attack and debuffs nothing.</summary>
+    [Fact]
+    public void FlyconidSmashAppliesNoFrail()
+    {
+        var fight = Fight.Hand().PlayerHp(200, 200).Enemy(hp: 52, defId: KE.Flyconid);
+        var flyconid = fight.State.Enemies[0];
+        flyconid.CurrentIntent = new Intent(IntentType.Attack, 11);
+        flyconid.LastMove = 2;
+
+        EnemyAI.ExecuteIntent(flyconid, fight.State, new Random(0));
+
+        Assert.Equal(0, fight.PlayerBuffAmount(BuffId.Frail));
+    }
+
+    /// <summary>VULNERABLE_SPORES_MOVE really is a bare DebuffIntent, and stays one.</summary>
+    [Fact]
+    public void FlyconidVulnerableSporesStillApplyVulnerable()
+    {
+        var fight = Fight.Hand().PlayerHp(200, 200).Enemy(hp: 52, defId: KE.Flyconid);
+        var flyconid = fight.State.Enemies[0];
+        flyconid.CurrentIntent = new Intent(IntentType.Debuff, 2);
+        flyconid.LastMove = 0;
+        int hpBefore = fight.State.PlayerHp;
+
+        EnemyAI.ExecuteIntent(flyconid, fight.State, new Random(0));
+
+        Assert.Equal(2, fight.PlayerBuffAmount(BuffId.Vulnerable));
+        Assert.Equal(hpBefore, fight.State.PlayerHp);
+    }
 }

@@ -953,8 +953,38 @@ public static class CombatFactory
         return pool[rng.Next(pool.Length)];
     }
 
+    /// <summary>
+    /// The act-1 elites, named rather than described as a range.
+    /// </summary>
+    /// <remarks>
+    /// This was <c>>= BygoneEffigy and &lt;= WaterfallGiant</c>, which was true when
+    /// WaterfallGiant was the last name in the enum and quietly stopped being true when
+    /// Architect and SkulkingColony were appended after it: a Skulking Colony elite did
+    /// not read as one, so Booming Conch never fired and a live capture opened that fight
+    /// with seven cards and four energy where the emulator had five and three. A range
+    /// over an enum is a promise about declaration ORDER that nothing enforces.
+    ///
+    /// <para>
+    /// It also swept up every boss, and the game does not: BoomingConch asks for
+    /// <c>CurrentRoom.RoomType == RoomType.Elite</c>, and a boss room is RoomType.Boss.
+    /// Act 2's elites are deliberately absent — the emulator models act 1, and listing
+    /// names it cannot reach would be guessing.
+    /// </para>
+    /// </remarks>
+    private static readonly ActOneEncounter[] EliteEncounters =
+    [
+        // Overgrowth, per Acts/Overgrowth.cs.
+        ActOneEncounter.BygoneEffigy,
+        ActOneEncounter.Byrdonis,
+        ActOneEncounter.PhrogParasite,
+        // Underdocks, per Acts/Underdocks.cs.
+        ActOneEncounter.PhantasmalGardeners,
+        ActOneEncounter.SkulkingColony,
+        ActOneEncounter.TerrorEel,
+    ];
+
     private static bool IsEliteEncounter(ActOneEncounter encounter) =>
-        encounter is >= ActOneEncounter.BygoneEffigy and <= ActOneEncounter.WaterfallGiant;
+        Array.IndexOf(EliteEncounters, encounter) >= 0;
 
     private static List<EnemyState> CreateSlimeEncounter(
         Random rng,

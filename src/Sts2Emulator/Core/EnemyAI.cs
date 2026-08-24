@@ -317,6 +317,16 @@ public static class EnemyAI
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
                 }
 
+                // FRAIL_SPORES_MOVE is SingleAttackIntent(SporeDamage) then DebuffIntent,
+                // so the readout calls it an Attack and it resolves here. Its
+                // PowerCmd.Apply<FrailPower>(2) sat in the debuff branch, which the move's
+                // Attack intent never reaches -- the damage landed and the Frail did not,
+                // so every Defend after it blocked five where the game blocked three.
+                if (enemy.DefId == KE.Flyconid && enemy.LastMove == 1)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
+                }
+
                 if (enemy.DefId == KE.DecimillipedeSegment && enemy.MoveIndex % 3 == 1)
                 {
                     BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
@@ -2531,15 +2541,11 @@ public static class EnemyAI
                 break;
 
             case KE.Flyconid:
-                if (enemy.CurrentIntent.Magnitude > 2)
-                {
-                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
-                }
-                else
-                {
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 2);
-                }
+                // VULNERABLE_SPORES_MOVE, the only one of the three that is a bare
+                // DebuffIntent. FRAIL_SPORES used to be handled here too, keyed on the
+                // intent's magnitude -- but it announces as an Attack and so never
+                // arrived; its rider lives with the attack now.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 2);
                 break;
 
             case KE.LivingFog:

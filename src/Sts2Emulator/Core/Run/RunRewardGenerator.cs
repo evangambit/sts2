@@ -159,6 +159,16 @@ public static class RunRewardGenerator
 
     public static void GenerateCombatRewards(RunState state)
     {
+        // ChosenCheese.AfterCombatEnd: GainMaxHp(1). Gaining a maximum heals by the same
+        // amount, so a fight won at 2 HP ends at 3 before Burning Blood's six -- which is
+        // how this surfaced, as a single point of player HP after 126 clean steps of a
+        // capture (`NXV45HW43K`). The emulator could already be GIVEN the relic by Room
+        // Full of Cheese and then did nothing with it.
+        if (HasRelic(state, RunConstants.RelicChosenCheese))
+        {
+            RunNonCombatEffects.GainMaxHp(state, 1);
+        }
+
         if (HasRelic(state, RunConstants.RelicBurningBlood))
         {
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 6);

@@ -84,4 +84,40 @@ public class RunSiteRelicTests
 
         return engine.State.PlayerHp - 1;
     }
+
+    /// <summary>
+    /// ChosenCheese.AfterCombatEnd is GainMaxHp(1), and gaining a maximum heals by the
+    /// same amount — so a fight won at 2 HP ends at 3 before Burning Blood's six.
+    /// </summary>
+    /// <remarks>
+    /// The emulator could already be given this relic by Room Full of Cheese and then did
+    /// nothing with it, which is worth more than one point: it surfaced as a single HP of
+    /// difference 126 steps into a capture (`NXV45HW43K`) with nothing else wrong in 149,
+    /// and every fight after it would have compounded.
+    /// </remarks>
+    [Fact]
+    public void ChosenCheeseGainsAMaxHpEveryTimeACombatEnds()
+    {
+        var state = ShopBoundRun();
+        state.Relics.Add(new RelicInstance(RunConstants.RelicChosenCheese));
+        int maxBefore = state.PlayerMaxHp;
+
+        RunRewardGenerator.GenerateCombatRewards(state);
+
+        Assert.Equal(maxBefore + 1, state.PlayerMaxHp);
+        // 50, +1 for the maximum, +6 for Burning Blood.
+        Assert.Equal(57, state.PlayerHp);
+    }
+
+    [Fact]
+    public void WithoutTheCheeseTheMaximumDoesNotMove()
+    {
+        var state = ShopBoundRun();
+        int maxBefore = state.PlayerMaxHp;
+
+        RunRewardGenerator.GenerateCombatRewards(state);
+
+        Assert.Equal(maxBefore, state.PlayerMaxHp);
+        Assert.Equal(56, state.PlayerHp);
+    }
 }
