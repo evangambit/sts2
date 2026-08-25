@@ -302,6 +302,15 @@ public static class EnemyAI
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
                 }
 
+                // TENDERIZER_MOVE's rider, which used to ride on the Debuff branch
+                // because the intent was typed Debuff. Retyping it Attack -- which is
+                // what the move declares FIRST -- moves the damage into DealAttack and
+                // would have dropped the Vulnerable on the floor.
+                if (enemy.DefId == KE.Ovicopter && enemy.MoveIndex % 4 == 2)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 2);
+                }
+
                 if (enemy.DefId == KE.Fabricator)
                 {
                     SummonFabricatorBots(enemy, state, rng, includeDefensive: false);
@@ -598,8 +607,20 @@ public static class EnemyAI
             case KE.Exoskeleton:
                 return rng.Next(3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 4),
-                    1 => new Intent(IntentType.Attack, 9),
+                    // MultiAttackIntent(SkitterDamage, SkitterRepeats): the damage is a
+                    // flat 1 and the REPEATS are what ascension moves, 4 at A9 and 3 at
+                    // A8. A flat 4 was the A9 hit count read as a damage number, which is
+                    // wrong twice over -- E10's fold again, and off the Deadly branch.
+                    0 => new Intent(
+                        IntentType.Attack,
+                        1,
+                        Hits: Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
+                    ),
+                    // MandiblesDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
                     _ => new Intent(IntentType.Buff, 0),
                 };
 
@@ -814,17 +835,30 @@ public static class EnemyAI
                 );
 
             case KE.BowlbugRock:
+                // HeadbuttDamage
                 return enemy.MoveIndex % 2 == 0
-                    ? new Intent(IntentType.Attack, 16)
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 15)
+                    )
                     : new Intent(IntentType.Unknown, 0);
 
             case KE.BowlbugEgg:
-                return new Intent(IntentType.Attack, 8);
+                // BiteDamage
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                );
 
             case KE.BowlbugNectar:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    1 => new Intent(IntentType.Buff, 16),
+                    // BuffStrengthGain
+                    1 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 15)
+                    ),
+                    // ThrashDamage, which carries no ascension term.
                     _ => new Intent(IntentType.Attack, 3),
                 };
 
@@ -855,10 +889,22 @@ public static class EnemyAI
                 return (enemy.MoveIndex % 3) switch
                 {
                     0 => enemy.CurrentIntent.Type == IntentType.Attack
-                        ? new Intent(IntentType.Attack, 6)
+                        // SuckDamage
+                        ? new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 4)
+                        )
                         : new Intent(IntentType.Debuff, 2),
-                    1 => new Intent(IntentType.Attack, 15),
-                    _ => new Intent(IntentType.Attack, 6),
+                    // BiteDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 13)
+                    ),
+                    // SuckDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 4)
+                    ),
                 };
 
             case KE.SlumberingBeetle:
@@ -878,23 +924,58 @@ public static class EnemyAI
                 return (enemy.MoveIndex % 4) switch
                 {
                     0 => new Intent(IntentType.Buff, 0),
-                    1 => new Intent(IntentType.Attack, 17),
-                    2 => new Intent(IntentType.Debuff, 8),
-                    _ => new Intent(IntentType.Buff, 4),
+                    // SmashDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 17, 16)
+                    ),
+                    // TENDERIZER_MOVE declares SingleAttackIntent(TenderizerDamage) and
+                    // THEN a DebuffIntent, and the readout follows the declaration -- so
+                    // it is an Attack whose number is damage, not a Debuff. E12 again.
+                    2 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    ),
+                    // NutritionalPasteStrengthAmount
+                    _ => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
+                    ),
                 };
 
             case KE.LouseProgenitor:
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 10),
+                    // WebDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 10, 9)
+                    ),
+                    // CurlBlock is GetValueIfAscension(ToughEnemies, 18, 14), and Tough
+                    // IS live at A8 -- so this 18 is right where the others were not.
                     1 => new Intent(IntentType.Defend, 18),
-                    _ => new Intent(IntentType.Attack, 16),
+                    // PounceDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
+                    ),
                 };
 
             case KE.HunterKiller:
-                return enemy.MoveIndex == 0
-                    ? new Intent(IntentType.Debuff, 1)
-                    : new Intent(IntentType.Attack, rng.Next(3) == 0 ? 19 : 24);
+                // BiteDamage, or PUNCTURE_MOVE's MultiAttackIntent(PunctureDamage, 3).
+                // The 24 was the three hits folded into one number, which matches only
+                // while the creature has no Strength -- the game adds it to EACH hit.
+                return enemy.MoveIndex == 0 ? new Intent(IntentType.Debuff, 1)
+                    : rng.Next(3) == 0
+                        ? new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 19, 17)
+                        )
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7),
+                        Hits: 3
+                    );
 
             case KE.Axebot:
                 return (enemy.MoveIndex % 3) switch
@@ -2581,11 +2662,6 @@ public static class EnemyAI
 
             case KE.Myte:
                 AddStatusToHand(state, ST.Toxic, enemy.CurrentIntent.Magnitude);
-                break;
-
-            case KE.Ovicopter:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 2);
                 break;
 
             case KE.LouseProgenitor:
