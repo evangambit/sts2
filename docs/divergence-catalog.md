@@ -44,7 +44,7 @@ right about the Fogmog all along. The capture that reproduced it is committed as
 **Read "three" narrowly.** This table holds divergences a capture or a test SURFACED and
 nobody has closed. It is not a measure of what is wrong with the emulator, and right now
 it is a bad proxy for one: the largest known defect surface is not in it at all. That is
-**66 suspect ascension literals** (`scripts/audit_ascension_literals.py`), **46 encounters
+**61 suspect ascension literals** (`scripts/audit_ascension_literals.py`), **41 encounters
 never walked past their opening state**, and **three whole characters — Defect,
 Necrobinder, Regent, 264 cards — with not one card verified**. Those are known-wrong or
 never-checked rather than merely unlisted; every batch put through the combat suite so far
@@ -56,6 +56,10 @@ read before deciding what to do next.
 | O16 | Sea Glass's grid is a 0-to-15 multi-select; the emulator's hands over picks until they run out | `AncientBlessingTests` | `CardSelectorPrefs(prompt, 0, list.Count)` is MinSelect 0, MaxSelect 15, with a manual confirm — the player may take any number of the fifteen, including none. The emulator's offer grid takes `PendingOfferPicks` cards and cannot stop early. A run that wants all fifteen matches; one that wants three does not. The same gap applies to any future 0-to-N grid. |
 | O17 | Mad Science plays as a plain 12-damage attack whatever Tinker Time built | `ZenWeaverReflectionsTinkerTests` | The event is faithful now — three pages, the right shuffles, and the chosen type and rider recorded on the `CardInstance` — but the CARD is not. `MadScience.OnPlay` branches on its type (attack 12 / block 8 / a power) and then applies one of nine riders; the emulator has the card-table entry, so it plays as the Attack row regardless. Two of the riders need powers that do not exist (`CuriousPower`, `ImprovementPower`) and Chaos plays a mocked random card, so this is a card-implementation job rather than a missed line. |
 | O15 | Alchemical Coffer wants six potion slots; the emulator caps at three | `AncientBlessingTests` | `RunState.PotionSlots` is a fixed `int[3]`, as are `CombatState`'s and `GameState`'s, and the combat observation is laid out around that width — so a run cannot hold more than three potions whatever `MaxPotionSlots` says. The Coffer grants four slots on top of two. Widening the array is an observation-layout change, which is why it is recorded rather than done in passing; the test deliberately does NOT assert three, because that would bake the cap in as though it were the rule. |
+
+Nine encounter models still roll their composition off `EncounterModel.Rng` without the
+emulator plumbing it (E89 names the seven that remain), which no act-1 trace can catch for
+the act-2 and act-3 ones.
 
 All thirty-two committed traces replay with no divergence on any compared field, the two
 stand-in draw counts E30 left behind are gone, and **every one of the twenty-five Neow

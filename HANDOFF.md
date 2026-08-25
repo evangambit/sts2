@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **42 tested, 46 pending** — and the pending list is a
+  setup: 88 encounters modelled, **47 tested, 41 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1208,6 +1208,20 @@ turned out to exclude nothing in combat.
   still pending have never been walked past their opening state in C#, they are all
   later-act content, and the Python live-fixture suite only replays the six that have
   committed captures. Nothing in act 1 is on that list any more.
+
+  **A pending list built from the enum cannot see what the pools deal that the enum has
+  not got.** Sweeping Hive's weak encounters found two that could not be BUILT — one with
+  no case in the roster switch at all, one whose monster the extractor excluded — and
+  neither was on any pending list, because both are things the code does not have rather
+  than things it has not checked (E85). `EveryPoolEncounterBuildsTests` walks the pools
+  instead of the enum, and is the cheapest guard in the suite.
+
+  **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
+  were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES
+  rather than loops (E86) — a Tunneler that walks back to its opening bite every fourth
+  turn, a Hopper that comes back after escaping. And a `ConditionalBranchState` is not an
+  alternation: the Bowlbug Rock's dizzy turn is owed only when its own attack was fully
+  blocked, so modelling it as every-other-turn halved its damage (E87).
   Nineteen encounters in, the count is **thirty-one defects** — a rate that has not fallen
   as the easy ones were taken — and the largest group is one class:
   `CombatFactory`'s opening intents were converted to `Ascension.Value` years ago,
@@ -1221,8 +1235,8 @@ turned out to exclude nothing in combat.
 
   **That sweep is now a script**, `scripts/audit_ascension_literals.py`, which cross-checks
   every monster's `GetValueIfAscension(DeadlyEnemies, high, low)` pairs against the bare
-  literals in its `EnemyAI` case block. It reported 80; the **Hive batch is fixed** (E83)
-  and **66 remain**, most of them act 3 and the later act-2 elites and bosses.
+  literals in its `EnemyAI` case block. It reported 80; the Hive monsters are fixed (E83,
+  E86) and **61 remain**, most of them act 3 and the later act-2 elites and bosses.
 
   Two cautions the batch earned, both worth carrying into the next one:
 
