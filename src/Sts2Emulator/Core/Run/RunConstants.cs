@@ -129,6 +129,16 @@ public static class RunConstants
     public const int BundleConfirmAction = 2;
     public const int RestHealAction = 0;
     public const int RestUpgradeAction = 1;
+
+    /// <summary>
+    /// The rest option Pael's Growth adds: copy every Clone-enchanted card in the deck.
+    /// </summary>
+    /// <remarks>
+    /// Offered whenever the relic is HELD — <c>TryModifyRestSiteOptions</c> adds it
+    /// unconditionally and <c>IsEnabled</c> is the base's true — not when the deck happens
+    /// to hold a Clone card. With none it simply copies nothing.
+    /// </remarks>
+    public const int RestCloneAction = 2;
     public const int ShopRemoveAction = 13;
     public const int ShopSkipAction = 14;
     public const int EventSkipAction = 3;

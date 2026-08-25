@@ -492,6 +492,11 @@ public sealed class RunEngine
                     SetMask(mask, RunConstants.RestUpgradeAction);
                 }
 
+                if (State.Relics.Any(relic => relic.DefId == RunConstants.RelicPaelsGrowth))
+                {
+                    SetMask(mask, RunConstants.RestCloneAction);
+                }
+
                 SetMask(mask, RunConstants.RewardSkipAction);
                 break;
 
@@ -1347,6 +1352,52 @@ public sealed class RunEngine
         return EncounterRng.SeedFor((int)State.Rng.Seed, State.Floor, encounterId, weakVariant);
     }
 
+    /// <summary>
+    /// Goopy grows on play and the game bumps the DECK version's amount as well as the
+    /// combat card's — so the block it gains is permanent for the rest of the run.
+    /// </summary>
+    /// <remarks>
+    /// The emulator has no link from a combat card back to the deck card it was copied
+    /// from, so the amounts are matched by card identity: for each (id, upgraded) the
+    /// combat's Goopy amounts are written onto the run deck's, largest first. The combat
+    /// deck IS the run deck copied, so the two multisets agree unless a card was added or
+    /// removed mid-fight — and a card added mid-fight is not in the run deck to grow.
+    /// </remarks>
+    private void CarryGoopyGrowthToTheDeck(CombatState combat)
+    {
+        var amounts = combat
+            .AllCards()
+            .Where(card => card.Enchantment == Enchantment.Goopy)
+            .GroupBy(card => (card.DefId, card.Upgraded))
+            .ToDictionary(
+                group => group.Key,
+                group => new Queue<int>(
+                    group.Select(card => card.EnchantAmount).OrderByDescending(a => a)
+                )
+            );
+        if (amounts.Count == 0)
+        {
+            return;
+        }
+
+        foreach (
+            int index in Enumerable
+                .Range(0, State.Deck.Count)
+                .Where(i => State.Deck[i].Enchantment == Enchantment.Goopy)
+                .OrderByDescending(i => State.Deck[i].EnchantAmount)
+        )
+        {
+            var card = State.Deck[index];
+            if (amounts.TryGetValue((card.DefId, card.Upgraded), out var queue) && queue.Count > 0)
+            {
+                State.Deck[index] = card with { EnchantAmount = queue.Dequeue() };
+            }
+        }
+    }
+
+    /// <summary>The post-combat sync, exposed so a test can drive it without a fight.</summary>
+    internal void SyncAfterCombatForTest() => SyncAfterCombat();
+
     private void SyncAfterCombat()
     {
         if (State.ActiveCombat is null)
@@ -1355,6 +1406,7 @@ public sealed class RunEngine
         }
 
         Effects.RelicEffects.CollectUsedUpRelics(State.ActiveCombat, State.UsedUpRelics);
+        CarryGoopyGrowthToTheDeck(State.ActiveCombat);
         State.PlayerHp = Math.Max(0, State.ActiveCombat.PlayerHp);
         State.PlayerMaxHp = Math.Max(1, State.ActiveCombat.PlayerMaxHp);
         State.Gold = Math.Max(0, State.ActiveCombat.PlayerGold);
@@ -1807,6 +1859,25 @@ public sealed class RunEngine
             State.RestResultPending = true;
             return 0;
         }
+        if (
+            action == RunConstants.RestCloneAction
+            && State.Relics.Any(relic => relic.DefId == RunConstants.RelicPaelsGrowth)
+        )
+        {
+            // CloneRestSiteOption: one copy of every Clone-enchanted card, added to the
+            // deck. This is the whole of what the Clone enchantment does — it overrides
+            // nothing in a fight — so a run holding Pael's Growth and never resting gets
+            // nothing from it at all.
+            var copies = State.Deck.Where(card => card.Enchantment == Enchantment.Clone).ToList();
+            foreach (var card in copies)
+            {
+                RunNonCombatEffects.AddCardToDeck(State, card);
+            }
+
+            State.RestResultPending = true;
+            return 0;
+        }
+
         if (action == RunConstants.RestUpgradeAction)
         {
             if (!State.Deck.Any(RunConstants.IsRunCardUpgradable))

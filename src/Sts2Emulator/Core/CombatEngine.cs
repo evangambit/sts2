@@ -19,6 +19,13 @@ public static class CombatEngine
     {
         state.TargetEnemyIndex = targetEnemyIndex;
 
+        // Anything queued before the player has acted goes off FIRST. Imbued's turn-1
+        // auto-play is the only thing that queues at combat start, and it fires in the
+        // game's pre-play phase — before the player's first move, not after it. The loop
+        // further down drains what an action ITSELF queues; this drains what was already
+        // waiting.
+        DrainAutoPlayQueue(state, rng);
+
         // A pending card selection owns the action space until it is answered: the game
         // will not let you play, end the turn or quaff while its selection screen is up.
         if (state.PendingSelection is not null)
@@ -1738,6 +1745,31 @@ public static class CombatEngine
     /// screen back to the caller, so anything that would raise one resolves itself —
     /// see CardEffects.OpenCardSelection.
     /// </summary>
+    /// <summary>
+    /// Play whatever is already waiting in the auto-play queue.
+    /// </summary>
+    /// <remarks>
+    /// Separate from the loop that runs after an action because the two fire at different
+    /// moments: that one handles what a card's own effect queued, this one handles what
+    /// was queued before the player moved at all. Imbued is the only thing that does the
+    /// latter, and it plays from the BOTTOM of the draw pile, where the turn-1 reorder
+    /// put it.
+    /// </remarks>
+    private static void DrainAutoPlayQueue(CombatState state, Random rng)
+    {
+        while (state.AutoPlayQueue.Count > 0)
+        {
+            var next = state.AutoPlayQueue[0];
+            state.AutoPlayQueue.RemoveAt(0);
+            AutoPlay(state, next, rng);
+            if (PlayerIsDead(state) || NoPrimaryEnemyLeft(state))
+            {
+                state.AutoPlayQueue.Clear();
+                return;
+            }
+        }
+    }
+
     private static void AutoPlay(CombatState state, CardInstance card, Random rng)
     {
         bool wasAutoPlaying = state.AutoPlaying;

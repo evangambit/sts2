@@ -151,6 +151,52 @@ public class EnchantmentCombatTests
         Assert.All(pile.Take(2), card => Assert.Equal(Enchantment.None, card.Enchantment));
     }
 
+    /// <summary>
+    /// <c>AfterAutoPrePlayPhaseEntered</c> plays the card on turn 1 — from the BOTTOM of
+    /// the draw pile, where the reorder just put it, and before the player has moved.
+    /// </summary>
+    [Fact]
+    public void ImbuedAutoPlaysItselfOnTurnOne()
+    {
+        var fight = Fight
+            .Hand(Card(IC.StrikeIronclad))
+            .Draw(Enchanted(IC.DefendIronclad, Enchantment.Imbued, 1))
+            .Energy(3)
+            .Enemy(hp: 40);
+        // The harness builds a state directly rather than through CombatFactory, so the
+        // combat-start queueing has to be asked for; a real fight gets it from Reset.
+        CombatFactory.QueueCombatStartAutoPlays(fight.State);
+
+        // The player's first action is the Strike; the Defend should already have gone
+        // off by the time it resolves.
+        fight.Play(0);
+
+        Assert.DoesNotContain(fight.State.DrawPile, card => card.Enchantment == Enchantment.Imbued);
+        Assert.True(fight.State.PlayerBlock > 0, "the imbued Defend should have played");
+    }
+
+    /// <summary>An auto-play is free — it does not spend the player's energy.</summary>
+    [Fact]
+    public void ImbuedsAutoPlayCostsNoEnergy()
+    {
+        var withImbued = Fight
+            .Hand(Card(IC.StrikeIronclad))
+            .Draw(Enchanted(IC.DefendIronclad, Enchantment.Imbued, 1))
+            .Energy(3)
+            .Enemy(hp: 40);
+        CombatFactory.QueueCombatStartAutoPlays(withImbued.State);
+        withImbued.Play(0);
+
+        var plain = Fight
+            .Hand(Card(IC.StrikeIronclad))
+            .Draw(Card(IC.DefendIronclad))
+            .Energy(3)
+            .Enemy(hp: 40);
+        plain.Play(0);
+
+        Assert.Equal(plain.State.Energy, withImbued.State.Energy);
+    }
+
     // ---- Clone ----------------------------------------------------------------------
 
     /// <summary>

@@ -402,6 +402,8 @@ public static class CombatFactory
 
         RelicEffects.ApplyCombatStart(state, rng);
         RelicEffects.ApplyStartOfPlayerTurn(state, rng);
+
+        QueueCombatStartAutoPlays(state);
         RelicEffects.ApplyAfterPlayerHpChanged(state);
     }
 
@@ -419,6 +421,33 @@ public static class CombatFactory
     /// <param name="drawPile">Draw pile, index 0 = top. Reordered in place.</param>
     /// <param name="handDraw">Base number of cards to draw.</param>
     /// <returns>The possibly-increased number of cards to draw.</returns>
+    /// <summary>
+    /// Queue the cards that play themselves before the player moves.
+    /// </summary>
+    /// <remarks>
+    /// <c>Imbued.AfterAutoPrePlayPhaseEntered</c> auto-plays its card on turn 1, and the
+    /// turn-1 reorder has just put it at the BOTTOM of the draw pile — so it plays from
+    /// there rather than from hand, which the game's AutoPlay is happy to do. Queued
+    /// rather than played, because this method builds a state and does not resolve card
+    /// effects; the first <c>CombatEngine.Step</c> drains it before the player's action.
+    /// </remarks>
+    public static void QueueCombatStartAutoPlays(CombatState state)
+    {
+        for (int i = state.DrawPile.Count - 1; i >= 0; i--)
+        {
+            if (state.DrawPile[i].Enchantment != Enchantment.Imbued)
+            {
+                continue;
+            }
+
+            // Taken OUT of the pile as it is queued: AutoPlayCore files the card into
+            // the discard or exhaust pile when it is done, so leaving it in the draw
+            // pile would duplicate it.
+            state.AutoPlayQueue.Insert(0, state.DrawPile[i]);
+            state.RemoveFromDrawPileAt(i);
+        }
+    }
+
     public static int ApplyTurnOneDrawPileReorder(List<CardInstance> drawPile, int handDraw)
     {
         // The game moves each bottom-sorted card with Remove+Add, so afterwards they

@@ -66,6 +66,11 @@ public sealed class CombatState
 
     // Potions: slot index → potion def ID, 0 = empty
     public int[] PotionSlots = new int[3];
+
+    /// <summary>Every card the fight is holding, wherever it sits.</summary>
+    public IEnumerable<CardInstance> AllCards() =>
+        Hand.Concat(DrawPile).Concat(DiscardPile).Concat(ExhaustPile);
+
     public int MaxPotionSlots = 3;
 
     // Relics
