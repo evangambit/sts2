@@ -90,6 +90,7 @@ internal static class Enemies
         new EnemyDef(Id: 82, Name: "SpinyToad", MinHp: 121, MaxHp: 124, MinHpBelowToughEnemies: 116, MaxHpBelowToughEnemies: 119, Moves: Array.Empty<int>()),
         new EnemyDef(Id: 83, Name: "Stabbot", MinHp: 19, MaxHp: 24, MinHpBelowToughEnemies: 18, MaxHpBelowToughEnemies: 23, Moves: Array.Empty<int>()),
         new EnemyDef(Id: 84, Name: "TerrorEel", MinHp: 150, MaxHp: 150, MinHpBelowToughEnemies: 140, MaxHpBelowToughEnemies: 140, Moves: Array.Empty<int>()),
+        new EnemyDef(Id: 10007, Name: "TestSubject", MinHp: 111, MaxHp: 111, MinHpBelowToughEnemies: 100, MaxHpBelowToughEnemies: 100, Moves: Array.Empty<int>()),
         new EnemyDef(Id: 85, Name: "TheAdversaryMkOne", MinHp: 100, MaxHp: 100, MinHpBelowToughEnemies: 100, MaxHpBelowToughEnemies: 100, Moves: Array.Empty<int>()),
         new EnemyDef(Id: 86, Name: "TheAdversaryMkThree", MinHp: 300, MaxHp: 300, MinHpBelowToughEnemies: 300, MaxHpBelowToughEnemies: 300, Moves: Array.Empty<int>()),
         new EnemyDef(Id: 87, Name: "TheAdversaryMkTwo", MinHp: 200, MaxHp: 200, MinHpBelowToughEnemies: 200, MaxHpBelowToughEnemies: 200, Moves: Array.Empty<int>()),

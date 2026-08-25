@@ -683,7 +683,8 @@
     "VineShambler": 103,
     "WaterfallGiant": 104,
     "Wriggler": 105,
-    "Zapbot": 106
+    "Zapbot": 106,
+    "TestSubject": 10007
   },
   "powers": {
     "AccelerantPower": 1,

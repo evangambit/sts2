@@ -37,36 +37,82 @@ public class HiveAscensionIntentTests
     }
 
     /// <summary>
-    /// SkitterDamage is a flat 1 and SkitterRepeats is what ascension moves (4 at A9,
-    /// 3 at A8) — so a flat 4 was the A9 HIT COUNT read as a damage number.
-    /// MandiblesDamage is 9 at A9 and 8 at A8.
+    /// The three Exoskeletons open on SKITTER, MANDIBLES and ENRAGE by SLOT — the
+    /// opener is a ConditionalBranchState on SlotName, not a roll.
     /// </summary>
+    /// <remarks>
+    /// SkitterDamage is a flat 1 and SkitterRepeats is what ascension moves (4 at A9,
+    /// 3 at A8), so the flat 4 this used to announce was the A9 HIT COUNT read as a
+    /// damage number. MandiblesDamage is 9 at A9 and 8 at A8.
+    /// </remarks>
     [Theory]
     [InlineData(8, 3, 8)]
     [InlineData(9, 4, 9)]
-    public void ExoskeletonSkittersAndBitesAtTheRightLevel(
-        int ascension,
-        int expectedRepeats,
-        int expectedMandibles
-    )
+    public void ExoskeletonsOpenBySlot(int ascension, int expectedRepeats, int expectedMandibles)
     {
-        // The move is a NextInt(3) over three states, so sweep seeds until each is seen
-        // rather than assuming which one the opener rolls.
-        var seen = new HashSet<(IntentType, int, int)>();
-        for (int seed = 0; seed < 40; seed++)
-        {
-            var fight = Fight.Encounter(
-                CombatFactory.ActOneEncounter.Exoskeletons,
-                ascension,
-                seed
-            );
-            seen.Add(IntentOf(fight, KE.Exoskeleton));
-        }
+        var fight = At(CombatFactory.ActOneEncounter.Exoskeletons, ascension);
 
-        Assert.Contains((IntentType.Attack, 1, expectedRepeats), seen);
-        Assert.Contains((IntentType.Attack, expectedMandibles, 1), seen);
-        // Never the folded number, at either level.
-        Assert.DoesNotContain((IntentType.Attack, 4, 1), seen);
+        Assert.Equal(3, fight.State.Enemies.Count);
+        Assert.Equal(
+            [
+                (IntentType.Attack, 1, expectedRepeats),
+                (IntentType.Attack, expectedMandibles, 1),
+                (IntentType.Buff, 0, 1),
+            ],
+            fight
+                .State.Enemies.Select(e =>
+                    (e.CurrentIntent.Type, e.CurrentIntent.Magnitude, e.CurrentIntent.Hits)
+                )
+                .ToList()
+        );
+    }
+
+    /// <summary>
+    /// MANDIBLES_MOVE.FollowUpState is ENRAGE_MOVE outright — no branch and no roll.
+    /// </summary>
+    [Fact]
+    public void AnExoskeletonThatBitesEnragesNext()
+    {
+        var fight = At(CombatFactory.ActOneEncounter.Exoskeletons, Ascension.DefaultLevel);
+        var second = fight.State.Enemies[1];
+        Assert.Equal(8, second.CurrentIntent.Magnitude);
+
+        fight.EndTurn();
+
+        Assert.Equal(IntentType.Buff, second.CurrentIntent.Type);
+    }
+
+    /// <summary>
+    /// The RAND branch offers SKITTER and MANDIBLES and never ENRAGE, and both are
+    /// CannotRepeat — so after a skitter the roll can only come out mandibles.
+    /// </summary>
+    [Fact]
+    public void AfterSkitteringTheOnlyBranchLeftIsMandibles()
+    {
+        var fight = At(CombatFactory.ActOneEncounter.Exoskeletons, Ascension.DefaultLevel);
+        var first = fight.State.Enemies[0];
+        Assert.True(first.CurrentIntent.Hits > 1);
+
+        fight.EndTurn();
+
+        Assert.Equal(
+            (IntentType.Attack, 8, 1),
+            (first.CurrentIntent.Type, first.CurrentIntent.Magnitude, first.CurrentIntent.Hits)
+        );
+    }
+
+    /// <summary>
+    /// The weak encounter declares THREE; four is the normal one, which had no case in
+    /// the roster switch at all and threw out of CombatFactory when Hive dealt it.
+    /// </summary>
+    [Fact]
+    public void TheWeakEncounterIsThreeAndTheNormalOneIsFour()
+    {
+        Assert.Equal(3, At(CombatFactory.ActOneEncounter.Exoskeletons, 8).State.Enemies.Count);
+        Assert.Equal(
+            4,
+            At(CombatFactory.ActOneEncounter.ExoskeletonsNormal, 8).State.Enemies.Count
+        );
     }
 
     [Theory]

@@ -539,7 +539,20 @@ public static class CombatFactory
 
             ActOneEncounter.SlimesWeak => CreateSlimeEncounter(rng, encounterRngSeed, ascension),
 
+            // ExoskeletonsWeak declares THREE; the normal version is the one with four.
+            // The weak roster had been written from the normal model, so act 2's opening
+            // fight arrived with an extra creature.
             ActOneEncounter.Exoskeletons =>
+            [
+                CreateExoskeleton(rng, new Intent(IntentType.Attack, 4)),
+                CreateExoskeleton(rng, new Intent(IntentType.Attack, 9)),
+                CreateExoskeleton(rng, new Intent(IntentType.Buff, 0)),
+            ],
+
+            // ExoskeletonsNormal had no case at all, and it IS in Hive's normal pool --
+            // so an act-2 run that drew it did not fight it wrongly, it threw
+            // ArgumentOutOfRangeException out of the roster switch.
+            ActOneEncounter.ExoskeletonsNormal =>
             [
                 CreateExoskeleton(rng, new Intent(IntentType.Attack, 4)),
                 CreateExoskeleton(rng, new Intent(IntentType.Attack, 9)),
@@ -738,9 +751,9 @@ public static class CombatFactory
                 CreateEnemy(KE.LivingFog, rng, new Intent(IntentType.Debuff, 9)),
             ],
 
-            ActOneEncounter.BowlbugsWeak => CreateBowlbugsWeakEncounter(rng),
+            ActOneEncounter.BowlbugsWeak => CreateBowlbugsWeakEncounter(rng, encounterRngSeed),
 
-            ActOneEncounter.Bowlbugs => CreateBowlbugsEncounter(rng),
+            ActOneEncounter.Bowlbugs => CreateBowlbugsEncounter(rng, encounterRngSeed),
 
             ActOneEncounter.Tunneler =>
             [
@@ -1108,20 +1121,58 @@ public static class CombatFactory
         ];
     }
 
-    private static List<EnemyState> CreateBowlbugsWeakEncounter(Random rng) =>
-        [
-            CreateEnemy(KE.BowlbugRock, rng, new Intent(IntentType.Attack, 16)),
-            CreateBowlbugWorker(rng.Next(2) == 0 ? KE.BowlbugEgg : KE.BowlbugNectar, rng),
-        ];
-
-    private static List<EnemyState> CreateBowlbugsEncounter(Random rng)
+    /// <summary>
+    /// BowlbugsWeak: a Rock, then ONE worker out of Egg and Nectar.
+    /// </summary>
+    /// <remarks>
+    /// The pick is <c>base.Rng.NextItem(Bugs)</c> — the ENCOUNTER's stream, not the
+    /// combat rng, which is the same class of defect <c>EncounterRng</c> was built for
+    /// and which act 2 has no capture to catch.
+    /// </remarks>
+    private static List<EnemyState> CreateBowlbugsWeakEncounter(Random rng, int? encounterRngSeed)
     {
-        int[] workers = [KE.BowlbugEgg, KE.BowlbugSilk, KE.BowlbugNectar];
+        int[] bugs = [KE.BowlbugEgg, KE.BowlbugNectar];
+        int worker = encounterRngSeed.HasValue
+            ? bugs[EncounterRng.Stream(encounterRngSeed.Value).NextInt(0, bugs.Length)]
+            : bugs[rng.Next(bugs.Length)];
         return
         [
             CreateEnemy(KE.BowlbugRock, rng, new Intent(IntentType.Attack, 16)),
-            .. workers.OrderBy(_ => rng.Next()).Take(2).Select(id => CreateBowlbugWorker(id, rng)),
+            CreateBowlbugWorker(worker, rng),
         ];
+    }
+
+    /// <summary>
+    /// BowlbugsNormal: a Rock, then TWO workers drawn without replacement.
+    /// </summary>
+    /// <remarks>
+    /// <c>GenerateMonsters</c> loops twice, and each pass re-derives the candidates as
+    /// "the workers not already taken" (`_workerValidCounts` caps each at one) and calls
+    /// <c>base.Rng.NextItem</c> on THAT list — so it is two draws over three then two,
+    /// not a shuffle of three. `OrderBy(_ => rng.Next())` spent a draw per worker off the
+    /// wrong stream and distributed them differently besides.
+    /// </remarks>
+    private static List<EnemyState> CreateBowlbugsEncounter(Random rng, int? encounterRngSeed)
+    {
+        var remaining = new List<int> { KE.BowlbugEgg, KE.BowlbugSilk, KE.BowlbugNectar };
+        var typeRng = encounterRngSeed.HasValue
+            ? EncounterRng.Stream(encounterRngSeed.Value)
+            : null;
+        var enemies = new List<EnemyState>
+        {
+            CreateEnemy(KE.BowlbugRock, rng, new Intent(IntentType.Attack, 16)),
+        };
+        for (int i = 0; i < 2; i++)
+        {
+            int index = typeRng is null
+                ? rng.Next(remaining.Count)
+                : typeRng.NextInt(0, remaining.Count);
+            int worker = remaining[index];
+            remaining.RemoveAt(index);
+            enemies.Add(CreateBowlbugWorker(worker, rng));
+        }
+
+        return enemies;
     }
 
     private static EnemyState CreateBowlbugWorker(int defId, Random rng) =>

@@ -104,6 +104,21 @@ public sealed class EnemyState
     public bool Escaped;
 
     /// <summary>
+    /// A Bowlbug Rock whose headbutt was fully blocked, and which owes a turn for it.
+    /// </summary>
+    /// <remarks>
+    /// <c>ImbalancedPower.AfterDamageGiven</c> fires on `result.WasFullyBlocked` and sets
+    /// the Rock's `IsOffBalance`; the same HEADBUTT_MOVE then stuns it, so the next turn
+    /// is DIZZY_MOVE, which clears the flag. Only the Bowlbug Rock carries the power —
+    /// on anything else it would stun outright — so this is a field rather than a buff.
+    ///
+    /// Without it the Rock alternated headbutt and dizzy unconditionally, which is half
+    /// its damage against a player who never fully blocks, and announces a stun that is
+    /// not coming.
+    /// </remarks>
+    public bool OffBalance;
+
+    /// <summary>
     /// Which of the encounter's <c>Slots</c> this creature stands in, or -1 when the
     /// encounter does not place by slot.
     /// </summary>

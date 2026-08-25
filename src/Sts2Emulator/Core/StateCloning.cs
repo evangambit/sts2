@@ -62,6 +62,7 @@ public static class StateCloning
             StolenGold = enemy.StolenGold,
             HeistGold = enemy.HeistGold,
             Escaped = enemy.Escaped,
+            OffBalance = enemy.OffBalance,
         };
 
     public static PendingCardSelection Clone(this PendingCardSelection selection) =>

@@ -567,6 +567,92 @@ public static class EnemyAI
 
     // ── Per-enemy intent selection ─────────────────────────────────────────────
 
+    /// <summary>
+    /// SKITTER, MANDIBLES or ENRAGE — a slot-picked opener and a two-way branch after it.
+    /// </summary>
+    /// <remarks>
+    /// A flat <c>rng.Next(3)</c> was wrong in four ways at once. The OPENER is not random
+    /// at all: <c>INIT_MOVE</c> is a ConditionalBranchState on SlotName — first skitters,
+    /// second bites, third enrages, and only a fourth (which the normal encounter has and
+    /// the weak one does not) rolls. MANDIBLES then goes STRAIGHT to ENRAGE, with no roll.
+    /// The RAND branch it eventually reaches offers only SKITTER and MANDIBLES, never
+    /// ENRAGE. And both of its branches are <c>CannotRepeat</c>, so the move just
+    /// performed has weight zero — after a skitter the roll can only come out mandibles.
+    ///
+    /// The draw still happens. <c>RandomBranchState.GetNextState</c> calls
+    /// <c>rng.NextFloat(max)</c> unconditionally and only THEN walks the weights, so a
+    /// forced branch costs a value off the AI stream exactly like a free one — the same
+    /// rule that made a one-item ancient pool cost its draw (E65).
+    /// </remarks>
+    private static Intent ExoskeletonIntent(
+        EnemyState enemy,
+        Random rng,
+        int ascension,
+        IReadOnlyList<EnemyState>? roster
+    )
+    {
+        var skitter = new Intent(
+            IntentType.Attack,
+            1,
+            Hits: Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
+        );
+        var mandibles = new Intent(
+            IntentType.Attack,
+            Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+        );
+        var enrage = new Intent(IntentType.Buff, 0);
+
+        // The RAND branch: one draw, and the move just performed cannot come up.
+        Intent Branch(bool lastWasSkitter)
+        {
+            bool takeSkitter = rng.Next(2) == 0;
+            return lastWasSkitter || !takeSkitter ? mandibles : skitter;
+        }
+
+        if (enemy.MoveIndex == 0)
+        {
+            // Slot order IS roster order, and the roster is the encounter's own list.
+            int slot = roster is null ? 0 : SlotAmongKind(enemy, roster);
+            return slot switch
+            {
+                0 => skitter,
+                1 => mandibles,
+                2 => enrage,
+                _ => Branch(lastWasSkitter: false),
+            };
+        }
+
+        // MANDIBLES_MOVE.FollowUpState is ENRAGE_MOVE outright -- no branch, no draw.
+        if (enemy.CurrentIntent.Type == IntentType.Attack && enemy.CurrentIntent.Hits == 1)
+        {
+            return enrage;
+        }
+
+        bool cameFromSkitter =
+            enemy.CurrentIntent.Type == IntentType.Attack && enemy.CurrentIntent.Hits > 1;
+        return Branch(cameFromSkitter);
+    }
+
+    /// <summary>This creature's position among the enemies sharing its def id.</summary>
+    private static int SlotAmongKind(EnemyState enemy, IReadOnlyList<EnemyState> roster)
+    {
+        int slot = 0;
+        foreach (var other in roster)
+        {
+            if (ReferenceEquals(other, enemy))
+            {
+                return slot;
+            }
+
+            if (other.DefId == enemy.DefId)
+            {
+                slot++;
+            }
+        }
+
+        return slot;
+    }
+
     private static Intent SelectIntent(
         EnemyState enemy,
         Random rng,
@@ -605,24 +691,7 @@ public static class EnemyAI
                     : new Intent(IntentType.Debuff, 3);
 
             case KE.Exoskeleton:
-                return rng.Next(3) switch
-                {
-                    // MultiAttackIntent(SkitterDamage, SkitterRepeats): the damage is a
-                    // flat 1 and the REPEATS are what ascension moves, 4 at A9 and 3 at
-                    // A8. A flat 4 was the A9 hit count read as a damage number, which is
-                    // wrong twice over -- E10's fold again, and off the Deadly branch.
-                    0 => new Intent(
-                        IntentType.Attack,
-                        1,
-                        Hits: Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
-                    ),
-                    // MandiblesDamage
-                    1 => new Intent(
-                        IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
-                    ),
-                    _ => new Intent(IntentType.Buff, 0),
-                };
+                return ExoskeletonIntent(enemy, rng, ascension, roster);
 
             case KE.FuzzyWurmCrawler:
                 return (enemy.MoveIndex % 3) == 1
@@ -835,13 +904,21 @@ public static class EnemyAI
                 );
 
             case KE.BowlbugRock:
+                // HEADBUTT_MOVE's follow-up is a ConditionalBranchState, not an
+                // alternation: it headbutts EVERY turn, and only owes a dizzy turn when
+                // its own attack was fully blocked. `% 2` gave a Rock that stunned itself
+                // every other turn against a player who never blocked at all.
+                if (enemy.OffBalance)
+                {
+                    enemy.OffBalance = false;
+                    return new Intent(IntentType.Unknown, 0);
+                }
+
                 // HeadbuttDamage
-                return enemy.MoveIndex % 2 == 0
-                    ? new Intent(
-                        IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 15)
-                    )
-                    : new Intent(IntentType.Unknown, 0);
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 15)
+                );
 
             case KE.BowlbugEgg:
                 // BiteDamage
@@ -851,16 +928,18 @@ public static class EnemyAI
                 );
 
             case KE.BowlbugNectar:
-                return (enemy.MoveIndex % 3) switch
-                {
-                    // BuffStrengthGain
-                    1 => new Intent(
+                // THRASH -> BUFF -> THRASH2, and THRASH2 follows up to ITSELF. Not a
+                // cycle: `% 3` sent it back for a second Buff on turn four, which the
+                // machine has no edge for.
+                //
+                // BuffStrengthGain on the one buff turn; ThrashDamage, which carries no
+                // ascension term, on every other.
+                return enemy.MoveIndex == 1
+                    ? new Intent(
                         IntentType.Buff,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 15)
-                    ),
-                    // ThrashDamage, which carries no ascension term.
-                    _ => new Intent(IntentType.Attack, 3),
-                };
+                    )
+                    : new Intent(IntentType.Attack, 3);
 
             case KE.BowlbugSilk:
                 return enemy.MoveIndex % 2 == 0
@@ -868,20 +947,51 @@ public static class EnemyAI
                     : new Intent(IntentType.Attack, 10);
 
             case KE.Tunneler:
-                return (enemy.MoveIndex % 3) switch
+                // BITE -> BURROW -> BELOW, and BELOW follows up to ITSELF -- so it
+                // burrows once and then hits from below forever. `% 3` walked it back to
+                // the bite every fourth turn, at a third of the damage.
+                return enemy.MoveIndex switch
                 {
-                    0 => new Intent(IntentType.Attack, 15),
+                    // BiteDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 13)
+                    ),
+                    // BURROW_MOVE's BlockGain is the TOUGH pair (37, 32), and Tough is
+                    // live at A8 — so 37 is right here, unlike the two beside it.
                     1 => new Intent(IntentType.Defend, 37),
-                    _ => new Intent(IntentType.Attack, 26),
+                    // BelowDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 26, 23)
+                    ),
                 };
 
             case KE.ThievingHopper:
-                return (enemy.MoveIndex % 5) switch
+                // THIEVERY -> FLUTTER -> HAT_TRICK -> NAB -> ESCAPE, and ESCAPE follows
+                // up to ITSELF. `% 5` restarted the whole routine on turn six, so a
+                // Hopper that had already left came back to steal again.
+                return enemy.MoveIndex switch
                 {
-                    0 => new Intent(IntentType.Attack, 19),
-                    1 => new Intent(IntentType.Buff, 5),
-                    2 => new Intent(IntentType.Attack, 23),
-                    3 => new Intent(IntentType.Attack, 16),
+                    // TheftDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 19, 17)
+                    ),
+                    // FLUTTER_MOVE is a bare BuffIntent, which carries no number and no
+                    // power -- its IsHovering only picks sound effects and animations.
+                    // The Slippery 5 this used to announce and apply was invented.
+                    1 => new Intent(IntentType.Buff, 0),
+                    // HatTrickDamage
+                    2 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 23, 21)
+                    ),
+                    // NabDamage
+                    3 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
+                    ),
                     _ => new Intent(IntentType.Unknown, 0),
                 };
 
@@ -2347,10 +2457,6 @@ public static class EnemyAI
                 state.FatGremlinEscaped = true;
                 break;
 
-            case KE.ThievingHopper:
-                BuffSystem.Apply(enemy.Buffs, BuffId.Slippery, enemy.CurrentIntent.Magnitude);
-                break;
-
             case KE.SpinyToad:
                 BuffSystem.Apply(enemy.Buffs, BuffId.Thorns, enemy.CurrentIntent.Magnitude);
                 break;
@@ -2862,6 +2968,15 @@ public static class EnemyAI
         if (unblocked > 0 && triggerSuck)
         {
             TriggerSuck(enemy);
+        }
+
+        // ImbalancedPower.AfterDamageGiven, which only the Bowlbug Rock carries: an
+        // attack of its own that block swallowed WHOLE knocks it off balance, and it
+        // spends the following turn dizzy. `damage > 0` matters -- a zeroed attack was
+        // not blocked, it was nothing.
+        if (enemy.DefId == KE.BowlbugRock && damage > 0 && unblocked == 0)
+        {
+            enemy.OffBalance = true;
         }
 
         ApplyPlayerThorns(enemy, state);

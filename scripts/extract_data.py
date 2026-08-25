@@ -51,6 +51,10 @@ HP_PLAIN = re.compile(r"(?:Min|Max)InitialHp\s*=>\s*(\d+)\s*;")
 HP_ASCENSION = re.compile(
     r"(?:Min|Max)InitialHp\s*=>.+?GetValueIfAscension\([^,]+,\s*(\d+),\s*(\d+)\s*\)",
 )
+# `MinInitialHp => FirstFormHp;` -- a monster whose HP is named rather than stated.
+# Only the Test Subject does this (its three forms each have their own), and it read as
+# ZERO HP until the indirection was followed, which is worse than not extracting it.
+HP_INDIRECT = re.compile(r"(?:Min|Max)InitialHp\s*=>\s*([A-Za-z_]\w*)\s*;")
 
 # Monster move intents
 SINGLE_ATTACK = re.compile(r"new SingleAttackIntent\((\d+)\)")
@@ -366,9 +370,19 @@ def extract_enemies() -> str:
             "BattleFriendV1",
             "BattleFriendV2",
             "BattleFriendV3",
-            "TestSubject",
         ):
             continue
+
+        # HP — follow a named property to what it actually says, first: the regexes
+        # below match a literal or a GetValueIfAscension call, and neither is what
+        # `MinInitialHp => FirstFormHp` is.
+        for referent in dict.fromkeys(HP_INDIRECT.findall(text)):
+            named = re.search(
+                rf"\b{re.escape(referent)}\s*=>\s*(.+?);",
+                text,
+            )
+            if named is not None:
+                text += f"\n\tpublic override int MinInitialHp => {named.group(1)};\n"
 
         # HP — try AscensionHelper form first, then plain int
         ascension_hps = HP_ASCENSION.findall(text)
