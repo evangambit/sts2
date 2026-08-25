@@ -684,6 +684,10 @@
     "WaterfallGiant": 104,
     "Wriggler": 105,
     "Zapbot": 106,
+    "FakeMerchantMonster": 10003,
+    "BattleFriendV1": 10004,
+    "BattleFriendV2": 10005,
+    "BattleFriendV3": 10006,
     "TestSubject": 10007
   },
   "powers": {

@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **61 tested, 27 pending** — and the pending list is a
+  setup: 88 encounters modelled, **65 tested, 23 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1303,6 +1303,26 @@ turned out to exclude nothing in combat.
   a fourteen-turn boss fight that plays cards is already past it (H17). `FightChecks`
   passes a limit high enough not to bind. The tell is an emulator that looks a move behind
   only at the far end of a long fixture — check the action count before the move machine.
+
+  **Act 1's event fights were unreachable, not untested.** `ModelDb.AllEncounters` unions
+  the act POOLS, so an encounter only an event starts is absent from it and the mod's
+  `debug_start_encounter` could not find one (H18). Fixed in the mod by falling back to
+  the registry by `ModelId`. Four captured immediately; two diverged. `FakeMerchantMonster`
+  and the three `BattleFriendV*` were also on `extract_data.py`'s exclusion list next to
+  `BigDummy`, so the emulator threw on building them — the same shape as `TestSubject`.
+  **Check that list before assuming a monster is unimplemented.**
+
+  **A workaround for one bug becomes a bug when the bug is fixed.** The attack path
+  subtracted the Flail Knight's Strength from its damage, because its intent table carried
+  damage with the Strength folded in. Correcting the table left the subtraction, so it
+  announced 21 and hit for 15 (E107). When you correct a table, grep for the DefId in the
+  execution path — a compensation elsewhere is invisible from the table itself.
+
+  **`scripts/audit_ascension_literals.py` has a sibling worth writing.** A one-off sweep
+  comparing every `MultiAttackIntent(damage, repeat)` in the decompiled monsters against
+  whether the emulator's case mentions `Hits:` found eighteen candidates in seconds — most
+  of them act 3, which is where that defect class will keep living. The same shape would
+  work for `DefendIntent` amounts and for bare `MoveIndex switch` with no `%`.
 
   **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
   were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES

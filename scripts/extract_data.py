@@ -375,10 +375,6 @@ def extract_enemies() -> str:
             "OneHpMonster",
             "TenHpMonster",
             "BigDummy",
-            "FakeMerchantMonster",
-            "BattleFriendV1",
-            "BattleFriendV2",
-            "BattleFriendV3",
         ):
             continue
 

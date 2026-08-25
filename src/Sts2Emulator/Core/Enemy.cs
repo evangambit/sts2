@@ -137,6 +137,16 @@ public sealed class EnemyState
     public int RepeatStreak;
 
     /// <summary>
+    /// Moves left before a branch on a COOLDOWN can be taken again.
+    /// </summary>
+    /// <remarks>
+    /// <c>RandomBranchState</c> gives a branch weight zero while it appears in the last
+    /// <c>cooldown</c> logged MOVES — a different rule from the repeat cap, and one that
+    /// outlasts it. The Fake Merchant's ENRAGE is the only branch that uses it, at three.
+    /// </remarks>
+    public int BranchCooldown;
+
+    /// <summary>
     /// Which of the encounter's <c>Slots</c> this creature stands in, or -1 when the
     /// encounter does not place by slot.
     /// </summary>

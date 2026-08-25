@@ -954,7 +954,10 @@ public static class CombatFactory
 
             ActOneEncounter.Knights =>
             [
-                CreateEnemy(KE.FlailKnight, rng, new Intent(IntentType.Attack, 17), moveIndex: 2),
+                // MoveIndex 0: the Flail Knight's machine STARTS on RAM_MOVE, which its
+                // own case now expresses. The 2 was an index into the fixed cycle the
+                // emulator used to run instead of the branch state.
+                CreateEnemy(KE.FlailKnight, rng, new Intent(IntentType.Attack, 15)),
                 CreateEnemy(KE.SpectralKnight, rng, new Intent(IntentType.Debuff, 2)),
                 CreateEnemy(KE.MagiKnight, rng, new Intent(IntentType.Attack, 7)),
             ],
@@ -1305,12 +1308,8 @@ public static class CombatFactory
 
     private static EnemyState CreateMysteriousKnight(Random rng)
     {
-        var enemy = CreateEnemy(
-            KE.FlailKnight,
-            rng,
-            new Intent(IntentType.Attack, 23),
-            moveIndex: 2
-        );
+        // RAM_MOVE is where the machine starts; see the Knights roster above.
+        var enemy = CreateEnemy(KE.FlailKnight, rng, new Intent(IntentType.Attack, 15));
         enemy.Block = 6;
         BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 6);
         BuffSystem.Apply(enemy.Buffs, BuffId.Plating, 6);

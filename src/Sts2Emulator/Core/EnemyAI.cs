@@ -273,14 +273,11 @@ public static class EnemyAI
                 // doubled the Strength its SuckPower grants, since Suck triggers per hit.
                 // The intent's own Hits carries this now.
 
+                // The Flail Knight used to have its Strength SUBTRACTED here, because its
+                // intent table carried damage with the Strength already in it -- a
+                // compensation for one bug that became a bug of its own the moment the
+                // table was corrected to real base values. It announced 21 and dealt 15.
                 int baseDamage = enemy.CurrentIntent.Magnitude;
-                if (enemy.DefId == KE.FlailKnight)
-                {
-                    baseDamage = Math.Max(
-                        0,
-                        baseDamage - BuffSystem.Get(enemy.Buffs, BuffId.Strength)
-                    );
-                }
 
                 // Hits, not one: the riders below belong to the attack as a whole, and a
                 // multi-hit intent used to break out above them -- which is how Punch
@@ -379,6 +376,14 @@ public static class EnemyAI
                         BuffId.Strength,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
                     );
+                }
+
+                // THROW_RELIC_MOVE's DebuffIntent is Frail 1, which the merchant's
+                // attack branch never applied -- the intent said Attack and the rider
+                // for it lived only in the buff handler, so a throw was bare damage.
+                if (enemy.DefId == KE.FakeMerchant && enemy.LastBranch == 2)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
                 }
 
                 if (enemy.DefId == KE.MagiKnight && enemy.MoveIndex % 5 == 0)
@@ -687,12 +692,18 @@ public static class EnemyAI
         EnemyState enemy,
         Random rng,
         Intent[] branches,
-        int maxRepeats = 1
+        int[]? maxRepeats = null
     )
     {
+        // Per BRANCH, because they differ: the Flail Knight's WAR_CHANT is CannotRepeat
+        // (a cap of one) while its FLAIL and RAM may each run twice. One shared cap gets
+        // whichever branch it was not written for wrong.
         var eligible = Enumerable
             .Range(0, branches.Length)
-            .Where(index => index != enemy.LastBranch || enemy.RepeatStreak < maxRepeats)
+            .Where(index =>
+                index != enemy.LastBranch
+                || enemy.RepeatStreak < (maxRepeats is null ? 1 : maxRepeats[index])
+            )
             .ToArray();
         if (eligible.Length == 0)
         {
@@ -1356,21 +1367,40 @@ public static class EnemyAI
                     : new Intent(IntentType.Buff, 1);
 
             case KE.FakeMerchant:
-                return enemy.MoveIndex switch
-                {
-                    0 => new Intent(IntentType.Attack, 15),
-                    1 => new Intent(IntentType.Attack, 16),
-                    2 => new Intent(IntentType.Attack, 10),
-                    _ => new Intent(IntentType.Buff, 2),
-                };
+                return FakeMerchantIntent(enemy, rng, ascension);
 
             case KE.FlailKnight:
-                return (enemy.MoveIndex % 3) switch
+            {
+                // RAM first, then a RandomBranchState all three moves return to -- not a
+                // fixed cycle, which is what `% 3` made it. WAR_CHANT is CannotRepeat;
+                // FLAIL and RAM may each run twice.
+                Intent[] branches =
+                [
+                    // WAR_CHANT's Strength.
+                    new Intent(IntentType.Buff, 3),
+                    // FLAIL_MOVE: MultiAttackIntent(FlailDamage, 2), folded into 20.
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 10, 9),
+                        Hits: 2
+                    ),
+                    // RamDamage. The 23 was not any branch of anything -- a live capture
+                    // opens at 21, which is this 15 plus the Mysterious Knight's own
+                    // Strength 6.
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 17, 15)
+                    ),
+                ];
+
+                if (enemy.MoveIndex == 0)
                 {
-                    0 => new Intent(IntentType.Buff, 3),
-                    1 => new Intent(IntentType.Attack, 20),
-                    _ => new Intent(IntentType.Attack, 23),
-                };
+                    enemy.LastBranch = 2;
+                    return branches[2];
+                }
+
+                return PickBranch(enemy, rng, branches, [1, 2, 2]);
+            }
 
             case KE.BygoneEffigy:
                 return enemy.MoveIndex switch
@@ -3546,6 +3576,67 @@ public static class EnemyAI
     /// at all, and the demon stopped growing. Two places deriving the same phase from
     /// the move index is how they drift.
     /// </remarks>
+    /// <summary>
+    /// The Fake Merchant: SWIPE first, then two RandomBranchStates it moves between.
+    /// </summary>
+    /// <remarks>
+    /// The emulator had a bare `MoveIndex switch` with no wrap, so from its fourth move
+    /// on it enraged every turn forever — E100's shape a third time, in an act-1 event
+    /// fight nothing had ever walked.
+    ///
+    /// The real machine has two branch sets. Everything returns to RAND_MOVE
+    /// (swipe / spew / throw / enrage), EXCEPT throw, which returns to RAND_ATTACK_MOVE
+    /// (swipe / spew / throw) — so it cannot enrage straight after throwing a relic. All
+    /// branches are CannotRepeat, and ENRAGE additionally carries a COOLDOWN of three
+    /// moves, which is a different rule: weight zero while it appears in the last three
+    /// logged moves, not merely the last one.
+    /// </remarks>
+    private static Intent FakeMerchantIntent(EnemyState enemy, Random rng, int ascension)
+    {
+        // SwipeDamage; SPEW_COINS is MultiAttackIntent(2, 8) at a flat 2; ThrowRelicDamage
+        // with a Frail rider; ENRAGE_MOVE's Strength.
+        Intent[] branches =
+        [
+            new Intent(
+                IntentType.Attack,
+                Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 13)
+            ),
+            new Intent(IntentType.Attack, 2, Hits: 8),
+            new Intent(
+                IntentType.Attack,
+                Ascension.Value(ascension, Ascension.DeadlyEnemies, 10, 9)
+            ),
+            new Intent(IntentType.Buff, 2),
+        ];
+
+        if (enemy.MoveIndex == 0)
+        {
+            enemy.LastBranch = 0;
+            return branches[0];
+        }
+
+        if (enemy.BranchCooldown > 0)
+        {
+            enemy.BranchCooldown--;
+        }
+
+        // RAND_ATTACK_MOVE after a throw, RAND_MOVE otherwise -- and enrage is out while
+        // it is cooling.
+        bool enrageOffered = enemy.LastBranch != 2 && enemy.BranchCooldown == 0;
+        int[] offered = enrageOffered ? [0, 1, 2, 3] : [0, 1, 2];
+        var eligible = offered.Where(index => index != enemy.LastBranch).ToArray();
+        int chosen = eligible[rng.Next(eligible.Length)];
+
+        enemy.LastBranch = chosen;
+        if (chosen == 3)
+        {
+            // Weight zero until three MOVES have passed, which is this one plus two more.
+            enemy.BranchCooldown = 3;
+        }
+
+        return branches[chosen];
+    }
+
     private static int KnowledgeDemonPhase(int moveIndex) =>
         moveIndex < 12 ? moveIndex % 4 : 1 + ((moveIndex - 12) % 3);
 

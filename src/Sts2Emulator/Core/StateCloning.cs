@@ -65,6 +65,7 @@ public static class StateCloning
             OffBalance = enemy.OffBalance,
             LastBranch = enemy.LastBranch,
             RepeatStreak = enemy.RepeatStreak,
+            BranchCooldown = enemy.BranchCooldown,
         };
 
     public static PendingCardSelection Clone(this PendingCardSelection selection) =>
