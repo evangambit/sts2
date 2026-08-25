@@ -45,6 +45,39 @@ internal static class EncounterTags
         };
 
     /// <summary>
+    /// The <c>Id.Entry</c> of every encounter whose GenerateMonsters draws.
+    /// </summary>
+    /// <remarks>
+    /// Generated because the hand-kept version of this table was the SILENT half
+    /// of the plumbing: a builder can be given its seed and still fall back to the
+    /// combat rng, because the seed only exists if the encounter is listed here.
+    /// Nothing errors — the roster just comes out of the wrong stream. See E90.
+    ///
+    /// Keyed by MODEL name rather than encounter id: two models can share one
+    /// emulator id (CorpseSlugs weak and normal do) and they have different
+    /// entries, so the id alone cannot answer.
+    /// </remarks>
+    public static string? EntryForModel(string model) =>
+        model switch
+        {
+            "BowlbugsNormal" => "BOWLBUGS_NORMAL",
+            "BowlbugsWeak" => "BOWLBUGS_WEAK",
+            "CorpseSlugsNormal" => "CORPSE_SLUGS_NORMAL",
+            "CorpseSlugsWeak" => "CORPSE_SLUGS_WEAK",
+            "DecimillipedeElite" => "DECIMILLIPEDE_ELITE",
+            "FlyconidNormal" => "FLYCONID_NORMAL",
+            "PunchOffEventEncounter" => "PUNCH_OFF_EVENT_ENCOUNTER",
+            "RubyRaidersNormal" => "RUBY_RAIDERS_NORMAL",
+            "ScrollsOfBitingNormal" => "SCROLLS_OF_BITING_NORMAL",
+            "ScrollsOfBitingWeak" => "SCROLLS_OF_BITING_WEAK",
+            "SlimesNormal" => "SLIMES_NORMAL",
+            "SlimesWeak" => "SLIMES_WEAK",
+            "SlitheringStranglerNormal" => "SLITHERING_STRANGLER_NORMAL",
+            "TwoTailedRatsNormal" => "TWO_TAILED_RATS_NORMAL",
+            _ => null,
+        };
+
+    /// <summary>
     /// Each act's four encounter pools, in the act's own declaration order.
     /// </summary>
     /// <remarks>

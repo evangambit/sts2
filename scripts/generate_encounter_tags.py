@@ -50,6 +50,8 @@ ALIASES = {
     "ExoskeletonsWeak": "Exoskeletons",
     "FuzzyWurmCrawlerWeak": "FuzzyWurmCrawler",
     "AxebotsNormal": "Axebot",
+    "DecimillipedeElite": "Decimillipede",
+    "PunchOffEventEncounter": "PunchOff",
     "KnightsElite": "Knights",
     "ScrollsOfBitingNormal": "Scrolls",
     "ScrollsOfBitingWeak": "ScrollsWeak",
@@ -167,6 +169,45 @@ def act_pools() -> dict[str, dict[str, list[tuple[int, str]]]]:
     return pools
 
 
+ROLLS_OWN_RNG = re.compile(r"base\.Rng|Rng\)")
+
+
+def slugify(name: str) -> str:
+    r"""Slugify a class name the way the game does, giving its ``Id.Entry``.
+
+    The pattern is ``([A-Za-z0-9]|\\G(?!^))([A-Z])`` -> ``$1_$2``, upper-cased: an
+    underscore before
+    every capital that follows an alphanumeric. Verified against the eight entries that
+    were hand-transcribed into ``EncounterRng`` and checked against live captures.
+    """
+    out: list[str] = []
+    for index, char in enumerate(name.strip()):
+        if char.isupper() and index > 0 and name[index - 1].isalnum():
+            out.append("_")
+        out.append(char)
+    return "".join(out).upper()
+
+
+def rolls_own_composition() -> dict[str, str]:
+    """Encounter models whose ``GenerateMonsters`` draws, mapped to their ``Id.Entry``.
+
+    An encounter that picks its own monsters -- or their opening moves, or their starting
+    HP -- draws from ``EncounterModel.Rng``, a stream seeded per encounter and per floor.
+    Rolling any of it on the combat rng gets the roster right by luck only, and there is
+    no capture for act 2 or act 3 to notice.
+    """
+    rolling: dict[str, str] = {}
+    for path in sorted(ENCOUNTERS.glob("*.cs")):
+        body = re.search(
+            r"GenerateMonsters\(\).*?\n\t\}",
+            path.read_text(encoding="utf-8"),
+            re.DOTALL,
+        )
+        if body is not None and ROLLS_OWN_RNG.search(body.group(0)):
+            rolling[path.stem] = slugify(path.stem)
+    return rolling
+
+
 def collect() -> list[tuple[int, str, list[str]]]:
     ids = encounter_ids()
     rows: dict[int, tuple[str, list[str]]] = {}
@@ -193,7 +234,7 @@ def collect() -> list[tuple[int, str, list[str]]]:
     return [(eid, name, tags) for eid, (name, tags) in sorted(rows.items())]
 
 
-def render(rows: list[tuple[int, str, list[str]]], pools) -> str:
+def render(rows: list[tuple[int, str, list[str]]], pools, rolling) -> str:
     lines = [
         "// AUTO-GENERATED — do not edit. Re-run scripts/generate_encounter_tags.py.",
         "namespace Sts2Emulator.GeneratedData;",
@@ -222,6 +263,32 @@ def render(rows: list[tuple[int, str, list[str]]], pools) -> str:
         lines.append(f"            {encounter_id} => [{joined}], // {name}")
     lines += [
         "            _ => None,",
+        "        };",
+        "",
+    ]
+
+    lines += [
+        "    /// <summary>",
+        "    /// The <c>Id.Entry</c> of every encounter whose GenerateMonsters draws.",
+        "    /// </summary>",
+        "    /// <remarks>",
+        "    /// Generated because the hand-kept version of this table was the SILENT half",
+        "    /// of the plumbing: a builder can be given its seed and still fall back to the",
+        "    /// combat rng, because the seed only exists if the encounter is listed here.",
+        "    /// Nothing errors — the roster just comes out of the wrong stream. See E90.",
+        "    ///",
+        "    /// Keyed by MODEL name rather than encounter id: two models can share one",
+        "    /// emulator id (CorpseSlugs weak and normal do) and they have different",
+        "    /// entries, so the id alone cannot answer.",
+        "    /// </remarks>",
+        "    public static string? EntryForModel(string model) =>",
+        "        model switch",
+        "        {",
+    ]
+    for model, entry in sorted(rolling.items()):
+        lines.append(f'            "{model}" => "{entry}",')
+    lines += [
+        "            _ => null,",
         "        };",
         "",
     ]
@@ -266,7 +333,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    rendered = render(collect(), act_pools())
+    rendered = render(collect(), act_pools(), rolls_own_composition())
     if args.check:
         current = OUT.read_text(encoding="utf-8") if OUT.exists() else ""
         if current != rendered:

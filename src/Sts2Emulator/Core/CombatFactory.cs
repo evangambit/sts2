@@ -839,9 +839,9 @@ public static class CombatFactory
                 CreateEnemy(KE.OwlMagistrate, rng, new Intent(IntentType.Attack, 17)),
             ],
 
-            ActOneEncounter.ScrollsWeak => CreateScrollsEncounter(rng, 3),
+            ActOneEncounter.ScrollsWeak => CreateScrollsEncounter(rng, 3, encounterRngSeed),
 
-            ActOneEncounter.Scrolls => CreateScrollsEncounter(rng, 4),
+            ActOneEncounter.Scrolls => CreateScrollsEncounter(rng, 4, encounterRngSeed),
 
             ActOneEncounter.SlimedBerserker =>
             [
@@ -874,11 +874,9 @@ public static class CombatFactory
                 CreateEnemy(KE.Wriggler, rng, new Intent(IntentType.Buff, 1), moveIndex: 1),
             ],
 
-            ActOneEncounter.PunchOff =>
-            [
-                CreatePunchOffConstruct(rng, startsWithFastPunch: true),
-                CreatePunchOffConstruct(rng, startsWithFastPunch: false),
-            ],
+            // Two draws, in roster order, off the encounter's own stream: how much
+            // starting HP each construct has lost.
+            ActOneEncounter.PunchOff => CreatePunchOffEncounter(rng, encounterRngSeed),
 
             ActOneEncounter.FakeMerchant =>
             [
@@ -937,7 +935,7 @@ public static class CombatFactory
                 CreateEnemy(KE.Byrdonis, rng, new Intent(IntentType.Attack, 19)),
             ],
 
-            ActOneEncounter.Decimillipede => CreateDecimillipede(rng),
+            ActOneEncounter.Decimillipede => CreateDecimillipede(rng, encounterRngSeed),
 
             ActOneEncounter.Knights =>
             [
@@ -1215,9 +1213,24 @@ public static class CombatFactory
         return enemy;
     }
 
-    private static List<EnemyState> CreateScrollsEncounter(Random rng, int count)
+    /// <summary>
+    /// Three or four Scrolls of Biting, whose opening moves are one roll and two offsets.
+    /// </summary>
+    /// <remarks>
+    /// <c>StarterMoveIdx = base.Rng.NextInt(3)</c> for the first, then <c>+1</c> and
+    /// <c>+2</c> mod 3 — so ONE draw decides every scroll's opening, and taking it off
+    /// the combat rng moves the whole fight. The fourth, which only the normal encounter
+    /// has, is pinned at 2 and takes no draw.
+    /// </remarks>
+    private static List<EnemyState> CreateScrollsEncounter(
+        Random rng,
+        int count,
+        int? encounterRngSeed
+    )
     {
-        int firstMove = rng.Next(3);
+        int firstMove = encounterRngSeed.HasValue
+            ? EncounterRng.Stream(encounterRngSeed.Value).NextInt(3)
+            : rng.Next(3);
         var enemies = new List<EnemyState>();
         for (int i = 0; i < count; i++)
         {
@@ -1241,10 +1254,32 @@ public static class CombatFactory
             _ => new Intent(IntentType.Buff, 2),
         };
 
-    private static EnemyState CreatePunchOffConstruct(Random rng, bool startsWithFastPunch)
+    /// <summary>
+    /// The Punch Off event's two constructs, each already hurt by a rolled amount.
+    /// </summary>
+    /// <remarks>
+    /// <c>StartingHpReduction = base.Rng.NextInt(2, 10)</c> for each, in roster order —
+    /// two draws off the encounter's own stream, which is why they are taken here rather
+    /// than inside the per-construct builder.
+    /// </remarks>
+    private static List<EnemyState> CreatePunchOffEncounter(Random rng, int? encounterRngSeed)
+    {
+        var stream = encounterRngSeed.HasValue ? EncounterRng.Stream(encounterRngSeed.Value) : null;
+        return
+        [
+            CreatePunchOffConstruct(rng, stream, startsWithFastPunch: true),
+            CreatePunchOffConstruct(rng, stream, startsWithFastPunch: false),
+        ];
+    }
+
+    private static EnemyState CreatePunchOffConstruct(
+        Random rng,
+        Rng.GameRng? stream,
+        bool startsWithFastPunch
+    )
     {
         var enemy = CreatePunchConstruct(rng, startsWithFastPunch);
-        int hpReduction = rng.Next(2, 10);
+        int hpReduction = stream?.NextInt(2, 10) ?? rng.Next(2, 10);
         enemy.Hp = Math.Max(1, enemy.Hp - hpReduction);
         return enemy;
     }
@@ -1263,9 +1298,18 @@ public static class CombatFactory
         return enemy;
     }
 
-    private static List<EnemyState> CreateDecimillipede(Random rng)
+    /// <summary>
+    /// Three segments, whose opening moves are one roll and two offsets.
+    /// </summary>
+    /// <remarks>
+    /// Same shape as the Scrolls: <c>base.Rng.NextInt(3)</c> for the front segment, then
+    /// <c>+1</c> and <c>+2</c> mod 3 for the middle and back.
+    /// </remarks>
+    private static List<EnemyState> CreateDecimillipede(Random rng, int? encounterRngSeed)
     {
-        int starter = rng.Next(3);
+        int starter = encounterRngSeed.HasValue
+            ? EncounterRng.Stream(encounterRngSeed.Value).NextInt(3)
+            : rng.Next(3);
         var enemies = new List<EnemyState>(3);
         for (int i = 0; i < 3; i++)
         {

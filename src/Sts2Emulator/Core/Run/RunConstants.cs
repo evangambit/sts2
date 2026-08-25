@@ -524,6 +524,17 @@ public static class RunConstants
 
     public const int PunchOffEncounterId = 56;
 
+    // Encounters that roll something off their OWN stream, and so need an entry id.
+    public const int BowlbugsWeakEncounterId = 31;
+
+    public const int BowlbugsNormalEncounterId = 32;
+
+    public const int DecimillipedeEncounterId = 69;
+
+    public const int ScrollsWeakEncounterId = 49;
+
+    public const int ScrollsNormalEncounterId = 50;
+
     /// <summary>Room Full of Cheese's Gorge: eight offered, two kept.</summary>
     public const int GorgeCardChoices = 8;
     public const int GorgeCardsKept = 2;

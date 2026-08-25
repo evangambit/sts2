@@ -1216,6 +1216,14 @@ turned out to exclude nothing in combat.
   than things it has not checked (E85). `EveryPoolEncounterBuildsTests` walks the pools
   instead of the enum, and is the cheapest guard in the suite.
 
+  **Plumbing an encounter's own RNG has two halves, and one of them is silent.** The
+  builder takes an `encounterRngSeed`, but that seed is only ever non-null if the
+  encounter is listed in `EncounterRng`'s entry table — so wiring the builder and
+  forgetting the table leaves code that reads as fixed and behaves exactly as before
+  (E90). The table is generated now, and the guard varies the seed and watches the roster
+  rather than asking whether the builder mentions it. All fourteen rolling encounters are
+  plumbed; the audit that said otherwise was a grep that only matched single-line calls.
+
   **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
   were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES
   rather than loops (E86) — a Tunneler that walks back to its opening bite every fourth
