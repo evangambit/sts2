@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **58 tested, 30 pending** — and the pending list is a
+  setup: 88 encounters modelled, **61 tested, 27 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1257,6 +1257,17 @@ turned out to exclude nothing in combat.
   inside it went unnoticed for as long as the branch did (E97). When a rider does nothing
   observable, check which branch it is in before checking its number.
 
+  **A boss's numbers can be a mechanic in disguise.** The Crusher announced 21 where its
+  ThrashDamage is 14, because `SurroundedPower`'s 1.5x had been multiplied in — and that
+  multiplier STOPS when its partner dies and the player turns to face the survivor (E99).
+  A constant that happens to match at turn one is the easiest kind of wrong to keep. When
+  an announced number does not appear anywhere in the monster's own source, look for a
+  power on the player before assuming a transcription slip.
+
+  **A bare `MoveIndex switch` with no wrap is a boss that repeats one move forever.** Both
+  Hive bosses had one (E100). Grep for `enemy.MoveIndex switch` without a `%` — the
+  discard arm is doing the work of the whole late fight.
+
   **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
   were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES
   rather than loops (E86) — a Tunneler that walks back to its opening bite every fourth
@@ -1277,9 +1288,10 @@ turned out to exclude nothing in combat.
   **That sweep is now a script**, `scripts/audit_ascension_literals.py`, which cross-checks
   every monster's `GetValueIfAscension(DeadlyEnemies, high, low)` pairs against the bare
   literals in its `EnemyAI` case block. It reported 80; the Hive monsters are fixed (E83,
-  E86, E91, E95-E98) and **49 remain**, nearly all of them act 3 and Hive's bosses.
-  **Hive is done bar its three bosses** — all four weak encounters, all eight normals and
-  all three elites now have suites.
+  E86, E91, E95-E100) and **40 remain**, nearly all of them act 3.
+  **Hive is DONE** — all four weak encounters, all eight normals, all three elites and all
+  three bosses now have suites. The remaining 27 pending encounters are Glory's 17 and
+  ten act-1 stragglers.
 
   Two cautions the batch earned, both worth carrying into the next one:
 

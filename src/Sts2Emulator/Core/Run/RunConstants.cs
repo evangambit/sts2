@@ -522,6 +522,18 @@ public static class RunConstants
     /// <summary>The fight Dense Vegetation's Rest wakes up, entered from the event.</summary>
     public const int DenseVegetationEncounterId = 55;
 
+    /// <summary>SurroundedPower.Direction.Right, the enum's zero and the player's start.</summary>
+    public const int FacingRight = 1;
+
+    /// <summary>SurroundedPower.Direction.Left.</summary>
+    public const int FacingLeft = 2;
+
+    /// <summary>CrabRagePower's PowerVar&lt;StrengthPower&gt;, paid when its partner dies.</summary>
+    public const int CrabRageStrength = 6;
+
+    /// <summary>CrabRagePower's BlockVar, unpowered.</summary>
+    public const int CrabRageBlock = 99;
+
     /// <summary>ReattachPower's Amount on every Decimillipede segment.</summary>
     public const int DecimillipedeReattachHeal = 25;
 

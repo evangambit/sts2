@@ -1191,6 +1191,11 @@ public static class CombatEngine
             {
                 continue;
             }
+            else if (TryEnrageCrabPartner(state, state.Enemies[i]))
+            {
+                // Not a revive: the dead half stays dead, so this does not `continue`.
+                TurnPlayerToFaceSurvivor(state);
+            }
             else if (TryRespawnTestSubject(state.Enemies[i]))
             {
                 continue;
@@ -1333,6 +1338,83 @@ public static class CombatEngine
         enemy.CurrentIntent = new Intent(IntentType.Buff, 0);
         enemy.Block = 0;
         return true;
+    }
+
+    /// <summary>
+    /// <c>CrabRagePower.AfterDeath</c>: the surviving half takes Strength 6 and 99 block.
+    /// </summary>
+    /// <remarks>
+    /// It fires for a death on its OWN side that is not its own, so killing one half of
+    /// the Kaiser Crab enrages the other. None of it was modelled, which made halving the
+    /// boss free — and the half left standing is the one the player then has to survive.
+    /// </remarks>
+    private static bool TryEnrageCrabPartner(CombatState state, EnemyState dead)
+    {
+        if (BuffSystem.Get(dead.Buffs, BuffId.CrabRage) <= 0)
+        {
+            return false;
+        }
+
+        bool enraged = false;
+        foreach (var other in state.Enemies)
+        {
+            if (
+                ReferenceEquals(other, dead)
+                || other.Hp <= 0
+                || BuffSystem.Get(other.Buffs, BuffId.CrabRage) <= 0
+            )
+            {
+                continue;
+            }
+
+            BuffSystem.Apply(other.Buffs, BuffId.Strength, Run.RunConstants.CrabRageStrength);
+            // BlockVar(99, ValueProp.Unpowered): Dexterity does not touch it.
+            other.Block += Run.RunConstants.CrabRageBlock;
+            enraged = true;
+        }
+
+        return enraged;
+    }
+
+    /// <summary>
+    /// <c>SurroundedPower.AfterDeath</c>: the player turns to face whoever is left.
+    /// </summary>
+    /// <remarks>
+    /// It only turns when every REMAINING hittable enemy is on one side — which for the
+    /// Kaiser Crab means one half has died. Turning to face the survivor is what takes
+    /// the 1.5x away from it, and it is why the multiplier cannot be a constant baked
+    /// into the announced damage.
+    /// </remarks>
+    private static void TurnPlayerToFaceSurvivor(CombatState state)
+    {
+        int facing = BuffSystem.Get(state.PlayerBuffs, BuffId.Surrounded);
+        if (facing == 0)
+        {
+            return;
+        }
+
+        var living = state.Enemies.Where(e => e.Hp > 0).ToArray();
+        if (living.Length == 0)
+        {
+            return;
+        }
+
+        if (
+            facing == Run.RunConstants.FacingRight
+            && living.All(e => BuffSystem.Get(e.Buffs, BuffId.BackAttackLeft) > 0)
+        )
+        {
+            BuffSystem.Remove(state.PlayerBuffs, BuffId.Surrounded);
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Surrounded, Run.RunConstants.FacingLeft);
+        }
+        else if (
+            facing == Run.RunConstants.FacingLeft
+            && living.All(e => BuffSystem.Get(e.Buffs, BuffId.BackAttackRight) > 0)
+        )
+        {
+            BuffSystem.Remove(state.PlayerBuffs, BuffId.Surrounded);
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Surrounded, Run.RunConstants.FacingRight);
+        }
     }
 
     private static bool TryRespawnAxebot(EnemyState enemy, Random rng, int ascension)

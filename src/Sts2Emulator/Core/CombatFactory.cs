@@ -376,6 +376,15 @@ public static class CombatFactory
         );
         _currentNicheHpRng = null;
         _usedNicheHps = null;
+
+        // SurroundedPower goes on the PLAYER, so it cannot be applied while the roster is
+        // being built. Direction.Right is the enum's zero, which is where the player
+        // starts -- with their back to the Crusher.
+        if (state.Enemies.Any(e => BuffSystem.Get(e.Buffs, BuffId.BackAttackLeft) > 0))
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Surrounded, Run.RunConstants.FacingRight);
+        }
+
         EnemyAI.ChooseIntents(state.Enemies, state.Turn, rng, state.AiRng, state.AscensionLevel);
         EnemyAI.UpdateSecondaryIntents(state.Enemies);
 
@@ -961,11 +970,7 @@ public static class CombatFactory
                 CreateEnemy(KE.CeremonialBeast, rng, new Intent(IntentType.Buff, 160)),
             ],
 
-            ActOneEncounter.KaiserCrab =>
-            [
-                CreateEnemy(KE.Crusher, rng, new Intent(IntentType.Attack, 21)),
-                CreateEnemy(KE.Rocket, rng, new Intent(IntentType.Attack, 4)),
-            ],
+            ActOneEncounter.KaiserCrab => CreateKaiserCrab(rng),
 
             ActOneEncounter.KnowledgeDemon =>
             [
@@ -1382,6 +1387,32 @@ public static class CombatFactory
         }
         enemy.MaxHp = hp;
         enemy.Hp = hp;
+    }
+
+    /// <summary>
+    /// The two halves of the Kaiser Crab, and the pair of powers that tie them together.
+    /// </summary>
+    /// <remarks>
+    /// Neither was modelled, and between them they are most of the fight.
+    /// <c>SurroundedPower</c> goes on the PLAYER and makes an attack from whichever half
+    /// is at their back land at 1.5x; the player starts facing Right, so it is the
+    /// Crusher's, and it stops when the Rocket dies and the player turns. The emulator
+    /// had the 1.5x multiplied into the Crusher's announced damage, which is a number
+    /// that can never stop being wrong. <c>CrabRagePower</c> is the other half of it: the
+    /// survivor of the pair takes Strength 6 and 99 block, so halving the boss is not
+    /// free.
+    /// </remarks>
+    private static List<EnemyState> CreateKaiserCrab(Random rng)
+    {
+        var crusher = CreateEnemy(KE.Crusher, rng, new Intent(IntentType.Attack, 12));
+        BuffSystem.Apply(crusher.Buffs, BuffId.BackAttackLeft, 1);
+        BuffSystem.Apply(crusher.Buffs, BuffId.CrabRage, 1);
+
+        var rocket = CreateEnemy(KE.Rocket, rng, new Intent(IntentType.Attack, 3));
+        BuffSystem.Apply(rocket.Buffs, BuffId.BackAttackRight, 1);
+        BuffSystem.Apply(rocket.Buffs, BuffId.CrabRage, 1);
+
+        return [crusher, rocket];
     }
 
     private static EnemyState CreateMechaKnight(Random rng)

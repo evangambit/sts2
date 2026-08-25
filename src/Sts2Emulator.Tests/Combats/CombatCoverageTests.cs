@@ -49,9 +49,7 @@ public class CombatCoverageTests
         "FakeMerchant",
         "FrogKnight",
         "GlobeHead",
-        "KaiserCrab",
         "Knights",
-        "KnowledgeDemon",
         "LostAndForgotten",
         "MechaKnight",
         "MysteriousKnight",
@@ -63,7 +61,6 @@ public class CombatCoverageTests
         "SlimedBerserker",
         "SoulNexus",
         "TestSubject",
-        "TheInsatiable",
         "TunnelerAndChomper",
         "TurretOperator",
     ];

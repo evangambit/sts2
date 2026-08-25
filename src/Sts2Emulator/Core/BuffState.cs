@@ -166,6 +166,31 @@ public enum BuffId
     /// one piece at a time.
     /// </remarks>
     Reattach,
+
+    /// <summary>
+    /// The Kaiser Crab's <c>SurroundedPower</c>, on the PLAYER: which way they are facing.
+    /// </summary>
+    /// <remarks>
+    /// Magnitude 1 is facing Right and 2 is facing Left, matching the power's own
+    /// <c>Direction</c> enum, which starts at Right. An attack from the half at the
+    /// player's BACK lands at 1.5x — while both halves live that is the Crusher, and the
+    /// emulator had the multiplier baked into the Crusher's announced damage instead, so
+    /// it never stopped when it should.
+    /// </remarks>
+    Surrounded,
+
+    /// <summary>Marker: this creature attacks from the player's left. See [[Surrounded]].</summary>
+    BackAttackLeft,
+
+    /// <summary>Marker: this creature attacks from the player's right.</summary>
+    BackAttackRight,
+
+    /// <summary>
+    /// <c>CrabRagePower</c>: when its partner dies, this half takes Strength 6 and 99
+    /// block. Killing one side of the Kaiser Crab enrages the other, and none of that
+    /// was modelled — so the boss could be halved for free.
+    /// </summary>
+    CrabRage,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

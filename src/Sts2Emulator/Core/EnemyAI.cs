@@ -1568,33 +1568,105 @@ public static class EnemyAI
                     );
 
             case KE.Crusher:
+                // THRASH -> ENLARGING_STRIKE -> BUG_STING -> ADAPT -> GUARDED_STRIKE.
+                //
+                // The old numbers had SurroundedPower's 1.5x multiplied INTO them --
+                // 14 x 1.5 = 21 -- which is wrong twice: it is the A9 damage, and the
+                // multiplier stops the moment the Rocket dies and the player turns to
+                // face the survivor. The intent announces the base now and the 1.5x is
+                // applied where the damage lands.
                 return (enemy.MoveIndex % 5) switch
                 {
-                    0 => new Intent(IntentType.Attack, 21),
-                    1 => new Intent(IntentType.Attack, 6),
-                    2 => new Intent(IntentType.Attack, 20),
-                    3 => new Intent(IntentType.Buff, 3),
-                    _ => new Intent(IntentType.Attack, 21),
+                    // ThrashDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
+                    ),
+                    // EnlargingStrikeDamage, which is 4 at BOTH levels.
+                    1 => new Intent(IntentType.Attack, 4),
+                    // BUG_STING_MOVE: MultiAttackIntent(BugStingDamage, 2), plus Weak and
+                    // Frail. The 20 was the two hits folded and multiplied.
+                    2 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6),
+                        Hits: 2
+                    ),
+                    // AdaptStrengthGain
+                    3 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
+                    ),
+                    // GuardedStrikeDamage, and a flat 18 block.
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
+                    ),
                 };
 
             case KE.Rocket:
+                // TARGETING_RETICLE -> PRECISION_BEAM -> CHARGE_UP -> LASER -> RECHARGE.
+                // The structure was right and every number was the A9 branch.
                 return (enemy.MoveIndex % 5) switch
                 {
-                    0 => new Intent(IntentType.Attack, 4),
-                    1 => new Intent(IntentType.Attack, 20),
-                    2 => new Intent(IntentType.Buff, 3),
-                    3 => new Intent(IntentType.Attack, 35),
+                    // TargetingReticleDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
+                    ),
+                    // PrecisionBeamDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 20, 18)
+                    ),
+                    // ChargeUpStrengthGain
+                    2 => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
+                    ),
+                    // LaserDamage
+                    3 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 35, 31)
+                    ),
+                    // RECHARGE_MOVE is a SleepIntent: it spends the turn doing nothing.
                     _ => new Intent(IntentType.Unknown, 0),
                 };
 
             case KE.KnowledgeDemon:
-                return enemy.MoveIndex switch
+            {
+                // CURSE -> SLAP -> KNOWLEDGE_OVERWHELMING -> PONDER, and PONDER's
+                // follow-up is a ConditionalBranchState: back to CURSE while it has cast
+                // fewer than three, and to SLAP forever after. A bare `MoveIndex switch`
+                // with no wrap left it PONDERING every turn from the fourth on.
+                //
+                // Three curses land on moves 0, 4 and 8, so moves 0-11 are the four-cycle
+                // and everything past 11 is the three-cycle SLAP -> OVERWHELMING ->
+                // PONDER.
+                int phase =
+                    enemy.MoveIndex < 12 ? enemy.MoveIndex % 4 : 1 + ((enemy.MoveIndex - 12) % 3);
+                return phase switch
                 {
                     0 => new Intent(IntentType.Debuff, 0),
-                    1 => new Intent(IntentType.Attack, 18),
-                    2 => new Intent(IntentType.Attack, 27),
-                    _ => new Intent(IntentType.Buff, 13),
+                    // SlapDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 18, 17)
+                    ),
+                    // KNOWLEDGE_OVERWHELMING_MOVE:
+                    // MultiAttackIntent(KnowledgeOverwhelmingDamage, 3). The 27 was 9x3
+                    // folded, at the A9 damage.
+                    2 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8),
+                        Hits: 3
+                    ),
+                    // PONDER: PonderDamage, a heal of 30, and PonderStrength.
+                    _ => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
+                    ),
                 };
+            }
 
             case KE.LagavulinMatriarch:
                 return BuffSystem.Get(enemy.Buffs, BuffId.Asleep) > 0
@@ -1681,13 +1753,33 @@ public static class EnemyAI
                     : new Intent(IntentType.Attack, 16);
 
             case KE.TheInsatiable:
-                return enemy.MoveIndex switch
+                // LIQUIFY once, then THRASH -> BITE -> SALIVATE -> THRASH_2 -> THRASH,
+                // cycling. THRASH_2 is the same move in a second state, which is what
+                // gives the cycle its two thrashes. `_ => thrash` for everything past
+                // move three left it thrashing forever from the fifth turn on.
+                if (enemy.MoveIndex == 0)
                 {
-                    0 => new Intent(IntentType.Buff, 0),
-                    1 => new Intent(IntentType.Attack, 18),
-                    2 => new Intent(IntentType.Attack, 31),
-                    3 => new Intent(IntentType.Buff, 3),
-                    _ => new Intent(IntentType.Attack, 18),
+                    return new Intent(IntentType.Buff, 0);
+                }
+
+                return ((enemy.MoveIndex - 1) % 4) switch
+                {
+                    // THRASH_MOVE: MultiAttackIntent(ThrashDamage, 2), folded into 18.
+                    0 or 3 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8),
+                        Hits: 2
+                    ),
+                    // BiteDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 31, 28)
+                    ),
+                    // SalivateStrength
+                    _ => new Intent(
+                        IntentType.Buff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
+                    ),
                 };
 
             case KE.KinFollower:
@@ -3135,6 +3227,21 @@ public static class EnemyAI
         {
             damage /= 2;
         }
+        // SurroundedPower.ModifyDamageMultiplicative: an attack from the half at the
+        // player's BACK lands at 1.5x. Facing Right is hit by BackAttackLeft and Facing
+        // Left by BackAttackRight -- and the player only ever turns when one half dies,
+        // so while both live it is the Crusher that gets the bonus.
+        int facing = BuffSystem.Get(state.PlayerBuffs, BuffId.Surrounded);
+        bool fromBehind =
+            facing == Run.RunConstants.FacingRight
+                ? BuffSystem.Get(enemy.Buffs, BuffId.BackAttackLeft) > 0
+                : facing == Run.RunConstants.FacingLeft
+                    && BuffSystem.Get(enemy.Buffs, BuffId.BackAttackRight) > 0;
+        if (fromBehind)
+        {
+            damage = (int)(damage * 1.5m);
+        }
+
         int absorbed = Math.Min(state.PlayerBlock, damage);
         state.PlayerBlock -= absorbed;
         int unblocked = damage - absorbed;
