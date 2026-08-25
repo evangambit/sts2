@@ -4581,7 +4581,10 @@ public static class CardEffects
     /// </summary>
     private static int Blk(CardDef def, bool upgraded, CardInstance card) =>
         (upgraded ? def.BaseBlock + def.UpgradeBlock : def.BaseBlock)
-        + card.EnchantedWith(Enchantment.Nimble);
+        + card.EnchantedWith(Enchantment.Nimble)
+        // Goopy.EnchantBlockAdditive is `Amount - 1`, so a freshly goopied card at 1 adds
+        // NOTHING and only starts paying once it has been played.
+        + (card.Enchantment == Enchantment.Goopy ? Math.Max(0, card.EnchantAmount - 1) : 0);
 
     private static EnemyState? FirstEnemy(CombatState state)
     {

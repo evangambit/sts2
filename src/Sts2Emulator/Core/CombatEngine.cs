@@ -212,6 +212,7 @@ public static class CombatEngine
                 card with
                 {
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
+                    EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                 },
                 rng: rng
             );
@@ -224,6 +225,7 @@ public static class CombatEngine
                     FreeThisTurn = false,
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
+                    EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                 }
             );
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FeralUsed, 1);
@@ -236,6 +238,7 @@ public static class CombatEngine
                     FreeThisTurn = false,
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
+                    EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                 }
             );
         }
@@ -247,12 +250,14 @@ public static class CombatEngine
                     FreeThisTurn = false,
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
+                    EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                 }
             );
         }
 
         state.PlayedCardBonusDamage = 0;
         state.PlayedCardEnchantSpent = false;
+        state.PlayedCardEnchantGrew = false;
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
@@ -880,6 +885,12 @@ public static class CombatEngine
             case Enchantment.Corrupted:
                 // Unblockable, unpowered, and every play -- not once.
                 Effects.CardEffects.DealDamageToPlayer(state, 2);
+                break;
+            case Enchantment.Goopy:
+                // AfterCardPlayed bumps the amount, and bumps the DECK version's too --
+                // so a goopied Defend is worth one more block in every fight after this
+                // one, for the rest of the run. The block itself is Amount - 1.
+                state.PlayedCardEnchantGrew = true;
                 break;
         }
     }
@@ -1702,6 +1713,13 @@ public static class CombatEngine
         )
         {
             return false;
+        }
+
+        // Goopy.OnEnchant adds the Exhaust keyword to its card, so a goopied Defend
+        // exhausts whatever its printed keywords say.
+        if (card.Enchantment == Enchantment.Goopy)
+        {
+            return true;
         }
 
         return def.Exhaust;

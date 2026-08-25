@@ -174,13 +174,17 @@ public static class CardInstanceExtensions
     }
 
     /// <summary>
-    /// Whether this card should be sorted to the bottom of the draw pile at the
-    /// start of combat (the game's <c>EnchantmentModel.ShouldStartAtBottomOfDrawPile</c>,
-    /// true only for the <c>Imbued</c> enchantment).  Enchantments are not modelled
-    /// yet, so this is always false — it exists so the turn-1 reorder is written
-    /// against the real rule rather than silently omitting half of it.
+    /// Whether this card should be sorted to the bottom of the draw pile at the start of
+    /// combat — the game's <c>EnchantmentModel.ShouldStartAtBottomOfDrawPile</c>, true
+    /// only for <c>Imbued</c>.
     /// </summary>
-    public static bool StartsAtBottomOfDrawPile(this CardInstance card) => false;
+    /// <remarks>
+    /// This was a stub returning false, written against the real rule so the turn-1
+    /// reorder would not silently omit half of it, and waiting for an enchantment that
+    /// did not exist. Electric Shrymp brought Imbued with it.
+    /// </remarks>
+    public static bool StartsAtBottomOfDrawPile(this CardInstance card) =>
+        card.Enchantment == Enchantment.Imbued;
 
     /// <summary>The amount this card's enchantment was applied at, if it is that one.</summary>
     public static int EnchantedWith(this CardInstance card, Enchantment enchantment) =>

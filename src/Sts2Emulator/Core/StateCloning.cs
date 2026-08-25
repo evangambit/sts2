@@ -121,6 +121,7 @@ public static class StateCloning
             AutoPlaying = combat.AutoPlaying,
             PlayedCardBonusDamage = combat.PlayedCardBonusDamage,
             PlayedCardEnchantSpent = combat.PlayedCardEnchantSpent,
+            PlayedCardEnchantGrew = combat.PlayedCardEnchantGrew,
             Turn = combat.Turn,
             PlayerTurn = combat.PlayerTurn,
             SkillPlayedWhileSmoggy = combat.SkillPlayedWhileSmoggy,

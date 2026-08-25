@@ -147,6 +147,16 @@ public sealed class CombatState
     public bool PlayedCardEnchantSpent;
 
     /// <summary>
+    /// The card just played carries an enchantment that GROWS on play — Goopy's.
+    /// </summary>
+    /// <remarks>
+    /// Handed back through the state for the same reason <see cref="PlayedCardEnchantSpent"/>
+    /// is: CardEffects takes the card by value, so the played copy has to be rebuilt by
+    /// the caller that files it away.
+    /// </remarks>
+    public bool PlayedCardEnchantGrew;
+
+    /// <summary>
     /// The run's <c>combat_energy_costs</c> stream, which Slither re-rolls its cost from
     /// every time it is drawn. Null falls back to the combat rng, as the other streams do.
     /// </summary>
