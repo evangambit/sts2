@@ -461,6 +461,12 @@ class FightChecks(_TestCaseIfChecking):
             completed_combat_rooms=capture["completed_combat_rooms"],
             total_floor=capture["total_floor"],
             ascension=capture["ascension"],
+            # No step limit. `MAX_EPISODE_STEPS` is an RL training concern -- it stops a
+            # policy looping forever -- and it has no business truncating a REPLAY of a
+            # fight that really happened. A twelve-turn capture that plays cards is
+            # already about fifty actions, so the default silently cut long fixtures off
+            # partway and the emulator read as a move behind at the far end.
+            max_episode_steps=1_000_000,
         )
         obs, _info = cls.env.reset()
 

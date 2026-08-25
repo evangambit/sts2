@@ -1298,6 +1298,12 @@ turned out to exclude nothing in combat.
   the emulator is answered AFTER its own step, and the answers are recorded in the
   fixture's actions rather than re-derived offline.
 
+  **A fixture replay is not an RL episode.** `Sts2CombatEnv`'s `MAX_EPISODE_STEPS` exists
+  to stop a training policy looping; applied to a replay it truncates long captures, and
+  a fourteen-turn boss fight that plays cards is already past it (H17). `FightChecks`
+  passes a limit high enough not to bind. The tell is an emulator that looks a move behind
+  only at the far end of a long fixture — check the action count before the move machine.
+
   **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
   were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES
   rather than loops (E86) — a Tunneler that walks back to its opening bite every fourth

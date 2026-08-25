@@ -1,5 +1,5 @@
 {
-  "rooms_entered": 77,
+  "rooms_entered": 79,
   "state_type": "boss",
   "battle": {
     "round": 1,
@@ -434,7 +434,7 @@
     "completed_combat_rooms": -1,
     "total_floor": 1,
     "ascension": 8,
-    "turns": 12,
+    "turns": 14,
     "play": true,
     "add_cards": [],
     "buff_max_hp": 250
@@ -787,11 +787,40 @@
         "DEFEND_IRONCLAD",
         "BASH"
       ]
+    },
+    {
+      "turn": 14,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2
+      ],
+      "player_hp": 11,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 339,
+          "intent": [
+            0,
+            42
+          ]
+        }
+      ],
+      "live_hand": [
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
     }
   ],
   "coverage": {
     "Knowledge Demon": {
-      "seen": 11,
+      "seen": 12,
       "declared": 4
     }
   }
