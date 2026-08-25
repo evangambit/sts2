@@ -17,6 +17,14 @@ internal static class Boss
             foreach (var enemy in fight.State.Enemies)
             {
                 enemy.Hp = 9999;
+                // The Insatiable's SandpitPower is a countdown that KILLS the player when
+                // it empties, so a fight walked past turn four ends and the last intent
+                // stands still. Topped up here for the same reason the HP is: this walks
+                // the move table, and the table is not what the sandpit is about.
+                if (BuffSystem.Get(enemy.Buffs, BuffId.Sandpit) > 0)
+                {
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Sandpit, 99);
+                }
             }
 
             fight.State.PlayerHp = 9999;

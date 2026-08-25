@@ -162,6 +162,17 @@ public sealed class CombatState
     public bool PlayedCardEnchantGrew;
 
     /// <summary>
+    /// How much the card being resolved raised its OWN cost for the rest of the combat.
+    /// </summary>
+    /// <remarks>
+    /// The same shape as <see cref="PlayedCardEnchantGrew"/> and for the same reason: the
+    /// effect runs while the card is out of every pile, so what it did to itself has to
+    /// be carried until the card is written back. Frantic Escape's
+    /// `EnergyCost.AddThisCombat(1)` is the only user so far.
+    /// </remarks>
+    public int PlayedCardCostBump;
+
+    /// <summary>
     /// The run's <c>combat_energy_costs</c> stream, which Slither re-rolls its cost from
     /// every time it is drawn. Null falls back to the combat rng, as the other streams do.
     /// </summary>

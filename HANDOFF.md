@@ -1268,6 +1268,16 @@ turned out to exclude nothing in combat.
   Hive bosses had one (E100). Grep for `enemy.MoveIndex switch` without a `%` — the
   discard arm is doing the work of the whole late fight.
 
+  **One act-2 boss capture corrected two things reading the source had not.** Hive's
+  three bosses had suites written entirely from decompiled C#; the first live capture
+  (E101-E103) found that the Kaiser Crab's 1.5x changes hands whenever the player
+  TARGETS a half, that the Insatiable's sandpit counter belongs on the monster and not
+  the player, and that Frantic Escape's cost bump is per-card. **A suite written from the
+  source agrees with your reading of the source** — it cannot tell you the reading was
+  partial. `scripts/combat_sweep.py --encounters <name>` reaches any act, because
+  `debug_start_encounter` looks an encounter up by class name; the act-2 and act-3
+  entries just had to be added to `LIVE_ENCOUNTER_BY_EMULATOR`.
+
   **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
   were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES
   rather than loops (E86) — a Tunneler that walks back to its opening bite every fourth

@@ -54,7 +54,11 @@ LIVE_ENCOUNTER_BY_EMULATOR = {
     "chompers": "ChompersNormal",
     "nibbit": "NibbitsWeak",
     "slimes": "SlimesWeak",
-    "exoskeletons": "ExoskeletonsNormal",
+    # Id 4 is ExoskeletonsWeak (THREE) and 87 is ExoskeletonsNormal (four). This said
+    # Normal for id 4, so a sweep of it would have started a four-monster fight live
+    # against the emulator's three -- latent, because nothing had ever swept it.
+    "exoskeletons-weak": "ExoskeletonsWeak",
+    "exoskeletons-normal": "ExoskeletonsNormal",
     "inklets": "InkletsNormal",
     "two-tailed-rats": "TwoTailedRatsNormal",
     "gremlin-merc": "GremlinMercNormal",
@@ -137,6 +141,11 @@ LIVE_ENCOUNTER_BY_EMULATOR = {
     "kin": "TheKinBoss",
     "vantom": "VantomBoss",
     "waterfall-giant": "WaterfallGiantBoss",
+    # Hive. debug_start_encounter looks an encounter up by CLASS NAME, so it reaches
+    # act 2 exactly as it reaches act 1 -- these were simply never listed.
+    "kaiser-crab": "KaiserCrabBoss",
+    "knowledge-demon": "KnowledgeDemonBoss",
+    "insatiable": "TheInsatiableBoss",
     "architect": "TheArchitectEventEncounter",
 }
 

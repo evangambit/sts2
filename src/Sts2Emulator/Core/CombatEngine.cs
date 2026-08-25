@@ -42,11 +42,16 @@ public static class CombatEngine
         }
         else if (action < endTurnAction)
         {
+            // SurroundedPower.BeforeCardPlayed, and it fires BEFORE the card resolves.
+            TurnPlayerTowardTarget(state, state.Hand[action]);
             result = PlayCard(state, action, rng);
         }
         else
         {
             int potionSlot = action - endTurnAction - 1;
+            // SurroundedPower.BeforePotionUsed, the same rule for a targeted potion. The
+            // potion's own target is not tracked, so this uses the aimed-at enemy.
+            TurnPlayerTowardTarget(state, card: null);
             result = UsePotion(state, potionSlot, rng);
         }
 
@@ -220,6 +225,7 @@ public static class CombatEngine
                 {
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
+                    CostBump = card.CostBump + state.PlayedCardCostBump,
                 },
                 rng: rng
             );
@@ -233,6 +239,7 @@ public static class CombatEngine
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
+                    CostBump = card.CostBump + state.PlayedCardCostBump,
                 }
             );
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FeralUsed, 1);
@@ -246,6 +253,7 @@ public static class CombatEngine
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
+                    CostBump = card.CostBump + state.PlayedCardCostBump,
                 }
             );
         }
@@ -258,6 +266,7 @@ public static class CombatEngine
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
+                    CostBump = card.CostBump + state.PlayedCardCostBump,
                 }
             );
         }
@@ -265,6 +274,7 @@ public static class CombatEngine
         state.PlayedCardBonusDamage = 0;
         state.PlayedCardEnchantSpent = false;
         state.PlayedCardEnchantGrew = false;
+        state.PlayedCardCostBump = 0;
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
@@ -943,10 +953,12 @@ public static class CombatEngine
             cost -= state.AttackCardsPlayedThisTurn;
         }
 
-        if (def.Id == Effects.ST.FranticEscape)
-        {
-            cost += BuffSystem.Get(state.PlayerBuffs, BuffId.FranticEscapePlayedCount);
-        }
+        // FranticEscape's OnPlay ends with `base.EnergyCost.AddThisCombat(1)` -- on the
+        // CARD, so only the copy that was played gets dearer. A player-wide counter made
+        // every escape in the deck cost more the moment one was used, and a live capture
+        // caught it as an energy shortfall: the game could still afford a Strike on turn
+        // three where the emulator could not.
+        cost += card.CostBump;
 
         if (def.Type == CardType.Attack)
         {
@@ -1377,6 +1389,82 @@ public static class CombatEngine
     }
 
     /// <summary>
+    /// <c>SurroundedPower.BeforeCardPlayed</c>: the player turns to face what they aim at.
+    /// </summary>
+    /// <remarks>
+    /// **This is the Kaiser Crab.** Whichever half you target, you turn to face it — and
+    /// the OTHER half is then at your back, hitting for 1.5x. A live capture settles it:
+    /// the Crusher opens at 18 against a base of 12 while the Rocket opens at its bare 3,
+    /// and the moment the player's first card lands on the Crusher the bonus moves to
+    /// the Rocket for the rest of the fight (27 for an 18 beam, 49 for a 33 laser).
+    ///
+    /// Modelling the turn on DEATH alone — which is where reading the decompiled source
+    /// stopped — gets turn one right and every turn after it wrong.
+    /// </remarks>
+    private static void TurnPlayerTowardTarget(CombatState state, CardInstance? card)
+    {
+        int facing = BuffSystem.Get(state.PlayerBuffs, BuffId.Surrounded);
+        if (facing == 0)
+        {
+            return;
+        }
+
+        // Only a card that AIMS at something turns the player: `cardPlay.Target != null`.
+        // **Approximated as "is an attack"**, because the card table carries no
+        // single-target flag — so an all-enemy attack, whose Target is null in the game,
+        // turns the player here and should not. Nothing in a starter deck does that, and
+        // the capture behind this rule is all Strikes and a Bash; it will matter the
+        // first time a Cleave meets a Kaiser Crab.
+        if (card is not null)
+        {
+            var def = GeneratedData.Cards.Get(Math.Abs(card.Value.DefId));
+            if (def.Type != CardType.Attack)
+            {
+                return;
+            }
+        }
+
+        // The aimed-at enemy, resolved the way every single-target effect resolves it:
+        // the explicit target when there is one, else the first living enemy.
+        int index = state.TargetEnemyIndex;
+        var target =
+            index >= 0 && index < state.Enemies.Count && state.Enemies[index].Hp > 0
+                ? state.Enemies[index]
+                : state.Enemies.FirstOrDefault(e => e.Hp > 0);
+        if (target is null)
+        {
+            return;
+        }
+
+        FacePast(state, target, facing);
+    }
+
+    /// <summary>
+    /// <c>SurroundedPower.UpdateDirection</c>: turn only if the target is the side the
+    /// player's back is currently to.
+    /// </summary>
+    private static void FacePast(CombatState state, EnemyState target, int facing)
+    {
+        bool turn =
+            facing == Run.RunConstants.FacingRight
+                ? BuffSystem.Get(target.Buffs, BuffId.BackAttackLeft) > 0
+                : BuffSystem.Get(target.Buffs, BuffId.BackAttackRight) > 0;
+        if (!turn)
+        {
+            return;
+        }
+
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.Surrounded);
+        BuffSystem.Apply(
+            state.PlayerBuffs,
+            BuffId.Surrounded,
+            facing == Run.RunConstants.FacingRight
+                ? Run.RunConstants.FacingLeft
+                : Run.RunConstants.FacingRight
+        );
+    }
+
+    /// <summary>
     /// <c>SurroundedPower.AfterDeath</c>: the player turns to face whoever is left.
     /// </summary>
     /// <remarks>
@@ -1399,21 +1487,13 @@ public static class CombatEngine
             return;
         }
 
-        if (
-            facing == Run.RunConstants.FacingRight
-            && living.All(e => BuffSystem.Get(e.Buffs, BuffId.BackAttackLeft) > 0)
-        )
+        // Only when every remaining hittable enemy is on one side, which for this fight
+        // means one half has died.
+        bool allLeft = living.All(e => BuffSystem.Get(e.Buffs, BuffId.BackAttackLeft) > 0);
+        bool allRight = living.All(e => BuffSystem.Get(e.Buffs, BuffId.BackAttackRight) > 0);
+        if (allLeft || allRight)
         {
-            BuffSystem.Remove(state.PlayerBuffs, BuffId.Surrounded);
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Surrounded, Run.RunConstants.FacingLeft);
-        }
-        else if (
-            facing == Run.RunConstants.FacingLeft
-            && living.All(e => BuffSystem.Get(e.Buffs, BuffId.BackAttackRight) > 0)
-        )
-        {
-            BuffSystem.Remove(state.PlayerBuffs, BuffId.Surrounded);
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Surrounded, Run.RunConstants.FacingRight);
+            FacePast(state, living[0], facing);
         }
     }
 

@@ -80,7 +80,9 @@ public enum BuffId
     ToolsOfTheTrade, // player: draw then discard one at turn start
     ShivDamage, // player: bonus damage for Shiv-like cards
     Afterimage, // player: gain N block after playing a card
-    FranticEscapePlayedCount, // player: track plays to increase cost
+    FranticEscapePlayedCountUnused, // replaced by CardInstance.CostBump; id kept so the
+
+    // ordinals after it do not move -- they reach the observation.
     RetainHand, // player: keep remaining hand at end of player turn
     BlockNextTurn, // player: gain N unpowered block after next turn's block clear
     Nostalgia, // player: first N Attack/Skill cards each turn go on top of draw pile

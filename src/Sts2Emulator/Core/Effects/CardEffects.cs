@@ -53,7 +53,7 @@ public static class CardEffects
                     BuffSystem.Apply(target.Buffs, BuffId.Sandpit, 1);
                 }
 
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.FranticEscapePlayedCount, 1);
+                state.PlayedCardCostBump++;
                 break;
             }
 
@@ -2109,6 +2109,31 @@ public static class CardEffects
     /// Inserts cards at CardPilePosition.Random, which the game resolves as one
     /// Rng.Shuffle.NextInt(count + 1) per card — not a shuffle of the whole pile.
     /// </summary>
+    /// <summary>
+    /// <c>CardPileCmd.AddGeneratedCardToCombat(card, PileType.Discard, CardPilePosition.Random)</c>.
+    /// </summary>
+    /// <remarks>
+    /// The same rule as the draw-pile version and off the same stream — a random discard
+    /// placement is not a cosmetic detail, because it decides the order the pile comes
+    /// back in when it is reshuffled, and it spends shuffle draws either way.
+    /// </remarks>
+    internal static void AddCardToDiscardPileRandomly(
+        CombatState state,
+        int cardId,
+        int count,
+        Random rng
+    )
+    {
+        var placementRng = state.ShuffleRng ?? rng;
+        for (int i = 0; i < count; i++)
+        {
+            state.DiscardPile.Insert(
+                placementRng.Next(state.DiscardPile.Count + 1),
+                new CardInstance(cardId, false)
+            );
+        }
+    }
+
     internal static void AddCardToDrawPileRandomly(
         CombatState state,
         int cardId,

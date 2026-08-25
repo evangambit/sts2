@@ -2895,9 +2895,26 @@ public static class EnemyAI
             case KE.TheInsatiable:
                 if (enemy.MoveIndex == 0)
                 {
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Sandpit, 4);
+                    // SandpitPower goes on the INSATIABLE, targeting the player -- it is
+                    // `PowerCmd.Apply(sandpitPower, base.Creature, 4m, ...)` with
+                    // `sandpitPower.Target = target`. Applying it to the player instead
+                    // left the enemy's counter at ZERO, which inverts the whole mechanic:
+                    // a Frantic Escape is meant to BUY a turn by pushing the count up,
+                    // and instead the first one played took it to 1 and the next enemy
+                    // turn ticked it to 0 and killed the player outright. A live capture
+                    // has the player at 48 where the emulator had them dead.
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Sandpit, 4);
+                    // Six cards in ONE loop: `pile = (i < 3) ? Draw : Discard`, every one
+                    // of them at CardPilePosition.Random. The discard half is random too
+                    // -- appending it skipped three draws off the shuffle stream and put
+                    // the cards somewhere the game did not.
                     Effects.CardEffects.AddCardToDrawPileRandomly(state, ST.FranticEscape, 3, rng);
-                    AddStatus(state, ST.FranticEscape, 3);
+                    Effects.CardEffects.AddCardToDiscardPileRandomly(
+                        state,
+                        ST.FranticEscape,
+                        3,
+                        rng
+                    );
                 }
                 else
                 {
@@ -3227,21 +3244,6 @@ public static class EnemyAI
         {
             damage /= 2;
         }
-        // SurroundedPower.ModifyDamageMultiplicative: an attack from the half at the
-        // player's BACK lands at 1.5x. Facing Right is hit by BackAttackLeft and Facing
-        // Left by BackAttackRight -- and the player only ever turns when one half dies,
-        // so while both live it is the Crusher that gets the bonus.
-        int facing = BuffSystem.Get(state.PlayerBuffs, BuffId.Surrounded);
-        bool fromBehind =
-            facing == Run.RunConstants.FacingRight
-                ? BuffSystem.Get(enemy.Buffs, BuffId.BackAttackLeft) > 0
-                : facing == Run.RunConstants.FacingLeft
-                    && BuffSystem.Get(enemy.Buffs, BuffId.BackAttackRight) > 0;
-        if (fromBehind)
-        {
-            damage = (int)(damage * 1.5m);
-        }
-
         int absorbed = Math.Min(state.PlayerBlock, damage);
         state.PlayerBlock -= absorbed;
         int unblocked = damage - absorbed;

@@ -157,6 +157,23 @@ public static class BuffSystem
             float mult = 1.5f + Get(attackerBuffs, BuffId.CrueltyPower) / 100f;
             dmg *= mult;
         }
+
+        // SurroundedPower.ModifyDamageMultiplicative, the Kaiser Crab's: an attack from
+        // the half at the player's BACK lands at 1.5x. It belongs here rather than at the
+        // point of damage because the game's readout shows the modified number --
+        // AttackIntent.GetSingleDamage runs the move through Hook.ModifyDamage first --
+        // and a live capture confirms it: the Crusher opens announcing 18 for a base 12.
+        int facing = Get(defenderBuffs, BuffId.Surrounded);
+        bool fromBehind =
+            facing == Run.RunConstants.FacingRight
+                ? Get(attackerBuffs, BuffId.BackAttackLeft) > 0
+                : facing == Run.RunConstants.FacingLeft
+                    && Get(attackerBuffs, BuffId.BackAttackRight) > 0;
+        if (fromBehind)
+        {
+            dmg *= 1.5f;
+        }
+
         return Math.Max(0, (int)dmg);
     }
 

@@ -171,6 +171,10 @@ public readonly record struct CardInstance(
     // Sharp/Nimble/Swift at 2; the event enchantments are all applied at 1.
     Enchantment Enchantment = Enchantment.None,
     int EnchantAmount = 0,
+    // `EnergyCost.AddThisCombat(n)` on THIS card's model, which is per-card and not
+    // player-wide: a Frantic Escape that has been played costs more, and its siblings do
+    // not. Tracked here so the bump travels with the copy through the piles.
+    int CostBump = 0,
     // Whether a once-per-combat enchantment on this copy has already fired. Sown, Swift
     // and Vigorous each set EnchantmentStatus.Disabled after they go off.
     //
