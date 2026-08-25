@@ -42,7 +42,6 @@ public class CombatCoverageTests
         "BattlewornDummy1",
         "BattlewornDummy2",
         "BattlewornDummy3",
-        "CultistAndSeapunk",
         "DevotedSculptor",
         "Fabricator",
         "FrogKnight",
@@ -57,7 +56,6 @@ public class CombatCoverageTests
         "SlimedBerserker",
         "SoulNexus",
         "TestSubject",
-        "TunnelerAndChomper",
         "TurretOperator",
     ];
 

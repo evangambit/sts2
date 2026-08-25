@@ -769,10 +769,14 @@ public static class CombatFactory
                 CreateEnemy(KE.Tunneler, rng, new Intent(IntentType.Attack, 15)),
             ],
 
+            // TunnelerNormal sets `chomper.ScreamFirst = true`, which makes SCREECH the
+            // machine's INITIAL state rather than CLAMP -- so this chomper opens on the
+            // screech and its whole alternation runs opposite to a plain one. Without the
+            // offset it clamped first and stayed inverted for the rest of the fight.
             ActOneEncounter.TunnelerAndChomper =>
             [
-                CreateChomper(rng, new Intent(IntentType.Debuff, 3)),
-                CreateEnemy(KE.Tunneler, rng, new Intent(IntentType.Attack, 15)),
+                CreateChomper(rng, new Intent(IntentType.Debuff, 3), moveIndex: 1),
+                CreateEnemy(KE.Tunneler, rng, new Intent(IntentType.Attack, 13)),
             ],
 
             ActOneEncounter.ThievingHopper =>

@@ -49,7 +49,13 @@ public static class EnemyAI
                 ? BuffSystem.Get(enemy.Buffs, BuffId.Vigor)
                 : 0;
 
-        enemy.Block = 0; // block clears at start of enemy turn
+        // Block clears at the start of the enemy turn -- unless BurrowedPower says
+        // otherwise. `ShouldClearBlock` returns false for its OWNER, which is what lets a
+        // burrowed Tunneler sit behind the same 37 until the player breaks it.
+        if (BuffSystem.Get(enemy.Buffs, BuffId.Burrowed) <= 0)
+        {
+            enemy.Block = 0;
+        }
         if (BuffSystem.Get(enemy.Buffs, BuffId.Stunned) > 0)
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.Stunned, -1);
@@ -1046,8 +1052,9 @@ public static class EnemyAI
 
             case KE.Tunneler:
                 // BITE -> BURROW -> BELOW, and BELOW follows up to ITSELF -- so it
-                // burrows once and then hits from below forever. `% 3` walked it back to
-                // the bite every fourth turn, at a third of the damage.
+                // burrows once and then hits from below forever, unless the player breaks
+                // the burrow, which stuns it back to BITE. `% 3` walked it back to the
+                // bite every fourth turn, at a third of the damage.
                 return enemy.MoveIndex switch
                 {
                     // BiteDamage
@@ -1055,9 +1062,12 @@ public static class EnemyAI
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 13)
                     ),
-                    // BURROW_MOVE's BlockGain is the TOUGH pair (37, 32), and Tough is
-                    // live at A8 — so 37 is right here, unlike the two beside it.
-                    1 => new Intent(IntentType.Defend, 37),
+                    // BURROW_MOVE declares its BuffIntent FIRST and its DefendIntent
+                    // second, so the readout is a bare BUFF with no number -- a live
+                    // capture shows (Buff, none) where this announced Defend 37. E12's
+                    // rule again. The block it gains is BlockGain, the TOUGH pair, so 37
+                    // at A8; it is applied by the rider rather than read off the intent.
+                    1 => new Intent(IntentType.Buff, 0),
                     // BelowDamage
                     _ => new Intent(
                         IntentType.Attack,
@@ -2684,6 +2694,15 @@ public static class EnemyAI
         int ascension = state.AscensionLevel;
         switch (enemy.DefId)
         {
+            case KE.Tunneler:
+                // BURROW_MOVE: BurrowedPower, then GainBlock(BlockGain). BlockGain is the
+                // TOUGH pair (37, 32) and Tough is live at A8, so 37 here.
+                BuffSystem.Apply(enemy.Buffs, BuffId.Burrowed, 1);
+                enemy.Block += BuffSystem.IncomingBlock(
+                    Ascension.Value(state.AscensionLevel, Ascension.ToughEnemies, 37, 32),
+                    enemy.Buffs
+                );
+                break;
             case KE.CalcifiedCultist:
                 // Incantation: apply 2 Ritual to self (gains +2 Strength each subsequent turn).
                 BuffSystem.Apply(enemy.Buffs, BuffId.Ritual, 2);
@@ -3658,6 +3677,29 @@ public static class EnemyAI
             SourceCardDefId = ST.Disintegration,
             Amount = Run.RunConstants.DisintegrationDamageValues[cast],
         };
+    }
+
+    /// <summary>
+    /// <c>BurrowedPower.AfterBlockBroken</c>: the Tunneler is stunned out of its burrow.
+    /// </summary>
+    /// <remarks>
+    /// `CreatureCmd.Stun(owner, StillDizzyMove, "BITE_MOVE")` — a turn spent dizzy and
+    /// then back to the start of its table — and `AfterRemoved` takes the rest of the
+    /// block with it. Breaking the burrow is the ONLY exit from BELOW_MOVE, which follows
+    /// up to itself, so without this the emulator's Tunneler could never be interrupted.
+    /// </remarks>
+    public static void BreakBurrowIfBlockGone(EnemyState enemy)
+    {
+        if (BuffSystem.Get(enemy.Buffs, BuffId.Burrowed) <= 0 || enemy.Block > 0)
+        {
+            return;
+        }
+
+        BuffSystem.Remove(enemy.Buffs, BuffId.Burrowed);
+        enemy.Block = 0;
+        BuffSystem.Apply(enemy.Buffs, BuffId.Stunned, 1);
+        // The stunned turn increments MoveIndex on its way past, so -1 lands on BITE.
+        enemy.MoveIndex = -1;
     }
 
     private static void SummonParafright(EnemyState enemy, CombatState state)

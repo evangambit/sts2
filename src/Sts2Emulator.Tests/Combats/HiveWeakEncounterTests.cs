@@ -243,10 +243,77 @@ public class TunnelerTests
             fight.EndTurn();
         }
 
-        // BiteDamage 13, then BlockGain 37 (the TOUGH pair, live at A8), then
-        // BelowDamage 23 for good.
+        // BiteDamage 13, then BURROW, then BelowDamage 23 for good.
         Assert.Equal((IntentType.Attack, 13), seen[0]);
-        Assert.Equal((IntentType.Defend, 37), seen[1]);
+        // BURROW_MOVE declares its BuffIntent FIRST and its DefendIntent second, so the
+        // readout is a bare buff with no number. This asserted (Defend, 37) until a live
+        // capture showed (Buff, none) -- E12's rule, and the block is still 37, it is
+        // just not what the intent SAYS.
+        Assert.Equal((IntentType.Buff, 0), seen[1]);
         Assert.All(seen.Skip(2), entry => Assert.Equal((IntentType.Attack, 23), entry));
+    }
+
+    /// <summary>
+    /// <c>BurrowedPower</c>: the block it gains does not clear between turns.
+    /// </summary>
+    /// <remarks>
+    /// `ShouldClearBlock` returns false for its owner, so the 37 stands until the player
+    /// chews through it. A live capture shows the Tunneler on exactly 92 HP for three
+    /// turns running while it is dug in.
+    /// </remarks>
+    [Fact]
+    public void TheBurrowsBlockPersistsAcrossTurns()
+    {
+        var fight = Fight.Encounter(CombatFactory.ActOneEncounter.Tunneler);
+        var tunneler = fight.State.Enemies[0];
+        tunneler.Hp = 999;
+        fight.State.PlayerHp = 9999;
+
+        fight.EndTurn(); // BITE
+        fight.EndTurn(); // BURROW
+
+        Assert.Equal(1, BuffSystem.Get(tunneler.Buffs, BuffId.Burrowed));
+        Assert.Equal(37, tunneler.Block);
+
+        fight.EndTurn();
+        Assert.Equal(37, tunneler.Block);
+    }
+
+    /// <summary>
+    /// Breaking the burrow is the ONLY way out of BELOW_MOVE, which follows up to itself.
+    /// </summary>
+    /// <remarks>
+    /// `AfterBlockBroken` stuns the Tunneler into DIZZY_MOVE and then back to BITE_MOVE,
+    /// and `AfterRemoved` takes the rest of the block with it. Without this the emulator's
+    /// Tunneler hit from below for the rest of the fight however hard it was struck.
+    /// </remarks>
+    [Fact]
+    public void BreakingTheBurrowStunsItBackToTheBite()
+    {
+        var fight = Fight.Encounter(CombatFactory.ActOneEncounter.Tunneler);
+        var tunneler = fight.State.Enemies[0];
+        tunneler.Hp = 999;
+        fight.State.PlayerHp = 9999;
+
+        fight.EndTurn(); // BITE
+        fight.EndTurn(); // BURROW
+        Assert.Equal(37, tunneler.Block);
+
+        // Break it.
+        fight.State.Hand.Clear();
+        fight.State.Hand.Add(new CardInstance(472, Upgraded: false));
+        fight.State.Energy = 9;
+        tunneler.Block = 1;
+        fight.Play(0, target: 0);
+
+        Assert.Equal(0, BuffSystem.Get(tunneler.Buffs, BuffId.Burrowed));
+        Assert.Equal(0, tunneler.Block);
+
+        // A turn spent dizzy, and then the table starts over at the bite.
+        fight.EndTurn();
+        Assert.Equal(
+            (IntentType.Attack, 13),
+            (tunneler.CurrentIntent.Type, tunneler.CurrentIntent.Magnitude)
+        );
     }
 }

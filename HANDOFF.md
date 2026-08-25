@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **65 tested, 23 pending** — and the pending list is a
+  setup: 88 encounters modelled, **67 tested, 21 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1333,6 +1333,13 @@ turned out to exclude nothing in combat.
   whether the emulator's case mentions `Hits:` found eighteen candidates in seconds — most
   of them act 3, which is where that defect class will keep living. The same shape would
   work for `DefendIntent` amounts and for bare `MoveIndex switch` with no `%`.
+
+  **I have now put a rider in the wrong `Apply*Intent` three times.** The Infested Prism's
+  block sat in the buff handler while all its moves are attacks (E97); correcting PONDER's
+  type broke the demon's rider the same way (E105); and the Tunneler's burrow went into
+  `ApplyDebuffIntent` when BURROW is a Buff (E108). The symptom is always the same — the
+  rider silently does nothing — and the compiler cannot help. **After adding a rider, check
+  it fired**, not just that it built.
 
   **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
   were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES

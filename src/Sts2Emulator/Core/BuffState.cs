@@ -212,6 +212,19 @@ public enum BuffId
     /// with less.
     /// </summary>
     WasteAway,
+
+    /// <summary>
+    /// <c>BurrowedPower</c>: the Tunneler is dug in behind its block.
+    /// </summary>
+    /// <remarks>
+    /// Three things ride on it, and the emulator had none of them. `ShouldClearBlock`
+    /// returns FALSE for its owner, so a burrowed Tunneler keeps its block across turns
+    /// instead of losing it at the start of each one. `AfterBlockBroken` stuns it into
+    /// DIZZY_MOVE and then back to BITE_MOVE, which is the only way out of the burrow —
+    /// otherwise it hits from below forever. And `AfterRemoved` takes the rest of the
+    /// block with it.
+    /// </remarks>
+    Burrowed,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

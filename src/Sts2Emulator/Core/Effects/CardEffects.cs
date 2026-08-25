@@ -2655,6 +2655,10 @@ public static class CardEffects
             EnemyAI.TriggerShriekIfWounded(target);
         }
 
+        // BurrowedPower.AfterBlockBroken -- checked on every hit, because breaking the
+        // burrow is the only way to interrupt a Tunneler and it can happen mid-attack.
+        EnemyAI.BreakBurrowIfBlockGone(target);
+
         // SlumberPower.AfterDamageReceived: a sleeper loses a point of sleep for every
         // INSTANCE of unblocked damage, so a multi-hit attack wakes it faster than one
         // big one. Counting turns alone was right only for a beetle nobody hit -- and it
