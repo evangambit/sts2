@@ -534,6 +534,23 @@ public static class RunConstants
     /// <summary>CrabRagePower's BlockVar, unpowered.</summary>
     public const int CrabRageBlock = 99;
 
+    /// <summary>
+    /// What Disintegration is offered AGAINST on each of the demon's three casts.
+    /// </summary>
+    public static readonly int[] CurseOfKnowledgePairs = [ST.MindRot, ST.Sloth, ST.WasteAway];
+
+    /// <summary>The Knowledge Demon's three Disintegration amounts, in cast order.</summary>
+    public static readonly int[] DisintegrationDamageValues = [6, 7, 8];
+
+    /// <summary>MindRot's PowerVar: draw this many fewer cards.</summary>
+    public const int MindRotAmount = 1;
+
+    /// <summary>Sloth's PowerVar: play at most this many cards a turn.</summary>
+    public const int SlothAmount = 3;
+
+    /// <summary>WasteAway's PowerVar: this much less energy each turn.</summary>
+    public const int WasteAwayAmount = 1;
+
     /// <summary>ReattachPower's Amount on every Decimillipede segment.</summary>
     public const int DecimillipedeReattachHeal = 25;
 

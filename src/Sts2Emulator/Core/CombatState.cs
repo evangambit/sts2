@@ -182,6 +182,10 @@ public sealed class CombatState
     public int Turn;
     public bool PlayerTurn = true;
     public bool SkillPlayedWhileSmoggy;
+
+    /// <summary>Cards of any kind played this turn, which SlothPower caps.</summary>
+    public int CardsPlayedThisTurn;
+
     public int AttackCardsPlayedThisTurn;
     public int AttackOrSkillCardsPlayedThisTurn;
     public int CardPlaysThisTurn;

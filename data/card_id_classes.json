@@ -264,7 +264,10 @@
       "FranticEscape",
       "Wound",
       "Wither",
-      "SpoilsMap"
+      "SpoilsMap",
+      "MindRot",
+      "Sloth",
+      "WasteAway"
     ]
   }
 }

@@ -257,6 +257,11 @@ class Sts2CombatEnv(gym.Env):
         native.debug_gain_max_hp(self._handle, amount, self._obs_buf)
         return self._obs()
 
+    def pending_selection_kind(self) -> int:
+        """Report the card selection this combat is waiting on, or 0 for none."""
+        assert self._handle is not None, "Call reset() before pending_selection_kind()"
+        return native.pending_selection_kind(self._handle)
+
     def action_masks(self) -> np.ndarray:
         """Return a boolean mask of valid actions (for MaskablePPO)."""
         assert self._handle is not None, "Call reset() before action_masks()"

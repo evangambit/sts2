@@ -36,6 +36,19 @@ public enum CardSelectionKind
     /// itself — see <see cref="PendingCardSelection.GeneratedCandidates" />.
     /// </summary>
     GeneratedCardToHand = 7,
+
+    /// <summary>
+    /// The Knowledge Demon's CURSE_OF_KNOWLEDGE: two curses offered, and the one chosen
+    /// applies its power. The pair changes on each of its three casts, and Disintegration
+    /// — always the first option — escalates 6, 7, 8.
+    /// </summary>
+    /// <remarks>
+    /// The candidates are card models the game generates for the screen; nothing is added
+    /// to a pile, so <see cref="PendingCardSelection.GeneratedCandidates" /> carries them
+    /// exactly as Discovery's do. The emulator used to apply a flat Disintegration 6 with
+    /// no choice at all — the same picking-for-the-player this type exists to stop.
+    /// </remarks>
+    CurseOfKnowledge = 8,
 }
 
 /// <summary>

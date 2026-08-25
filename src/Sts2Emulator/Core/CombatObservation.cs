@@ -149,7 +149,11 @@ public static class CombatObservation
             obs[SelectionCountOffset] = selection.Candidates.Count;
 
             // A generated choice has no pile behind it; its options are on the selection.
-            if (selection.Kind == CardSelectionKind.GeneratedCardToHand)
+            if (
+                selection.Kind
+                is CardSelectionKind.GeneratedCardToHand
+                    or CardSelectionKind.CurseOfKnowledge
+            )
             {
                 for (
                     int i = 0;

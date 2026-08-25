@@ -366,6 +366,21 @@ public static class EnemyAI
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 1);
                 }
 
+                // PONDER's HealIntent and BuffIntent, which ride its attack. The heal
+                // is `30 * Players.Count`, so 30 in singleplayer; PonderStrength is a
+                // Deadly pair, and it COMPOUNDS -- every later slap and every hit of
+                // KNOWLEDGE OVERWHELMING reads higher for each ponder it has done, which
+                // is why a flat 3 showed up as a growing error rather than a fixed one.
+                if (enemy.DefId == KE.KnowledgeDemon && KnowledgeDemonPhase(enemy.MoveIndex) == 3)
+                {
+                    enemy.Hp = Math.Min(enemy.MaxHp, enemy.Hp + 30);
+                    BuffSystem.Apply(
+                        enemy.Buffs,
+                        BuffId.Strength,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
+                    );
+                }
+
                 if (enemy.DefId == KE.MagiKnight && enemy.MoveIndex % 5 == 0)
                 {
                     enemy.Block += BuffSystem.IncomingBlock(9, enemy.Buffs);
@@ -1642,8 +1657,7 @@ public static class EnemyAI
                 // Three curses land on moves 0, 4 and 8, so moves 0-11 are the four-cycle
                 // and everything past 11 is the three-cycle SLAP -> OVERWHELMING ->
                 // PONDER.
-                int phase =
-                    enemy.MoveIndex < 12 ? enemy.MoveIndex % 4 : 1 + ((enemy.MoveIndex - 12) % 3);
+                int phase = KnowledgeDemonPhase(enemy.MoveIndex);
                 return phase switch
                 {
                     0 => new Intent(IntentType.Debuff, 0),
@@ -1660,9 +1674,13 @@ public static class EnemyAI
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8),
                         Hits: 3
                     ),
-                    // PONDER: PonderDamage, a heal of 30, and PonderStrength.
+                    // PONDER declares SingleAttackIntent FIRST, then HealIntent and
+                    // BuffIntent -- so the readout calls it an ATTACK, for PonderDamage.
+                    // Announcing it as a Buff told a policy a turn of damage was a turn
+                    // of nothing; a live capture reads (Attack, 11) where this said
+                    // (Buff, 11). E12's rule, a third time.
                     _ => new Intent(
-                        IntentType.Buff,
+                        IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
                     ),
                 };
@@ -2867,12 +2885,6 @@ public static class EnemyAI
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
                 break;
 
-            case KE.KnowledgeDemon:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                enemy.Hp = Math.Min(enemy.MaxHp, enemy.Hp + 30);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
-                break;
-
             case KE.Aeonglass:
                 AddStatus(state, ST.Wither, enemy.CurrentIntent.Magnitude);
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 4);
@@ -3122,7 +3134,7 @@ public static class EnemyAI
                 break;
 
             case KE.KnowledgeDemon:
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Disintegration, 6);
+                OpenCurseOfKnowledge(enemy, state);
                 break;
 
             case KE.Queen:
@@ -3506,6 +3518,56 @@ public static class EnemyAI
             KE.Stabbot => new Intent(IntentType.Debuff, 12),
             _ => new Intent(IntentType.Unknown, 0),
         };
+
+    /// <summary>
+    /// CURSE_OF_KNOWLEDGE: two curses offered, and the player picks one.
+    /// </summary>
+    /// <remarks>
+    /// <c>ChooseCurse</c> builds the pair from <c>_curseOfKnowledgeSets[counter]</c> —
+    /// Disintegration against MindRot, then Sloth, then WasteAway — and overwrites
+    /// Disintegration's amount from <c>_disintegrationDamageValues[counter]</c>, 6 then 7
+    /// then 8. The chosen card's <c>OnChosen</c> applies its power; nothing joins a pile.
+    ///
+    /// The emulator used to apply a flat Disintegration 6 and offer nothing, which chose
+    /// for the player AND took the wrong curse twice out of three — the same defect the
+    /// seven run-level policy sites had, in combat.
+    ///
+    /// The screen opens during the ENEMY's turn and the player answers it on their next
+    /// action, which is what <c>PendingSelection</c> already does for every other
+    /// mid-play choice.
+    /// </remarks>
+    /// <summary>
+    /// Which of the Knowledge Demon's four moves a move index lands on.
+    /// </summary>
+    /// <remarks>
+    /// Shared by the intent and its riders ON PURPOSE. PONDER heals and takes Strength,
+    /// and that rider used to live in the BUFF handler because the emulator announced
+    /// PONDER as a buff; retyping it to the attack it really is stopped the rider firing
+    /// at all, and the demon stopped growing. Two places deriving the same phase from
+    /// the move index is how they drift.
+    /// </remarks>
+    private static int KnowledgeDemonPhase(int moveIndex) =>
+        moveIndex < 12 ? moveIndex % 4 : 1 + ((moveIndex - 12) % 3);
+
+    private static void OpenCurseOfKnowledge(EnemyState enemy, CombatState state)
+    {
+        // Curses land on the demon's first move and every fourth after it, so the cast
+        // index is the move index over four -- clamped, because the branch stops sending
+        // it back to CURSE once it has cast three.
+        int cast = Math.Clamp(
+            enemy.MoveIndex / 4,
+            0,
+            Run.RunConstants.CurseOfKnowledgePairs.Length - 1
+        );
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.CurseOfKnowledge,
+            Candidates = [0, 1],
+            GeneratedCandidates = [ST.Disintegration, Run.RunConstants.CurseOfKnowledgePairs[cast]],
+            SourceCardDefId = ST.Disintegration,
+            Amount = Run.RunConstants.DisintegrationDamageValues[cast],
+        };
+    }
 
     private static void SummonParafright(EnemyState enemy, CombatState state)
     {

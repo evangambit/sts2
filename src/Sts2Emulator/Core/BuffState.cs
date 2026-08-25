@@ -193,6 +193,25 @@ public enum BuffId
     /// was modelled — so the boss could be halved for free.
     /// </summary>
     CrabRage,
+
+    /// <summary>
+    /// <c>MindRotPower</c>: draw this many fewer cards. One of the Knowledge Demon's
+    /// curses.
+    /// </summary>
+    MindRot,
+
+    /// <summary>
+    /// <c>SlothPower</c>: play at most this many cards a turn. `ShouldPlay` returns false
+    /// once the count is reached, so the cards are not unplayable — the turn simply
+    /// stops accepting them.
+    /// </summary>
+    Sloth,
+
+    /// <summary>
+    /// <c>WasteAwayPower</c>: <c>ModifyMaxEnergy</c> subtracts this, so every turn starts
+    /// with less.
+    /// </summary>
+    WasteAway,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

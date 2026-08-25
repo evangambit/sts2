@@ -492,6 +492,21 @@ public static class NativeExports
     /// starter deck on turn four, two moves short of walking either half's table, and a
     /// capture that stops short of a move can never put that move under test.
     /// </remarks>
+    /// <summary>
+    /// The kind of card selection the combat is waiting on, or 0 for none.
+    /// </summary>
+    /// <remarks>
+    /// A differential capture has to answer the emulator's screen at the same point the
+    /// live game answers its own, and the two do not open at the same INSTANT: the live
+    /// game acts when `end_turn` is posted, the emulator when `step` is called. Counting
+    /// the live screens and replaying that many steps looks equivalent and is not — a
+    /// poll can see one screen twice, and the extra step lands with nothing open, where
+    /// it means "play card 0". Asking is the only thing that cannot double-count.
+    /// </remarks>
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_PendingSelectionKind")]
+    public static int Sts2_PendingSelectionKind(int handle) =>
+        (int)(_pool[handle]!.State.PendingSelection?.Kind ?? CardSelectionKind.None);
+
     [UnmanagedCallersOnly(EntryPoint = "Sts2_DebugGainMaxHp")]
     public static unsafe void Sts2_DebugGainMaxHp(int handle, int amount, int* obsBuf)
     {

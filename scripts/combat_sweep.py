@@ -224,6 +224,35 @@ def end_turn_action(live_state: dict[str, Any]) -> int:
     return len(hand)
 
 
+def answer_combat_screen(base_url: str) -> None:
+    """Answer a card-selection screen an ENEMY raised, LIVE only.
+
+    Some monsters stop the fight to ask the player something. The Knowledge Demon's
+    CURSE_OF_KNOWLEDGE is the first: two curses, and whichever is chosen applies its
+    power. A sweep that treats the screen as "combat ended" cannot capture that fight at
+    all, which is why the demon had no fixture while the other two Hive bosses did.
+
+    Always the FIRST candidate. The choice has to be deterministic and identical on both
+    sides or the two fights diverge by construction; which one it is does not matter to
+    the comparison, only that both make it.
+
+    **The emulator is answered elsewhere, and the order is the whole point.** The live
+    game ends its turn when `end_turn` is posted; the emulator ends its when `env.step`
+    is called, which is AFTER this wait returns. Answering the emulator here reaches it
+    while it is still in the player's turn with no screen open -- where `step(0)` means
+    "play card 0", so it quietly loses a card per screen and the demon's own selection is
+    then left unanswered, putting it a move behind for the rest of the fight.
+    """
+    trace_real_game.post_action(base_url, {"action": "select_card", "index": 0})
+
+    # Wait for the live screen to close, so the caller's next poll does not answer twice.
+    deadline = time.monotonic() + 10.0
+    while time.monotonic() < deadline:
+        if start_real_game_run.get_state(base_url).get("state_type") != "card_select":
+            return
+        time.sleep(0.25)
+
+
 def buff_both_players(base_url: str, env: Any, amount: int) -> list[str]:
     """Raise max HP and heal by it on BOTH sides, before turn one.
 
@@ -472,6 +501,14 @@ def wait_for_next_round(base_url: str, previous_round: int, timeout: float = 30.
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         state = start_real_game_run.get_state(base_url)
+        # A monster can stop its own turn to ask the player something, and the game will
+        # not reach a play phase until it is answered. There is no single moment to check
+        # for it -- the screen goes up partway through the enemy turn, after end_turn is
+        # posted and long before the round advances -- so the watching has to happen in
+        # the same poll that waits for the round.
+        if state.get("state_type") == "card_select":
+            answer_combat_screen(base_url)
+            continue
         if state.get("state_type") not in COMBAT_STATE_TYPES:
             return state
         battle = state.get("battle") or {}
@@ -558,13 +595,27 @@ def drive_turns(
         round_before = live_round(live_state)
         trace_real_game.post_action(base_url, {"action": "end_turn"})
         try:
-            start_real_game_run.wait_for_combat_ready(base_url, timeout=30.0)
+            # The ROUND wait first: it is the one that answers any screen the enemy turn
+            # raised, and `wait_for_combat_ready` asks for a combat state with a full
+            # hand -- which a curse screen is neither, so it would time out first.
             wait_for_next_round(base_url, round_before)
+            start_real_game_run.wait_for_combat_ready(base_url, timeout=30.0)
         except RuntimeError:
             notes.append(f"live combat did not return to play phase after turn {turn}")
             break
 
         _obs, _reward, terminated, truncated, _info = env.step(action)
+        # The emulator raises its own screen during ITS enemy turn, which is the step
+        # just taken -- so its answer belongs here, after it, and matches the live one.
+        # ASKED, not counted: a live poll can see one screen twice, and an extra step
+        # with nothing open means "play card 0" -- which cost the emulator a card and
+        # then left its own selection unanswered, putting the demon a move behind.
+        while env.unwrapped.pending_selection_kind():
+            env.step(0)
+            # RECORDED, so the offline replay steps exactly what the capture stepped
+            # rather than re-deriving when a screen was open. Re-deriving is what left
+            # the demon a move behind at the far end of its fight.
+            actions.append(0)
         live_summary = trace_real_game.summarize_state(
             start_real_game_run.get_state(base_url),
         )

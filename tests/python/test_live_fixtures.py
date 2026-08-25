@@ -490,6 +490,15 @@ class FightChecks(_TestCaseIfChecking):
                 obs, _reward, terminated, truncated, _info = cls.env.step(action)
                 if terminated or truncated:
                     break
+
+            # A monster can stop its own turn to ask the player something -- the
+            # Knowledge Demon's CURSE_OF_KNOWLEDGE does -- and the emulator will not
+            # advance until it is answered. The capture answered the FIRST candidate on
+            # both sides, so the replay has to make the same choice or it replays a
+            # different fight; that is what `combat_sweep.answer_combat_screen` records.
+            while not (terminated or truncated) and cls.env.unwrapped.pending_selection_kind():
+                obs, _reward, terminated, truncated, _info = cls.env.step(0)
+
             cls.emu_turns.append(
                 validate_real_game_trace.emulator_trace.summarize_observation(obs),
             )

@@ -36,6 +36,14 @@ internal static class Boss
                 )
             );
             fight.EndTurn();
+
+            // A monster can stop the turn to ask the player something -- the Knowledge
+            // Demon's curse screen does -- and nothing advances until it is answered.
+            // Always the first candidate, so the walk is deterministic.
+            while (fight.Pending is not null)
+            {
+                fight.Choose(0);
+            }
         }
 
         return seen;
@@ -215,20 +223,22 @@ public class KnowledgeDemonTests
         var demon = fight.State.Enemies[0];
         var types = Boss.Cycle(fight, demon, 12).Select(i => i.Item1).ToList();
 
+        // PONDER declares its SingleAttackIntent first, so it READS as an attack -- the
+        // heal and the Strength ride it. A live capture shows (Attack, 11).
         Assert.Equal(
             [
                 IntentType.Debuff,
                 IntentType.Attack,
                 IntentType.Attack,
-                IntentType.Buff,
+                IntentType.Attack,
                 IntentType.Debuff,
                 IntentType.Attack,
                 IntentType.Attack,
-                IntentType.Buff,
+                IntentType.Attack,
                 IntentType.Debuff,
                 IntentType.Attack,
                 IntentType.Attack,
-                IntentType.Buff,
+                IntentType.Attack,
             ],
             types
         );
@@ -265,7 +275,7 @@ public class KnowledgeDemonTests
 
         Assert.Equal((IntentType.Attack, slap, 1), seen[1]);
         Assert.Equal((IntentType.Attack, overwhelming, 3), seen[2]);
-        Assert.Equal((IntentType.Buff, ponder, 1), seen[3]);
+        Assert.Equal((IntentType.Attack, ponder, 1), seen[3]);
     }
 }
 

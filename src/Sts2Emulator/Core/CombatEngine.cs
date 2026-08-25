@@ -89,11 +89,14 @@ public static class CombatEngine
             || energyToSpend > state.Energy
             || IsBlockedBySmoggy(def, state)
             || IsBlockedByEnthralled(card, state)
+            || IsBlockedBySloth(state)
             || Effects.RelicEffects.BlocksFurtherCardPlays(state)
         )
         {
             return StepResult.Invalid;
         }
+
+        state.CardsPlayedThisTurn++;
         bool feralReturn =
             def.Type == CardType.Attack
             && energyToSpend == 0
@@ -568,6 +571,7 @@ public static class CombatEngine
         state.PlayerTurn = true;
         state.Energy = EffectiveMaxEnergy(state);
         state.PlayerHpLostThisTurn = 0;
+        state.CardsPlayedThisTurn = 0;
 
         Effects.CardEffects.TriggerAllOrbAfterTurnStartPassives(state, rng);
 
@@ -742,12 +746,17 @@ public static class CombatEngine
             Effects.CardEffects.AddRandomDefectPowerCardsToHand(state, creativeAi, rng);
         }
 
-        // Draw five cards.
+        // Draw five cards -- less MindRot, which is `Math.Max(0, count - Amount)` on the
+        // whole draw rather than a per-card effect.
         Effects.CardEffects.DrawCards(
             state,
-            5
-                + BuffSystem.Get(state.PlayerBuffs, BuffId.MachineLearning)
-                + Effects.RelicEffects.ExtraHandDraw(state),
+            Math.Max(
+                0,
+                5
+                    + BuffSystem.Get(state.PlayerBuffs, BuffId.MachineLearning)
+                    + Effects.RelicEffects.ExtraHandDraw(state)
+                    - BuffSystem.Get(state.PlayerBuffs, BuffId.MindRot)
+            ),
             rng
         );
         int nextTurnDraw = BuffSystem.Get(state.PlayerBuffs, BuffId.NextTurnDraw);
@@ -869,9 +878,29 @@ public static class CombatEngine
         return shaped + terminal;
     }
 
+    /// <summary>
+    /// <c>SlothPower.ShouldPlay</c>: <c>_cardsPlayedThisTurn &lt; Amount</c>.
+    /// </summary>
+    /// <remarks>
+    /// A cap on the turn, not on the cards: nothing becomes Unplayable, the turn simply
+    /// stops accepting plays once the count is reached. It counts EVERY card, which is
+    /// why it reads the plain per-turn total rather than one of the typed ones.
+    /// </remarks>
+    private static bool IsBlockedBySloth(CombatState state)
+    {
+        int sloth = BuffSystem.Get(state.PlayerBuffs, BuffId.Sloth);
+        return sloth > 0 && state.CardsPlayedThisTurn >= sloth;
+    }
+
     private static int EffectiveMaxEnergy(CombatState state)
     {
-        return state.MaxEnergy + BuffSystem.Get(state.PlayerBuffs, BuffId.PyrePower);
+        // WasteAwayPower.ModifyMaxEnergy subtracts its amount, so every turn starts short.
+        return Math.Max(
+            0,
+            state.MaxEnergy
+                + BuffSystem.Get(state.PlayerBuffs, BuffId.PyrePower)
+                - BuffSystem.Get(state.PlayerBuffs, BuffId.WasteAway)
+        );
     }
 
     /// <summary>Cost of a card in hand, for callers that hold no CardDef (relics).</summary>
@@ -1039,6 +1068,39 @@ public static class CombatEngine
     /// Answers the open card-selection screen and closes it. Moving a card cannot end
     /// the combat, so this is never terminal.
     /// </summary>
+    /// <summary>
+    /// <c>IChoosable.OnChosen</c> for each of the Knowledge Demon's four curses.
+    /// </summary>
+    /// <remarks>
+    /// Every one applies a POWER rather than adding a card to the deck, which is why the
+    /// emulator's old shape — a buff on the player — was right in kind and wrong in
+    /// everything else: it applied Disintegration always, at a flat 6, with no choice.
+    /// </remarks>
+    private static void ApplyChosenCurse(CombatState state, int cardId, int disintegration)
+    {
+        switch (cardId)
+        {
+            case Effects.ST.Disintegration:
+                // DynamicVars["DisintegrationPower"], which the demon overwrites per cast
+                // from _disintegrationDamageValues -- 6, then 7, then 8.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Disintegration, disintegration);
+                break;
+            case Effects.ST.MindRot:
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.MindRot, Run.RunConstants.MindRotAmount);
+                break;
+            case Effects.ST.Sloth:
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Sloth, Run.RunConstants.SlothAmount);
+                break;
+            case Effects.ST.WasteAway:
+                BuffSystem.Apply(
+                    state.PlayerBuffs,
+                    BuffId.WasteAway,
+                    Run.RunConstants.WasteAwayAmount
+                );
+                break;
+        }
+    }
+
     private static StepResult ResolveCardSelection(CombatState state, int action, Random rng)
     {
         var selection = state.PendingSelection!;
@@ -1102,6 +1164,14 @@ public static class CombatEngine
                     var card = state.DrawPile[index];
                     state.RemoveFromDrawPileAt(index);
                     state.Hand.Add(card);
+                }
+
+                break;
+
+            case CardSelectionKind.CurseOfKnowledge:
+                if (index < selection.GeneratedCandidates.Count)
+                {
+                    ApplyChosenCurse(state, selection.GeneratedCandidates[index], selection.Amount);
                 }
 
                 break;

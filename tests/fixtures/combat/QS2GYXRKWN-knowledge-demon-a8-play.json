@@ -1,0 +1,798 @@
+{
+  "rooms_entered": 77,
+  "state_type": "boss",
+  "battle": {
+    "round": 1,
+    "turn": "player",
+    "is_play_phase": true,
+    "enemies": [
+      {
+        "entity_id": "KNOWLEDGE_DEMON_0",
+        "combat_id": 1,
+        "name": "Knowledge Demon",
+        "hp": 399,
+        "max_hp": 399,
+        "block": 0,
+        "status": [],
+        "intents": [
+          {
+            "type": "Debuff",
+            "label": "",
+            "title": "Strategic",
+            "description": "This enemy intends to apply a Debuff to you."
+          }
+        ]
+      }
+    ]
+  },
+  "run": {
+    "act": 1,
+    "floor": 1,
+    "ascension": 8
+  },
+  "player": {
+    "character": "The Ironclad",
+    "hp": 64,
+    "max_hp": 80,
+    "block": 0,
+    "deck": [
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 0
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 1
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 2
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 3
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 4
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 5
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 6
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 7
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 8
+      },
+      {
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ],
+        "index": 9
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "name": "Ascender's Bane",
+        "type": "Curse",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. Ethereal. Eternal.",
+        "rarity": "Curse",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Eternal",
+            "description": "Cannot be removed or transformed from your Deck."
+          },
+          {
+            "name": "Unplayable",
+            "description": "Unplayable cards cannot be played."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ],
+        "index": 10
+      }
+    ],
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 0,
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 1,
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 2,
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "name": "Ascender's Bane",
+        "type": "Curse",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. Ethereal. Eternal.",
+        "rarity": "Curse",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Eternal",
+            "description": "Cannot be removed or transformed from your Deck."
+          },
+          {
+            "name": "Unplayable",
+            "description": "Unplayable cards cannot be played."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ],
+        "index": 3,
+        "target_type": "None",
+        "can_play": false,
+        "unplayable_reason": "HasUnplayableKeyword"
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 4,
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null
+      }
+    ],
+    "draw_pile_count": 6,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "name": "Bash",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable."
+      },
+      {
+        "name": "Defend",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block."
+      },
+      {
+        "name": "Defend",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block."
+      },
+      {
+        "name": "Strike",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage."
+      },
+      {
+        "name": "Strike",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage."
+      },
+      {
+        "name": "Strike",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage."
+      }
+    ],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "draw_pile_ordered": [
+      {
+        "id": "BASH",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      }
+    ],
+    "discard_pile_ordered": [],
+    "hand_ordered": [
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      }
+    ],
+    "gold": 99,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "keywords": []
+      }
+    ],
+    "potions": [],
+    "max_potion_slots": 2
+  },
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1"
+  },
+  "capture": {
+    "seed": "QS2GYXRKWN",
+    "encounter": "knowledge-demon",
+    "live_encounter": "KnowledgeDemonBoss",
+    "completed_combat_rooms": -1,
+    "total_floor": 1,
+    "ascension": 8,
+    "turns": 12,
+    "play": true,
+    "add_cards": [],
+    "buff_max_hp": 250
+  },
+  "turn_trace": [
+    {
+      "turn": 2,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2,
+        0
+      ],
+      "player_hp": 314,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 387,
+          "intent": [
+            0,
+            17
+          ]
+        }
+      ],
+      "live_hand": [
+        "BASH",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 3,
+      "action": 3,
+      "actions": [
+        0,
+        0,
+        3
+      ],
+      "player_hp": 296,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 379,
+          "intent": [
+            0,
+            24
+          ]
+        }
+      ],
+      "live_hand": [
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 4,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2
+      ],
+      "player_hp": 266,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 352,
+          "intent": [
+            0,
+            11
+          ]
+        }
+      ],
+      "live_hand": [
+        "BASH",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 5,
+      "action": 3,
+      "actions": [
+        0,
+        0,
+        3
+      ],
+      "player_hp": 254,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 374,
+          "intent": [
+            3,
+            null
+          ]
+        }
+      ],
+      "live_hand": [
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 6,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2,
+        0
+      ],
+      "player_hp": 254,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 365,
+          "intent": [
+            0,
+            19
+          ]
+        }
+      ],
+      "live_hand": [
+        "DEFEND_IRONCLAD",
+        "BASH",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 7,
+      "action": 3,
+      "actions": [
+        0,
+        0,
+        3
+      ],
+      "player_hp": 227,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 357,
+          "intent": [
+            0,
+            30
+          ]
+        }
+      ],
+      "live_hand": [
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 8,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2
+      ],
+      "player_hp": 189,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 339,
+          "intent": [
+            0,
+            13
+          ]
+        }
+      ],
+      "live_hand": [
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "BASH"
+      ]
+    },
+    {
+      "turn": 9,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2
+      ],
+      "player_hp": 173,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 363,
+          "intent": [
+            3,
+            null
+          ]
+        }
+      ],
+      "live_hand": [
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "BASH"
+      ]
+    },
+    {
+      "turn": 10,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2,
+        0
+      ],
+      "player_hp": 170,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 357,
+          "intent": [
+            0,
+            21
+          ]
+        }
+      ],
+      "live_hand": [
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 11,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2
+      ],
+      "player_hp": 128,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 339,
+          "intent": [
+            0,
+            36
+          ]
+        }
+      ],
+      "live_hand": [
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 12,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2
+      ],
+      "player_hp": 81,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 333,
+          "intent": [
+            0,
+            15
+          ]
+        }
+      ],
+      "live_hand": [
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "BASH",
+        "DEFEND_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 13,
+      "action": 2,
+      "actions": [
+        0,
+        0,
+        0,
+        2
+      ],
+      "player_hp": 50,
+      "player_max_hp": 330,
+      "enemies": [
+        {
+          "name": "Knowledge Demon",
+          "hp": 351,
+          "intent": [
+            0,
+            23
+          ]
+        }
+      ],
+      "live_hand": [
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "BASH"
+      ]
+    }
+  ],
+  "coverage": {
+    "Knowledge Demon": {
+      "seen": 11,
+      "declared": 4
+    }
+  }
+}

@@ -1278,6 +1278,26 @@ turned out to exclude nothing in combat.
   `debug_start_encounter` looks an encounter up by class name; the act-2 and act-3
   entries just had to be added to `LIVE_ENCOUNTER_BY_EMULATOR`.
 
+  **All three Hive bosses now have live captures**, and every one of them corrected
+  something the source alone had not (E101-E105). The last needed a feature first: the
+  Knowledge Demon blocks on a card screen, so it could not be captured until the choice
+  was modelled — and the choice turned out to be a defect in its own right, the emulator
+  having picked for the player at a fixed amount.
+
+  **Retyping an intent moves which branch its rider is in, in BOTH directions.** The
+  Infested Prism's block sat in `ApplyBuffIntent` and never ran because all its moves are
+  attacks (E97); correcting PONDER from Buff to Attack then broke the demon's rider the
+  same way (E105). After changing an intent's type, check the apply side — the compiler
+  will not.
+
+  **A differential capture must ANSWER the emulator's screen, never count the live one.**
+  A live poll can see one screen twice, and an extra `step(0)` with nothing open means
+  "play card 0" — the emulator quietly loses a card and its own selection is left
+  unanswered. `env.pending_selection_kind()` exists for this. The order matters too: the
+  live game acts when `end_turn` is posted and the emulator when `env.step` is called, so
+  the emulator is answered AFTER its own step, and the answers are recorded in the
+  fixture's actions rather than re-derived offline.
+
   **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
   were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES
   rather than loops (E86) — a Tunneler that walks back to its opening bite every fourth
