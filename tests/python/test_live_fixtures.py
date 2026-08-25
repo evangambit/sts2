@@ -464,6 +464,12 @@ class FightChecks(_TestCaseIfChecking):
         )
         obs, _info = cls.env.reset()
 
+        # Max HP the capture granted, applied first: a boss that kills a starter deck
+        # before its move table runs out cannot be captured to full coverage without it,
+        # and the trace below is of the buffed fight.
+        if capture.get("buff_max_hp"):
+            cls.env.unwrapped.debug_gain_max_hp(int(capture["buff_max_hp"]))
+
         # Cards the capture stacked on top of the hand, put back in the same slots. A
         # capture that reaches a Phrog Parasite's Wrigglers only does so because it could
         # kill the parasite, and replaying it with a starter deck replays a different

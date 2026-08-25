@@ -20,7 +20,13 @@ RELICS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Models.Relics"
 # ── patterns ──────────────────────────────────────────────────────────────────
 
 # Match card constructor arguments: cost, type, and rarity.
-CARD_CTOR = re.compile(r"base\((-?\d+),\s*CardType\.(\w+),\s*CardRarity\.(\w+)")
+CARD_CTOR = re.compile(
+    r"base\((-?\d+),\s*CardType\.(\w+),\s*CardRarity\.(\w+)"
+    # The fourth argument, when a card gives one. Only AnyEnemy means "target selection
+    # is performed" -- which is what decides whether a play carries a creature Target,
+    # and so whether the Kaiser Crab's Surrounded turns the player (E101).
+    r"(?:,\s*TargetType\.(\w+))?",
+)
 # DamageVar(6m, ...) or DamageVar(6, ...)
 DAMAGE_VAR = re.compile(r"new DamageVar\((\d+(?:\.\d+)?)m?,")
 # BlockVar(5m, ...)
@@ -263,6 +269,8 @@ def extract_cards() -> str:
         cost = int(ctor.group(1))
         card_type = ctor.group(2)  # Attack / Skill / Power / Status / Curse
         rarity = ctor.group(3)
+        # A card with no fourth argument takes CardModel's default, which is Self.
+        target_type = ctor.group(4) or "Self"
         # Negative-cost cards are statuses/curses; keep the ones the id map knows
         # (they are referenced by the engine) and skip the rest, as before.
         if cost < 0 and name not in _ID_MAP.get("cards", {}):
@@ -315,7 +323,8 @@ def extract_cards() -> str:
             f"Cost: {cost}, BaseDamage: {base_dmg}, BaseBlock: {base_block}, "
             f"UpgradeDamage: {upg_dmg}, UpgradeBlock: {upg_block}, "
             f"UpgradeCost: {upg_cost}, "
-            f"Type: CardType.{card_type}, Rarity: CardRarity.{rarity}{flags_cs}),",
+            f"Type: CardType.{card_type}, Rarity: CardRarity.{rarity}, "
+            f"Target: CardTarget.{target_type}{flags_cs}),",
         )
     if not entries:
         entries = ["        // No cards extracted — check CARDS_DIR path."]

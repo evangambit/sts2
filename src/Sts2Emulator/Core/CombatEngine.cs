@@ -1409,16 +1409,16 @@ public static class CombatEngine
             return;
         }
 
-        // Only a card that AIMS at something turns the player: `cardPlay.Target != null`.
-        // **Approximated as "is an attack"**, because the card table carries no
-        // single-target flag — so an all-enemy attack, whose Target is null in the game,
-        // turns the player here and should not. Nothing in a starter deck does that, and
-        // the capture behind this rule is all Strikes and a Bash; it will matter the
-        // first time a Cleave meets a Kaiser Crab.
+        // Only a card that AIMS at something turns the player: `cardPlay.Target != null`,
+        // which is TargetType.AnyEnemy and nothing else. An AllEnemies attack -- a
+        // Whirlwind, a Cleave -- performs no target selection and does NOT turn you.
+        //
+        // This was approximated as "is an attack" until the card table carried the real
+        // TargetType, which is now extracted: 183 AnyEnemy, 35 AllEnemies, 9 Random.
         if (card is not null)
         {
             var def = GeneratedData.Cards.Get(Math.Abs(card.Value.DefId));
-            if (def.Type != CardType.Attack)
+            if (def.Target != CardTarget.AnyEnemy)
             {
                 return;
             }

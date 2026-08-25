@@ -41,6 +41,28 @@ public enum CardRarity
     Quest,
 }
 
+/// <summary>
+/// The game's <c>TargetType</c>: whether playing this card picks a creature.
+/// </summary>
+/// <remarks>
+/// Only <see cref="AnyEnemy"/> performs target selection, which is what decides whether
+/// a play carries a creature <c>Target</c> — and so whether the Kaiser Crab's
+/// <c>SurroundedPower</c> turns the player toward it. An AllEnemies attack does not.
+/// </remarks>
+public enum CardTarget
+{
+    None,
+    Self,
+    AnyEnemy,
+    AllEnemies,
+    RandomEnemy,
+    AnyPlayer,
+    AnyAlly,
+    AllAllies,
+    TargetedNoCreature,
+    Osty,
+}
+
 public readonly record struct CardDef(
     int Id,
     string Name,
@@ -52,6 +74,7 @@ public readonly record struct CardDef(
     int UpgradeCost,
     CardType Type,
     CardRarity Rarity,
+    CardTarget Target = CardTarget.Self,
     bool Ethereal = false,
     bool Exhaust = false,
     bool Unplayable = false,

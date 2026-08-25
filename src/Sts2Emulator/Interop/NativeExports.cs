@@ -483,6 +483,24 @@ public static class NativeExports
         WriteObs(combat.State, obsBuf);
     }
 
+    /// <summary>
+    /// Raise the player's maximum HP and heal by the same amount, mid-combat.
+    /// </summary>
+    /// <remarks>
+    /// The mod's `debug_gain_max_hp` for a FIGHT rather than a run. A boss capture is
+    /// only worth as much as the number of turns it survives: the Kaiser Crab kills a
+    /// starter deck on turn four, two moves short of walking either half's table, and a
+    /// capture that stops short of a move can never put that move under test.
+    /// </remarks>
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_DebugGainMaxHp")]
+    public static unsafe void Sts2_DebugGainMaxHp(int handle, int amount, int* obsBuf)
+    {
+        var combat = _pool[handle]!;
+        combat.State.PlayerMaxHp += amount;
+        combat.State.PlayerHp += amount;
+        WriteObs(combat.State, obsBuf);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "Sts2_ResetWithDeck")]
     public static unsafe void Sts2_ResetWithDeck(int handle, int* deckIds, int deckLen, int* obsBuf)
     {

@@ -195,6 +195,13 @@ _lib.Sts2_DebugAddCardToHand.argtypes = [
     ctypes.POINTER(ctypes.c_int),
 ]
 
+_lib.Sts2_DebugGainMaxHp.restype = None
+_lib.Sts2_DebugGainMaxHp.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
+
 _lib.Sts2_ResetEncounterAtFloorWithExtraCards.restype = None
 _lib.Sts2_ResetEncounterAtFloorWithExtraCards.argtypes = [
     ctypes.c_int,
@@ -526,6 +533,11 @@ def debug_add_card_to_hand(
     rather than the deck, so no shuffle has to agree between the two sides.
     """
     _lib.Sts2_DebugAddCardToHand(handle, card_id, 1 if upgraded else 0, obs_buf)
+
+
+def debug_gain_max_hp(handle: int, amount: int, obs_buf: ctypes.Array) -> None:
+    """Raise max HP and heal by it, mirroring the mod's debug_gain_max_hp."""
+    _lib.Sts2_DebugGainMaxHp(handle, amount, obs_buf)
 
 
 def reset_encounter_with_extra_cards(

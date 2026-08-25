@@ -246,6 +246,17 @@ class Sts2CombatEnv(gym.Env):
         native.debug_add_card_to_hand(self._handle, card_id, self._obs_buf, upgraded)
         return self._obs()
 
+    def debug_gain_max_hp(self, amount: int) -> np.ndarray:
+        """Raise max HP and heal by it, as the mod's debug_gain_max_hp does live.
+
+        Only for differential captures. A boss capture is worth what it survives: the
+        Kaiser Crab kills a starter deck two moves short of either half's table, and a
+        capture that never reaches a move cannot put that move under test.
+        """
+        assert self._handle is not None, "Call reset() before debug_gain_max_hp()"
+        native.debug_gain_max_hp(self._handle, amount, self._obs_buf)
+        return self._obs()
+
     def action_masks(self) -> np.ndarray:
         """Return a boolean mask of valid actions (for MaskablePPO)."""
         assert self._handle is not None, "Call reset() before action_masks()"

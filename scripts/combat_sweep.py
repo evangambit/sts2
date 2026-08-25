@@ -224,6 +224,28 @@ def end_turn_action(live_state: dict[str, Any]) -> int:
     return len(hand)
 
 
+def buff_both_players(base_url: str, env: Any, amount: int) -> list[str]:
+    """Raise max HP and heal by it on BOTH sides, before turn one.
+
+    A boss capture is worth what it survives. The Kaiser Crab kills a starter deck on
+    turn four -- two moves short of walking either half's table -- and a capture that
+    never reaches a move cannot put that move under test, so `coverage` fails and the
+    fixture is not committable. Buffing is not cheating here: the comparison is of what
+    each side DOES, and both sides get the same player.
+    """
+    notes: list[str] = []
+    result = trace_real_game.post_action(
+        base_url,
+        {"action": "debug_gain_max_hp", "amount": amount},
+    )
+    if result.get("status") != "ok":
+        notes.append(f"live refused the max-hp buff: {result}")
+        return notes
+
+    env.unwrapped.debug_gain_max_hp(amount)
+    return notes
+
+
 def add_cards_to_both_hands(base_url: str, env: Any, cards: list[str]) -> list[str]:
     """Put the same cards on top of both hands, live and emulated.
 
@@ -465,6 +487,7 @@ def drive_turns(
     turns: int,
     play: bool = False,
     add_cards: list[str] | None = None,
+    buff_max_hp: int = 0,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """End turn on both sides in lockstep, comparing what the enemies announce.
 
@@ -479,6 +502,8 @@ def drive_turns(
     """
     rows: list[dict[str, Any]] = []
     notes: list[str] = []
+    if buff_max_hp:
+        notes += buff_both_players(base_url, env, buff_max_hp)
     if add_cards:
         opening = start_real_game_run.get_state(base_url)
         before = len(((opening.get("player") or {}).get("hand") or []))
@@ -641,6 +666,7 @@ def capture_one(
     turns: int = 0,
     play: bool = False,
     add_cards: list[str] | None = None,
+    buff_max_hp: int = 0,
 ) -> dict[str, Any]:
     live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(encounter)
     if live_encounter is None:
@@ -672,7 +698,9 @@ def capture_one(
         obs, _info = env.reset()
         emu_summary = validate.emulator_trace.summarize_observation(obs)
         turn_rows, turn_notes = (
-            drive_turns(base_url, env, turns, play, add_cards) if turns else ([], [])
+            drive_turns(base_url, env, turns, play, add_cards, buff_max_hp)
+            if turns
+            else ([], [])
         )
     finally:
         env.close()
@@ -781,6 +809,16 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--buff-max-hp",
+        type=int,
+        default=0,
+        help=(
+            "raise the player's max HP (and heal by it) on BOTH sides before turn one. "
+            "A boss that kills a starter deck before its move table runs out leaves a "
+            "capture that cannot satisfy the coverage check"
+        ),
+    )
+    parser.add_argument(
         "--add-card",
         action="append",
         default=[],
@@ -831,6 +869,7 @@ def main() -> None:
                 turns=args.turns,
                 play=args.play,
                 add_cards=args.add_card,
+                buff_max_hp=args.buff_max_hp,
             )
         except Exception as exc:  # noqa: BLE001 - one bad job must not end the sweep
             print(f"  CAPTURE FAILED: {exc}", flush=True)
@@ -879,6 +918,10 @@ def main() -> None:
                     # the offline replay can put the same ones in the same slots; without
                     # them the fight it replays is a different fight.
                     "add_cards": list(args.add_card),
+                    # Max HP the capture granted before turn one, for the same reason:
+                    # a buffed player fights longer, and replaying the trace against an
+                    # unbuffed one replays a fight that ends early.
+                    "buff_max_hp": args.buff_max_hp,
                 },
                 # The turn-by-turn live readout, when turns were driven: enough to
                 # replay the fight offline and check every intent an enemy showed, not
