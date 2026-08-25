@@ -1304,10 +1304,20 @@ turned out to exclude nothing in combat.
   passes a limit high enough not to bind. The tell is an emulator that looks a move behind
   only at the far end of a long fixture — check the action count before the move machine.
 
-  **Act 1's event fights were unreachable, not untested.** `ModelDb.AllEncounters` unions
-  the act POOLS, so an encounter only an event starts is absent from it and the mod's
+  **The event fights were unreachable, not untested.** `ModelDb.AllEncounters` unions the
+  act POOLS, so an encounter only an event starts is absent from it and the mod's
   `debug_start_encounter` could not find one (H18). Fixed in the mod by falling back to
-  the registry by `ModelId`. Four captured immediately; two diverged. `FakeMerchantMonster`
+  the registry by `ModelId`. Four captured immediately; two diverged.
+
+  **Which act an event fight belongs to is not obvious, and guessing it is how the last
+  sweep got mislabelled.** An event encounter is in no act's ENCOUNTER pool, so the only
+  way to place it is to find the EVENT that starts it and which act's event pool holds
+  that: `DenseVegetation` is Overgrowth's and `PunchOff` is Underdocks', but the
+  Mysterious Knight's `TheLanternKey` is HIVE's, `BattlewornDummy` is GLORY's,
+  `FakeMerchant` is in `AllSharedEvents` and belongs to no act, and `TheArchitect` is in
+  no event pool at all — `RunManager` enters it directly at an act boundary. Act 1's two
+  event fights both turned out CORRECT; the two defects were the shared merchant and an
+  act-2 knight. `FakeMerchantMonster`
   and the three `BattleFriendV*` were also on `extract_data.py`'s exclusion list next to
   `BigDummy`, so the emulator threw on building them — the same shape as `TestSubject`.
   **Check that list before assuming a monster is unimplemented.**
