@@ -21,6 +21,8 @@ import sys
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 
@@ -162,6 +164,62 @@ class TargetMapTests(unittest.TestCase):
 
         self.assertEqual(0, target_map["TWO_TAILED_RAT_0"])
         self.assertEqual(1, target_map["TWO_TAILED_RAT_1"])
+
+    @staticmethod
+    def _obs_with_enemy_hp(*hps: int) -> np.ndarray:
+        """Build an observation whose enemy slots carry the given HP, in index order."""
+        obs = np.zeros(native.OBS_SIZE, dtype=np.int32)
+        for index, hp in enumerate(hps):
+            obs[native.OBS_ENEMY_OFFSET + index * native.OBS_ENEMY_SLOT_SIZE] = hp
+        return obs
+
+    def test_an_ordinal_skips_the_emulators_dead(self):
+        # Index 0 is a corpse the emulator keeps and the game has removed, so the game's
+        # ordinal 0 is the emulator's index 1.
+        obs = self._obs_with_enemy_hp(0, 78)
+
+        self.assertEqual(1, commands.resolve_living_ordinal(0, obs))
+        self.assertEqual(-1, commands.resolve_living_ordinal(1, obs))
+
+    def test_the_suffix_fallback_is_resolved_too(self):
+        """E79: the fallback paths used to be handed straight to the emulator.
+
+        A Fogmog's eye dies and revives all fight, so the emulator holds a corpse at
+        index 0 for most of it. An attack the capture aimed at the Fogmog -- the only
+        LIVING enemy, so ordinal 0 -- resolved to emulator index 0 and hit the eye.
+        """
+        obs = self._obs_with_enemy_hp(0, 78)
+
+        # No map at all: translate_target falls through to the entity id's suffix.
+        ordinal = commands.translate_target({"target": "FOGMOG_0"}, None)
+        self.assertEqual(0, ordinal)
+        self.assertEqual(1, commands.resolve_living_ordinal(ordinal, obs))
+
+    def test_the_combat_id_fallback_is_resolved_too(self):
+        obs = self._obs_with_enemy_hp(0, 78)
+        reference_step = {
+            "raw_state": {"battle": {"enemies": [{"combat_id": 7, "name": "Fogmog"}]}},
+        }
+
+        ordinal = commands.translate_target({"target": 7}, None, reference_step)
+
+        self.assertEqual(0, ordinal)
+        self.assertEqual(1, commands.resolve_living_ordinal(ordinal, obs))
+
+    def test_every_path_agrees_when_nothing_has_died(self):
+        # The reason this went unnoticed: with no corpses the three paths are identical.
+        obs = self._obs_with_enemy_hp(6, 78)
+        enemies = [
+            {"name": "Eye With Teeth", "entity_id": "EYE_WITH_TEETH_0", "hp": 6},
+            {"name": "Fogmog", "entity_id": "FOGMOG_0", "hp": 78},
+        ]
+        target_map = commands.build_target_map(enemies)
+
+        by_map = commands.translate_target({"target": "FOGMOG_0"}, target_map)
+        by_suffix = commands.translate_target({"target": "FOGMOG_1"}, None)
+
+        self.assertEqual(1, commands.resolve_living_ordinal(by_map, obs))
+        self.assertEqual(1, commands.resolve_living_ordinal(by_suffix, obs))
 
     def test_a_mapped_target_never_falls_back_to_the_suffix(self):
         enemies = [

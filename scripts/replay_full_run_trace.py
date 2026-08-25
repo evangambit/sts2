@@ -481,21 +481,21 @@ def replay_trace(
         for reference_step in replay_steps:
             payload = reference_step.get("action")
             ref_summary = compare_traces.summary(reference_step)
-            ref_state = ref_summary.get("state_type")
-
             # The game RENUMBERS its entity ids as enemies die, so the map has to be
             # rebuilt every step rather than once on entering the fight. It is built
             # from the state the action was chosen in -- the previous step -- and its
-            # values are ordinals among living enemies, which are then resolved against
-            # the emulator's own list. The emulator keeps its dead in place, so the two
-            # index spaces diverge the moment anything dies.
-            if ref_state in COMBAT_STATES:
-                current_target_map = resolve_targets(
-                    build_target_map(previous_reference_enemies),
-                    obs,
-                )
-            else:
-                current_target_map = {}
+            # values are ordinals among living enemies. Resolving them against the
+            # emulator's own list is execute_command's job, not this one's: doing it
+            # here left translate_target's two FALLBACK paths unresolved, which is E79.
+            #
+            # Gated on the PREVIOUS step's enemy list, not on this step's state type.
+            # A capture pairs an action with the state it PRODUCED, so the killing blow
+            # of a fight is recorded against the rewards screen it opened -- and gating
+            # on that emptied the map for exactly the attack that ends a combat, which
+            # then fell through to the entity id's suffix. That is E80: the last Strike
+            # of a Fogmog fight was aimed at FOGMOG_0, read as ordinal 0, and landed on
+            # the eye sitting in front of it.
+            current_target_map = build_target_map(previous_reference_enemies)
             previous_reference_enemies = (
                 compare_traces.get_path(ref_summary, "battle.enemies") or []
             )
@@ -684,25 +684,6 @@ def summarize_hand(obs: np.ndarray) -> list[dict[str, Any]]:
         for hand_index in range(native.OBS_MAX_HAND)
         if int(obs[native.OBS_HAND_OFFSET + hand_index * slot]) != 0
     ]
-
-
-def resolve_targets(ordinals: dict[str, int], obs: np.ndarray) -> dict[str, int]:
-    """Turn ordinals-among-living into the emulator's absolute enemy indices.
-
-    The game renumbers its entity ids as enemies die, so a target id names the Nth
-    LIVING enemy. The emulator leaves its dead in the list, so the Nth living enemy is
-    not the enemy at index N once anything has died.
-    """
-    living = [
-        index
-        for index in range(native.MAX_ENEMIES)
-        if int(obs[native.OBS_ENEMY_OFFSET + index * native.OBS_ENEMY_SLOT_SIZE]) > 0
-    ]
-    return {
-        name: living[ordinal]
-        for name, ordinal in ordinals.items()
-        if 0 <= ordinal < len(living)
-    }
 
 
 def summarize_battle(obs: np.ndarray) -> dict[str, Any]:

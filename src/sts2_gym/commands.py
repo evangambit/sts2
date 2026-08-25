@@ -100,8 +100,13 @@ def execute_command(
             clear_deferred_selection(env)
             return reward, terminated, truncated, obs, info
 
+    # Resolved HERE, once, so no path can skip it. translate_target answers in ordinals
+    # among living enemies; the emulator indexes a list that still holds its dead.
     target = (
-        translate_target(command, target_map, reference_step)
+        resolve_living_ordinal(
+            translate_target(command, target_map, reference_step),
+            obs,
+        )
         if int(info["phase"]) == PHASE_COMBAT
         else -1
     )
@@ -390,16 +395,53 @@ def build_target_map(enemies: list[dict[str, Any]]) -> dict[str, int]:
     return result
 
 
+def living_enemy_indices(obs: np.ndarray) -> list[int]:
+    """Collect the emulator's absolute indices of the enemies still alive.
+
+    Slot 0 of an enemy's observation block is its current HP, so this is the emulator's
+    own answer to ``Creature.IsAlive`` (``CurrentHp > 0``). The emulator KEEPS its dead
+    in the enemy list where the game removes them, which is the whole reason an ordinal
+    among living has to be resolved rather than used as an index.
+    """
+    return [
+        index
+        for index in range(native.MAX_ENEMIES)
+        if int(obs[native.OBS_ENEMY_OFFSET + index * native.OBS_ENEMY_SLOT_SIZE]) > 0
+    ]
+
+
+def resolve_living_ordinal(ordinal: int, obs: np.ndarray) -> int:
+    """Turn an ordinal among LIVING enemies into the emulator's absolute index."""
+    if ordinal < 0:
+        return -1
+    living = living_enemy_indices(obs)
+    if ordinal >= len(living):
+        return -1
+    return living[ordinal]
+
+
 def translate_target(
     command: dict[str, Any] | None,
     target_map: dict[str, int] | None = None,
     reference_step: dict[str, Any] | None = None,
 ) -> int:
-    """Resolve an STS2MCP target string to absolute enemy index, or -1."""
+    """Resolve an STS2MCP target to an ordinal among LIVING enemies, or -1.
+
+    **Every** path here returns an ordinal, never an index. That is not a restatement of
+    the obvious -- it is the fix for E79. Only the ``target_map`` path used to be
+    resolved against the emulator's list; the two fallbacks below returned the game's own
+    numbering and it was handed straight to ``env.step`` as an absolute index. The game
+    removes its dead and the emulator does not, so the two agree exactly until something
+    dies and then silently name different creatures. A Fogmog's eye makes that permanent
+    rather than occasional: it dies and revives all fight, so the emulator holds a corpse
+    at index 0 for most of it, and an attack aimed at the Fogmog landed on the eye.
+    """
     if command is None:
         return -1
     target = command.get("target")
     if isinstance(target, int):
+        # The capture lists only living enemies (the mod filters on IsAlive), so a
+        # position in that list is an ordinal already.
         enemies = (
             ((reference_step or {}).get("raw_state") or {})
             .get("battle", {})
@@ -413,6 +455,8 @@ def translate_target(
         return -1
     if target_map is not None and target in target_map:
         return target_map[target]
+    # The entity id's suffix, which is the game's position among living creatures -- it
+    # RENUMBERS as they die, which is why build_target_map exists. Still an ordinal.
     parts = target.rsplit("_", 1)
     if len(parts) == 2 and parts[1].isdigit():
         return int(parts[1])
