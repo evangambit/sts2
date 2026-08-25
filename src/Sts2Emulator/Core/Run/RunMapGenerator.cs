@@ -202,12 +202,20 @@ public static class RunMapGenerator
         );
     }
 
+    // Glory reads the GENERATED pool; act 1 and Hive still read the constants they were
+    // verified with. The generator reproduces those sixteen pools exactly -- which is
+    // the whole argument that Glory's four are right -- and a test says so, so the two
+    // sources cannot drift apart in silence. Act 3 was reusing Hive's encounters
+    // outright until now.
     private static int[] WeakPoolFor(int act) =>
         act switch
         {
             RunConstants.ActUnderdocks => RunConstants.UnderdocksWeakEncounters.ToArray(),
             RunConstants.ActHive => RunConstants.HiveWeakEncounters.ToArray(),
-            RunConstants.ActGlory => RunConstants.HiveWeakEncounters.ToArray(),
+            RunConstants.ActGlory => GeneratedData.EncounterTags.Pool(
+                RunConstants.ActGlory,
+                "Weak"
+            ),
             _ => RunConstants.OvergrowthWeakEncounters.ToArray(),
         };
 
@@ -216,7 +224,10 @@ public static class RunMapGenerator
         {
             RunConstants.ActUnderdocks => RunConstants.UnderdocksNormalEncounters.ToArray(),
             RunConstants.ActHive => RunConstants.HiveNormalEncounters.ToArray(),
-            RunConstants.ActGlory => RunConstants.HiveNormalEncounters.ToArray(),
+            RunConstants.ActGlory => GeneratedData.EncounterTags.Pool(
+                RunConstants.ActGlory,
+                "Normal"
+            ),
             _ => RunConstants.OvergrowthNormalEncounters.ToArray(),
         };
 
@@ -225,7 +236,10 @@ public static class RunMapGenerator
         {
             RunConstants.ActUnderdocks => RunConstants.UnderdocksEliteEncounters.ToArray(),
             RunConstants.ActHive => RunConstants.HiveEliteEncounters.ToArray(),
-            RunConstants.ActGlory => RunConstants.HiveEliteEncounters.ToArray(),
+            RunConstants.ActGlory => GeneratedData.EncounterTags.Pool(
+                RunConstants.ActGlory,
+                "Elite"
+            ),
             _ => RunConstants.OvergrowthEliteEncounters.ToArray(),
         };
 
@@ -234,7 +248,10 @@ public static class RunMapGenerator
         {
             RunConstants.ActUnderdocks => RunConstants.UnderdocksBossEncounters.ToArray(),
             RunConstants.ActHive => RunConstants.HiveBossEncounters.ToArray(),
-            RunConstants.ActGlory => RunConstants.HiveBossEncounters.ToArray(),
+            RunConstants.ActGlory => GeneratedData.EncounterTags.Pool(
+                RunConstants.ActGlory,
+                "Boss"
+            ),
             _ => RunConstants.OvergrowthBossEncounters.ToArray(),
         };
 
@@ -1521,38 +1538,17 @@ public static class RunMapGenerator
         }
     }
 
+    /// <summary>
+    /// An encounter's tags, which <c>AddWithoutRepeatingTags</c> avoids repeating.
+    /// </summary>
+    /// <remarks>
+    /// Read from the generated table rather than transcribed. The hand-written switch
+    /// this replaces had lost four entries — KnightsElite, both halves of ScrollsOfBiting
+    /// and TunnelerNormal, which also carries a second tag its weak version does not —
+    /// and a missing tag is worse than a wrong one: <c>GrabIndex</c> rejection-samples,
+    /// so it changes how many draws a grab COSTS. Three of the four are Glory's, which is
+    /// act 3 waiting to be handed exactly what E66 did to act 2.
+    /// </remarks>
     private static HashSet<string> Tags(int encounterId) =>
-        encounterId switch
-        {
-            // Hive. Without these the tag-avoidance had nothing to avoid in act 2, which
-            // is worse than a wrong sequence: GrabIndex REJECTION-SAMPLES, so a missing
-            // tag changes how many draws a grab costs, and every draw after it — the
-            // boss, the ancient, the next act — lands somewhere else. A live capture
-            // (`ACT2TEST01`) opens act 2 on Pael where the emulator drew Tezcatara, and
-            // no list size or ordering could explain it because the ROLL itself was from
-            // the wrong position.
-            31 => ["Workers"], // BowlbugsWeak
-            32 => ["Workers"], // BowlbugsNormal
-            37 => ["Workers"], // SlumberingBeetleNormal
-            1 => ["Chomper"], // ChompersNormal
-            4 => ["Exoskeletons"], // ExoskeletonsWeak
-            RunConstants.ExoskeletonsNormalEncounterId => ["Exoskeletons"],
-            33 => ["Burrower"], // TunnelerWeak
-            35 => ["Thieves"], // ThievingHopperWeak
-            2 => ["Nibbit"], // NibbitsWeak
-            3 => ["Slimes"], // SlimesWeak
-            8 => ["Crawler"], // FuzzyWurmCrawlerWeak
-            9 => ["Slugs"], // CorpseSlugs
-            11 => ["Shrinker"], // ShrinkerBeetleWeak
-            12 => ["Seapunk"],
-            // 15 is NibbitsNormal, which declares NO Tags in the game — only
-            // NibbitsWeak is tagged Nibbit. Tagging it here wrongly blocked the game's
-            // legitimate NibbitsWeak -> NibbitsNormal run, shifting the whole
-            // remaining sequence by one.
-            16 => ["Slimes"], // SlimesNormal
-            17 => ["Mushroom", "Slimes"],
-            18 => ["Mushroom"],
-            21 => ["Shrinker", "Crawler"],
-            _ => [],
-        };
+        [.. GeneratedData.EncounterTags.For(encounterId)];
 }
