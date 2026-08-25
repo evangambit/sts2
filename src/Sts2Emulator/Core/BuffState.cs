@@ -154,6 +154,18 @@ public enum BuffId
     /// reach the observation.
     /// </remarks>
     Slumber,
+
+    /// <summary>
+    /// A Decimillipede segment's <c>ReattachPower</c>: how much it heals when it comes
+    /// back, and the marker that it comes back at all.
+    /// </summary>
+    /// <remarks>
+    /// A dead segment spends one turn as DEAD_MOVE and then REATTACHes for its Amount —
+    /// 25 — unless every OTHER segment is already dead, which is the only way the fight
+    /// is won. The emulator left a killed segment dead, so the elite could be taken apart
+    /// one piece at a time.
+    /// </remarks>
+    Reattach,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

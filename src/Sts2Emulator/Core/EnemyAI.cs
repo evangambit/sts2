@@ -352,12 +352,16 @@ public static class EnemyAI
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
                 }
 
-                if (enemy.DefId == KE.DecimillipedeSegment && enemy.MoveIndex % 3 == 1)
+                // Cycle positions, matching SelectIntent: 1 is CONSTRICT and 2 is BULK.
+                // These read as swapped against the old code because the CYCLE was what
+                // was wrong, not the riders.
+                if (enemy.DefId == KE.DecimillipedeSegment && enemy.MoveIndex % 3 == 2)
                 {
+                    // BulkStrength, a flat 2 with no ascension term.
                     BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
                 }
 
-                if (enemy.DefId == KE.DecimillipedeSegment && enemy.MoveIndex % 3 == 2)
+                if (enemy.DefId == KE.DecimillipedeSegment && enemy.MoveIndex % 3 == 1)
                 {
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 1);
                 }
@@ -365,6 +369,26 @@ public static class EnemyAI
                 if (enemy.DefId == KE.MagiKnight && enemy.MoveIndex % 5 == 0)
                 {
                     enemy.Block += BuffSystem.IncomingBlock(9, enemy.Buffs);
+                }
+
+                // Two of the prism's four moves carry a DefendIntent, for different
+                // amounts: RADIATE gains RadiateBlock and PULSATE gains PulsateBlock,
+                // which is the TOUGH pair and so 22 at A8.
+                //
+                // This lived in ApplyBuffIntent, as a flat 22 after "every attack" -- and
+                // ALL FOUR of the prism's moves are attacks, so that case never ran and
+                // the prism gained no block at all. A rider on an attacking creature
+                // belongs here, in the attack branch.
+                if (enemy.DefId == KE.InfestedPrism && enemy.MoveIndex % 4 == 1)
+                {
+                    int radiate = Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11);
+                    enemy.Block += BuffSystem.IncomingBlock(radiate, enemy.Buffs);
+                }
+
+                if (enemy.DefId == KE.InfestedPrism && enemy.MoveIndex % 4 == 3)
+                {
+                    int pulsate = Ascension.Value(ascension, Ascension.ToughEnemies, 22, 20);
+                    enemy.Block += BuffSystem.IncomingBlock(pulsate, enemy.Buffs);
                 }
 
                 if (enemy.DefId == KE.CeremonialBeast && enemy.MoveIndex > 0)
@@ -1345,20 +1369,52 @@ public static class EnemyAI
                 };
 
             case KE.Entomancer:
+                // Opens on BEES, then SPEAR, then PHEROMONE_SPIT, cycling.
                 return (enemy.MoveIndex % 3) switch
                 {
                     0 => new Intent(IntentType.Buff, 1),
-                    1 => new Intent(IntentType.Attack, 24),
-                    _ => new Intent(IntentType.Attack, 20),
+                    // BEES_MOVE: MultiAttackIntent(BeesDamage, BeesRepeat). BeesDamage is
+                    // 3 at BOTH levels and the REPEAT is what ascension moves, 8 at A9
+                    // and 7 at A8 -- so the 24 was the A9 hit count folded into the
+                    // damage, wrong in the same two ways the Exoskeleton's skitter was.
+                    1 => new Intent(
+                        IntentType.Attack,
+                        3,
+                        Hits: Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
+                    ),
+                    // SpearMoveDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 20, 18)
+                    ),
                 };
 
             case KE.InfestedPrism:
+                // JAB -> RADIATE -> WHIRLWIND -> PULSATE, cycling.
                 return (enemy.MoveIndex % 4) switch
                 {
-                    0 => new Intent(IntentType.Attack, 17),
-                    1 => new Intent(IntentType.Attack, 13),
-                    2 => new Intent(IntentType.Attack, 18),
-                    _ => new Intent(IntentType.Attack, 10),
+                    // JabDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 17, 15)
+                    ),
+                    // RadiateDamage, and RadiateBlock for itself.
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
+                    ),
+                    // WHIRLWIND_MOVE: MultiAttackIntent(WhirlwindDamage, 3). The 18 was
+                    // 6x3 folded, at the A9 damage.
+                    2 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 5),
+                        Hits: 3
+                    ),
+                    // PulsateDamage, plus PulsateBlock and another VitalSpark.
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 10, 8)
+                    ),
                 };
 
             case KE.PhrogParasite:
@@ -1418,11 +1474,31 @@ public static class EnemyAI
                     );
 
             case KE.DecimillipedeSegment:
+                // WRITHE -> CONSTRICT -> BULK, and back to WRITHE. Not 0 -> 1 -> 2: the
+                // FollowUpStates are `writhe -> constrict -> bulk -> writhe`, where the
+                // STARTER index maps 0/1/2 to writhe/bulk/constrict. Walking the starter
+                // numbering as though it were the cycle put every segment's second and
+                // third moves the wrong way round. MoveIndex is seeded with the CYCLE
+                // POSITION now, so this is the cycle itself.
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 12),
-                    1 => new Intent(IntentType.Attack, 7),
-                    _ => new Intent(IntentType.Attack, 9),
+                    // WRITHE_MOVE: MultiAttackIntent(WritheDamage, 2). The 12 was 6x2
+                    // folded, at the A9 damage as well.
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 5),
+                        Hits: 2
+                    ),
+                    // CONSTRICT_MOVE: ConstrictDamage, and Weak 1 on the player.
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8)
+                    ),
+                    // BULK_MOVE: BulkDamage, and Strength 2 on itself.
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
+                    ),
                 };
 
             case KE.SpectralKnight:
@@ -2684,15 +2760,6 @@ public static class EnemyAI
                 {
                     BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
                 }
-                break;
-
-            case KE.InfestedPrism:
-                if (enemy.CurrentIntent.Magnitude > 0)
-                {
-                    DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                }
-
-                enemy.Block += BuffSystem.IncomingBlock(22, enemy.Buffs);
                 break;
 
             case KE.PhantasmalGardener:

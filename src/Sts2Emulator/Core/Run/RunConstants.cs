@@ -522,6 +522,9 @@ public static class RunConstants
     /// <summary>The fight Dense Vegetation's Rest wakes up, entered from the event.</summary>
     public const int DenseVegetationEncounterId = 55;
 
+    /// <summary>ReattachPower's Amount on every Decimillipede segment.</summary>
+    public const int DecimillipedeReattachHeal = 25;
+
     public const int PunchOffEncounterId = 56;
 
     // Encounters that roll something off their OWN stream, and so need an entry id.

@@ -444,8 +444,12 @@ public static class CombatEngine
                 // IllusionPower.ReviveMove: Heal(MaxHp - CurrentHp), then back to the move
                 // it was on. It cannot be hit while reviving, which the emulator gets for
                 // free -- everything targets by "alive", and it is not yet.
+                //
+                // A Decimillipede segment reattaches for a FIXED amount instead, so it
+                // comes back hurt: 25 of a 46-to-52 pool.
+                int reattach = BuffSystem.Get(enemy.Buffs, BuffId.Reattach);
                 BuffSystem.Remove(enemy.Buffs, BuffId.Reviving);
-                enemy.Hp = enemy.MaxHp;
+                enemy.Hp = reattach > 0 ? Math.Min(enemy.MaxHp, enemy.Hp + reattach) : enemy.MaxHp;
                 continue;
             }
 
@@ -1183,6 +1187,10 @@ public static class CombatEngine
             {
                 continue;
             }
+            else if (TryReattachSegment(state, state.Enemies[i]))
+            {
+                continue;
+            }
             else if (TryRespawnTestSubject(state.Enemies[i]))
             {
                 continue;
@@ -1280,6 +1288,48 @@ public static class CombatEngine
 
         BuffSystem.Apply(enemy.Buffs, BuffId.Reviving, 1);
         // A HealIntent, so the readout says what the turn will be spent on.
+        enemy.CurrentIntent = new Intent(IntentType.Buff, 0);
+        enemy.Block = 0;
+        return true;
+    }
+
+    /// <summary>
+    /// <c>ReattachPower</c>: a killed Decimillipede segment comes back one turn later.
+    /// </summary>
+    /// <remarks>
+    /// <c>AfterDeath</c> puts it in DEAD_MOVE and <c>DoReattach</c> heals it by the
+    /// power's Amount — but only <c>if (!AreAllOtherSegmentsDead())</c>. That guard IS
+    /// the fight: the elite is won by emptying all three inside one window, and the
+    /// emulator, which left a killed segment dead, let it be taken apart one at a time.
+    ///
+    /// It heals 25 rather than to full, which is what separates this from the Fogmog
+    /// eye's revive — a segment that comes back is not a fresh one.
+    /// </remarks>
+    private static bool TryReattachSegment(CombatState state, EnemyState enemy)
+    {
+        if (BuffSystem.Get(enemy.Buffs, BuffId.Reattach) <= 0)
+        {
+            return false;
+        }
+
+        if (BuffSystem.Get(enemy.Buffs, BuffId.Reviving) > 0)
+        {
+            return true;
+        }
+
+        // The last one standing stays down, and takes the rest of the creature with it.
+        bool anyOtherAlive = state.Enemies.Any(other =>
+            !ReferenceEquals(other, enemy)
+            && BuffSystem.Get(other.Buffs, BuffId.Reattach) > 0
+            && (other.Hp > 0 || BuffSystem.Get(other.Buffs, BuffId.Reviving) > 0)
+        );
+        if (!anyOtherAlive)
+        {
+            return false;
+        }
+
+        BuffSystem.Apply(enemy.Buffs, BuffId.Reviving, 1);
+        // A HealIntent, so the readout says what the turn is spent on.
         enemy.CurrentIntent = new Intent(IntentType.Buff, 0);
         enemy.Block = 0;
         return true;

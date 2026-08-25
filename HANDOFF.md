@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **55 tested, 33 pending** — and the pending list is a
+  setup: 88 encounters modelled, **58 tested, 30 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1244,6 +1244,19 @@ turned out to exclude nothing in combat.
   PLAYER stops being asked for an intent, so a move cycle read past the player's death is
   just the last announcement standing still; keep both sides alive when walking a cycle.
 
+  **A monster can carry TWO numberings, and they need not agree.** The Decimillipede's
+  `StarterMoveIdx` numbers its moves 0/1/2 = WRITHE/BULK/CONSTRICT while the
+  FollowUpStates walk WRITHE -> CONSTRICT -> BULK, so advancing the starter numbering as
+  though it were the cycle silently transposed two moves (E95). Reconcile the two in ONE
+  place — the emulator seeds `MoveIndex` with the cycle position — or every rider keyed
+  to a phase inherits the error.
+
+  **A rider in the wrong branch is dead code, and dead code hides more than one bug.**
+  The Infested Prism's block sat in `ApplyBuffIntent` and all four of its moves are
+  attacks, so it never ran: the prism gained no block at all, and the wrong flat amount
+  inside it went unnoticed for as long as the branch did (E97). When a rider does nothing
+  observable, check which branch it is in before checking its number.
+
   **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
   were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES
   rather than loops (E86) — a Tunneler that walks back to its opening bite every fourth
@@ -1264,9 +1277,9 @@ turned out to exclude nothing in combat.
   **That sweep is now a script**, `scripts/audit_ascension_literals.py`, which cross-checks
   every monster's `GetValueIfAscension(DeadlyEnemies, high, low)` pairs against the bare
   literals in its `EnemyAI` case block. It reported 80; the Hive monsters are fixed (E83,
-  E86, E91) and **55 remain**, most of them act 3 and the later act-2 elites and bosses.
-  **Hive is done bar its elites and bosses** — all four weak encounters and all eight
-  normals now have suites.
+  E86, E91, E95-E98) and **49 remain**, nearly all of them act 3 and Hive's bosses.
+  **Hive is done bar its three bosses** — all four weak encounters, all eight normals and
+  all three elites now have suites.
 
   Two cautions the batch earned, both worth carrying into the next one:
 

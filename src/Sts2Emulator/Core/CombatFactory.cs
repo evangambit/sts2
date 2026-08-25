@@ -908,9 +908,12 @@ public static class CombatFactory
                 CreateEnemy(KE.BygoneEffigy, rng, new Intent(IntentType.Unknown, 0)),
             ],
 
+            // Opens on BEES. AfterAddedToRoom's PersonalHivePower at 1 -- which its
+            // PHEROMONE_SPIT reads to decide between growing the hive and taking
+            // Strength 2 -- is applied by CreateEnemy's rider block, not here.
             ActOneEncounter.Entomancer =>
             [
-                CreateEnemy(KE.Entomancer, rng, new Intent(IntentType.Attack, 24), moveIndex: 1),
+                CreateEnemy(KE.Entomancer, rng, new Intent(IntentType.Attack, 3), moveIndex: 1),
             ],
 
             ActOneEncounter.InfestedPrisms =>
@@ -1324,7 +1327,17 @@ public static class CombatFactory
         var enemies = new List<EnemyState>(3);
         for (int i = 0; i < 3; i++)
         {
-            int moveIndex = (starter + i) % 3;
+            // StarterMoveIdx numbers the moves 0/1/2 = WRITHE/BULK/CONSTRICT, but the
+            // machine walks WRITHE -> CONSTRICT -> BULK. MoveIndex carries the CYCLE
+            // POSITION so advancing it is advancing the cycle; this is the one place the
+            // two numberings have to be reconciled.
+            int starterMove = (starter + i) % 3;
+            int moveIndex = starterMove switch
+            {
+                0 => 0, // WRITHE, cycle position 0
+                1 => 2, // BULK, cycle position 2
+                _ => 1, // CONSTRICT, cycle position 1
+            };
             var enemy = CreateEnemy(
                 KE.DecimillipedeSegment,
                 rng,
@@ -1332,18 +1345,21 @@ public static class CombatFactory
                 moveIndex
             );
             MakeDecimillipedeHpEvenAndUnique(enemy, enemies);
+            // AfterAddedToRoom applies ReattachPower at 25 to every segment: a dead
+            // segment spends a turn as DEAD_MOVE and then heals back, and the fight is
+            // only won by emptying all three inside one window.
+            BuffSystem.Apply(enemy.Buffs, BuffId.Reattach, RunConstants.DecimillipedeReattachHeal);
             enemies.Add(enemy);
         }
         return enemies;
     }
 
-    private static Intent DecimillipedeIntent(int moveIndex) =>
-        (moveIndex % 3) switch
-        {
-            0 => new Intent(IntentType.Attack, 12),
-            1 => new Intent(IntentType.Attack, 7),
-            _ => new Intent(IntentType.Attack, 9),
-        };
+    /// <summary>
+    /// A placeholder: ChooseIntents overwrites every opening intent from
+    /// <c>EnemyAI.SelectIntent</c> the moment the roster is built. Kept only so a segment
+    /// is never constructed with an empty intent.
+    /// </summary>
+    private static Intent DecimillipedeIntent(int moveIndex) => new(IntentType.Attack, moveIndex);
 
     private static void MakeDecimillipedeHpEvenAndUnique(
         EnemyState enemy,
