@@ -197,6 +197,77 @@ public class EnchantmentCombatTests
         Assert.Equal(plain.State.Energy, withImbued.State.Energy);
     }
 
+    /// <summary>
+    /// The reorder MOVES the imbued card to the bottom; it does not stop the opening draw
+    /// reaching it. A deck of five or fewer draws its own bottom card, so the imbued one
+    /// lands in hand — and the game plays it from there, leaving the turn to start on
+    /// FOUR cards rather than five.
+    /// </summary>
+    [Fact]
+    public void AnImbuedCardDrawnIntoTheOpeningHandStillPlaysAndCostsAHandSlot()
+    {
+        var state = OpeningHandOf(deckSize: 5, imbued: true);
+
+        Assert.Equal(4, state.Hand.Count);
+        Assert.DoesNotContain(state.Hand, card => card.Enchantment == Enchantment.Imbued);
+        Assert.Single(state.AutoPlayQueue);
+    }
+
+    /// <summary>
+    /// The control: the same five-card deck without the enchantment keeps all five, so the
+    /// missing card above is the imbued one being spent and not a draw going wrong.
+    /// </summary>
+    [Fact]
+    public void TheSameDeckWithoutImbuedKeepsFiveCards()
+    {
+        var state = OpeningHandOf(deckSize: 5, imbued: false);
+
+        Assert.Equal(5, state.Hand.Count);
+        Assert.Empty(state.AutoPlayQueue);
+    }
+
+    /// <summary>
+    /// With a deck big enough that the draw never reaches the bottom, the imbued card is
+    /// still in the pile — so it plays from THERE and the hand is a normal five.
+    /// </summary>
+    [Fact]
+    public void AnImbuedCardLeftInTheDrawPilePlaysWithoutCostingAHandSlot()
+    {
+        var state = OpeningHandOf(deckSize: 10, imbued: true);
+
+        Assert.Equal(5, state.Hand.Count);
+        Assert.Single(state.AutoPlayQueue);
+        Assert.DoesNotContain(state.DrawPile, card => card.Enchantment == Enchantment.Imbued);
+    }
+
+    /// <summary>Deal an opening hand the way a real combat does, and queue what plays itself.</summary>
+    private static CombatState OpeningHandOf(int deckSize, bool imbued)
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.Hand.Clear();
+        state.DrawPile.Clear();
+        state.DiscardPile.Clear();
+        state.ExhaustPile.Clear();
+        for (int i = 0; i < deckSize - 1; i++)
+        {
+            state.DrawPile.Add(Card(IC.StrikeIronclad));
+        }
+
+        state.DrawPile.Add(
+            imbued ? Enchanted(IC.DefendIronclad, Enchantment.Imbued, 1) : Card(IC.DefendIronclad)
+        );
+
+        int draw = CombatFactory.ApplyTurnOneDrawPileReorder(state.DrawPile, 5);
+        for (int i = 0; i < draw && state.DrawPile.Count > 0; i++)
+        {
+            state.Hand.Add(state.DrawPile[0]);
+            state.RemoveFromDrawPileAt(0);
+        }
+
+        CombatFactory.QueueCombatStartAutoPlays(state);
+        return state;
+    }
+
     // ---- Clone ----------------------------------------------------------------------
 
     /// <summary>

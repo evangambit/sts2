@@ -433,18 +433,33 @@ public static class CombatFactory
     /// </remarks>
     public static void QueueCombatStartAutoPlays(CombatState state)
     {
-        for (int i = state.DrawPile.Count - 1; i >= 0; i--)
+        // The HAND as well as the draw pile. Imbued normally sits at the bottom of the
+        // pile and plays from there, but the reorder only moves it — it does not stop the
+        // opening draw reaching it. A deck of five or fewer draws its own bottom card, so
+        // the Imbued one lands in hand and the game plays it from there, leaving the turn
+        // to start on four. Scanning only the pile lost it entirely in that case: it never
+        // played at all and the player kept a card the game had spent.
+        QueueImbuedFrom(state, state.DrawPile, index => state.RemoveFromDrawPileAt(index));
+        QueueImbuedFrom(state, state.Hand, index => state.Hand.RemoveAt(index));
+    }
+
+    private static void QueueImbuedFrom(
+        CombatState state,
+        List<CardInstance> pile,
+        Action<int> removeAt
+    )
+    {
+        for (int i = pile.Count - 1; i >= 0; i--)
         {
-            if (state.DrawPile[i].Enchantment != Enchantment.Imbued)
+            if (pile[i].Enchantment != Enchantment.Imbued)
             {
                 continue;
             }
 
-            // Taken OUT of the pile as it is queued: AutoPlayCore files the card into
-            // the discard or exhaust pile when it is done, so leaving it in the draw
-            // pile would duplicate it.
-            state.AutoPlayQueue.Insert(0, state.DrawPile[i]);
-            state.RemoveFromDrawPileAt(i);
+            // Taken OUT as it is queued: AutoPlayCore files the card into the discard or
+            // exhaust pile when it is done, so leaving it where it was would duplicate it.
+            state.AutoPlayQueue.Insert(0, pile[i]);
+            removeAt(i);
         }
     }
 
