@@ -585,6 +585,7 @@ public static class RunNonCombatEffects
         state.EventValue0 = null;
         state.EventValue1 = null;
         state.EventPage = 0;
+        state.EventRandomOffer = [];
         state.CrystalSphere = null;
         state.CrystalSphereRng = null;
         state.EventRngStream = null;
@@ -600,6 +601,7 @@ public static class RunNonCombatEffects
         state.EventValue0 = null;
         state.EventValue1 = null;
         state.EventPage = 0;
+        state.EventRandomOffer = [];
         state.CrystalSphere = null;
         state.CrystalSphereRng = null;
         state.EventRngStream = null;
@@ -798,11 +800,16 @@ public static class RunNonCombatEffects
             RunConstants.EventAmalgamator => state.Deck.Count >= 2,
             RunConstants.EventFieldOfManSizedHoles => state.Deck.Count > 0,
             RunConstants.EventInfestedAutomaton => state.Deck.Count > 0,
-            RunConstants.EventReflections => state.Deck.Count > 0,
             RunConstants.EventSpiritGrafter => state.Deck.Count > 0,
-            RunConstants.EventTinkerTime => state.Deck.Count > 0,
-            RunConstants.EventZenWeaver => state.Deck.Any(RunConstants.IsRunCardUpgradable)
-                || state.PlayerHp < state.PlayerMaxHp,
+            // Reflections and TinkerTime declare no IsAllowed at all: both were gated on
+            // a non-empty deck, which is a rule neither model has. The deck-size gates
+            // came in with placeholder options that no longer stand.
+            RunConstants.EventReflections => true,
+            RunConstants.EventTinkerTime => true,
+            // The weaver only turns up for a run that can afford EmotionalAwarenessCost:
+            // `Players.All(p => p.Gold >= 125)`. The upgradable-or-hurt test belonged to
+            // the placeholder options.
+            RunConstants.EventZenWeaver => state.Gold >= RunConstants.ZenWeaverEmotionalCost,
             // The site only turns up on a run that is actually hurt: CurrentHp <= 70% of
             // max. It was grouped with the unconditional events.
             RunConstants.EventUnrestSite => state.PlayerHp <= state.PlayerMaxHp * 0.70m,
@@ -880,7 +887,8 @@ public static class RunNonCombatEffects
         int followUpCount = 0,
         int followUpHpLoss = 0,
         string? eventEntry = null,
-        int enchantAmount = 0
+        int enchantAmount = 0,
+        SelectionReturn returnTo = SelectionReturn.EventResult
     )
     {
         state.PendingSelectionEventEntry = eventEntry;
@@ -891,6 +899,7 @@ public static class RunNonCombatEffects
         state.PendingSelectionFollowUpCount = followUpCount;
         state.PendingSelectionFollowUpHpLoss = followUpHpLoss;
         state.PendingSelectionEnchantAmount = enchantAmount;
+        state.PendingSelectionReturn = returnTo;
         if (!Enumerable.Range(0, state.Deck.Count).Any(i => CanSelectCard(state, i)))
         {
             ClearDeckSelection(state);
@@ -910,6 +919,7 @@ public static class RunNonCombatEffects
         state.PendingSelectionFollowUpCount = 0;
         state.PendingSelectionFollowUpHpLoss = 0;
         state.PendingSelectionEnchantAmount = 0;
+        state.PendingSelectionReturn = SelectionReturn.EventResult;
         state.PendingSelectionReturnsToEvent = false;
     }
 
@@ -2108,21 +2118,6 @@ public static class RunNonCombatEffects
         state.PlayerMaxHp = newMaxHp;
     }
 
-    public static bool UpgradeFirstCard(RunState state)
-    {
-        for (int i = 0; i < state.Deck.Count; i++)
-        {
-            if (!RunConstants.IsRunCardUpgradable(state.Deck[i]))
-            {
-                continue;
-            }
-
-            state.Deck[i] = state.Deck[i] with { Upgraded = true };
-            return true;
-        }
-        return false;
-    }
-
     /// <summary>
     /// Doors of Light and Dark's Light door:
     /// <c>Deck.Cards.Where(IsUpgradable).StableShuffle(base.Rng).Take(Cards)</c>.
@@ -2162,6 +2157,119 @@ public static class RunNonCombatEffects
         }
     }
 
+    /// <summary>
+    /// Reflections' Touch a Mirror: downgrade up to two upgraded cards, then upgrade up
+    /// to four upgradable ones.
+    /// </summary>
+    /// <remarks>
+    /// The upgradable list is derived AFTER the downgrades, not alongside them, so the
+    /// two cards the mirror just knocked down are candidates to come straight back up.
+    /// Each pick is <c>Rng.NextItem</c> over the remaining list with the pick removed --
+    /// a draw per card, and only while the list has something in it, which is why both
+    /// loops break rather than clamp.
+    /// </remarks>
+    public static void ReflectionsTouchAMirror(RunState state)
+    {
+        var rng = EventRng(state, "REFLECTIONS");
+
+        var upgraded = Enumerable
+            .Range(0, state.Deck.Count)
+            .Where(index => state.Deck[index].Upgraded)
+            .ToList();
+        for (int i = 0; i < 2 && upgraded.Count > 0; i++)
+        {
+            int index = rng.NextItem(upgraded);
+            upgraded.Remove(index);
+            state.Deck[index] = state.Deck[index] with { Upgraded = false };
+        }
+
+        var upgradable = Enumerable
+            .Range(0, state.Deck.Count)
+            .Where(index => RunConstants.IsRunCardUpgradable(state.Deck[index]))
+            .ToList();
+        for (int i = 0; i < 4 && upgradable.Count > 0; i++)
+        {
+            int index = rng.NextItem(upgradable);
+            upgradable.Remove(index);
+            state.Deck[index] = state.Deck[index] with { Upgraded = true };
+        }
+    }
+
+    /// <summary>
+    /// Reflections' Shatter: a copy of every card in the deck, then a Bad Luck.
+    /// </summary>
+    /// <remarks>
+    /// The loop runs to the deck's size as it was BEFORE any copy was added, which is
+    /// what stops it copying its own copies forever. CloneCard preserves the card as it
+    /// stands -- upgrades and enchantment included -- and costs no draws.
+    /// </remarks>
+    public static void ReflectionsShatter(RunState state)
+    {
+        int originalDeckSize = state.Deck.Count;
+        for (int i = 0; i < originalDeckSize; i++)
+        {
+            // Not AddCardToDeck: this is CloneCard, so the egg relics do not get a second
+            // look at a card that is already in the deck.
+            state.Deck.Add(state.Deck[i]);
+        }
+
+        AddCardToDeck(state, new CardInstance(RunConstants.CardBadLuck, Upgraded: false));
+    }
+
+    /// <summary>
+    /// Tinker Time's second page: two of Attack, Skill and Power.
+    /// </summary>
+    /// <remarks>
+    /// <c>TakeRandom(2, Rng)</c> is <c>UnstableShuffle(rng).Take(2)</c>, so all three are
+    /// permuted -- two draws for a list of three -- and the first two are shown. Taking
+    /// only the draws the two shown cards need would leave the rider page reading the
+    /// stream one value early.
+    /// </remarks>
+    public static void BeginTinkerCardTypePage(RunState state)
+    {
+        var types = new List<int>
+        {
+            (int)CardType.Attack,
+            (int)CardType.Skill,
+            (int)CardType.Power,
+        };
+        EventRng(state, "TINKER_TIME").Shuffle(types);
+        state.EventRandomOffer = [.. types.Take(2)];
+        state.EventPage = 1;
+    }
+
+    /// <summary>
+    /// Tinker Time's third page: two of the three riders that belong to the chosen type.
+    /// </summary>
+    public static void BeginTinkerRiderPage(RunState state)
+    {
+        var riders = state.TinkerCardType switch
+        {
+            CardType.Attack => new List<int>
+            {
+                (int)TinkerRider.Sapping,
+                (int)TinkerRider.Violence,
+                (int)TinkerRider.Choking,
+            },
+            CardType.Skill => new List<int>
+            {
+                (int)TinkerRider.Energized,
+                (int)TinkerRider.Wisdom,
+                (int)TinkerRider.Chaos,
+            },
+            _ => new List<int>
+            {
+                (int)TinkerRider.Expertise,
+                (int)TinkerRider.Curious,
+                (int)TinkerRider.Improvement,
+            },
+        };
+        // The same stream the type page used: one event, one Rng.
+        EventRng(state, "TINKER_TIME").Shuffle(riders);
+        state.EventRandomOffer = [.. riders.Take(2)];
+        state.EventPage = 2;
+    }
+
     public static void UpgradeTwoRandomCardsForLightDoor(RunState state)
     {
         var indexes = state
@@ -2178,25 +2286,6 @@ public static class RunNonCombatEffects
         {
             state.Deck[index] = state.Deck[index] with { Upgraded = true };
         }
-    }
-
-    public static void RemoveLowestPriorityCard(RunState state)
-    {
-        if (state.Deck.Count == 0)
-        {
-            return;
-        }
-
-        foreach (int cardId in new[] { RunConstants.CursePlaceholderCard, 472, 131, 30 })
-        {
-            int index = state.Deck.FindIndex(card => Math.Abs(card.DefId) == cardId);
-            if (index >= 0)
-            {
-                state.Deck.RemoveAt(index);
-                return;
-            }
-        }
-        state.Deck.RemoveAt(state.Deck.Count - 1);
     }
 
     public static void TransformCardAt(RunState state, int deckIndex, GameRng rng)
@@ -2219,9 +2308,6 @@ public static class RunNonCombatEffects
         state.Deck.RemoveAt(deckIndex);
         AddCardToDeck(state, new CardInstance(rng.NextItem(pool), Upgraded: false));
     }
-
-    public static void TransformFirstCard(RunState state) =>
-        TransformCardAt(state, 0, state.PlayerRng.Transformations);
 
     public static void TransformFirstCardMatching(RunState state, int cardId)
     {

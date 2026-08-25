@@ -832,6 +832,9 @@ public static class RunRewardGenerator
             state.ShopCosts[10 + i] = ShopPotionCost(state.ShopPotions[i], state.PlayerRng.Shops);
         }
         state.ShopCosts[RunConstants.ShopRemoveAction] = 100 + 50 * state.ShopRemovalsUsed;
+        // A fresh merchant stocks the service again -- the price carries across shops,
+        // the once-per-visit limit does not.
+        state.ShopRemovalUsedThisVisit = false;
 
         // Membership Card's ModifyMerchantPrice: DynamicVar("Discount", 50m) as a
         // percentage of the original, applied to every entry the merchant quotes.

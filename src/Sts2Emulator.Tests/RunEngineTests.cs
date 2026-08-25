@@ -1322,11 +1322,31 @@ public class RunEngineTests
         Assert.Equal(0, status);
         Assert.Equal(RunPhase.TransformSelect, cage.State.Phase);
 
+        // Confirming the pickup opens the removal screen and takes nothing yet: the cage
+        // removes TWO cards and the PLAYER picks both. It used to take them itself, by a
+        // preference order the emulator invented, which is the whole of the relic.
+        status = cage.Step(0, -1, out _, out terminal, out _);
+        Assert.Equal(0, status);
+        Assert.Equal(RunPhase.TransformSelect, cage.State.Phase);
+        Assert.Equal(deckSize, cage.State.Deck.Count);
+
+        // The screen stays up for the second pick.
+        status = cage.Step(0, -1, out _, out terminal, out _);
+        Assert.Equal(0, status);
+        Assert.Equal(RunPhase.TransformSelect, cage.State.Phase);
+        Assert.Equal(deckSize - 1, cage.State.Deck.Count);
+
+        status = cage.Step(0, -1, out _, out terminal, out _);
+        Assert.Equal(0, status);
+        Assert.False(terminal);
+        Assert.Equal(deckSize - 2, cage.State.Deck.Count);
+
+        // Taken from Neow, so it goes back to Neow -- which stays up for one Proceed.
+        Assert.Equal(RunPhase.Ancient, cage.State.Phase);
         status = cage.Step(0, -1, out _, out terminal, out _);
         Assert.Equal(0, status);
         Assert.False(terminal);
         Assert.Equal(RunPhase.Map, cage.State.Phase);
-        Assert.Equal(deckSize - 2, cage.State.Deck.Count);
     }
 
     private static void AssertMask(int[] mask, params int[] enabledActions)

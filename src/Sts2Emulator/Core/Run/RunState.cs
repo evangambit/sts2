@@ -34,6 +34,31 @@ public enum DeckSelection
 }
 
 /// <summary>One act's generated rooms, as <c>ActModel._rooms</c> holds them.</summary>
+/// <summary>
+/// Where a deck selection puts the run once it has been answered.
+/// </summary>
+/// <remarks>
+/// Every selection used to land on <c>RunPhase.Event</c>, which is right for the events
+/// that open most of them and wrong for everything else — and it is what kept the shop's
+/// removal service and Empty Cage stuck choosing a card for the player instead of asking.
+/// Neow is not in here: it is decided by <c>NeowAwaitingProceed</c>, which the reward
+/// screens read too.
+/// </remarks>
+public enum SelectionReturn
+{
+    /// <summary>Back to the event, showing its result page.</summary>
+    EventResult = 0,
+
+    /// <summary>Back to the event with its options still up — the belt turns again.</summary>
+    EventOptions,
+
+    /// <summary>Back to the shop the service was bought from.</summary>
+    Shop,
+
+    /// <summary>On to the map: the room that opened it is finished.</summary>
+    Map,
+}
+
 public sealed record ActRooms(
     int Act,
     int[] Events,
@@ -351,6 +376,16 @@ public sealed class RunState
     /// </summary>
     public bool PendingHeftyTabletCurse;
     public int ShopRemovalsUsed;
+
+    /// <summary>Whether this shop's removal service has already been bought.</summary>
+    /// <remarks>
+    /// Separate from <see cref="ShopRemovalsUsed"/>, which is the RUN's total and only
+    /// sets the price (<c>BaseCost + PriceIncrease * CardShopRemovalsUsed</c>). The
+    /// merchant stocks the service once per visit — <c>MerchantCardRemovalEntry</c> has
+    /// <c>IsStocked => !Used</c> — so a second removal in the same shop is not for sale
+    /// at any price.
+    /// </remarks>
+    public bool ShopRemovalUsedThisVisit;
     public int? TransformSelectedDeckIndex;
 
     /// <summary>
@@ -392,6 +427,22 @@ public sealed class RunState
     public int EventPage;
 
     /// <summary>
+    /// Which two of an event's candidates the current page is showing, in the order it
+    /// shows them -- so an action index means the same thing to the engine as it does on
+    /// screen.
+    /// </summary>
+    /// <remarks>
+    /// Tinker Time is the case that needs it: both of its later pages are
+    /// <c>TakeRandom(2, Rng)</c> over three candidates, so which option index 0 IS
+    /// depends on a shuffle. Storing it beats re-deriving, which would advance the
+    /// event's stream a second time and offer a different pair than the one shown.
+    /// </remarks>
+    public int[] EventRandomOffer = [];
+
+    /// <summary>The card type Tinker Time's second page settled on.</summary>
+    public CardType TinkerCardType;
+
+    /// <summary>
     /// A card the event adds once the selection above finishes, and how many copies.
     /// Three events pay for a removal with a curse -- <c>RemoveFromDeck(cards)</c> and
     /// then <c>AddCurseToDeck&lt;T&gt;</c> -- so the curse has to survive the screen.
@@ -415,6 +466,9 @@ public sealed class RunState
     public int PendingSelectionEnchantAmount;
 
     public bool PendingSelectionReturnsToEvent;
+
+    /// <summary>Where this selection leaves the run when it is answered.</summary>
+    public SelectionReturn PendingSelectionReturn;
     public bool PendingRestUpgrade;
     public bool RestResultPending;
     public int UnknownMapPointsVisited;

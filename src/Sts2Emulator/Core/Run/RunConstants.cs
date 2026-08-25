@@ -353,6 +353,22 @@ public static class RunConstants
     /// <summary>Ascender's Bane, which the game refuses to remove from a deck.</summary>
     public const int CardAscendersBane = 10001;
 
+    /// <summary>Zen Weaver's Breathing Techniques hands out two of these.</summary>
+    public const int CardEnlightenment = 165;
+
+    /// <summary>The curse Reflections' Shatter adds after copying the deck.</summary>
+    public const int CardBadLuck = 10021;
+
+    /// <summary>Zen Weaver's three prices, its CanonicalVars.</summary>
+    public const int ZenWeaverBreathingCost = 50;
+
+    public const int ZenWeaverEmotionalCost = 125;
+
+    public const int ZenWeaverAcupunctureCost = 250;
+
+    /// <summary>The card Tinker Time builds, and only Tinker Time.</summary>
+    public const int CardMadScience = 292;
+
     /// <summary>
     /// How many characters Orobas may brand a Sea Glass with: everyone unlocked except
     /// the player's own, which is four on the mature profile the captures are taken on.

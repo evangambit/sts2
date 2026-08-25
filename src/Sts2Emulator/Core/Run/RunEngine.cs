@@ -51,6 +51,7 @@ public sealed class RunEngine
         State.PotionRewardOdds = 0.4;
         State.PendingRelicReward = false;
         State.ShopRemovalsUsed = 0;
+        State.ShopRemovalUsedThisVisit = false;
         State.TransformSelectedDeckIndex = null;
         RunNonCombatEffects.ClearDeckSelection(State);
         State.PendingRestUpgrade = false;
@@ -531,7 +532,8 @@ public sealed class RunEngine
                 }
 
                 if (
-                    State.Gold >= State.ShopCosts[RunConstants.ShopRemoveAction]
+                    !State.ShopRemovalUsedThisVisit
+                    && State.Gold >= State.ShopCosts[RunConstants.ShopRemoveAction]
                     && State.Deck.Count > 1
                 )
                 {
@@ -1751,14 +1753,35 @@ public sealed class RunEngine
         else if (action == RunConstants.ShopRemoveAction)
         {
             int cost = State.ShopCosts[RunConstants.ShopRemoveAction];
-            if (State.Gold < cost || State.Deck.Count <= 1)
+            if (State.ShopRemovalUsedThisVisit || State.Gold < cost || State.Deck.Count <= 1)
+            {
+                return -1;
+            }
+
+            // The merchant's service opens a removal SCREEN — which card goes is the
+            // player's decision, and the whole of what the gold buys. This used to call
+            // RemoveLowestPriorityCard, an emulator-invented preference order that starts
+            // with Ascender's Bane, a card the game will not even offer.
+            //
+            // Open BEFORE charging: a deck with nothing the screen would take is not a
+            // sale, and taking the gold for a screen that never appears is worse than
+            // refusing the click.
+            if (
+                !RunNonCombatEffects.BeginDeckSelection(
+                    State,
+                    DeckSelection.Remove,
+                    0,
+                    count: 1,
+                    returnTo: SelectionReturn.Shop
+                )
+            )
             {
                 return -1;
             }
 
             State.Gold -= cost;
-            RunNonCombatEffects.RemoveLowestPriorityCard(State);
             State.ShopRemovalsUsed++;
+            State.ShopRemovalUsedThisVisit = true;
         }
         else if (action != RunConstants.ShopSkipAction)
         {
@@ -3489,21 +3512,53 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventZenWeaver:
+                // The weaver sells removals. What was here -- heal 12 / upgrade a card /
+                // +5 max HP -- matched none of its three options; the model is
+                // BreathingTechniques, EmotionalAwareness and ArachnidAcupuncture.
                 if (action == 0)
                 {
-                    HealPlayer(12);
+                    // BreathingTechniquesCost 50, then two Enlightenments into the deck.
+                    State.Gold -= RunConstants.ZenWeaverBreathingCost;
+                    for (int i = 0; i < 2; i++)
+                    {
+                        RunNonCombatEffects.AddCardToDeck(
+                            State,
+                            new CardInstance(RunConstants.CardEnlightenment, Upgraded: false)
+                        );
+                    }
                 }
-                else if (action == 1)
+                else if (action is 1 or 2)
                 {
-                    // A deck with nothing left to upgrade does not make the option
-                    // illegal: none of these events locks it, so the game opens a selector
-                    // that comes back empty and the event finishes. Refusing here told an
-                    // agent a move it was offered did not exist.
-                    RunNonCombatEffects.UpgradeFirstCard(State);
-                }
-                else if (action == 2)
-                {
-                    RunNonCombatEffects.GainMaxHp(State, 5);
+                    // EmotionalAwareness removes one for 125, ArachnidAcupuncture two for
+                    // 250, and both are CreateLockedOption when the gold is not there --
+                    // a locked option is shown but does nothing, so refuse the action.
+                    int cost =
+                        action == 1
+                            ? RunConstants.ZenWeaverEmotionalCost
+                            : RunConstants.ZenWeaverAcupunctureCost;
+                    if (State.Gold < cost)
+                    {
+                        return -1;
+                    }
+
+                    // RemoveCardsAndProceed loses the gold AFTER the selector, but nothing
+                    // between the two can change it, and charging here keeps the cost from
+                    // outliving a selection that could not open.
+                    if (
+                        !RunNonCombatEffects.BeginDeckSelection(
+                            State,
+                            DeckSelection.Remove,
+                            0,
+                            count: action == 1 ? 1 : 2,
+                            eventEntry: "ZEN_WEAVER"
+                        )
+                    )
+                    {
+                        return -1;
+                    }
+
+                    State.Gold -= cost;
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3572,17 +3627,17 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventReflections:
+                // Neither option asks the player anything -- Touch a Mirror rolls its
+                // cards off the event's own Rng and Shatter takes the whole deck. What
+                // was here (transform the first card / upgrade the first card) was a
+                // placeholder standing in for both.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.TransformFirstCard(State);
+                    RunNonCombatEffects.ReflectionsTouchAMirror(State);
                 }
                 else if (action == 1)
                 {
-                    // A deck with nothing left to upgrade does not make the option
-                    // illegal: none of these events locks it, so the game opens a selector
-                    // that comes back empty and the event finishes. Refusing here told an
-                    // agent a move it was offered did not exist.
-                    RunNonCombatEffects.UpgradeFirstCard(State);
+                    RunNonCombatEffects.ReflectionsShatter(State);
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3631,27 +3686,50 @@ public sealed class RunEngine
                 }
 
                 break;
+            // Tinker Time builds a card over three pages: pick a type, pick a rider, take
+            // the Mad Science it made. What was here -- upgrade a card / transform a card
+            // / gain a potion -- was three options the event does not have, on a page it
+            // does not have (the model declares exactly ONE initial option).
+            case RunConstants.EventTinkerTime when State.EventPage == 2:
+                // The rider page. Both offered riders are legal; which is which came out
+                // of the shuffle, so the action indexes the offer.
+                if ((uint)action >= (uint)State.EventRandomOffer.Length)
+                {
+                    return -1;
+                }
+
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(
+                        RunConstants.CardMadScience,
+                        Upgraded: false,
+                        TinkerType: State.TinkerCardType,
+                        TinkerRider: (TinkerRider)State.EventRandomOffer[action]
+                    )
+                );
+                break;
+
+            case RunConstants.EventTinkerTime when State.EventPage == 1:
+                // The card-type page, two of Attack/Skill/Power. Choosing one settles the
+                // type and rolls the riders that go with it.
+                if ((uint)action >= (uint)State.EventRandomOffer.Length)
+                {
+                    return -1;
+                }
+
+                State.TinkerCardType = (CardType)State.EventRandomOffer[action];
+                RunNonCombatEffects.BeginTinkerRiderPage(State);
+                return 0;
+
             case RunConstants.EventTinkerTime:
+                // One option, and it only turns the page.
                 if (action == 0)
                 {
-                    // A deck with nothing left to upgrade does not make the option
-                    // illegal: none of these events locks it, so the game opens a selector
-                    // that comes back empty and the event finishes. Refusing here told an
-                    // agent a move it was offered did not exist.
-                    RunNonCombatEffects.UpgradeFirstCard(State);
+                    RunNonCombatEffects.BeginTinkerCardTypePage(State);
+                    return 0;
                 }
-                else if (action == 1)
-                {
-                    RunNonCombatEffects.TransformFirstCard(State);
-                }
-                else if (action == 2)
-                {
-                    RunRewardGenerator.AddPotion(
-                        State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                    );
-                }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
@@ -3984,6 +4062,7 @@ public sealed class RunEngine
 
             RunNonCombatEffects.ResolveDeckSelectionFollowUp(State);
             bool returnsToEvent = State.PendingSelectionReturnsToEvent;
+            var returnTo = State.PendingSelectionReturn;
             RunNonCombatEffects.ClearDeckSelection(State);
 
             // A selection NEOW opened returns to Neow, which stays up for one more
@@ -3996,15 +4075,28 @@ public sealed class RunEngine
                 return 0;
             }
 
-            // Most selections finish the event that opened them; the belt's Jelly Liver
-            // does not, because the belt turns and offers the next dish.
-            if (!returnsToEvent)
+            // A selection goes back to whatever opened it. Most are events, which is why
+            // that is the default — but a shop's removal service and a relic's pickup are
+            // not events, and assuming they were is what kept those two choosing a card
+            // for the player rather than asking.
+            switch (returnTo)
             {
-                State.EventId = RunConstants.EventResultPending;
-            }
+                case SelectionReturn.Shop:
+                    State.Phase = RunPhase.Shop;
+                    return 0;
+                case SelectionReturn.Map:
+                    return AdvanceAfterNode(out terminal);
+                default:
+                    // The belt's Jelly Liver keeps its options up, because the belt turns
+                    // and offers the next dish; everything else shows its result page.
+                    if (!returnsToEvent && returnTo != SelectionReturn.EventOptions)
+                    {
+                        State.EventId = RunConstants.EventResultPending;
+                    }
 
-            State.Phase = RunPhase.Event;
-            return 0;
+                    State.Phase = RunPhase.Event;
+                    return 0;
+            }
         }
 
         if (State.TransformSelectedDeckIndex < 0)
@@ -4021,11 +4113,22 @@ public sealed class RunEngine
             }
             else if (relicId == RunConstants.RelicEmptyCage)
             {
-                for (int i = 0; i < count; i++)
-                {
-                    RunNonCombatEffects.RemoveLowestPriorityCard(State);
-                }
+                // FromDeckForRemoval, like every other removal: the player picks. The
+                // relic is taken outside an event, so the selection goes back to the MAP
+                // rather than to an event page that is not there.
+                State.TransformSelectedDeckIndex = null;
+                terminal = false;
+                return RunNonCombatEffects.BeginDeckSelection(
+                    State,
+                    DeckSelection.Remove,
+                    0,
+                    count: count,
+                    returnTo: SelectionReturn.Map
+                )
+                    ? 0
+                    : AdvanceAfterNode(out terminal);
             }
+
             State.TransformSelectedDeckIndex = null;
             return AdvanceAfterNode(out terminal);
         }
@@ -4149,6 +4252,39 @@ public sealed class RunEngine
                 }
 
                 SetMask(mask, 1);
+                break;
+            case RunConstants.EventTinkerTime:
+                // Tinker Time builds its options into a List, so EventOptions.g.cs has no
+                // count for it and the fallback offered a flat 0..3 on every page. Page 0
+                // declares exactly one option; the two after it show two of three, and
+                // which two came out of the shuffle -- so the mask follows the offer.
+                if (State.EventPage == 0)
+                {
+                    SetMask(mask, 0);
+                    break;
+                }
+
+                for (int i = 0; i < State.EventRandomOffer.Length; i++)
+                {
+                    SetMask(mask, i);
+                }
+
+                break;
+            case RunConstants.EventZenWeaver:
+                // Breathing Techniques is never locked; the two removals are
+                // CreateLockedOption below their price, which shows the row greyed out
+                // and does nothing when it is clicked.
+                SetMask(mask, 0);
+                if (State.Gold >= RunConstants.ZenWeaverEmotionalCost)
+                {
+                    SetMask(mask, 1);
+                }
+
+                if (State.Gold >= RunConstants.ZenWeaverAcupunctureCost)
+                {
+                    SetMask(mask, 2);
+                }
+
                 break;
             case RunConstants.EventSelfHelpBook:
                 SetSelfHelpBookMask(mask, 0);

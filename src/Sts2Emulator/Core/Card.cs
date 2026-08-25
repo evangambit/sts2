@@ -14,6 +14,14 @@ public enum CardType
     /// observation encoding, so inserting would silently reinterpret existing data.
     /// </summary>
     Quest,
+
+    /// <summary>
+    /// The game's <c>CardType.None</c>, appended for the same reason Quest was: these
+    /// ordinals are referenced across the engine and the observation encoding, so
+    /// inserting would silently reinterpret existing data. Only a card that has not been
+    /// through Tinker Time uses it, so nothing reads it as a real type.
+    /// </summary>
+    None,
 }
 
 public enum CardRarity
@@ -131,6 +139,29 @@ public enum Enchantment
     TezcatarasEmber,
 }
 
+/// <summary>
+/// Mad Science's rider, chosen on Tinker Time's third page.
+/// </summary>
+/// <remarks>
+/// Declared in the game on <c>TinkerTime</c> itself. Three riders per card type, and the
+/// event offers two of the three: Attack gets Sapping/Violence/Choking, Skill gets
+/// Energized/Wisdom/Chaos, Power gets Expertise/Curious/Improvement. The ordering is the
+/// enum's own, which is what the event's shuffle permutes.
+/// </remarks>
+public enum TinkerRider
+{
+    None = 0,
+    Sapping,
+    Violence,
+    Choking,
+    Energized,
+    Wisdom,
+    Chaos,
+    Expertise,
+    Curious,
+    Improvement,
+}
+
 public readonly record struct CardInstance(
     int DefId,
     bool Upgraded,
@@ -156,7 +187,13 @@ public readonly record struct CardInstance(
     // Damage this copy has permanently gained during the combat. Rampage raises its own
     // damage every time it is played, and the growth rides on the card rather than on the
     // player, so two Rampages in a deck grow independently.
-    int BonusDamage = 0
+    int BonusDamage = 0,
+    // Mad Science is built at Tinker Time and nowhere else: its type and its rider are
+    // chosen by the player and then SAVED ON THE CARD ([SavedProperty] on both), which
+    // makes them part of the instance rather than of the definition. Default to None for
+    // every other card.
+    CardType TinkerType = CardType.None,
+    TinkerRider TinkerRider = TinkerRider.None
 );
 
 public static class CardInstanceExtensions
