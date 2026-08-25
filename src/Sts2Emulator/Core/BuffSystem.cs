@@ -88,6 +88,10 @@ public static class BuffSystem
             var b = buffs[i];
             switch (b.Id)
             {
+                // SlumberPower.AfterSideTurnEnd, which ticks for its OWNER's side only --
+                // the beetle is an enemy, and this runs for the enemies. Its other
+                // decrement, on unblocked damage, is in DealDamageToEnemy.
+                case BuffId.Slumber:
                 case BuffId.Vulnerable:
                 case BuffId.Weak:
                 case BuffId.Frail:

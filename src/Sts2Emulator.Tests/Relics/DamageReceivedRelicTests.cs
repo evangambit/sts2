@@ -87,18 +87,26 @@ public class DamageReceivedRelicTests
     }
 
     /// <summary>
-    /// SelfFormingClayPower gains its block in AfterBlockCleared, so the three block shows
-    /// up on the next player turn rather than immediately.
+    /// SelfFormingClayPower gains its block in AfterBlockCleared, so it shows up on the
+    /// next player turn rather than immediately.
     /// </summary>
+    /// <remarks>
+    /// SIX, not three, and the reason is worth keeping. The relic's
+    /// <c>AfterDamageReceived</c> fires per INSTANCE of unblocked damage and the power is
+    /// a Counter, so a two-hit attack arms it twice. These tests fight the Chompers,
+    /// whose CLAMP is <c>MultiAttackIntent(ClampDamage, 2)</c> — and while that was
+    /// folded into a single 18, every per-instance hook in the game under-triggered
+    /// against it. The fold was not only a wrong number.
+    /// </remarks>
     [Fact]
-    public void SelfFormingClayGivesThreeBlockOnTheFollowingTurn()
+    public void SelfFormingClayArmsOncePerHitAndPaysOnTheFollowingTurn()
     {
         var fight = Fight.WithRelics(RelicEffects.SelfFormingClay);
 
         Assert.Equal(0, fight.State.PlayerBlock);
         fight.EndTurn();
 
-        Assert.Equal(3, fight.State.PlayerBlock);
+        Assert.Equal(6, fight.State.PlayerBlock);
     }
 
     /// <summary>DynamicVar("BlockNextTurn", 3m) is unpowered — Dexterity must not raise it.</summary>
@@ -110,7 +118,8 @@ public class DamageReceivedRelicTests
 
         fight.EndTurn();
 
-        Assert.Equal(3, fight.State.PlayerBlock);
+        // Two arming instances at 3, and not a point of the five Dexterity.
+        Assert.Equal(6, fight.State.PlayerBlock);
     }
 
     [Fact]
@@ -120,6 +129,8 @@ public class DamageReceivedRelicTests
         fight.EndTurn();
         fight.EndTurn();
 
-        Assert.Equal(3, fight.State.PlayerBlock);
+        // The two Chompers alternate, so one of them clamps every turn and the relic
+        // re-arms every turn -- the power is removed as it pays out.
+        Assert.Equal(6, fight.State.PlayerBlock);
     }
 }

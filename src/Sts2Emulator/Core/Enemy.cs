@@ -119,6 +119,24 @@ public sealed class EnemyState
     public bool OffBalance;
 
     /// <summary>
+    /// Which arm of a <c>RandomBranchState</c> this creature last took, and how many
+    /// turns running it has taken it.
+    /// </summary>
+    /// <remarks>
+    /// <c>RandomBranchState</c> zeroes a branch's weight once the recent state log shows
+    /// it too many times: <c>CannotRepeat</c> is a cap of one, <c>CanRepeatXTimes(n)</c>
+    /// a cap of n. The obvious implementation — compare the new intent with
+    /// <c>CurrentIntent</c> — is WRONG for anything that buffs itself: the Obscura's WAIL
+    /// grants it Strength, so what it announces climbs and a base-damage branch never
+    /// equals the stored intent again. The branch's identity has to be remembered, not
+    /// inferred from what it announced.
+    /// </remarks>
+    public int LastBranch = -1;
+
+    /// <summary>Turns running on <see cref="LastBranch"/>.</summary>
+    public int RepeatStreak;
+
+    /// <summary>
     /// Which of the encounter's <c>Slots</c> this creature stands in, or -1 when the
     /// encounter does not place by slot.
     /// </summary>

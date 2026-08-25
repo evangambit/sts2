@@ -141,6 +141,19 @@ public enum BuffId
     /// than acting, and <c>ShouldAllowHitting</c> is false for its owner meanwhile.
     /// </summary>
     Reviving,
+
+    /// <summary>
+    /// The Slumbering Beetle's sleep, counted DOWN by two different things.
+    /// </summary>
+    /// <remarks>
+    /// <c>SlumberPower</c> decrements on every enemy-side turn end AND on every instance
+    /// of UNBLOCKED damage its owner takes; at zero the beetle is stunned awake into
+    /// ROLL_OUT. Modelled as three quiet turns alone, a beetle the player was hitting
+    /// woke on schedule here and early in the game — and hitting it is the obvious play,
+    /// since it sleeps behind Plating. Appended, like every id here: these ordinals
+    /// reach the observation.
+    /// </remarks>
+    Slumber,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

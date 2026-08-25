@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **47 tested, 41 pending** — and the pending list is a
+  setup: 88 encounters modelled, **55 tested, 33 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1224,6 +1224,26 @@ turned out to exclude nothing in combat.
   rather than asking whether the builder mentions it. All fourteen rolling encounters are
   plumbed; the audit that said otherwise was a grep that only matched single-line calls.
 
+  **A folded multi-hit is not just a wrong number.** Every per-instance hook in the game
+  under-triggers against it: Self-Forming Clay arms once per instance and its power is a
+  Counter, so the real two-hit Chomper clamp pays SIX block where the folded one paid
+  three (E91), and the Slumbering Beetle loses a point of sleep per instance (E94). Three
+  relic tests had been written around the folded figure. When a fold is corrected, expect
+  the per-instance hooks around it to move too — and check them rather than patching the
+  assertions.
+
+  **"Do not repeat the last move" cannot be implemented by comparing intents.** A
+  creature that buffs itself announces a climbing number, so a base-damage branch never
+  equals the stored `CurrentIntent` again and the exclusion silently stops firing — the
+  Obscura's WAIL grants it Strength and it wailed forever (E92). Remember the BRANCH's
+  identity (`EnemyState.LastBranch`), not what it announced.
+
+  **Two test-harness traps this batch, both of which look like engine bugs.** A summon is
+  inserted in FRONT of its summoner, so `Enemies[0]` stops being the creature you meant
+  the moment it acts — hold the reference, not the index. And an enemy that outlives the
+  PLAYER stops being asked for an intent, so a move cycle read past the player's death is
+  just the last announcement standing still; keep both sides alive when walking a cycle.
+
   **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
   were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES
   rather than loops (E86) — a Tunneler that walks back to its opening bite every fourth
@@ -1244,7 +1264,9 @@ turned out to exclude nothing in combat.
   **That sweep is now a script**, `scripts/audit_ascension_literals.py`, which cross-checks
   every monster's `GetValueIfAscension(DeadlyEnemies, high, low)` pairs against the bare
   literals in its `EnemyAI` case block. It reported 80; the Hive monsters are fixed (E83,
-  E86) and **61 remain**, most of them act 3 and the later act-2 elites and bosses.
+  E86, E91) and **55 remain**, most of them act 3 and the later act-2 elites and bosses.
+  **Hive is done bar its elites and bosses** — all four weak encounters and all eight
+  normals now have suites.
 
   Two cautions the batch earned, both worth carrying into the next one:
 

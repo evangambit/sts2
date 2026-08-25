@@ -2630,6 +2630,15 @@ public static class CardEffects
             EnemyAI.TriggerShriekIfWounded(target);
         }
 
+        // SlumberPower.AfterDamageReceived: a sleeper loses a point of sleep for every
+        // INSTANCE of unblocked damage, so a multi-hit attack wakes it faster than one
+        // big one. Counting turns alone was right only for a beetle nobody hit -- and it
+        // sleeps behind Plating, so hitting it is exactly what a player does.
+        if (hpLoss > 0 && BuffSystem.Get(target.Buffs, BuffId.Slumber) > 0)
+        {
+            BuffSystem.Apply(target.Buffs, BuffId.Slumber, -1);
+        }
+
         if (hpLoss > 0)
         {
             int envenom = BuffSystem.Get(state.PlayerBuffs, BuffId.Envenom);

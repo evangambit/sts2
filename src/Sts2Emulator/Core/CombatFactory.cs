@@ -771,10 +771,13 @@ public static class CombatFactory
                 CreateEnemy(KE.ThievingHopper, rng, new Intent(IntentType.Attack, 19)),
             ],
 
+            // The second Myte's INIT_MOVE branch is SUCK, which is phase 2 of the
+            // TOXIC -> BITE -> SUCK cycle -- so it starts two moves ahead, not on the
+            // same beat as the first.
             ActOneEncounter.Mytes =>
             [
                 CreateEnemy(KE.Myte, rng, new Intent(IntentType.Debuff, 2)),
-                CreateEnemy(KE.Myte, rng, new Intent(IntentType.Attack, 6)),
+                CreateEnemy(KE.Myte, rng, new Intent(IntentType.Attack, 6), moveIndex: 2),
             ],
 
             ActOneEncounter.SlumberingBeetle =>
@@ -1182,11 +1185,19 @@ public static class CombatFactory
             _ => throw new ArgumentOutOfRangeException(nameof(defId), defId, null),
         };
 
+    /// <summary>
+    /// Asleep behind Plating, and it wakes on a COUNTER rather than a turn count.
+    /// </summary>
+    /// <remarks>
+    /// <c>AfterAddedToRoom</c> applies PlatingPower at <c>PlatingAmount</c> — the TOUGH
+    /// pair (18, 15), so 18 at A8 — and SlumberPower at a flat 3.
+    /// </remarks>
     private static EnemyState CreateSlumberingBeetle(Random rng)
     {
         var enemy = CreateEnemy(KE.SlumberingBeetle, rng, new Intent(IntentType.Unknown, 0));
         enemy.Block = 18;
         BuffSystem.Apply(enemy.Buffs, BuffId.Plating, 18);
+        BuffSystem.Apply(enemy.Buffs, BuffId.Slumber, 3);
         return enemy;
     }
 

@@ -509,8 +509,11 @@ public class CombatEngineTests
                 Assert.Equal(2, BuffSystem.Get(enemy.Buffs, BuffId.Artifact));
             }
         );
+        // CLAMP is MultiAttackIntent(ClampDamage, 2), and ClampDamage is 8 at A8 -- the
+        // 18 this used to expect was the A9 damage with the two hits folded into it.
         Assert.Equal(IntentType.Attack, state.Enemies[0].CurrentIntent.Type);
-        Assert.Equal(18, state.Enemies[0].CurrentIntent.Magnitude);
+        Assert.Equal(8, state.Enemies[0].CurrentIntent.Magnitude);
+        Assert.Equal(2, state.Enemies[0].CurrentIntent.Hits);
         Assert.Equal(IntentType.Debuff, state.Enemies[1].CurrentIntent.Type);
         Assert.Equal(3, state.Enemies[1].CurrentIntent.Magnitude);
     }

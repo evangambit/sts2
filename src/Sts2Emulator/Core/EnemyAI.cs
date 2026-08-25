@@ -633,6 +633,41 @@ public static class EnemyAI
         return Branch(cameFromSkitter);
     }
 
+    /// <summary>
+    /// One draw over the branches the game would still consider, excluding whichever the
+    /// creature just performed.
+    /// </summary>
+    /// <remarks>
+    /// <c>RandomBranchState.GetNextState</c> sums the eligible weights, rolls
+    /// <c>NextFloat(total)</c> and walks the list in DECLARATION order — so with equal
+    /// weights it is a uniform pick over the survivors, in the order the branches were
+    /// added. The roll happens BEFORE the weights are read, so a choice narrowed to one
+    /// branch still costs a value off the AI stream (E65's rule).
+    /// </remarks>
+    private static Intent PickBranch(
+        EnemyState enemy,
+        Random rng,
+        Intent[] branches,
+        int maxRepeats = 1
+    )
+    {
+        var eligible = Enumerable
+            .Range(0, branches.Length)
+            .Where(index => index != enemy.LastBranch || enemy.RepeatStreak < maxRepeats)
+            .ToArray();
+        if (eligible.Length == 0)
+        {
+            eligible = [.. Enumerable.Range(0, branches.Length)];
+        }
+
+        // One draw whatever the choice narrowed to: GetNextState rolls NextFloat(total)
+        // before it walks the weights, so a forced branch costs a value all the same.
+        int chosen = eligible[rng.Next(eligible.Length)];
+        enemy.RepeatStreak = chosen == enemy.LastBranch ? enemy.RepeatStreak + 1 : 1;
+        enemy.LastBranch = chosen;
+        return branches[chosen];
+    }
+
     /// <summary>This creature's position among the enemies sharing its def id.</summary>
     private static int SlotAmongKind(EnemyState enemy, IReadOnlyList<EnemyState> roster)
     {
@@ -685,9 +720,15 @@ public static class EnemyAI
                     );
 
             case KE.Chomper:
-                // Alternates Clamp (9x2) and Screech (add Dazed).
+                // CLAMP and SCREECH alternate forever. CLAMP is
+                // MultiAttackIntent(ClampDamage, 2) -- the 18 was 9x2 folded, at the A9
+                // damage besides.
                 return enemy.MoveIndex % 2 == 0
-                    ? new Intent(IntentType.Attack, 18)
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 9, 8),
+                        Hits: 2
+                    )
                     : new Intent(IntentType.Debuff, 3);
 
             case KE.Exoskeleton:
@@ -942,9 +983,16 @@ public static class EnemyAI
                     : new Intent(IntentType.Attack, 3);
 
             case KE.BowlbugSilk:
+                // The machine's INITIAL state is TOXIC_SPIT, not THRASH -- it is built as
+                // `new MonsterMoveStateMachine(list, moveState2)`. THRASH is
+                // MultiAttackIntent(ThrashDamage, 2), so the 10 was 5x2 folded.
                 return enemy.MoveIndex % 2 == 0
                     ? new Intent(IntentType.Debuff, 1)
-                    : new Intent(IntentType.Attack, 10);
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4),
+                        Hits: 2
+                    );
 
             case KE.Tunneler:
                 // BITE -> BURROW -> BELOW, and BELOW follows up to ITSELF -- so it
@@ -996,15 +1044,14 @@ public static class EnemyAI
                 };
 
             case KE.Myte:
+                // TOXIC -> BITE -> SUCK, cycling -- but the machine OPENS on a
+                // ConditionalBranchState keyed to SlotName, and the second Myte starts on
+                // SUCK. Its whole cycle is therefore two ahead of the first's, which a
+                // shared `MoveIndex % 3` cannot express; the enemy's MoveIndex is seeded
+                // with the offset instead, so this is a plain cycle again.
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => enemy.CurrentIntent.Type == IntentType.Attack
-                        // SuckDamage
-                        ? new Intent(
-                            IntentType.Attack,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 4)
-                        )
-                        : new Intent(IntentType.Debuff, 2),
+                    0 => new Intent(IntentType.Debuff, 2),
                     // BiteDamage
                     1 => new Intent(
                         IntentType.Attack,
@@ -1018,22 +1065,57 @@ public static class EnemyAI
                 };
 
             case KE.SlumberingBeetle:
-                return enemy.MoveIndex < 3
+                // SNORE -> a ConditionalBranchState on `HasPower<SlumberPower>()`, and
+                // ROLL_OUT once it is gone follows up to ITSELF. Counting three turns was
+                // right only for a beetle nobody hit: SlumberPower also decrements on
+                // every instance of UNBLOCKED damage it takes, so attacking it -- the
+                // obvious play against something asleep behind Plating -- wakes it early.
+                //
+                // RolloutDamage
+                return BuffSystem.Get(enemy.Buffs, BuffId.Slumber) > 0
                     ? new Intent(IntentType.Unknown, 0)
-                    : new Intent(IntentType.Attack, 18);
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 18, 16)
+                    );
 
             case KE.SpinyToad:
+                // SPIKES -> EXPLOSION -> LASH, cycling.
                 return (enemy.MoveIndex % 3) switch
                 {
+                    // PROTRUDING_SPIKES_MOVE applies ThornsPower at a flat 5, with no
+                    // ascension term -- one of the few numbers beside a Deadly pair that
+                    // really is a literal.
                     0 => new Intent(IntentType.Buff, 5),
-                    1 => new Intent(IntentType.Attack, 25),
-                    _ => new Intent(IntentType.Attack, 19),
+                    // ExplosionDamage
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 25, 23)
+                    ),
+                    // LashDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 19, 17)
+                    ),
                 };
 
             case KE.Ovicopter:
-                return (enemy.MoveIndex % 4) switch
+                // LAY_EGGS -> SMASH -> TENDERIZER -> a ConditionalBranchState that goes
+                // back to LAY_EGGS or to NUTRITIONAL_PASTE, and both lead to SMASH. So it
+                // is a THREE-cycle whose first slot is one or the other, not a four-cycle
+                // that always does both -- `% 4` gave the Ovicopter an extra turn.
+                return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Buff, 0),
+                    // CanLay is `living teammates <= 3`. With none it always lays, which
+                    // is why the eggs it summons decide its own next move.
+                    0 => roster is not null
+                    && roster.Count(other => !ReferenceEquals(other, enemy) && other.Hp > 0) > 3
+                        // NutritionalPasteStrengthAmount
+                        ? new Intent(
+                            IntentType.Buff,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
+                        )
+                        : new Intent(IntentType.Buff, 0),
                     // SmashDamage
                     1 => new Intent(
                         IntentType.Attack,
@@ -1045,11 +1127,6 @@ public static class EnemyAI
                     2 => new Intent(
                         IntentType.Attack,
                         Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7)
-                    ),
-                    // NutritionalPasteStrengthAmount
-                    _ => new Intent(
-                        IntentType.Buff,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3)
                     ),
                 };
 
@@ -1072,20 +1149,54 @@ public static class EnemyAI
                 };
 
             case KE.HunterKiller:
-                // BiteDamage, or PUNCTURE_MOVE's MultiAttackIntent(PunctureDamage, 3).
-                // The 24 was the three hits folded into one number, which matches only
-                // while the creature has no Strength -- the game adds it to EACH hit.
-                return enemy.MoveIndex == 0 ? new Intent(IntentType.Debuff, 1)
-                    : rng.Next(3) == 0
-                        ? new Intent(
-                            IntentType.Attack,
-                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 19, 17)
-                        )
-                    : new Intent(
-                        IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7),
-                        Hits: 3
-                    );
+            {
+                // TENDERIZING_GOOP once, then a RandomBranchState over BITE and PUNCTURE
+                // that both moves return to. Equal weights, so it is a coin flip between
+                // the eligible ones -- `rng.Next(3) == 0` made the bite a one-in-three.
+                if (enemy.MoveIndex == 0)
+                {
+                    return new Intent(IntentType.Debuff, 1);
+                }
+
+                // BiteDamage, and PUNCTURE_MOVE's MultiAttackIntent(PunctureDamage, 3).
+                // The 24 this once announced was the three hits folded into one number,
+                // which matches only while the creature has no Strength.
+                var bite = new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 19, 17)
+                );
+                var puncture = new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 8, 7),
+                    Hits: 3
+                );
+
+                // BITE is CannotRepeat and PUNCTURE is CanRepeatXTimes(2). The caps
+                // differ per branch; two branches with the LOWER cap would be wrong for
+                // the puncture, so the two are handled as a pair here rather than by one
+                // shared maxRepeats.
+                bool punctureIsSpent = enemy.LastBranch == 1 && enemy.RepeatStreak >= 2;
+                Intent[] branches = [bite, puncture];
+                int chosen;
+                if (enemy.LastBranch == 0)
+                {
+                    rng.Next(1);
+                    chosen = 1;
+                }
+                else if (punctureIsSpent)
+                {
+                    rng.Next(1);
+                    chosen = 0;
+                }
+                else
+                {
+                    chosen = rng.Next(2);
+                }
+
+                enemy.RepeatStreak = chosen == enemy.LastBranch ? enemy.RepeatStreak + 1 : 1;
+                enemy.LastBranch = chosen;
+                return branches[chosen];
+            }
 
             case KE.Axebot:
                 return (enemy.MoveIndex % 3) switch
@@ -1166,14 +1277,33 @@ public static class EnemyAI
                     : new Intent(IntentType.Attack, 15);
 
             case KE.TheObscura:
-                return enemy.MoveIndex == 0
-                    ? new Intent(IntentType.Buff, 0)
-                    : rng.Next(3) switch
-                    {
-                        0 => new Intent(IntentType.Attack, 11),
-                        1 => new Intent(IntentType.Buff, 3),
-                        _ => new Intent(IntentType.Attack, 7),
-                    };
+            {
+                // ILLUSION once, then a RandomBranchState over PIERCING_GAZE, WAIL and
+                // HARDENING_STRIKE that every move returns to. All three are
+                // CannotRepeat, so the move just performed has weight ZERO -- the choice
+                // is between the OTHER TWO, and `rng.Next(3)` gave the Obscura a
+                // one-in-three chance of a move the game cannot pick.
+                if (enemy.MoveIndex == 0)
+                {
+                    return new Intent(IntentType.Buff, 0);
+                }
+
+                // PiercingGazeDamage; WAIL, a bare BuffIntent whose magnitude carries the
+                // Strength it grants; HardeningStrikeDamage.
+                Intent[] branches =
+                [
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
+                    ),
+                    new Intent(IntentType.Buff, 3),
+                    new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
+                    ),
+                ];
+                return PickBranch(enemy, rng, branches);
+            }
 
             case KE.Parafright:
                 return new Intent(IntentType.Attack, 17);
