@@ -41,6 +41,16 @@ modelled. The third (O17) is act-agnostic and is the tail of the event work in E
 right about the Fogmog all along. The capture that reproduced it is committed as
 `7WGQ2VNJ4M-a8-buff400`, the only trace that walks a Fogmog's illusion.
 
+**Read "three" narrowly.** This table holds divergences a capture or a test SURFACED and
+nobody has closed. It is not a measure of what is wrong with the emulator, and right now
+it is a bad proxy for one: the largest known defect surface is not in it at all. That is
+**66 suspect ascension literals** (`scripts/audit_ascension_literals.py`), **46 encounters
+never walked past their opening state**, and **three whole characters — Defect,
+Necrobinder, Regent, 264 cards — with not one card verified**. Those are known-wrong or
+never-checked rather than merely unlisted; every batch put through the combat suite so far
+has found something. HANDOFF's "Next work" is the register for that, and it is the one to
+read before deciding what to do next.
+
 | # | Metric | Seed | What is known |
 | --- | --- | --- | --- |
 | O16 | Sea Glass's grid is a 0-to-15 multi-select; the emulator's hands over picks until they run out | `AncientBlessingTests` | `CardSelectorPrefs(prompt, 0, list.Count)` is MinSelect 0, MaxSelect 15, with a manual confirm — the player may take any number of the fifteen, including none. The emulator's offer grid takes `PendingOfferPicks` cards and cannot stop early. A run that wants all fifteen matches; one that wants three does not. The same gap applies to any future 0-to-N grid. |
@@ -52,14 +62,21 @@ stand-in draw counts E30 left behind are gone, and **every one of the twenty-fiv
 blessings the screener knows about has now been captured and replayed**.
 
 That is a stronger statement than the last time this table was empty: twenty of the
-thirty were captured specifically to walk paths the others did not — most of them by
+thirty-two were captured specifically to walk paths the others did not — most of them by
 screening seeds for a Neow blessing no committed trace had taken — and closing what they
-found took twenty-seven engine fixes. It is still a statement about these thirty runs,
+found took twenty-seven engine fixes. It is still a statement about these thirty-two runs,
 not about the emulator: the last nine captures were taken after the set had gone green and
 eight of the nine found something. The blessing seam is now exhausted, which means the next
 capture has to be chosen on some other axis — an act 2, an unwalked event, a fight nobody
 has lost yet. See the note under "Patterns" about what a green
 set does and does not measure.
+
+**The thirty-second capture is the argument for that, taken on a different axis and worth
+copying.** `7WGQ2VNJ4M-a8-buff400` was taken to settle O11 rather than to cover a
+blessing, and it reproduced the divergence at the same step the original had — which is
+what made a bug that had survived two wrong hypotheses solvable in one reading. If a
+catalogued suspicion resists, **re-capture rather than re-reason**: the trace is cheap
+next to the staring, and this one killed the recorded hypothesis on the first look.
 
 The two that stood here last are E22 to E26 below; E27 and E28 came out of reading the
 code they touched, not out of a capture. What closed them is worth knowing
@@ -318,6 +335,40 @@ ROLL has to evaluate the roll into a local first — `||` and `&&` are control f
 control flow over a random stream changes the stream. The same lesson is already written
 into `CheckPotionRoll`, one file away, in a comment saying exactly this about White Beast
 Statue.
+
+**A recorded suspicion is not evidence, and it decays.** O11's catalogue entry named a
+cause — `resolve_targets` reading a def id where it wanted HP — and it was wrong; slot 0
+is current HP, which the same file's `summarize_battle` reads that way three lines apart.
+Two more hypotheses of my own died the same way. What settled it in one reading was
+**re-capturing the seed**: the trace reproduced the divergence at the same step, and the
+cause was visible in it. A capture costs a few minutes and the staring had cost far more,
+so when an open entry resists, re-capture before re-reasoning. Write the suspicion down by
+all means — but the entry is a place to start, not a finding, and the longer it sits the
+more the code around it has moved.
+
+**A resolver only helps on the paths that call it.** H16: `translate_target` had three
+paths and exactly one ran its answer through the living-enemy resolution. The other two
+returned the game's numbering and it was used as an emulator index — which agrees exactly
+until something dies, so the bug is invisible in every fight nothing survives. The fix
+that lasts is structural: make every path return the SAME kind of thing (an ordinal) and
+resolve once at the single call site, so a new path cannot skip the step. The same shape
+is worth checking wherever a "translate" and a "resolve" are two functions.
+
+**A capture pairs an action with the state it PRODUCED.** H15: the killing blow of a
+fight is recorded against the rewards screen it opened, so anything gated on "is this step
+a combat state?" is empty for exactly the last action of every fight. That is a narrow
+window — it needs something standing in front of the target to show at all, which in act 1
+is close to just a Fogmog's eye. When a harness reads a step's state to interpret a step's
+action, it wants the PREVIOUS step.
+
+**A generated table is a diff; a transcribed one is a divergence.** E81 is E47's lesson
+arriving a second time in a different costume. The encounter tags were hand-copied after
+E66 had just finished demonstrating what a missing one costs, and they had drifted by four
+entries anyway — because there is no moment at which a hand-written table is discovered to
+be short. Generating it also turned up E82, which nobody was looking for: act 3's four
+encounter pools were a placeholder returning act 2's. **Generating one thing tends to
+reveal the next**, because the generator has to be told about every case and the
+placeholders are the cases it cannot be told about.
 
 **A hand-kept list of ids is a claim about the game that nothing rechecks.** E47's
 `IsNonUpgradableCard` held fourteen entries where the game declares thirty-seven, and it

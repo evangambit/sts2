@@ -49,13 +49,13 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1844 pass, ~2m)
+# C# unit tests (currently 1899 pass, ~2m)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (403 pass, 6 skipped) — drives the live dylib via ctypes
+# Python gym tests (411 pass, 6 skipped) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
 # Regenerate game data / decompiled source for the current patch
@@ -844,11 +844,17 @@ Field of Man-Sized Holes and Spirit Grafter, BOTH options belonged to some other
 Field of Man-Sized Holes removes **two** chosen cards and adds a Normality; Spirit Grafter
 heals 25 and adds a Metamorphosis, or upgrades a chosen card and then charges 10
 unblockable. None of the emulator's numbers appear anywhere in either event's source.
-**Two sites still call `RemoveLowestPriorityCard`** — the shop's removal service and Empty
-Cage — and both are blocked on the same missing piece: `BeginDeckSelection`'s completion
-path always returns to `RunPhase.Event`, so a selection opened from a shop or a relic
-pickup has nowhere correct to land. That return needs generalising the way E53 generalised
-the rewards screen's.
+The last two sites — the shop's removal service and Empty Cage — were closed by E74, and
+the missing piece they were blocked on is now built: `SelectionReturn` records where a
+deck selection was opened FROM, generalising the return the way E53 generalised the
+rewards screen's. `RemoveLowestPriorityCard` is deleted, along with `UpgradeFirstCard` and
+`TransformFirstCard`; **the emulator no longer picks a card for the player anywhere.**
+
+E54's lesson repeated at the last three sites (E76–E78) and is the reason to keep it in
+mind rather than treat it as closed: chasing the five remaining `UpgradeFirstCard` /
+`TransformFirstCard` calls meant reading Zen Weaver, Reflections and Tinker Time, and all
+three turned out to be placeholders end to end — including one offering three options on a
+page the model gives ONE. **Read the decompiled model before trusting an event's options.**
 
 ### Hive's encounter tags, and why a missing tag is worse than a wrong order
 
@@ -866,8 +872,16 @@ why no list size or ordering could be made to explain it.
 
 Hive's tags: Bowlbugs weak and normal are both `Workers`, as is the Slumbering Beetle;
 Exoskeletons weak and normal share `Exoskeletons`; Chompers, the Tunneler and the Thieving
-Hopper have one each. **Glory's are not extracted yet** and will have the same effect on
-act 3 that this had on act 2.
+Hopper have one each.
+
+**The tag table is GENERATED now** (`scripts/generate_encounter_tags.py` →
+`Generated/EncounterTags.g.cs`), and generating it is what showed the hand-written one had
+already drifted by four entries: `KnightsElite`, both halves of `ScrollsOfBiting`, and
+`TunnelerNormal` — which carries `Burrower, Chomper` where the weak version carries only
+`Burrower`. Three of the four are Glory's, so act 3 was set up to be handed exactly this
+(E81). A tagged model the generator cannot map to an `ActOneEncounter` is an **error**, not
+a skip: silently dropping one is the failure the file exists to prevent, and the aliases
+for the handful whose class name differs from the enum name are stated once, at the top.
 
 **The debugging that found it is worth copying.** Printing the raw `NextDouble` behind each
 ancient pick, alongside the list size, turned a guessing game into arithmetic: with the
@@ -895,8 +909,10 @@ their pools and in which entries are conditional on the run.
 
 **Three approximations, all documented at their call sites, all currently unreachable:**
 
-1. `CanTakeAnEnchantment` stands in for `Goopy.CanEnchant` — the emulator has no Goopy
-   enchantment at all. Used only as a count against a threshold of THREE.
+1. `CanTakeAnEnchantment` stands in for `Goopy.CanEnchant`, counting anything that is not
+   a Curse or a Status. Used only as a count against a threshold of THREE. (The Goopy
+   enchantment itself IS modelled now — E70/E71 — but its `CanEnchant` rule leans on a
+   Basic-name stand-in for want of extracted card tags, which is the same gap as 2.)
 2. `IsRemovableCard` stands in for `CardModel.IsRemovable`, which is still not extracted;
    it knows about Ascender's Bane and not about Eternal cards. Threshold of FIVE.
 3. `HasEventPet` is not modelled, so Pael's Legion is always in pool 3.
@@ -905,11 +921,13 @@ The first two are counts against thresholds that a STARTING deck already clears 
 removable cards, so no reachable run disagrees — but they are approximations and will bite
 whenever a deck gets small or strange. The third is a straight omission waiting on pets.
 
-**Not yet wired:** which ancient an act actually gets. `ActModel.GenerateRooms` ends with
-`Ancient = rng.NextItem(GetUnlockedAncients().Concat(sharedAncientSubset))`, and the
-emulator spends that draw and discards the result. The shared-ancient SUBSET is also not
-modelled, and it changes the list the pick indexes into, so getting this right needs the
-subset first.
+**`CardModel.IsRemovable` and card tags are the shared root of 1 and 2**, and neither is
+extracted. They are cheap next to what they unblock: the tags also decide which cards each
+enchantment will take, so today those rules are matched on Basic card NAMES.
+
+Which ancient an act gets **is** wired (E65), including the shared-ancient subset that
+changes the list the pick indexes into. Seven seeds are pinned against live act-2 captures
+in `ActGenerationTests`.
 
 **A test-speed trap worth not falling into twice.** These tests sweep hundreds of seeds,
 and the first version called `RunEngine.Reset` for each — ~150ms apiece, which made one
@@ -1005,15 +1023,27 @@ acts and that the first is special; both assumptions are going to break.
 `act_selection`, including where a row has a single candidate, which still spends a draw.
 The devs have said act 2 and act 3 will get alternates the way act 1 has two: **that is a
 new entry in an existing row**. A fourth act is **a new row**. Neither needs the generator
-touched. What a new act DOES need is its own data, because none of it is inferable: four
-encounter pools, an event pool, and an `ActRoomCounts` entry (weak-encounter count and base
-room count — 3/15 for the act-1 regions, 2/14 for Hive, 2/13 for Glory). **Phase B is the transition itself**
-(advance the act, install its rooms, generate its map, continue the floor counter, land on
-the Ancient node act 2 opens with); phase C is whatever act 2 then finds, with ~140
-captured act-2 steps as the test.
+touched. What a new act DOES need is its own data: an event pool and an `ActRoomCounts`
+entry (weak-encounter count and base room count — 3/15 for the act-1 regions, 2/14 for
+Hive, 2/13 for Glory). **Its four encounter pools are no longer hand work** — the same
+generator emits all sixteen from each act's own `GenerateAllEncounters()`, filtered by
+`RoomType` plus the `IsWeak` override, in declaration order (which is what the grab bags
+are dealt in, and is NOT the act's `BossDiscoveryOrder`).
+
+That generator is also how **Glory stopped borrowing Hive's encounters** (E82): all four
+of its pools were a placeholder returning Hive's, so every act-3 room, elite and boss was
+an act-2 one. What makes Glory's four trustworthy with no capture behind them is that the
+same generator reproduces act 1's and Hive's twelve EXACTLY, and every one of those has
+been checked against the live game; `EncounterTagsAndPoolsTests` pins that comparison so
+the two sources cannot drift apart quietly. Act 1 and Hive still READ their verified
+constants — there is no reason to move a pool a capture has already agreed with.
+
+**Phase B is the transition itself** (advance the act, install its rooms, generate its
+map, continue the floor counter, land on the Ancient node act 2 opens with); phase C is
+whatever act 2 then finds, with ~140 captured act-2 steps as the test.
 
 Verified by the five `verify_run_generation` fixtures (which compare against live saves)
-and the 31 traces, all unmoved.
+and the 32 traces, all unmoved.
 
 ### Buffed captures, for the half of act 1 nothing has ever seen
 
@@ -1164,28 +1194,56 @@ left** — Rampage's per-copy growth, Battle Trance's NoDrawPower and Howl From 
 replay out of the exhaust pile are modelled, and Primal Force's IsTransformable filter
 turned out to exclude nothing in combat.
 
-- ⚠️ **Combats now have their own test suite, and the first three encounters found three
+- ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 87 encounters modelled, **3 tested, 84 pending**. All 42 act-1 encounters (both
-  act-1 variants) have rosters and intents; what was missing is anything checking them.
+  setup: 88 encounters modelled, **42 tested, 46 pending** — and the pending list is a
+  burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
+  and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
   `MoveIndex % 3`, so the opening HAUNT came round every third turn when the game enters it
   once and then alternates SWIPE and STOMP forever; that its Swipe and Stomp both used the
   A9 damage branch at A8 (13/12, not 14/15); and that STOMP landed as one hit instead of
   three. Enemy HP was ascension-blind as well — the extractor kept only the A8+ branch, so
-  `EnemyDef.HpBand` and both branches are extracted now. **Expect more of this**: 84
-  encounters have never been walked past their opening state in C#, and the Python
-  live-fixture suite only replays the six that have committed captures.
-  Eleven encounters in, the count is **twenty defects**, and the largest group is one
-  class: `CombatFactory`'s opening intents were converted to `Ascension.Value` years ago,
+  `EnemyDef.HpBand` and both branches are extracted now. **Expect more of this**: the 46
+  still pending have never been walked past their opening state in C#, they are all
+  later-act content, and the Python live-fixture suite only replays the six that have
+  committed captures. Nothing in act 1 is on that list any more.
+  Nineteen encounters in, the count is **thirty-one defects** — a rate that has not fallen
+  as the easy ones were taken — and the largest group is one class:
+  `CombatFactory`'s opening intents were converted to `Ascension.Value` years ago,
   but **`EnemyAI`'s per-turn intents never were** — eleven act-1 enemies were dealing their
   A9 damage at A8 (Inklet, Flyconid, Cubex Construct, Snapping Jaxfruit, Slithering
   Strangler, Fogmog, Living Fog, Gremlin Merc, Sneaky Gremlin, Two-Tailed Rat, Punch
-  Construct), on top of both Cultists. A sweep of every monster's `GetValueIfAscension`
-  pairs against `EnemyAI` flags **134 more suspect literals**, most of them act 2. Worth
-  knowing while reading `CombatFactory`: `ChooseIntents` overwrites every enemy's intent
-  immediately after the roster is built, so the opening-intent literals there are
-  placeholders — `moveIndex` is what actually selects the opening move.
+  Construct), on top of both Cultists. Worth knowing while reading `CombatFactory`:
+  `ChooseIntents` overwrites every enemy's intent immediately after the roster is built,
+  so the opening-intent literals there are placeholders — `moveIndex` is what actually
+  selects the opening move, and `EnemyAI.SelectIntent` is what an agent actually reads.
+
+  **That sweep is now a script**, `scripts/audit_ascension_literals.py`, which cross-checks
+  every monster's `GetValueIfAscension(DeadlyEnemies, high, low)` pairs against the bare
+  literals in its `EnemyAI` case block. It reported 80; the **Hive batch is fixed** (E83)
+  and **66 remain**, most of them act 3 and the later act-2 elites and bosses.
+
+  Two cautions the batch earned, both worth carrying into the next one:
+
+  - **It is a worklist, not a verdict.** It flags a bare occurrence of the high value
+    anywhere in the case block, so it cannot tell a damage number from a hit count.
+    Exoskeleton's flagged `4` was the A9 REPEAT count sitting where the damage should be —
+    a different bug than the one it was flagged for, and only reading the move state
+    machine showed that.
+  - **Not every literal beside a Deadly pair is wrong.** Louse Progenitor's Curl is
+    `GetValueIfAscension(ToughEnemies, 18, 14)`, and Tough IS live at A8 — so 18 is right
+    where the three Deadly values around it were not. A sweep that "fixed" every number in
+    that block would have broken it. There is a test saying so on purpose.
+
+  Three of the eight Hive monsters were wrong a SECOND way, and all three repeat shapes
+  this suite has already seen (E84): Exoskeleton's SKITTER and Hunter-Killer's PUNCTURE
+  are `MultiAttackIntent`s folded into one number (E10 — which matches only while the
+  creature has no Strength, since the game adds Strength to each hit), and the Ovicopter's
+  TENDERIZER declares its attack BEFORE its debuff, so the readout calls it an attack
+  (E12). **Retyping an intent moves which branch applies it**: the Ovicopter's Vulnerable
+  lived in the debuff handler and had to move into the attack branch with the damage, or
+  it would have been dropped in silence. Check the apply side whenever you change a type.
   The earlier count of **eight defects**: Haunted Ship's cycle, its two
   ascension branches and its single-hit Stomp; Vine Shambler's single-hit Swipe and a
   Tangled that was cleared at the start of the player turn instead of the end, so the
@@ -1194,6 +1252,39 @@ turned out to exclude nothing in combat.
   announced an attack's raw move damage**, where `AttackIntent.GetSingleDamage` runs it
   through `Hook.ModifyDamage` first — so a Ritual-stacking cultist told a policy it was
   hitting for nine on the turn it hit for fifteen.
+
+- ⚠️ **Mad Science is built correctly and played wrongly** (O17). Tinker Time is faithful
+  now — three pages, `TakeRandom(2, Rng)` on each of the last two, and the chosen type and
+  rider recorded on the `CardInstance` — but the CARD is not. `MadScience.OnPlay` branches
+  on its type (attack 12 / block 8 / a power) and then applies one of nine riders; the
+  emulator has only the card-table entry, so it plays as the Attack row whatever the player
+  built. Two riders need powers that do not exist (`CuriousPower`, `ImprovementPower`) and
+  Chaos plays a mocked random card, so this is a card-implementation job rather than a
+  missed line. It is the one piece of E76–E78 left over.
+
+- ✅ **The emulator no longer decides which card a screen takes.** Seven call sites were
+  choosing for the player — `RemoveLowestPriorityCard` walked an invented preference order
+  that LED with Ascender's Bane, a card the real removal screen will not offer. All three
+  helpers are deleted rather than merely unused. Two structural things came out of it and
+  are worth knowing before adding a screen:
+  - A deck selection now records **where it was opened from** (`SelectionReturn`), because
+    the completion path used to land on `RunPhase.Event` unconditionally — right for the
+    events that open most of them, wrong for a shop or a relic pickup. Same shape E53 fixed
+    for the rewards screen.
+  - **Reading each event's model to find the real choice found that all three were
+    placeholders** (E76–E78): Zen Weaver sells removals rather than healing, Reflections
+    asks the player nothing at all, and Tinker Time was offering three options on a page
+    that declares one. **Check the decompiled model before trusting an event's options** —
+    that is now twice this has paid (E54 was the first).
+
+- ⚠️ **A capture pairs an action with the state it PRODUCED, not the state it was chosen
+  in.** H15 is the cost of forgetting that: the killing blow of a fight is recorded against
+  the rewards screen it opened, so anything gated on "is this step a combat state?" is
+  empty for exactly the last action of every fight. Use the PREVIOUS step's data. The twin
+  lesson (H16) is that a resolver only helps on the paths that call it — `translate_target`
+  had three and only one was resolved, which agreed with the other two right up until
+  something died. Both are why O11 sat open for so long as an "emulator" bug that was
+  nothing of the kind.
 
 - ✅ **Multiplayer-only cards can no longer be offered.** `CardFactory.FilterForPlayerCount`
   drops every `MultiplayerOnly` card from a pool before anything is rolled from it, and
@@ -1995,7 +2086,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1844 pass
+dotnet test src/Sts2Emulator.Tests/        # 1899 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 403 pass
+uv run python -m unittest discover -s tests/python   # 411 pass
 ```
