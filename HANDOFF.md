@@ -2186,6 +2186,30 @@ python scripts/patch_refresh.py           # report: what changed, what broke, wh
 python scripts/patch_refresh.py --apply   # also decompile + extract + diff
 ```
 
+**The audits are the part the test suite cannot do**, and they run on every invocation,
+changed build or not. A test written from the decompiled source asserts what the source
+said WHEN IT WAS WRITTEN — so if the devs change a monster's damage, its move order or
+the intents a move declares, the emulator keeps the old value, the test keeps asserting
+the old value, and the whole suite stays green. Two thousand C# tests notice nothing.
+Only a fresh capture or a source comparison does, and the audits are the half that needs
+no game running:
+
+- `audit_ascension_literals.py` — bare A9 literals where A8's branch applies. Covers the
+  147 of `EnemyAI`'s 318 `new Intent(...)` constructions that read an `Ascension.Value`
+  pair.
+- `audit_enemy_moves.py` — three checks against the current monster classes. `hits`: a
+  `MultiAttackIntent(damage, repeat)` with no `Hits:` in the emulator, which is a wrong
+  number AND a silent under-trigger of every per-instance hook. `types`: a `MoveState`
+  declares a LIST and the readout follows the FIRST, so announcing a later one's type
+  misreports the turn. `shape`: a machine whose branches, self-loops or slot-keyed
+  opening `MoveIndex % n` arithmetic cannot express — ranked, because a RandomBranchState
+  the emulator answers without ever touching `rng` is a finding, while a conditional
+  branch is often modelled correctly by seeding MoveIndex.
+
+Both are **worklists, not verdicts**, and both fail loudly rather than skipping when they
+cannot map a monster to its emulator block — a rename is exactly when a silent skip would
+report the renamed monster as clean.
+
 `patch_refresh.py` does everything mechanical and **classifies** the fallout:
 
 - Detects the installed Steam buildid against `data/game_version.json`.

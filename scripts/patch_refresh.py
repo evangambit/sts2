@@ -91,6 +91,21 @@ def main() -> None:
     print(f"changed   : {'YES' if changed else 'no'}")
     print("=" * 68)
 
+    # Run ALWAYS, including when the build has not moved. They compare hand-written
+    # values against the decompiled source, so they are the one part of this that says
+    # something even on an unchanged build -- and they are the part the test suite
+    # cannot do. A test written from the source asserts what the source said WHEN IT WAS
+    # WRITTEN: a dev change to a monster's damage, its move order or the intents a move
+    # declares leaves the emulator wrong, the test asserting the old value, and the run
+    # green. Only a fresh capture or a source comparison notices.
+    print("\n--- audits (hand-written values vs the CURRENT decompiled source) ---")
+    for script in ("audit_ascension_literals.py", "audit_enemy_moves.py"):
+        res = run([sys.executable, f"scripts/{script}"])
+        tail = (res.stdout or res.stderr).strip().splitlines()
+        print(f"  {script}: {tail[-1] if tail else '(no output)'}")
+        if res.returncode != 0:
+            print("    !! the audit could not map every monster — see its output")
+
     if not changed and not args.apply:
         print("\nNothing to do — the recorded build matches what is installed.")
         return
