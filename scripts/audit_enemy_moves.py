@@ -36,6 +36,7 @@ Three checks, each a WORKLIST rather than a verdict:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 from pathlib import Path
 
@@ -84,7 +85,54 @@ NOT_A_MONSTER = {
 ALIASES = {"FakeMerchantMonster": "FakeMerchant"}
 
 
+MACHINE = re.compile(
+    r"protected override MonsterMoveStateMachine GenerateMoveStateMachine\(\).*?\n\t\}",
+    re.S,
+)
+
 COMMENT = re.compile(r"//[^\n]*")
+
+
+def machine_digest(source: str) -> str:
+    """A short fingerprint of this monster's move machine, as the GAME declares it.
+
+    Whitespace-collapsed so a reformat does not count as a change, and taken over
+    `GenerateMoveStateMachine` alone -- the states, their intents, the follow-ups and the
+    branch arms. That is exactly the thing a `VERIFIED` note is a claim about.
+    """
+    match = MACHINE.search(source)
+    body = match.group(0) if match else source
+    return hashlib.sha256(" ".join(body.split()).encode()).hexdigest()[:12]
+
+
+# Monsters whose flags have been READ against the source and found faithful, with the
+# digest of the machine that was read. Each entry is a claim that the emulator expresses
+# this machine correctly by other means -- usually by seeding MoveIndex per creature, or
+# by rolling through `PickBranch`, neither of which the checks above can see.
+#
+# The digest is what keeps this from becoming a place where flags go to die: if MegaCrit
+# changes the machine, the fingerprint stops matching and the audit says so LOUDLY rather
+# than staying quiet on the strength of a reading of the old source. That is the same
+# failure this whole script exists to catch, so it must not have it itself.
+#
+# Add an entry only alongside a test that pins the behaviour. `--digests` prints the
+# current fingerprint for every flagged monster, so writing one down is mechanical.
+VERIFIED: dict[str, tuple[str, str]] = {
+    "CorpseSlug": ("2300db6815f5", "StarterMoveIdx numbers the moves in the same order the cycle walks them, so the seeded MoveIndex IS the cycle"),
+    "LagavulinMatriarch": ("94f8def82c8d", "the branch is AsleepPower; the four-cycle below it is the follow-up chain, and MoveIndex parks at 0 while she sleeps"),
+    "Myte": ("52652a5c729e", "slot-keyed opening, seeded as a MoveIndex offset by CombatFactory: the second Myte starts two ahead"),
+    "Nibbit": ("e603c9d5ab2f", "slot-keyed opening, seeded the same way; alone/front/back pick the starting phase of one three-cycle"),
+    "Ovicopter": ("1ebba9f1bb71", "the conditional only chooses what fills the first slot of a three-cycle, which MytesTests' sibling suite pins"),
+    "PaelsLegion": ("f7dd883708a7", "one move whose follow-up is itself -- a cycle of one"),
+    "PhantasmalGardener": ("4ffd742b8206", "slot-keyed opening plus a conditional, both pinned by PhantasmalGardenersTests"),
+    "DecimillipedeSegment": ("5dbbac17e4ab", "the branch is reached only from REATTACH_MOVE, and a reattached segment rolls it through PickBranch (E121)"),
+    "SlitheringStrangler": ("9ecb2ba264ee", "CONSTRICT alternates with a ROLLED attack, and the roll goes through PickBranch"),
+    "Stabbot": ("", "one move whose follow-up is itself"),
+    "TestSubject": ("fe6a9c1b5914", "the conditional is on Respawns, which the emulator keys off the powers each respawn leaves behind; RESPAWN_MOVE's Buff intent is set by CombatEngine, not by the case block, which is why the types check cannot see it"),
+    "Toadpole": ("3898f71ee8ea", "slot-keyed opening into a three-cycle, seeded per creature"),
+    "TwoTailedRat": ("3b8a03ff4628", "every move returns to a weighted branch, rolled through PickWeightedBranch with the game's weights"),
+    "Wriggler": ("d96a5fa02389", "slot-keyed opening into a two-cycle, plus SPAWNED_MOVE for the ones that arrive stunned"),
+}
 
 
 def strip_comments(source: str) -> str:
@@ -234,12 +282,24 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", choices=[*CHECKS, "all"], default="all")
     parser.add_argument("--monster", default=None, help="audit just this one")
+    parser.add_argument(
+        "--digests",
+        action="store_true",
+        help="print each flagged monster's machine digest, for writing into VERIFIED",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="report VERIFIED monsters too, instead of counting them",
+    )
     args = parser.parse_args()
 
     blocks = emulator_blocks()
     wanted = list(CHECKS) if args.check == "all" else [args.check]
     flagged = 0
+    verified = 0
     modelled = 0
+    stale: list[tuple[str, str, str]] = []
     unmapped: list[str] = []
 
     for path in sorted(MONSTERS.glob("*.cs")):
@@ -265,12 +325,44 @@ def main() -> None:
         for name in wanted:
             found = CHECKS[name](monster, source, block)
             rows += [f"[{name}]{row}" for row in found]
-        if rows:
-            flagged += len(rows)
-            print(monster)
-            print("\n".join(rows))
+        if not rows:
+            continue
+
+        digest = machine_digest(source)
+        if args.digests:
+            print(f"{monster}: {digest}")
+            continue
+
+        note = VERIFIED.get(monster)
+        if note and not args.all:
+            if note[0] and note[0] != digest:
+                stale.append((monster, note[0], digest))
+            else:
+                verified += 1
+                continue
+
+        flagged += len(rows)
+        print(monster)
+        print("\n".join(rows))
+
+    if args.digests:
+        return
 
     print(f"\n{flagged} flag(s) across {modelled} modelled monsters")
+    if verified:
+        print(
+            f"{verified} more flagged and VERIFIED -- read against the source, faithful by "
+            "other means, machine unchanged since. `--all` reports them anyway.",
+        )
+
+    if stale:
+        print(
+            "\nVERIFIED notes whose MACHINE HAS CHANGED since it was read -- re-read these "
+            "before trusting anything about them:",
+        )
+        for monster, was, now in stale:
+            print(f"  {monster}: verified against {was}, the source now digests to {now}")
+        raise SystemExit(1)
 
     if unmapped:
         print(

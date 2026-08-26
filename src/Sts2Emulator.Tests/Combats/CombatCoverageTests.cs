@@ -43,7 +43,6 @@ public class CombatCoverageTests
         "Fabricator",
         "Knights",
         "LostAndForgotten",
-        "MechaKnight",
         "Scrolls",
     ];
 

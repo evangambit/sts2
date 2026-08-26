@@ -448,3 +448,75 @@ public class FrogKnightTests
         Assert.Equal(plating, BuffSystem.Get(knight.Buffs, BuffId.Plating));
     }
 }
+
+/// <summary>
+/// MechaKnightNormal: one Mecha Knight, behind ArtifactPower(3).
+/// </summary>
+public class MechaKnightTests
+{
+    private static Fight Mecha(int ascension = 8) =>
+        Fight.Encounter(CombatFactory.ActOneEncounter.MechaKnight, ascension);
+
+    /// <summary>
+    /// CHARGE, then FLAMETHROWER -> WINDUP -> HEAVY_CLEAVE forever. HEAVY_CLEAVE follows
+    /// up to the flamethrower rather than to the opening, so the charge happens ONCE — a
+    /// `% 4` brought it back every fourth turn, and the windup's Strength makes every
+    /// number after it climb, so the whole readout drifted.
+    /// </summary>
+    [Theory]
+    [InlineData(8, 25, 35)]
+    [InlineData(9, 30, 40)]
+    public void ItChargesOnceThenCyclesThree(int ascension, int charge, int cleave)
+    {
+        var fight = Mecha(ascension);
+        var seen = GloryNormal.Cycle(fight, fight.State.Enemies[0], 7);
+
+        Assert.Equal(
+            [
+                (IntentType.Attack, charge, 1),
+                (IntentType.Debuff, 4, 1),
+                (IntentType.Defend, 15, 1),
+                // WINDUP's StrengthPower(5), on every attack from here on.
+                (IntentType.Attack, cleave + 5, 1),
+                (IntentType.Debuff, 4, 1),
+                (IntentType.Defend, 15, 1),
+                (IntentType.Attack, cleave + 10, 1),
+            ],
+            seen
+        );
+    }
+
+    /// <summary>
+    /// WINDUP declares its DefendIntent before its BuffIntent, so it announces as a
+    /// Defend. It had been typed Buff — and there is no Mecha Knight case in
+    /// <c>ApplyBuffIntent</c>, so the move **did nothing at all**: no block, no Strength.
+    /// </summary>
+    [Fact]
+    public void TheWindupBlocksAndBuffs()
+    {
+        var fight = Mecha();
+        var knight = fight.State.Enemies[0];
+        fight.State.PlayerHp = 9999;
+
+        fight.Turns(2); // CHARGE, FLAMETHROWER
+        Assert.Equal(0, BuffSystem.Get(knight.Buffs, BuffId.Strength));
+
+        fight.State.PlayerHp = 9999;
+        fight.EndTurn(); // WINDUP
+
+        Assert.Equal(15, knight.Block);
+        Assert.Equal(5, BuffSystem.Get(knight.Buffs, BuffId.Strength));
+    }
+
+    /// <summary>FlamethrowerMove puts its four Burns in the HAND, not the discard.</summary>
+    [Fact]
+    public void TheFlamethrowerFillsTheHand()
+    {
+        var fight = Mecha();
+        fight.State.PlayerHp = 9999;
+
+        fight.Turns(2); // CHARGE, then FLAMETHROWER resolves
+
+        Assert.Equal(4, fight.State.Hand.Count(card => card.DefId == ST.Burn));
+    }
+}

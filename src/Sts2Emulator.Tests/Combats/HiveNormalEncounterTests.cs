@@ -164,6 +164,41 @@ public class MytesTests
         Assert.Equal((IntentType.Debuff, 2, 1), second[1]);
         Assert.Equal((IntentType.Attack, 13, 1), second[2]);
     }
+
+    /// <summary>
+    /// SUCK_MOVE declares its attack and then a BuffIntent — StrengthPower(SuckStrength)
+    /// on itself. Nothing applied it: the Myte's "suck" is a plain per-move Strength, not
+    /// the per-HIT SuckPower the Fossil Stalker carries, and only the stalker was ever
+    /// given <c>BuffId.Suck</c>. So a Myte announced the same three numbers for the whole
+    /// fight where the game's climb every third turn.
+    /// </summary>
+    [Theory]
+    [InlineData(8, 2, 4, 13)]
+    [InlineData(9, 3, 6, 15)]
+    public void EachSuckMakesTheMyteBigger(int ascension, int suckStrength, int suck, int bite)
+    {
+        var fight = HiveNormal.At(CombatFactory.ActOneEncounter.Mytes, ascension);
+        var myte = fight.State.Enemies[0];
+
+        // TOXIC, BITE, SUCK -- so one suck has landed by the end of the third turn.
+        fight.State.PlayerHp = 999;
+        HiveNormal.Cycle(fight, 0, 3);
+
+        Assert.Equal(suckStrength, BuffSystem.Get(myte.Buffs, BuffId.Strength));
+
+        // And the announcement carries it: the second pass reads base plus the Strength
+        // the first suck bought, on both of the Myte's attacks.
+        var second = GloryNormal.Cycle(fight, myte, 3);
+        Assert.Equal(
+            [
+                (IntentType.Debuff, 2, 1),
+                (IntentType.Attack, bite + suckStrength, 1),
+                (IntentType.Attack, suck + suckStrength, 1),
+            ],
+            second
+        );
+        Assert.Equal(suckStrength * 2, BuffSystem.Get(myte.Buffs, BuffId.Strength));
+    }
 }
 
 public class OvicopterTests

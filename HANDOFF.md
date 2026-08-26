@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **79 tested, 9 pending** — and the pending list is a
+  setup: 88 encounters modelled, **80 tested, 8 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1366,8 +1366,19 @@ turned out to exclude nothing in combat.
   **Hive is DONE** — all four weak encounters, all eight normals, all three elites and all
   three bosses now have suites. Thirteen encounters are still pending, all of Glory's.
 
-  **`audit_enemy_moves.py`'s worklist is down from 36 flags to 15, and the whole `[hits]`
-  class is CLOSED** — every `MultiAttackIntent` the emulator had folded into one number now
+  **`audit_enemy_moves.py` reports ZERO flags.** From 36 down to none over four batches:
+  every `MultiAttackIntent` the emulator folded now carries its hit count, every intent
+  announces the type its move declares first, and every machine the checks could not read
+  has been read by hand. **Thirteen monsters are in a `VERIFIED` table rather than fixed**
+  — their `MoveIndex %` really is faithful, because the emulator seeds the index per
+  creature or rolls through `PickBranch`, neither of which a regex over the case block can
+  see. Each entry carries the **digest of the machine it was read against**, so if MegaCrit
+  changes one the fingerprint stops matching and the audit says so loudly instead of
+  staying quiet on a reading of the old source. `--digests` prints the current fingerprints
+  and `--all` reports the verified ones anyway.
+
+  The old headline, for reference: the worklist was at 15 flags with the whole `[hits]`
+  class CLOSED — every `MultiAttackIntent` the emulator had folded into one number now
   carries its hit count. Fourteen monsters over two batches, at **six defects apiece on
   average**, and only one per monster was the fold the audit flagged. What is left is 17
   `[shape]` flags and 2 `[types]`, and Glory is down to 10 pending encounters.
@@ -1406,10 +1417,18 @@ turned out to exclude nothing in combat.
   the strength of that sentence. **A comment claiming code is wrong is a hypothesis, not
   evidence** — and this file is full of comments that were written when they were true.
 
-  What the batch DID find, once the audit stopped lying: a reattached Decimillipede segment
-  rolls rather than resuming its cycle (E121), and the Frog Knight's cycle had
+  What those batches DID find, once the audit stopped lying: a reattached Decimillipede
+  segment rolls rather than resuming its cycle (E121); the Frog Knight's cycle had
   STRIKE_DOWN_EVIL and FOR_THE_QUEEN transposed with BEETLE_CHARGE — its biggest move —
-  unreachable (E122).
+  unreachable (E122); the Myte's SUCK never grew it, because only the Fossil Stalker was
+  ever given `BuffId.Suck` and the Myte's is a plain per-move Strength (E123); and the
+  Mecha Knight charged every fourth turn while its WINDUP did **nothing at all**, having
+  been typed Buff into a branch with no case for it (E124).
+
+  **Reading a false flag is still worth doing.** The Myte's was a false positive — its
+  `[shape]` flag was about the opening, which is correctly seeded — and the monster
+  underneath it had a Strength that was never applied. Four of the thirteen verified
+  monsters turned up something on the way to being cleared.
 
   Nine lessons the three batches earned, on top of the ones already listed above:
 

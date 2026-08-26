@@ -427,9 +427,14 @@ public static class EnemyAI
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 1);
                 }
 
+                // SLASH2_MOVE's DefendIntent, worth Slash2Block. ToughEnemies is live at
+                // A8, so the 14 was right there and wrong at every level below it.
                 if (enemy.DefId == KE.LagavulinMatriarch && enemy.MoveIndex % 4 == 3)
                 {
-                    enemy.Block += BuffSystem.IncomingBlock(14, enemy.Buffs);
+                    enemy.Block += BuffSystem.IncomingBlock(
+                        Ascension.Value(ascension, Ascension.ToughEnemies, 14, 12),
+                        enemy.Buffs
+                    );
                 }
 
                 if (enemy.DefId == KE.SoulFysh && enemy.MoveIndex % 5 == 2)
@@ -496,6 +501,21 @@ public static class EnemyAI
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 4);
                 }
 
+                // SUCK_MOVE declares SingleAttackIntent then BuffIntent: the attack, then
+                // StrengthPower(SuckStrength) on itself. Nothing applied it -- the Myte's
+                // "suck" is a plain per-move Strength, not the per-HIT SuckPower the Fossil
+                // Stalker carries, and only the stalker was ever given `BuffId.Suck`. So
+                // the Myte never grew at all, and its cycle announces the same three
+                // numbers for the whole fight where the game's climbs every third turn.
+                if (enemy.DefId == KE.Myte && enemy.MoveIndex % 3 == 2)
+                {
+                    BuffSystem.Apply(
+                        enemy.Buffs,
+                        BuffId.Strength,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
+                    );
+                }
+
                 // TongueLashMove applies FrailPower(2) after it swings. This lived in
                 // ApplyDebuffIntent, and the knight has no Debuff intent at all.
                 if (enemy.DefId == KE.FrogKnight && enemy.LastMove == 0)
@@ -552,6 +572,13 @@ public static class EnemyAI
                 }
 
                 enemy.Block += BuffSystem.IncomingBlock(enemy.CurrentIntent.Magnitude, enemy.Buffs);
+                // WindupMove gains 15 block and then StrengthPower(5). The block comes
+                // from the intent above; the Strength is the BuffIntent riding with it.
+                if (enemy.DefId == KE.MechaKnight)
+                {
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 5);
+                }
+
                 if (enemy.DefId == KE.Axebot && enemy.MoveIndex == 0)
                 {
                     // BootUpStrGain * (2 - StockAmount): nothing on the bot that opens the
@@ -1924,12 +1951,34 @@ public static class EnemyAI
                 };
 
             case KE.MechaKnight:
-                return (enemy.MoveIndex % 4) switch
+                // CHARGE, then FLAMETHROWER -> WINDUP -> HEAVY_CLEAVE forever:
+                // HEAVY_CLEAVE follows up to the FLAMETHROWER, not to the opening, so the
+                // charge happens ONCE. `% 4` brought it back every fourth turn -- 25
+                // damage the fight does not have -- and put the whole cycle out of step.
+                if (enemy.MoveIndex == 0)
                 {
-                    0 => new Intent(IntentType.Attack, 30),
-                    1 => new Intent(IntentType.Debuff, 4),
-                    2 => new Intent(IntentType.Buff, 15),
-                    _ => new Intent(IntentType.Attack, 40),
+                    // ChargeDamage
+                    return new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 30, 25)
+                    );
+                }
+
+                return ((enemy.MoveIndex - 1) % 3) switch
+                {
+                    // FLAMETHROWER: StatusIntent(4), four Burns into the HAND.
+                    0 => new Intent(IntentType.Debuff, 4),
+                    // WINDUP declares DefendIntent BEFORE BuffIntent, so it announces as a
+                    // Defend of _windupBlock and not as the Buff of 15 the emulator said.
+                    // Typing it Buff also meant it did NOTHING: there is no MechaKnight
+                    // case in ApplyBuffIntent, so the knight gained neither the block nor
+                    // the Strength that comes with it.
+                    1 => new Intent(IntentType.Defend, 15),
+                    // HeavyCleaveDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 40, 35)
+                    ),
                 };
 
             case KE.PhantasmalGardener:
