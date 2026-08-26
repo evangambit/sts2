@@ -251,3 +251,42 @@ telling apart before a network is sized around 630 inputs.
 **A dozen action indices are legal in more than one phase.** The mask keeps that safe, but
 it means one output neuron means different things on different screens, so the phase has
 to be prominent in the observation for the network to disambiguate.
+
+
+## What the search path measures (`scripts/mcts_probe.py`)
+
+A throwaway determinized MCTS — shallow tree, floor-count value, nothing trained —
+walked hard enough to answer what the design above could not. Re-run after any change to
+the clone API or the step path:
+
+    uv run python scripts/mcts_probe.py
+
+**The clone contract holds.** All three invariants a tree search depends on pass:
+stepping a clone leaves the parent untouched; two un-resampled clones given the same
+actions end in the same state; and 24 determinizations produce 20 distinct futures, so
+`resample_hidden` genuinely re-seeds rather than quietly copying. That is worth having
+checked, because a clone that silently shared state with its parent would look like a
+search bug for a long time.
+
+**The handle pool takes 255 concurrent clones.** Clone-simulate-destroy never approaches
+it. A design that holds a handle per tree node is two orders of magnitude past it, so the
+tree has to be Python-side and the world replayed into a clone per simulation — which is
+what this probe does.
+
+**A simulation costs ~714us, not one step.** It is clone + descend + roll out, about 16
+steps deep, so **~1,400 simulations/s** and ~22,000 steps/s inside the search. The step
+path is the ceiling: clone is ~17us of that and the remaining ~700us is simulation. This
+is the concrete reason to work on step cost rather than on forking.
+
+**The path works end to end, and it scales with search.** Against random play on the same
+seeds, MCTS reaches deeper floors:
+
+| simulations per move | random | search | lift |
+| --- | --- | --- | --- |
+| 40 | 3.5 mean | 5.2 mean | +1.7 floors |
+| 120 | 3.4 mean | 8.0 mean | +4.6 floors |
+
+That is not a claim about the agent — the value function is "how far did the rollout
+get". It is a claim about the plumbing: the clone, the mask, the value and the backup are
+all connected, and more search buys more floors, which is what a working search does.
+Cost at 120 sims/move is about 6s of wall clock per run.
