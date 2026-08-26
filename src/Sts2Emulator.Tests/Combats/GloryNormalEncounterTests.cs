@@ -276,6 +276,39 @@ public class OwlMagistrateTests
         Assert.Equal(before - 6, owl.Hp);
     }
 
+    /// <summary>
+    /// JUDICIAL_FLIGHT applies SoarPower(1) and VERDICT takes it away. Soar halves POWERED
+    /// attack damage against the owl — attack damage from Attack cards and from creatures
+    /// attacking, which is exactly what `BuffSystem.IncomingDamage` computes and nothing
+    /// else. It was recorded as unmodelled (O19) on the reading that the emulator could
+    /// not tell a powered attack from an unpowered one; it can, because the two damage
+    /// helpers are split along that line already.
+    /// </summary>
+    [Fact]
+    public void SoarHalvesAttacksWhileTheOwlIsFlying()
+    {
+        var fight = Owl();
+        var owl = fight.State.Enemies[0];
+        fight.State.PlayerHp = 9999;
+
+        fight.Turns(3); // SCRUTINY, PECK_ASSAULT, JUDICIAL_FLIGHT
+        Assert.Equal(1, BuffSystem.Get(owl.Buffs, BuffId.Soar));
+
+        owl.Block = 0;
+        int before = owl.Hp;
+        fight.State.Hand = [new CardInstance(IC.StrikeIronclad, false)];
+        fight.State.Energy = 3;
+        fight.Play(0, target: 0);
+
+        // A Strike is 6; half of it, rounded down as the game's decimal cast does, is 3.
+        Assert.Equal(before - 3, owl.Hp);
+
+        fight.State.PlayerHp = 9999;
+        fight.EndTurn(); // VERDICT brings it down
+
+        Assert.Equal(0, BuffSystem.Get(owl.Buffs, BuffId.Soar));
+    }
+
     /// <summary>VerdictMove applies VulnerablePower(4), which the emulator never did.</summary>
     [Fact]
     public void TheVerdictLeavesThePlayerVulnerable()
@@ -518,5 +551,189 @@ public class MechaKnightTests
         fight.Turns(2); // CHARGE, then FLAMETHROWER resolves
 
         Assert.Equal(4, fight.State.Hand.Count(card => card.DefId == ST.Burn));
+    }
+}
+
+/// <summary>
+/// FabricatorNormal: one Fabricator, which builds bots until the bench is full.
+/// </summary>
+public class FabricatorTests
+{
+    private static Fight Shop(int ascension = 8) =>
+        Fight.Encounter(CombatFactory.ActOneEncounter.Fabricator, ascension);
+
+    /// <summary>
+    /// A ConditionalBranchState on CanFabricate — fewer than four living teammates — and
+    /// only then a roll between FABRICATE and FABRICATING_STRIKE. With the bench full it
+    /// DISINTEGRATES, a move the emulator never reached: it rolled the pair
+    /// unconditionally, so a Fabricator with four bots up kept summoning into a full
+    /// board and its second attack never happened.
+    /// </summary>
+    [Theory]
+    [InlineData(8, 11)]
+    [InlineData(9, 13)]
+    public void WithTheBenchFullItDisintegrates(int ascension, int disintegrate)
+    {
+        var fight = Shop(ascension);
+        var fabricator = fight.State.Enemies[0];
+        for (int i = 0; i < 4; i++)
+        {
+            fight.State.Enemies.Add(
+                new EnemyState
+                {
+                    DefId = KE.Guardbot,
+                    Hp = 20,
+                    MaxHp = 20,
+                }
+            );
+        }
+
+        EnemyAI.ChooseIntents(fight.State.Enemies, 0, new Random(0), ascension: ascension);
+
+        Assert.Equal(new Intent(IntentType.Attack, disintegrate), fabricator.CurrentIntent);
+    }
+
+    /// <summary>
+    /// With room on the bench it rolls, and both arms are reachable — FABRICATE is a bare
+    /// summon, FABRICATING_STRIKE summons as it swings and so announces as an attack.
+    /// </summary>
+    [Theory]
+    [InlineData(8, 18)]
+    [InlineData(9, 21)]
+    public void WithRoomItRollsBetweenSummonAndStrike(int ascension, int strike)
+    {
+        var seen = new HashSet<Intent>();
+        for (int seed = 0; seed < 24; seed++)
+        {
+            var fight = Fight.Encounter(CombatFactory.ActOneEncounter.Fabricator, ascension, seed);
+            EnemyAI.ChooseIntents(fight.State.Enemies, 0, new Random(seed), ascension: ascension);
+            seen.Add(fight.State.Enemies[0].CurrentIntent);
+        }
+
+        Assert.Contains(new Intent(IntentType.Buff, 0), seen);
+        Assert.Contains(new Intent(IntentType.Attack, strike), seen);
+        Assert.Equal(2, seen.Count);
+    }
+
+    /// <summary>
+    /// The bots it builds. Two of the four carry a DeadlyEnemies pair and both were on the
+    /// A9 branch — written in <c>BotIntent</c>, a switch EXPRESSION, which the ascension
+    /// audit could not see until it learned to read more than `case` arms.
+    /// </summary>
+    [Theory]
+    [InlineData(8, 11, 14)]
+    [InlineData(9, 12, 15)]
+    public void TheBotsCarryTheirOwnAscensionValues(int ascension, int stab, int zap)
+    {
+        var fight = Shop(ascension);
+        var stabbot = new EnemyState
+        {
+            DefId = KE.Stabbot,
+            Hp = 20,
+            MaxHp = 20,
+        };
+        var zapbot = new EnemyState
+        {
+            DefId = KE.Zapbot,
+            Hp = 20,
+            MaxHp = 20,
+        };
+        fight.State.Enemies.AddRange([stabbot, zapbot]);
+
+        EnemyAI.ChooseIntents(fight.State.Enemies, 0, new Random(0), ascension: ascension);
+
+        // STAB_MOVE declares its attack BEFORE its debuff, so it announces as an Attack --
+        // the emulator had it as a Debuff with the attack as its secondary, inverted.
+        Assert.Equal(new Intent(IntentType.Attack, stab), stabbot.CurrentIntent);
+        Assert.Equal(new Intent(IntentType.Debuff, 1), stabbot.SecondaryIntent);
+        Assert.Equal(new Intent(IntentType.Attack, zap), zapbot.CurrentIntent);
+    }
+}
+
+/// <summary>
+/// KnightsNormal: a Flail Knight, a Spectral Knight and a Magi Knight.
+/// </summary>
+public class KnightsTests
+{
+    private static Fight Trio(int ascension = 8) =>
+        Fight.Encounter(CombatFactory.ActOneEncounter.Knights, ascension);
+
+    [Fact]
+    public void TheEncounterIsThreeKnights()
+    {
+        Assert.Equal([KE.FlailKnight, KE.SpectralKnight, KE.MagiKnight], Trio().EnemyDefIds);
+    }
+
+    /// <summary>
+    /// The Magi Knight opens POWER_SHIELD then DAMPEN, and MAGIC_BOMB returns to RAM — so
+    /// those two happen ONCE and the fight is a three-cycle after them. A `% 5` brought
+    /// both back every fifth turn, and all three of its damage numbers were the A9 branch.
+    /// </summary>
+    /// <remarks>
+    /// PowerShieldBlock is a TOUGH pair, not a Deadly one, so it reads 9 at A8 and A9
+    /// alike — the level below is what tells the two apart, which is why the block is
+    /// checked separately.
+    /// </remarks>
+    [Theory]
+    [InlineData(8, 6, 10, 35, 9)]
+    [InlineData(9, 7, 11, 40, 9)]
+    public void TheMagiKnightShieldsAndDampensOnce(
+        int ascension,
+        int shield,
+        int spear,
+        int bomb,
+        int block
+    )
+    {
+        var fight = Trio(ascension);
+        var magi = fight.State.Enemies[2];
+        var seen = GloryNormal.Cycle(fight, magi, 7);
+
+        Assert.Equal(
+            [
+                (IntentType.Attack, shield, 1),
+                (IntentType.Debuff, 1, 1),
+                (IntentType.Attack, spear, 1),
+                (IntentType.Defend, block, 1),
+                (IntentType.Attack, bomb, 1),
+                (IntentType.Attack, spear, 1),
+                (IntentType.Defend, block, 1),
+            ],
+            seen
+        );
+    }
+
+    /// <summary>
+    /// POWER_SHIELD's DefendIntent, worth PowerShieldBlock — the ToughEnemies pair, which
+    /// the emulator used at the high value for every level, and handed out every fifth
+    /// turn rather than once.
+    /// </summary>
+    [Theory]
+    [InlineData(8, 9)]
+    [InlineData(0, 5)]
+    public void ThePowerShieldBlocksAtItsOwnAscension(int ascension, int block)
+    {
+        var fight = Trio(ascension);
+        var magi = fight.State.Enemies[2];
+        fight.State.PlayerHp = 9999;
+
+        fight.EndTurn(); // POWER_SHIELD
+
+        Assert.Equal(block, magi.Block);
+    }
+
+    /// <summary>
+    /// POWER_SHIELD is the opening and nothing returns to it, so its damage is announced
+    /// once in the whole fight. The `% 5` handed it out every fifth turn.
+    /// </summary>
+    [Fact]
+    public void TheShieldNeverComesRoundAgain()
+    {
+        var fight = Trio();
+        var magi = fight.State.Enemies[2];
+        var seen = GloryNormal.Cycle(fight, magi, 12);
+
+        Assert.Equal((IntentType.Attack, 6, 1), seen[0]);
+        Assert.DoesNotContain((IntentType.Attack, 6, 1), seen.Skip(1));
     }
 }

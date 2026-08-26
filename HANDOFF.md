@@ -1162,6 +1162,16 @@ not looser.
 
 ## Next work (prioritized, with pointers)
 
+⚠️ **Enchantments are an act-1 mechanic and the emulator has 13 of 22, with 4 of the 14
+relics that grant one** — see **[docs/enchantment-coverage.md](docs/enchantment-coverage.md)**
+for the gap, the semantics of each missing one, and the port order. The implemented
+granters are all `Ancient` rarity, which makes the mechanic read as act-2 content; it is
+not. Five `Shop`-rarity relics grant enchantments (a sixth pays off having one) and three
+shops appear per act, and
+Self-Help Book, Stone of All Time and Symbiote sit in **both** act-1 event pools. Highest
+priority there is the five Shop granters, because an act-1 deck distribution that cannot
+produce an enchantment is silently wrong for anything modelling a deck.
+
 **Combat start and run generation are both bit-exact** (see "what's proven"). The open
 front is now _per-card correctness_, and it is far larger than the guard used to report.
 The game has **five** characters; the emulator has id-constant classes for three of them,
@@ -1196,7 +1206,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **80 tested, 8 pending** — and the pending list is a
+  setup: 88 encounters modelled, **82 tested, 6 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1360,9 +1370,11 @@ turned out to exclude nothing in combat.
 
   **That sweep is now a script**, `scripts/audit_ascension_literals.py`, which cross-checks
   every monster's `GetValueIfAscension(DeadlyEnemies, high, low)` pairs against the bare
-  literals in its `EnemyAI` case block. It reported 80; the Hive monsters are fixed (E83,
-  E86, E91, E95-E100), Glory's lone monsters are fixed (E112-E116) and its three bosses
-  with them (E118-E120), which leaves **16**.
+  literals in its `EnemyAI` case block. **It reported 80 and now reports ZERO** (E83, E86,
+  E91, E95-E100, E112-E116, E118-E120, E126). Three of the last twelve were the AUDIT
+  rather than the emulator: it read only `case KE.X:` arms, and every rider added since the
+  Hive batches lives in an `if (enemy.DefId == KE.X && ...)` block or a switch expression
+  instead (H20). It reads all four shapes now.
   **Hive is DONE** — all four weak encounters, all eight normals, all three elites and all
   three bosses now have suites. Thirteen encounters are still pending, all of Glory's.
 

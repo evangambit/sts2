@@ -115,6 +115,9 @@ public enum BuffId
     Infested, // Phrog Parasite: spawn Wrigglers when killed
     PainfulStabs, // Test Subject: every hit that lands unblocked adds a Wound
     Nemesis, // Test Subject phase 3: toggles Intangible at the end of every enemy turn
+    Soar, // Owl Magistrate: halves powered attack damage against it while it flies
+    VitalSpark, // Infested Prism: playing a Skill taints the player for the round
+    Tainted, // the player: powered attacks land for this much more, until the enemy turn ends
     Tangled, // Vine Shambler card debuff, currently tracked as a player debuff
     Constrict, // Slithering Strangler pressure debuff, currently tracked
     Smoggy, // Living Fog card affliction debuff, currently tracked

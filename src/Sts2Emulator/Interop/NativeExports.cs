@@ -176,6 +176,8 @@ public static class NativeExports
         /// </remarks>
         public void ResetArena(
             ReadOnlySpan<int> deckIds,
+            ReadOnlySpan<int> enchantIds,
+            ReadOnlySpan<int> enchantAmounts,
             int encounterId,
             ReadOnlySpan<int> relicIds,
             ReadOnlySpan<int> potionIds,
@@ -187,6 +189,25 @@ public static class NativeExports
             int completedCombatRooms
         )
         {
+            // The enchantment arrays run parallel to the deck and may be empty, which
+            // reads as Enchantment.None on every card. An id list alone cannot carry
+            // them, and ACT 1 hands them out: Self-Help Book, Stone of All Time and
+            // Symbiote sit in both act-1 event pools, Sapphire Seed and Wood Carvings in
+            // Underdocks', and six Shop-rarity relics grant one apiece.
+            var deck = new CardInstance[deckIds.Length];
+            for (int i = 0; i < deckIds.Length; i++)
+            {
+                int cardId = deckIds[i];
+                deck[i] = new CardInstance(
+                    Math.Abs(cardId),
+                    cardId < 0,
+                    Enchantment: i < enchantIds.Length
+                        ? (Enchantment)enchantIds[i]
+                        : Enchantment.None,
+                    EnchantAmount: i < enchantAmounts.Length ? enchantAmounts[i] : 0
+                );
+            }
+
             State.AscensionLevel = ascension;
             SeedStreams();
             // -1 means "no forced encounter": the factory rolls the seeded first combat.
@@ -204,7 +225,7 @@ public static class NativeExports
             CombatFactory.Reset(
                 State,
                 Rng,
-                deckIds,
+                (ReadOnlySpan<CardInstance>)deck,
                 encounter,
                 relicIds,
                 playerHp,
@@ -471,6 +492,10 @@ public static class NativeExports
         int handle,
         int* deckIds,
         int deckLen,
+        int* enchantIds,
+        int enchantLen,
+        int* enchantAmounts,
+        int enchantAmountLen,
         int encounterId,
         int* relicIds,
         int relicLen,
@@ -488,6 +513,8 @@ public static class NativeExports
         var combat = _pool[handle]!;
         combat.ResetArena(
             new ReadOnlySpan<int>(deckIds, deckLen),
+            new ReadOnlySpan<int>(enchantIds, enchantLen),
+            new ReadOnlySpan<int>(enchantAmounts, enchantAmountLen),
             encounterId,
             new ReadOnlySpan<int>(relicIds, relicLen),
             new ReadOnlySpan<int>(potionIds, potionLen),

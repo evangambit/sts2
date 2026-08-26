@@ -13,7 +13,7 @@ and SelectIntent is the one that matters: ``ChooseIntents`` overwrites every ope
 intent right after the roster is built, so the literals in CombatFactory are placeholders.
 
 **This is a worklist, not a verdict.** It flags a bare occurrence of the high value
-anywhere in a monster's case block, so it cannot tell a damage number from a hit count or
+anywhere the emulator speaks about that monster, so it cannot tell a damage number from a hit count or
 from an unrelated constant -- Exoskeleton's flagged 4 turned out to be the A9 REPEAT
 count standing where the damage should be, which is a different bug than the one flagged.
 Read the move state machine before changing a line. Nor does an absent flag mean correct:
@@ -53,14 +53,61 @@ def deadly_pairs() -> dict[str, list[tuple[str, int, int]]]:
     return pairs
 
 
+def statement_at(text: str, index: int) -> str:
+    """The whole statement or arm the character at `index` belongs to.
+
+    Walks back to the start of that line, then forward until the braces it opened are
+    balanced again -- or, for a one-line arm that opens none, to the `;` or `,` that ends
+    it. Deliberately generous: over-collecting costs a false MISS at worst, and this
+    function exists because under-collecting was costing false FLAGS.
+    """
+    start = text.rfind("\n", 0, index) + 1
+    depth = 0
+    opened = False
+    for cursor in range(start, len(text)):
+        char = text[cursor]
+        if char == "{":
+            depth += 1
+            opened = True
+        elif char == "}":
+            depth -= 1
+            if opened and depth <= 0:
+                return text[start : cursor + 1]
+        elif char in ";," and depth == 0 and not opened:
+            return text[start : cursor + 1]
+    return text[start:]
+
+
 def ai_blocks() -> dict[str, str]:
-    """Split EnemyAI into per-monster case blocks, concatenating a monster's several."""
+    """Everything in EnemyAI that speaks about each monster, concatenated.
+
+    Not just the `case KE.X:` arms. The emulator carries a monster's numbers in at least
+    four shapes, and for a while this collector saw only the first:
+
+      * `case KE.X:` in SelectIntent or one of the Apply*Intent switches;
+      * `if (enemy.DefId == KE.X && ...) { ... }` riders inside the shared attack, defend
+        and buff branches, which is where every rider added since the Hive batches lives;
+      * switch-expression arms, `KE.X => ...` and `KE.X when ... => ...`, as
+        SecondaryIntentFor and BotIntent are written;
+      * `if (defId == KE.X)` inside a helper.
+
+    Reading only the case arms reported six monsters as carrying a bare A9 literal while
+    the guarded `Ascension.Value(...)` sat in a rider ten lines up -- the same over-report
+    the move audit had, for the same reason: a checker that reads code has to be able to
+    see all of the code.
+    """
     text = ENEMY_AI.read_text(encoding="utf-8")
-    marks = [(m.start(), m.group(1)) for m in re.finditer(r"case KE\.(\w+):", text)]
     blocks: dict[str, str] = {}
+
+    marks = [(m.start(), m.group(1)) for m in re.finditer(r"case KE\.(\w+):", text)]
     for index, (start, name) in enumerate(marks):
         end = marks[index + 1][0] if index + 1 < len(marks) else len(text)
         blocks[name] = blocks.get(name, "") + text[start:end]
+
+    for match in re.finditer(r"\bKE\.(\w+)\b", text):
+        name = match.group(1)
+        blocks[name] = blocks.get(name, "") + "\n" + statement_at(text, match.start())
+
     return blocks
 
 

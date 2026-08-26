@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Sts2Emulator.Core;
+using Sts2Emulator.Core.Effects;
 using Sts2Emulator.Core.Run;
 using Xunit;
 
@@ -228,6 +229,59 @@ public class EntomancerTests
 
 public class InfestedPrismsTests
 {
+    /// <summary>
+    /// <c>VitalSparkPower</c> is the Skill-card twin of the Globe Head's Galvanic: the
+    /// prism arrives holding VitalSparkAmount, PULSATE stacks another on top, and every
+    /// Skill the player plays stamps them with TaintedPower — which adds that much to
+    /// every POWERED attack against them until the enemy turn ends.
+    /// </summary>
+    /// <remarks>
+    /// None of it was modelled. The ascension audit flagged VitalSparkAmount's 3 as an A9
+    /// literal, which was a false positive of the documented kind — the 3 in the prism's
+    /// block is WhirlwindRepeat, a hit count — and reading it turned up a whole power
+    /// missing instead.
+    /// </remarks>
+    [Theory]
+    [InlineData(8, 2)]
+    [InlineData(9, 3)]
+    public void PlayingASkillTaintsThePlayer(int ascension, int spark)
+    {
+        var fight = Fight.Encounter(CombatFactory.ActOneEncounter.InfestedPrisms, ascension);
+        var prism = fight.State.Enemies[0];
+        fight.State.PlayerHp = 9999;
+
+        Assert.Equal(spark, BuffSystem.Get(prism.Buffs, BuffId.VitalSpark));
+        Assert.Equal(0, BuffSystem.Get(fight.State.PlayerBuffs, BuffId.Tainted));
+
+        fight.State.Hand = [new CardInstance(IC.DefendIronclad, false)];
+        fight.State.Energy = 3;
+        fight.Play();
+
+        Assert.Equal(spark, BuffSystem.Get(fight.State.PlayerBuffs, BuffId.Tainted));
+
+        // A tainted player takes that much more from every powered attack -- JabDamage
+        // plus the taint.
+        int announced = prism.CurrentIntent.AnnouncedDamage(prism.Buffs, fight.State.PlayerBuffs);
+        Assert.Equal(prism.CurrentIntent.Magnitude + spark, announced);
+
+        // TaintedPower removes itself outright at the end of the enemy turn.
+        fight.EndTurn();
+        Assert.Equal(0, BuffSystem.Get(fight.State.PlayerBuffs, BuffId.Tainted));
+    }
+
+    /// <summary>PULSATE stacks another Vital Spark on top of the one it arrived with.</summary>
+    [Fact]
+    public void PulsateStacksAnotherSpark()
+    {
+        var fight = Fight.Encounter(CombatFactory.ActOneEncounter.InfestedPrisms);
+        var prism = fight.State.Enemies[0];
+        fight.State.PlayerHp = 9999;
+
+        fight.Turns(4); // JAB, RADIATE, WHIRLWIND, PULSATE
+
+        Assert.Equal(4, BuffSystem.Get(prism.Buffs, BuffId.VitalSpark));
+    }
+
     /// <summary>
     /// JAB -> RADIATE -> WHIRLWIND -> PULSATE, cycling. WHIRLWIND is
     /// MultiAttackIntent(WhirlwindDamage, 3) and was folded into 18.

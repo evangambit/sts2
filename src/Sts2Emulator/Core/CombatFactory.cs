@@ -834,13 +834,10 @@ public static class CombatFactory
 
             ActOneEncounter.Fabricator =>
             [
-                CreateEnemy(
-                    KE.Fabricator,
-                    rng,
-                    rng.Next(2) == 0
-                        ? new Intent(IntentType.Buff, 0)
-                        : new Intent(IntentType.Attack, 21)
-                ),
+                // A placeholder, like every opening intent here: ChooseIntents overwrites
+                // it as soon as the roster is built, and it is the branch in SelectIntent
+                // that actually rolls.
+                CreateEnemy(KE.Fabricator, rng, new Intent(IntentType.Buff, 0)),
             ],
 
             ActOneEncounter.FrogKnight => [CreateFrogKnight(rng)],
@@ -1859,6 +1856,20 @@ public static class CombatFactory
         if (enemy.DefId == KE.GlobeHead)
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.Galvanic, 6);
+        }
+
+        if (enemy.DefId == KE.InfestedPrism)
+        {
+            // InfestedPrism.AfterAddedToRoom applies VitalSparkPower(VitalSparkAmount).
+            // It is the Skill-card twin of the Globe Head's Galvanic above: where Galvanic
+            // damages the player for playing a Power, Vital Spark taints them for playing
+            // a Skill, and a tainted player takes that much more from every powered attack
+            // for the rest of the round.
+            BuffSystem.Apply(
+                enemy.Buffs,
+                BuffId.VitalSpark,
+                Ascension.Value(_currentAscension, Ascension.DeadlyEnemies, 3, 2)
+            );
         }
 
         if (enemy.DefId == KE.LivingShield)

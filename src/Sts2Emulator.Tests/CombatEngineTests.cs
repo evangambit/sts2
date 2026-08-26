@@ -951,6 +951,11 @@ public class CombatEngineTests
             },
         ];
 
+        // The bots' intents come from ChooseIntents rather than the hand-built ones
+        // above: STAB_MOVE announces as an ATTACK carrying a Frail, and a test that writes
+        // `Debuff 12` by hand asserts the emulator's old reading of the move back to it.
+        EnemyAI.ChooseIntents(state.Enemies, 0, new Random(0), ascension: 8);
+
         EnemyAI.ExecuteIntent(state.Enemies[1], state, new Random(0));
         EnemyAI.ExecuteIntent(state.Enemies[2], state, new Random(0));
         EnemyAI.ExecuteIntent(state.Enemies[3], state, new Random(0));
@@ -963,7 +968,8 @@ public class CombatEngineTests
                 + state.DrawPile.Count(c => c.DefId == ST.Dazed)
         );
         Assert.Equal(1, BuffSystem.Get(state.PlayerBuffs, BuffId.Frail));
-        Assert.Equal(37, state.PlayerHp);
+        // StabDamage 11 and ZapDamage 14 at A8; both were on the A9 branch.
+        Assert.Equal(64 - 11 - 14, state.PlayerHp);
         Assert.Equal(2, BuffSystem.Get(state.Enemies[4].Buffs, BuffId.Strength));
     }
 
@@ -982,14 +988,15 @@ public class CombatEngineTests
         };
 
         EnemyAI.ExecuteIntent(egg, state, new Random(0));
-        EnemyAI.ChooseIntents([egg], 0, new Random(0));
+        EnemyAI.ChooseIntents([egg], 0, new Random(0), ascension: 8);
         EnemyAI.ExecuteIntent(egg, state, new Random(0));
 
         Assert.Equal(0, BuffSystem.Get(egg.Buffs, BuffId.Hatch));
         Assert.Equal(1, BuffSystem.Get(egg.Buffs, BuffId.Minion));
         Assert.InRange(egg.MaxHp, 20, 23);
         Assert.Equal(IntentType.Attack, egg.CurrentIntent.Type);
-        Assert.Equal(59, state.PlayerHp);
+        // NibbleDamage is 4 at A8; the 5 this used to assert is the A9 branch.
+        Assert.Equal(64 - 4, state.PlayerHp);
     }
 
     /// <summary>

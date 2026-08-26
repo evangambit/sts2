@@ -40,8 +40,6 @@ public class CombatCoverageTests
         "BattlewornDummy1",
         "BattlewornDummy2",
         "BattlewornDummy3",
-        "Fabricator",
-        "Knights",
         "LostAndForgotten",
         "Scrolls",
     ];

@@ -377,9 +377,16 @@ public static class EnemyAI
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
                 }
 
-                if (enemy.DefId == KE.MagiKnight && enemy.MoveIndex % 5 == 0)
+                // POWER_SHIELD_MOVE's DefendIntent, worth PowerShieldBlock -- and the
+                // shield is the knight's move ZERO and nothing else, since MAGIC_BOMB
+                // returns to RAM rather than to the opening. The `% 5` handed it out every
+                // fifth turn, at the ToughEnemies value used at every level.
+                if (enemy.DefId == KE.MagiKnight && enemy.MoveIndex == 0)
                 {
-                    enemy.Block += BuffSystem.IncomingBlock(9, enemy.Buffs);
+                    enemy.Block += BuffSystem.IncomingBlock(
+                        Ascension.Value(ascension, Ascension.ToughEnemies, 9, 5),
+                        enemy.Buffs
+                    );
                 }
 
                 // Two of the prism's four moves carry a DefendIntent, for different
@@ -400,6 +407,14 @@ public static class EnemyAI
                 {
                     int pulsate = Ascension.Value(ascension, Ascension.ToughEnemies, 22, 20);
                     enemy.Block += BuffSystem.IncomingBlock(pulsate, enemy.Buffs);
+                    // PULSATE stacks another VitalSparkAmount on top of the one the prism
+                    // arrived with, and VitalSparkPower is a Counter -- so the tax on
+                    // playing a Skill climbs as the fight goes on.
+                    BuffSystem.Apply(
+                        enemy.Buffs,
+                        BuffId.VitalSpark,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 3, 2)
+                    );
                 }
 
                 if (enemy.DefId == KE.CeremonialBeast && enemy.MoveIndex > 0)
@@ -495,10 +510,20 @@ public static class EnemyAI
                     BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
                 }
 
-                // VerdictMove applies VulnerablePower(4) as it lands.
+                // VerdictMove applies VulnerablePower(4) as it lands, and takes the owl
+                // back out of the air: `PowerCmd.Remove<SoarPower>` is the last line of
+                // the move.
                 if (enemy.DefId == KE.OwlMagistrate && enemy.MoveIndex % 4 == 3)
                 {
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 4);
+                    BuffSystem.Remove(enemy.Buffs, BuffId.Soar);
+                }
+
+                // StabMove applies FrailPower(1) after it swings. It lived in the debuff
+                // branch, which the bot's Attack intent no longer reaches.
+                if (enemy.DefId == KE.Stabbot)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
                 }
 
                 // SUCK_MOVE declares SingleAttackIntent then BuffIntent: the attack, then
@@ -1422,9 +1447,32 @@ public static class EnemyAI
                     );
 
             case KE.Fabricator:
-                return rng.Next(2) == 0
+            {
+                // A ConditionalBranchState on CanFabricate -- fewer than four living
+                // teammates -- and only then a roll between FABRICATE and
+                // FABRICATING_STRIKE. With the bench full it DISINTEGRATES instead, a move
+                // the emulator never reached: it rolled the pair unconditionally, so a
+                // Fabricator with four bots up kept summoning into a full board.
+                bool canFabricate =
+                    (roster?.Count(other => other.Hp > 0 && other != enemy) ?? 0) < 4;
+                if (!canFabricate)
+                {
+                    // DisintegrateDamage
+                    return new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
+                    );
+                }
+
+                return PickBranch([0, 1], rng) == 0
                     ? new Intent(IntentType.Buff, 0)
-                    : new Intent(IntentType.Attack, 21);
+                    // FabricatingStrikeDamage; the move summons as it swings, which is why
+                    // it announces as an attack rather than as the summon.
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 21, 18)
+                    );
+            }
 
             case KE.FrogKnight:
             {
@@ -1638,7 +1686,11 @@ public static class EnemyAI
             }
 
             case KE.Parafright:
-                return new Intent(IntentType.Attack, 17);
+                // SlamDamage; SLAM_MOVE follows up to itself and is the whole creature.
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 17, 16)
+                );
 
             case KE.Wriggler:
                 return (enemy.MoveIndex % 2) == 0
@@ -1964,13 +2016,42 @@ public static class EnemyAI
             }
 
             case KE.MagiKnight:
-                return (enemy.MoveIndex % 5) switch
+                // POWER_SHIELD -> DAMPEN -> RAM -> PREP -> MAGIC_BOMB -> RAM -> ...:
+                // MAGIC_BOMB follows up to RAM, not to the opening, so the shield and the
+                // dampen happen ONCE and the fight is a three-cycle after them. `% 5`
+                // brought both back every fifth turn.
+                if (enemy.MoveIndex == 0)
                 {
-                    0 => new Intent(IntentType.Attack, 7),
-                    1 => new Intent(IntentType.Debuff, 1),
-                    2 => new Intent(IntentType.Attack, 11),
-                    3 => new Intent(IntentType.Defend, 9),
-                    _ => new Intent(IntentType.Attack, 40),
+                    // PowerShieldDamage, plus PowerShieldBlock for itself.
+                    return new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6)
+                    );
+                }
+
+                if (enemy.MoveIndex == 1)
+                {
+                    // DAMPEN_MOVE: DampenPower(1) on the player.
+                    return new Intent(IntentType.Debuff, 1);
+                }
+
+                return ((enemy.MoveIndex - 2) % 3) switch
+                {
+                    // SpearDamage, which RAM_MOVE deals.
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10)
+                    ),
+                    // PREP_MOVE gains PowerShieldBlock, the same amount the shield does.
+                    1 => new Intent(
+                        IntentType.Defend,
+                        Ascension.Value(ascension, Ascension.ToughEnemies, 9, 5)
+                    ),
+                    // BombDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 40, 35)
+                    ),
                 };
 
             case KE.MechaKnight:
@@ -3080,15 +3161,32 @@ public static class EnemyAI
                 return new Intent(IntentType.Debuff, 2);
 
             case KE.Stabbot:
-                return new Intent(IntentType.Debuff, 12);
+                // STAB_MOVE declares SingleAttackIntent BEFORE its DebuffIntent, so it
+                // announces as an Attack of StabDamage -- it was typed Debuff with the
+                // attack as its SECONDARY, which is the announcement inverted. The
+                // `[types]` check could not see it: SecondaryIntentFor does say Attack for
+                // this monster, and that check asks per MONSTER, not per move.
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 12, 11)
+                );
 
             case KE.Zapbot:
-                return new Intent(IntentType.Attack, 15);
+                // ZapDamage
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 14)
+                );
 
             case KE.ToughEgg:
+                // HATCH once, then NIBBLE, which follows up to itself.
                 return BuffSystem.Get(enemy.Buffs, BuffId.Hatch) > 0
                     ? new Intent(IntentType.Buff, 0)
-                    : new Intent(IntentType.Attack, 5);
+                    // NibbleDamage
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
+                    );
 
             case KE.SkulkingColony:
                 return (enemy.MoveIndex % 4) switch
@@ -3230,7 +3328,9 @@ public static class EnemyAI
             // ADVANCED_GAS's second intent is the card debuff it inflicts.
             KE.LivingFog when enemy.MoveIndex == 0 => new Intent(IntentType.Debuff, 1),
             KE.VineShambler when enemy.MoveIndex % 3 == 1 => new Intent(IntentType.Debuff, 1),
-            KE.Stabbot => new Intent(IntentType.Attack, enemy.CurrentIntent.Magnitude),
+            // STAB_MOVE's second declared intent is the Frail it applies, now that the
+            // attack it leads with is the primary one.
+            KE.Stabbot => new Intent(IntentType.Debuff, 1),
             KE.SkulkingColony when enemy.MoveIndex % 4 == 2 => new Intent(
                 IntentType.Attack,
                 enemy.CurrentIntent.Magnitude
@@ -3479,6 +3579,15 @@ public static class EnemyAI
                 {
                     BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
                 }
+                break;
+
+            case KE.OwlMagistrate:
+                // JUDICIAL_FLIGHT takes off and applies SoarPower(1), which halves powered
+                // attack damage against the owl until VERDICT brings it down. Recorded as
+                // an unmodelled gap (O19) on the grounds that the powered-attack
+                // distinction was one `IncomingDamage` could not make -- it turns out that
+                // function IS the powered-attack path, so the gap was a misreading.
+                BuffSystem.Apply(enemy.Buffs, BuffId.Soar, enemy.CurrentIntent.Magnitude);
                 break;
 
             case KE.PhantasmalGardener:
@@ -3836,11 +3945,6 @@ public static class EnemyAI
                 AddStatus(state, ST.Dazed, 1);
                 Effects.CardEffects.AddCardToDrawPileRandomly(state, ST.Dazed, 1, rng);
                 break;
-
-            case KE.Stabbot:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 1);
-                break;
         }
     }
 
@@ -4147,7 +4251,7 @@ public static class EnemyAI
             var bot = CreateEnemy(
                 defensive,
                 rng,
-                BotIntent(defensive),
+                BotIntent(defensive, state.AscensionLevel),
                 stunned: true,
                 state: state
             );
@@ -4157,19 +4261,42 @@ public static class EnemyAI
         if (state.Enemies.Count < 6)
         {
             int aggro = rng.Next(2) == 0 ? KE.Zapbot : KE.Stabbot;
-            var bot = CreateEnemy(aggro, rng, BotIntent(aggro), stunned: true, state: state);
+            var bot = CreateEnemy(
+                aggro,
+                rng,
+                BotIntent(aggro, state.AscensionLevel),
+                stunned: true,
+                state: state
+            );
             BuffSystem.Apply(bot.Buffs, BuffId.Minion, 1);
             state.Enemies.Insert(insertIndex, Effects.RelicEffects.Spawned(state, bot));
         }
     }
 
-    private static Intent BotIntent(int defId) =>
+    /// <summary>
+    /// The opening intent a summoned bot arrives holding. Takes the ascension level
+    /// because two of the four carry a DeadlyEnemies pair, and this is the second place
+    /// their numbers are written down — the audit reads `case KE.X:` arms and switch
+    /// expressions alike now, which is how these two were found.
+    /// </summary>
+    private static Intent BotIntent(int defId, int ascension) =>
         defId switch
         {
+            // GuardMove gives every Fabricator 15 block, a flat amount.
             KE.Guardbot => new Intent(IntentType.Defend, 15),
+            // NOISE_MOVE: StatusIntent(2).
             KE.Noisebot => new Intent(IntentType.Debuff, 2),
-            KE.Zapbot => new Intent(IntentType.Attack, 15),
-            KE.Stabbot => new Intent(IntentType.Debuff, 12),
+            // ZapDamage
+            KE.Zapbot => new Intent(
+                IntentType.Attack,
+                Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 14)
+            ),
+            // StabDamage. STAB_MOVE announces as an Attack, not as the Frail it also
+            // applies.
+            KE.Stabbot => new Intent(
+                IntentType.Attack,
+                Ascension.Value(ascension, Ascension.DeadlyEnemies, 12, 11)
+            ),
             _ => new Intent(IntentType.Unknown, 0),
         };
 

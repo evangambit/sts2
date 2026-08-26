@@ -129,6 +129,12 @@ public static class BuffSystem
                 // duration DEBUFFS below because it is a Buff: PowerCmd.Apply's
                 // skip-a-tick grace is only given to a debuff landing on a player-side
                 // creature, so an Intangible the player gains this turn ticks tonight.
+                // TaintedPower.AfterSideTurnEnd REMOVES itself outright rather than
+                // decrementing, so a round's worth of Skills is paid for once.
+                case BuffId.Tainted:
+                    buffs.RemoveAt(i);
+                    break;
+
                 case BuffId.Intangible:
                     buffs[i] = b with { Magnitude = b.Magnitude - 1 };
                     if (buffs[i].Magnitude <= 0)
@@ -186,9 +192,18 @@ public static class BuffSystem
         List<BuffState> defenderBuffs
     )
     {
+        // Everything in this function is the POWERED-ATTACK path, which is what lets the
+        // two hooks below live here at all. `ValueProp.IsPoweredAttack` is `Move &&
+        // !Unpowered` -- attack damage from Attack cards and from enemy creatures
+        // attacking -- and the two callers are exactly those: EnemyAI.DealAttackDamage and
+        // CardEffects.DealDamageToEnemy. Relic, potion, thorns and poison damage all go
+        // through the `Unpowered` helpers instead and never arrive here.
         float dmg = baseDamage;
         dmg += Get(attackerBuffs, BuffId.Strength);
         dmg += Get(attackerBuffs, BuffId.Vigor);
+        // TaintedPower.ModifyDamageAdditive, which the Infested Prism's Vital Spark stamps
+        // on the player for every Skill they play.
+        dmg += Get(defenderBuffs, BuffId.Tainted);
         if (Get(attackerBuffs, BuffId.Weak) > 0)
         {
             dmg *= 0.75f;
@@ -219,6 +234,13 @@ public static class BuffSystem
         if (fromBehind)
         {
             dmg *= 1.5f;
+        }
+
+        // SoarPower.ModifyDamageMultiplicative: a flying Owl Magistrate takes half from a
+        // POWERED attack, which is the only kind that reaches this function.
+        if (Get(defenderBuffs, BuffId.Soar) > 0)
+        {
+            dmg *= 0.5f;
         }
 
         return CapIncomingDamage(Math.Max(0, (int)dmg), defenderBuffs);

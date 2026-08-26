@@ -2041,6 +2041,24 @@ public static class CombatEngine
             }
         }
 
+        if (def.Type == CardType.Skill)
+        {
+            // VitalSparkPower.AfterCardPlayed: a Skill carrying its Tainted affliction
+            // stamps TaintedPower on the player. Read as the largest Vital Spark on the
+            // board, the same way Galvanic is read above -- the affliction lands on the
+            // CARD in the game, and modelling the card stamp rather than the board would
+            // mean tracking an affliction per instance for one monster.
+            int vitalSpark = state
+                .Enemies.Where(e => e.Hp > 0)
+                .Select(e => BuffSystem.Get(e.Buffs, BuffId.VitalSpark))
+                .DefaultIfEmpty(0)
+                .Max();
+            if (vitalSpark > 0)
+            {
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Tainted, vitalSpark);
+            }
+        }
+
         int panache = BuffSystem.Get(state.PlayerBuffs, BuffId.PanachePower);
         if (panache > 0)
         {

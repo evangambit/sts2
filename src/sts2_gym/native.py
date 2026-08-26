@@ -251,6 +251,10 @@ _lib.Sts2_ResetArena.argtypes = [
     ctypes.c_int,  # handle
     ctypes.POINTER(ctypes.c_int),  # deck ids
     ctypes.c_int,  # deck len
+    ctypes.POINTER(ctypes.c_int),  # enchantment ids, parallel to the deck
+    ctypes.c_int,  # enchantment len
+    ctypes.POINTER(ctypes.c_int),  # enchantment amounts, parallel to the deck
+    ctypes.c_int,  # enchantment amount len
     ctypes.c_int,  # encounter id (-1 = roll it)
     ctypes.POINTER(ctypes.c_int),  # relic ids
     ctypes.c_int,  # relic len
@@ -599,6 +603,7 @@ def reset_arena(
     handle: int,
     deck_ids: list[int],
     obs_buf: ctypes.Array,
+    enchantments: list[tuple[int, int]] | None = None,
     encounter_id: int = -1,
     relic_ids: list[int] | None = None,
     potion_ids: list[int] | None = None,
@@ -617,12 +622,22 @@ def reset_arena(
     ascension against a chosen encounter.
 
     A NEGATIVE card id means upgraded, matching CombatFactory's own
-    ``new CardInstance(Math.Abs(id), id < 0)``. Enchantments cannot be expressed in a
-    flat id list and are not carried.
+    ``new CardInstance(Math.Abs(id), id < 0)``.
+
+    ``enchantments`` is a list of (enchantment_id, amount) running parallel to
+    ``deck_ids``; pass None for a deck with none. Act 1 grants them by two routes, so
+    this is not act-2 decoration: Self-Help Book, Stone of All Time and Symbiote are in
+    both act-1 event pools (Sapphire Seed and Wood Carvings in Underdocks' as well), and
+    six Shop-rarity relics grant one apiece.
 
     encounter_id of -1 rolls the seeded first-combat encounter instead of forcing one.
     """
     deck_buf = (ctypes.c_int * len(deck_ids))(*deck_ids)
+    ench = list(enchantments or [])
+    ench_ids = [e for e, _ in ench]
+    ench_amts = [a for _, a in ench]
+    ench_id_buf = (ctypes.c_int * max(1, len(ench_ids)))(*ench_ids)
+    ench_amt_buf = (ctypes.c_int * max(1, len(ench_amts)))(*ench_amts)
     relics = list(relic_ids or [])
     relic_buf = (ctypes.c_int * max(1, len(relics)))(*relics)
     potions = list(potion_ids or [])
@@ -631,6 +646,10 @@ def reset_arena(
         handle,
         deck_buf,
         len(deck_ids),
+        ench_id_buf,
+        len(ench_ids),
+        ench_amt_buf,
+        len(ench_amts),
         encounter_id,
         relic_buf,
         len(relics),
