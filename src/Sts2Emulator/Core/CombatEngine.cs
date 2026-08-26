@@ -26,17 +26,21 @@ public static class CombatEngine
         // waiting.
         DrainAutoPlayQueue(state, rng);
 
-        // A pending card selection owns the action space until it is answered: the game
-        // will not let you play, end the turn or quaff while its selection screen is up.
-        if (state.PendingSelection is not null)
-        {
-            return ResolveCardSelection(state, action, rng);
-        }
-
         int endTurnAction = state.Hand.Count;
         StepResult result;
 
-        if (action == endTurnAction)
+        // A pending card selection owns the action space until it is answered: the game
+        // will not let you play, end the turn or quaff while its selection screen is up.
+        //
+        // This used to RETURN rather than fall through, which put anything the answer
+        // queued a whole action late. Answering a discard screen with a Sly card queues it
+        // to play, and the game plays it as part of that discard -- not after whatever the
+        // player does next.
+        if (state.PendingSelection is not null)
+        {
+            result = ResolveCardSelection(state, action, rng);
+        }
+        else if (action == endTurnAction)
         {
             result = EndTurn(state, rng);
         }
@@ -416,13 +420,18 @@ public static class CombatEngine
                 );
             }
 
+            // Hand Trick's Sly lasts a single TURN, so a card that survives into the
+            // next hand does not carry the grant with it. Note this cleanup does NOT go
+            // through DiscardMovedCards: the end-of-turn discard is not a
+            // `CardCmd.Discard` in the game and does not trigger Sly, so holding a
+            // Tactician to the end of the turn buys nothing.
             if (retainHand > 0 || card.IsRetained())
             {
-                nextHand.Add(card with { FreeThisTurn = false });
+                nextHand.Add(card with { FreeThisTurn = false, SlyThisTurn = false });
             }
             else
             {
-                state.DiscardPile.Add(card with { FreeThisTurn = false });
+                state.DiscardPile.Add(card with { FreeThisTurn = false, SlyThisTurn = false });
             }
         }
         state.Hand.Clear();
@@ -1190,12 +1199,20 @@ public static class CombatEngine
 
                 break;
 
+            case CardSelectionKind.MarkHandCardSly:
+                if (index < state.Hand.Count)
+                {
+                    state.Hand[index] = state.Hand[index] with { SlyThisTurn = true };
+                }
+
+                break;
+
             case CardSelectionKind.DiscardFromHandRepeated:
                 if (index < state.Hand.Count)
                 {
                     var discarded = state.Hand[index];
                     state.Hand.RemoveAt(index);
-                    state.DiscardPile.Add(discarded with { FreeThisTurn = false });
+                    Effects.CardEffects.DiscardMovedCards(state, [discarded]);
                 }
 
                 // Ask again until the picks are spent or the hand empties; the follow-up

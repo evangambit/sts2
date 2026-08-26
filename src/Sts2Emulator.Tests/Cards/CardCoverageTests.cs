@@ -190,7 +190,6 @@ public class CardCoverageTests
         "GunkUp",
         "Hailstorm",
         "HammerTime",
-        "HandTrick",
         "Hang",
         "Haunt",
         "Haze",

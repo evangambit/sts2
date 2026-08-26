@@ -106,7 +106,12 @@ public readonly record struct CardDef(
     // read from the source rather than restated: the hand-kept list of ids it replaces
     // had 14 of the 38, and the dozen curses missing from it were silently eligible for
     // every upgrade in the game.
-    bool Upgradable = true
+    bool Upgradable = true,
+    // CardKeyword.Sly. A Sly card DISCARDED by an effect is auto-played --
+    // `CardCmd.DiscardAndDraw` gathers the sly ones as it moves them and plays each
+    // afterwards. The end-of-turn hand discard does not route through that command and so
+    // does not trigger it.
+    bool Sly = false
 );
 
 /// <summary>
@@ -220,7 +225,11 @@ public readonly record struct CardInstance(
     // makes them part of the instance rather than of the definition. Default to None for
     // every other card.
     CardType TinkerType = CardType.None,
-    TinkerRider TinkerRider = TinkerRider.None
+    TinkerRider TinkerRider = TinkerRider.None,
+    // `CardModel.HasSingleTurnSly`, which Hand Trick sets on a chosen Skill. Sly is
+    // otherwise a keyword on the DEFINITION, so this is the per-copy half of the same
+    // question -- see CardInstanceExtensions.IsSlyThisTurn.
+    bool SlyThisTurn = false
 );
 
 public static class CardInstanceExtensions
@@ -260,6 +269,14 @@ public static class CardInstanceExtensions
     /// </summary>
     public static bool IsRetained(this CardInstance card) =>
         GeneratedData.Cards.Get(card.DefId).Retain || card.Enchantment == Enchantment.Steady;
+
+    /// <summary>
+    /// `CardModel.IsSlyThisTurn`: the Sly keyword on the definition, or a single-turn
+    /// grant from Hand Trick. A Sly card DISCARDED by an effect is played instead of
+    /// joining the pile.
+    /// </summary>
+    public static bool IsSlyThisTurn(this CardInstance card) =>
+        GeneratedData.Cards.Get(card.DefId).Sly || card.SlyThisTurn;
 }
 
 public static class Enchantments

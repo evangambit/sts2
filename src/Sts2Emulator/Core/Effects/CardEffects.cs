@@ -1281,9 +1281,35 @@ public static class CardEffects
                 }
                 break;
 
-            case SI.HandTrick: // 1-cost, 7/10 block and mark a Skill Sly
+            case SI.HandTrick: // 1-cost, 7/10 block and mark a CHOSEN Skill Sly
+            {
                 GainBlock(state, Blk(def, upgraded, card), rng);
+                // `CardSelectCmd.FromHand` filtered to `card.Type == Skill &&
+                // !card.IsSlyThisTurn`. The marking was the whole second half of the card
+                // and did nothing at all before: Sly was unmodelled, so Hand Trick was
+                // seven block.
+                var skills = new List<int>();
+                for (int i = 0; i < state.Hand.Count; i++)
+                {
+                    var candidate = state.Hand[i];
+                    if (
+                        GeneratedData.Cards.Get(candidate.DefId).Type == CardType.Skill
+                        && !candidate.IsSlyThisTurn()
+                    )
+                    {
+                        skills.Add(i);
+                    }
+                }
+
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.MarkHandCardSly,
+                    skills,
+                    def.Id,
+                    autoPick: skills.Count > 0 ? skills[0] : 0
+                );
                 break;
+            }
 
             case SI.HiddenDaggers: // 1-cost, discard 2 CHOSEN cards, then add 2 Shivs
                 // The card deals NO damage: its two vars are CardsVar(2) -- how many to
@@ -2716,11 +2742,15 @@ public static class CardEffects
                 break;
             }
 
+            case CardSelectionKind.MarkHandCardSly when index < state.Hand.Count:
+                state.Hand[index] = state.Hand[index] with { SlyThisTurn = true };
+                break;
+
             case CardSelectionKind.DiscardFromHandRepeated when index < state.Hand.Count:
             {
                 var card = state.Hand[index];
                 state.Hand.RemoveAt(index);
-                state.DiscardPile.Add(card with { FreeThisTurn = false });
+                DiscardMovedCards(state, [card]);
                 break;
             }
         }
@@ -5460,12 +5490,52 @@ public static class CardEffects
 
     public static void DiscardFirstCardsFromHand(CombatState state, int count)
     {
+        var moved = new List<CardInstance>();
         for (int i = 0; i < count && state.Hand.Count > 0; i++)
         {
-            var handCard = state.Hand[0];
+            moved.Add(state.Hand[0]);
             state.Hand.RemoveAt(0);
-            state.DiscardPile.Add(handCard with { FreeThisTurn = false });
         }
+
+        DiscardMovedCards(state, moved);
+    }
+
+    /// <summary>
+    /// Puts cards that have left the hand into the discard pile the way
+    /// <c>CardCmd.DiscardAndDraw</c> does — collecting the Sly ones as they move and
+    /// playing each of them once the rest are down.
+    /// </summary>
+    /// <remarks>
+    /// This is the chokepoint on purpose. Every effect-driven discard in the emulator
+    /// reaches the pile through here or through the selection resolution beside it, so Sly
+    /// is answered once rather than at a dozen call sites — and the sites are in two
+    /// different dispatches, the `case SI.X:` arms and the by-NAME fallback, which is
+    /// exactly the shape that gets a rule applied to half of them.
+    ///
+    /// The END-OF-TURN hand discard deliberately does NOT come through here. That cleanup
+    /// does not route through <c>CardCmd.Discard</c> in the game either, so holding a
+    /// Tactician to the end of the turn is not a free point of energy.
+    ///
+    /// A Sly card is queued instead of being added to the pile rather than as well as: the
+    /// game adds it and then plays it FROM the discard, and playing it here sends it to
+    /// whichever pile a played card lands in. Doing both would leave a copy behind.
+    /// </remarks>
+    internal static void DiscardMovedCards(CombatState state, List<CardInstance> cards)
+    {
+        var sly = new List<CardInstance>();
+        foreach (var card in cards)
+        {
+            var moved = card with { FreeThisTurn = false };
+            if (moved.IsSlyThisTurn())
+            {
+                sly.Add(moved);
+                continue;
+            }
+
+            state.DiscardPile.Add(moved);
+        }
+
+        state.AutoPlayQueue.AddRange(sly);
     }
 
     public static void AddGeneratedCardsToHand(CombatState state, int cardId, int count)

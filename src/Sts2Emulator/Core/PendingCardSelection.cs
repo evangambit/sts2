@@ -61,6 +61,13 @@ public enum CardSelectionKind
     /// agent told it discards the leftmost card learns a rule the game does not have.
     /// </remarks>
     DiscardFromHandRepeated = 9,
+
+    /// <summary>
+    /// Hand Trick: a Skill in hand that is not already Sly is made Sly for this turn, so
+    /// discarding it later plays it. The filter lives in the candidate list, as Secret
+    /// Weapon's does.
+    /// </summary>
+    MarkHandCardSly = 10,
 }
 
 /// <summary>

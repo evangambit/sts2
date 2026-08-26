@@ -290,9 +290,14 @@ def extract_cards() -> str:
         upg_block = decimal_to_int(upg_blk_m.group(1)) if upg_blk_m else 0
 
         def_id = stable_id("cards", name)
+        # Retain and Sly were missing from this tuple, and both are read by the engine:
+        # `CardInstanceExtensions.IsRetained` decides what survives the end-of-turn hand
+        # discard, and Sly decides what auto-plays when an effect discards it. Eleven cards
+        # declare Retain and eight declare Sly, and not one of them was marked -- a field
+        # the extractor never emits reads exactly like a card that does not have it.
         flags = [
             f"{keyword}: true"
-            for keyword in ("Ethereal", "Exhaust", "Unplayable")
+            for keyword in ("Ethereal", "Exhaust", "Unplayable", "Retain", "Sly")
             if has_canonical_keyword(text, keyword)
         ]
         # Innate needs precise attribution, unlike the flags above: 9 cards declare
