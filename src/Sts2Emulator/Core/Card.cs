@@ -111,7 +111,19 @@ public readonly record struct CardDef(
     // `CardCmd.DiscardAndDraw` gathers the sly ones as it moves them and plays each
     // afterwards. The end-of-turn hand discard does not route through that command and so
     // does not trigger it.
-    bool Sly = false
+    bool Sly = false,
+    // Keywords an UPGRADE changes, which the flags above cannot express on their own. The
+    // direction differs by keyword and is not interchangeable: twelve cards GAIN Retain
+    // when upgraded, the way fifteen gain Innate, while nineteen LOSE Exhaust and three
+    // lose Ethereal -- and for most of those losing it is the whole benefit of the
+    // upgrade. See CardInstanceExtensions.IsRetained / IsExhaust / IsEthereal.
+    bool RetainWhenUpgraded = false,
+    bool ExhaustRemovedWhenUpgraded = false,
+    bool EtherealRemovedWhenUpgraded = false,
+    // CardKeyword.Eternal, which is `CardModel.IsRemovable => !Keywords.Contains(Eternal)`.
+    // Seven curses carry it and `CardSelectCmd.FromDeckForRemoval` filters on it, so the
+    // game will not so much as OFFER one for removal.
+    bool Eternal = false
 );
 
 /// <summary>
@@ -267,8 +279,34 @@ public static class CardInstanceExtensions
     /// Whether this card is Retained, from any source the emulator models: the printed
     /// keyword, or the Steady enchantment, which adds it (<c>Steady.OnEnchant</c>).
     /// </summary>
-    public static bool IsRetained(this CardInstance card) =>
-        GeneratedData.Cards.Get(card.DefId).Retain || card.Enchantment == Enchantment.Steady;
+    public static bool IsRetained(this CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return def.Retain
+            || (card.Upgraded && def.RetainWhenUpgraded)
+            || card.Enchantment == Enchantment.Steady;
+    }
+
+    /// <summary>
+    /// Whether this copy exhausts when played. Nineteen cards DROP Exhaust when upgraded,
+    /// and for most of them that is the whole benefit of the upgrade — an upgraded
+    /// Discovery, Hologram or Secret Technique comes back.
+    /// </summary>
+    public static bool IsExhaust(this CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return def.Exhaust && !(card.Upgraded && def.ExhaustRemovedWhenUpgraded);
+    }
+
+    /// <summary>
+    /// Whether this copy is Ethereal. Apparition, Echo Form and Void Form all drop it when
+    /// upgraded; the emulator knew about Echo Form only, by its raw id.
+    /// </summary>
+    public static bool IsEthereal(this CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return def.Ethereal && !(card.Upgraded && def.EtherealRemovedWhenUpgraded);
+    }
 
     /// <summary>
     /// `CardModel.IsSlyThisTurn`: the Sly keyword on the definition, or a single-turn

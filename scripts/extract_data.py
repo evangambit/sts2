@@ -97,8 +97,26 @@ def innate_canonical(text: str) -> bool:
 
 
 def innate_on_upgrade(text: str) -> bool:
+    return keyword_on_upgrade(text, "Innate", "Add")
+
+
+def keyword_on_upgrade(text: str, keyword: str, verb: str) -> bool:
+    """Whether OnUpgrade ADDS or REMOVES this keyword.
+
+    The direction is the whole point and the two are not interchangeable. Every
+    OnUpgrade that mentions Innate or Retain ADDS it -- the upgrade grants the keyword --
+    and every one that mentions Exhaust or Ethereal REMOVES it, which is usually the
+    entire reason to upgrade the card. A check that only asked "is the keyword mentioned
+    in OnUpgrade" would read those two groups as the same thing and get one of them
+    backwards.
+    """
     m = _ON_UPGRADE_BODY.search(text)
-    return bool(m and "CardKeyword.Innate" in m.group(1))
+    if not m:
+        return False
+    for line in m.group(1).splitlines():
+        if f"CardKeyword.{keyword}" in line and verb in line:
+            return True
+    return False
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -297,7 +315,7 @@ def extract_cards() -> str:
         # the extractor never emits reads exactly like a card that does not have it.
         flags = [
             f"{keyword}: true"
-            for keyword in ("Ethereal", "Exhaust", "Unplayable", "Retain", "Sly")
+            for keyword in ("Ethereal", "Exhaust", "Unplayable", "Retain", "Sly", "Eternal")
             if has_canonical_keyword(text, keyword)
         ]
         # Innate needs precise attribution, unlike the flags above: 9 cards declare
@@ -308,6 +326,18 @@ def extract_cards() -> str:
             flags.append("Innate: true")
         if innate_on_upgrade(text):
             flags.append("InnateWhenUpgraded: true")
+        # Retain is granted by an upgrade on twelve cards, exactly as Innate is on
+        # fifteen -- and like Innate it needs its own flag, because a card that only
+        # retains once upgraded must not retain before then.
+        if keyword_on_upgrade(text, "Retain", "Add"):
+            flags.append("RetainWhenUpgraded: true")
+        # Exhaust and Ethereal go the other way: nineteen cards drop Exhaust when
+        # upgraded and three drop Ethereal, and for most of those it is the whole
+        # benefit of the upgrade.
+        if keyword_on_upgrade(text, "Exhaust", "Remove"):
+            flags.append("ExhaustRemovedWhenUpgraded: true")
+        if keyword_on_upgrade(text, "Ethereal", "Remove"):
+            flags.append("EtherealRemovedWhenUpgraded: true")
         if HAS_ENERGY_COST_X.search(text):
             flags.append("HasEnergyCostX: true")
         if MULTIPLAYER_ONLY.search(text):

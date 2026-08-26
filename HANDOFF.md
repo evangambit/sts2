@@ -58,6 +58,11 @@ bash scripts/build.sh osx-arm64
 # Python gym tests (411 pass, 6 skipped) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
 
+# Audits (all three are worklists; each has a docstring saying what it cannot see)
+uv run python scripts/audit_enemy_moves.py        # monster behaviour vs the source
+uv run python scripts/audit_ascension_literals.py # A9 values used at A8
+uv run python scripts/audit_card_keywords.py      # card keywords the table never got
+
 # Regenerate game data / decompiled source for the current patch
 bash scripts/decompile.sh "<game dir>"        # → decompiled/ (gitignored), needs ilspycmd
 python scripts/extract_data.py                # → src/Sts2Emulator/Generated/*.g.cs

@@ -960,8 +960,16 @@ public static class RunNonCombatEffects
             DeckSelection.TransformTo => GeneratedData.Cards.Get(card.DefId).Rarity
                 == CardRarity.Basic,
             DeckSelection.Upgrade => RunConstants.IsRunCardUpgradable(card),
-            DeckSelection.RemoveUpgradable => RunConstants.IsRunCardUpgradable(card),
-            DeckSelection.TransformToRandom or DeckSelection.Remove => true,
+            // `FromDeckForRemoval` filters on `c.IsRemovable && filter(c)`, so the Eternal
+            // check applies to this one too.
+            DeckSelection.RemoveUpgradable => RunConstants.IsRunCardUpgradable(card)
+                && !GeneratedData.Cards.Get(card.DefId).Eternal,
+            // `CardSelectCmd.FromDeckForRemoval` filters on `c.IsRemovable`, which is
+            // `!Keywords.Contains(CardKeyword.Eternal)` -- so the game will not so much as
+            // OFFER an Eternal card for removal. Seven curses carry it, Ascender's Bane
+            // among them, and the emulator let a run delete every one.
+            DeckSelection.Remove => !GeneratedData.Cards.Get(card.DefId).Eternal,
+            DeckSelection.TransformToRandom => true,
             _ => false,
         };
     }

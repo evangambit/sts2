@@ -5038,7 +5038,7 @@ public static class CardEffects
         state.RemoveFromDrawPileAt(index);
         var def = GeneratedData.Cards.Get(card.DefId);
         PlayNestedCard(def, card.Upgraded, state, rng, card);
-        if (def.Exhaust)
+        if (card.IsExhaust())
         {
             ExhaustCard(state, card, rng: rng);
         }

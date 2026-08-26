@@ -397,7 +397,9 @@ public static class CombatEngine
         foreach (var card in state.Hand)
         {
             var def = GeneratedData.Cards.Get(card.DefId);
-            if (def.Ethereal && !(def.Id == 159 && card.Upgraded))
+            // Three cards drop Ethereal when upgraded, not one: this was `def.Id == 159`,
+            // which is Echo Form, and said nothing about Apparition or Void Form.
+            if (card.IsEthereal())
             {
                 Effects.CardEffects.ExhaustCard(state, card, causedByEthereal: true, rng: rng);
                 continue;
@@ -2198,7 +2200,8 @@ public static class CombatEngine
             return true;
         }
 
-        return def.Exhaust;
+        // Nineteen cards drop Exhaust when upgraded, which this read straight past.
+        return card.IsExhaust();
     }
 
     private static bool ShouldPlaceOnDrawPileAfterPlay(CombatState state, CardDef def)
