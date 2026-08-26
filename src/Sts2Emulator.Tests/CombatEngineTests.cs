@@ -992,6 +992,13 @@ public class CombatEngineTests
         Assert.Equal(59, state.PlayerHp);
     }
 
+    /// <summary>
+    /// BARRAGE_MOVE declares its MultiAttackIntent before its BuffIntent, so it announces
+    /// as an Attack of BarrageDamage twice over -- not, as this test used to assert by
+    /// handing the enemy the intent itself, as a Buff of the two hits folded together.
+    /// The intent comes from <c>ChooseIntents</c> here for that reason: a hand-built one
+    /// cannot tell you the readout is wrong.
+    /// </summary>
     [Fact]
     public void AdversaryVariants_UseBarrageAttackAndStrengthMove()
     {
@@ -1002,10 +1009,14 @@ public class CombatEngineTests
             DefId = KE.TheAdversaryMkThree,
             Hp = 300,
             MaxHp = 300,
-            CurrentIntent = new Intent(IntentType.Buff, 20),
             Buffs = [new BuffState(BuffId.Artifact, 2)],
             MoveIndex = 2,
         };
+
+        EnemyAI.ChooseIntents([mkThree], 0, new Random(0));
+
+        Assert.Equal(new Intent(IntentType.Attack, 10, Hits: 2), mkThree.CurrentIntent);
+        Assert.Equal(new Intent(IntentType.Buff, 4), mkThree.SecondaryIntent);
 
         EnemyAI.ExecuteIntent(mkThree, state, new Random(0));
 

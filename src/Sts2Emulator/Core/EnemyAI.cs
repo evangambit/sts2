@@ -482,6 +482,58 @@ public static class EnemyAI
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 1);
                 }
 
+                // HAMMER_UPPERCUT_MOVE swings and then applies Weak 2 and Frail 2. The
+                // Axebot had no attack rider at all, so both were simply missing -- odd
+                // move indices are the uppercut, even ones the ONE_TWO.
+                if (enemy.DefId == KE.Axebot && enemy.MoveIndex % 2 == 1)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 2);
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
+                }
+
+                // ShockingSlap applies FrailPower(2); GalvanicBurstMove takes
+                // StrengthPower(2). The Strength used to sit in ApplyBuffIntent, and every
+                // one of the Globe Head's three moves is an attack -- so it never ran, and
+                // when it had run it would have fired on all three.
+                if (enemy.DefId == KE.GlobeHead && enemy.MoveIndex % 3 == 0)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
+                }
+
+                if (enemy.DefId == KE.GlobeHead && enemy.MoveIndex % 3 == 2)
+                {
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
+                }
+
+                // VerdictMove applies VulnerablePower(4) as it lands.
+                if (enemy.DefId == KE.OwlMagistrate && enemy.MoveIndex % 4 == 3)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 4);
+                }
+
+                // EbbMove attacks and then gains EbbBlock, a flat 33.
+                if (enemy.DefId == KE.Aeonglass && enemy.MoveIndex % 3 == 0)
+                {
+                    enemy.Block += BuffSystem.IncomingBlock(33, enemy.Buffs);
+                }
+
+                // BarrageMove's StrengthPower, which followed its attack into the attack
+                // branch when the intent was retyped.
+                if (enemy.MoveIndex % 3 == 2)
+                {
+                    int barrageStrength = enemy.DefId switch
+                    {
+                        KE.TheAdversaryMkOne => 2,
+                        KE.TheAdversaryMkTwo => 3,
+                        KE.TheAdversaryMkThree => 4,
+                        _ => 0,
+                    };
+                    if (barrageStrength > 0)
+                    {
+                        BuffSystem.Apply(enemy.Buffs, BuffId.Strength, barrageStrength);
+                    }
+                }
+
                 break;
             }
 
@@ -499,10 +551,14 @@ public static class EnemyAI
                 }
 
                 enemy.Block += BuffSystem.IncomingBlock(enemy.CurrentIntent.Magnitude, enemy.Buffs);
-                if (enemy.DefId == KE.Axebot && enemy.MoveIndex % 3 == 0)
+                if (enemy.DefId == KE.Axebot && enemy.MoveIndex == 0)
                 {
+                    // BootUpStrGain * (2 - StockAmount): nothing on the bot that opens the
+                    // fight, one helping on the first respawn and two on the second. Stock
+                    // has already been decremented by the respawn that got here.
                     int stock = BuffSystem.Get(enemy.Buffs, BuffId.Stock);
-                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, Math.Max(0, 2 - stock) * 4);
+                    int gain = Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, Math.Max(0, 2 - stock) * gain);
                 }
 
                 break;
@@ -1259,11 +1315,33 @@ public static class EnemyAI
             }
 
             case KE.Axebot:
-                return (enemy.MoveIndex % 3) switch
+                // BOOT_UP -> HAMMER_UPPERCUT, and from there HAMMER_UPPERCUT <-> ONE_TWO
+                // forever. The machine's INITIAL state is HAMMER_UPPERCUT unless the bot
+                // was built with a stock override, which only a respawn does -- so BOOT_UP
+                // is index 0 and an Axebot that opens the fight never sees it. The old
+                // `% 3` walked back to BOOT_UP every third turn and put ONE_TWO before the
+                // uppercut besides.
+                return enemy.MoveIndex switch
                 {
-                    0 => new Intent(IntentType.Defend, 15),
-                    1 => new Intent(IntentType.Attack, 20),
-                    _ => new Intent(IntentType.Attack, 14),
+                    // BootUpBlock. The Strength it also grants rides in the Defend branch
+                    // of ExecuteIntent, since BOOT_UP announces as a Defend.
+                    0 => new Intent(
+                        IntentType.Defend,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 10)
+                    ),
+                    // ONE_TWO_MOVE: MultiAttackIntent(OneTwoDamage, 2). The 20 was the two
+                    // hits folded, at the A9 damage besides.
+                    _ when enemy.MoveIndex % 2 == 0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 10, 9),
+                        Hits: 2
+                    ),
+                    // HAMMER_UPPERCUT_MOVE: HammerUppercutDamage, plus Weak 2 and Frail 2,
+                    // which are applied in the attack branch.
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 12)
+                    ),
                 };
 
             case KE.DevotedSculptor:
@@ -1291,11 +1369,28 @@ public static class EnemyAI
                 };
 
             case KE.GlobeHead:
+                // SHOCKING_SLAP -> THUNDER_STRIKE -> GALVANIC_BURST, cycling. Index 0 had
+                // been given THUNDER_STRIKE's folded total as well as index 1, so the slap
+                // announced 21 for a move that hits for 14 and never applied its Frail.
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 21),
-                    1 => new Intent(IntentType.Attack, 21),
-                    _ => new Intent(IntentType.Attack, 17),
+                    // ShockingSlapDamage, plus FrailPower(2) on the target.
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 13)
+                    ),
+                    // THUNDER_STRIKE: MultiAttackIntent(ThunderStrikeDamage, 3). The 21 was
+                    // the three hits folded, at the A9 damage besides.
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6),
+                        Hits: 3
+                    ),
+                    // GalvanicBurstDamage, plus StrengthPower(2) on itself.
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 17, 16)
+                    ),
                 };
 
             case KE.LivingShield:
@@ -1333,30 +1428,70 @@ public static class EnemyAI
                     );
 
             case KE.OwlMagistrate:
+                // MAGISTRATE_SCRUTINY -> PECK_ASSAULT -> JUDICIAL_FLIGHT -> VERDICT.
                 return (enemy.MoveIndex % 4) switch
                 {
-                    0 => new Intent(IntentType.Attack, 17),
-                    1 => new Intent(IntentType.Attack, 24),
+                    // ScrutinyDamage
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 17, 16)
+                    ),
+                    // PECK_ASSAULT: MultiAttackIntent(PeckAssaultDamage, 6). The 24 was the
+                    // six hits folded -- and six is a lot of per-instance triggers to lose.
+                    // PeckAssaultDamage is 4 at both ascension levels.
+                    1 => new Intent(IntentType.Attack, 4, Hits: 6),
+                    // JUDICIAL_FLIGHT: SoarPower(1) on itself, which halves powered attack
+                    // damage against it until VERDICT removes it. Soar itself is not
+                    // modelled -- see docs/divergence-catalog.md.
                     2 => new Intent(IntentType.Buff, 1),
-                    _ => new Intent(IntentType.Attack, 36),
+                    // VerdictDamage, plus VulnerablePower(4) on the target.
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 36, 33)
+                    ),
                 };
 
             case KE.ScrollOfBiting:
                 return ScrollOfBitingIntent(enemy, rng, ascension);
 
             case KE.SlimedBerserker:
+                // VOMIT_ICHOR -> FURIOUS_PUMMELING -> LEECHING_HUG -> SMOTHER, cycling.
                 return (enemy.MoveIndex % 4) switch
                 {
+                    // VOMIT_ICHOR: StatusIntent(10), ten Slimed into the discard.
                     0 => new Intent(IntentType.Debuff, 10),
-                    1 => new Intent(IntentType.Attack, 20),
-                    2 => new Intent(IntentType.Buff, 3),
-                    _ => new Intent(IntentType.Attack, 33),
+                    // FURIOUS_PUMMELING: MultiAttackIntent(PummelingDamage, 4). The 20 was
+                    // the four hits folded, at the A9 damage besides.
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4),
+                        Hits: 4
+                    ),
+                    // LEECHING_HUG declares DebuffIntent BEFORE BuffIntent, so the readout
+                    // calls it a Debuff -- Weak 3 on the player, Strength 3 on itself. It
+                    // was typed Buff, which is what a policy read, and the effect sat in
+                    // the buff branch to match.
+                    2 => new Intent(IntentType.Debuff, 3),
+                    // SmotherDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 33, 30)
+                    ),
                 };
 
             case KE.TheLost:
+                // DEBILITATING_SMOG <-> EYE_LASERS. The smog declares DebuffIntent before
+                // BuffIntent, so Debuff is what it announces, and its number is the
+                // Strength it takes from the player and keeps.
                 return (enemy.MoveIndex % 2) == 0
                     ? new Intent(IntentType.Debuff, 2)
-                    : new Intent(IntentType.Attack, 10);
+                    // EYE_LASERS: MultiAttackIntent(EyeLasersDamage, 2). The 10 was the two
+                    // hits folded, at the A9 damage besides.
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4),
+                        Hits: 2
+                    );
 
             case KE.TheForgotten:
                 return (enemy.MoveIndex % 2) == 0
@@ -1584,12 +1719,62 @@ public static class EnemyAI
                 };
 
             case KE.SpectralKnight:
-                return enemy.MoveIndex switch
+            {
+                // HEX -> SOUL_SLASH -> a RandomBranchState that SOUL_SLASH and SOUL_FLAME
+                // both return to. AddBranch(soulSlash, 2) is the maxRepeats overload --
+                // barred once it has come up twice running -- and AddBranch(soulFlame,
+                // CannotRepeat) bars the flame whenever it was the last move. The emulator
+                // walked HEX, SOUL_SLASH, then SOUL_FLAME forever: a fixed order where the
+                // game rolls, and it never touched the AI stream.
+                const int hex = 0;
+                const int soulSlash = 1;
+                const int soulFlame = 2;
+                int knightMove;
+                if (enemy.LastMove < 0)
                 {
-                    0 => new Intent(IntentType.Debuff, 2),
-                    1 => new Intent(IntentType.Attack, 17),
-                    _ => new Intent(IntentType.Attack, 12),
+                    knightMove = hex;
+                }
+                else if (enemy.LastMove == hex)
+                {
+                    knightMove = soulSlash;
+                }
+                else
+                {
+                    var eligible = new List<int>();
+                    if (enemy.LastMove != soulSlash || enemy.LastMoveRepeats < 2)
+                    {
+                        eligible.Add(soulSlash);
+                    }
+
+                    if (enemy.LastMove != soulFlame)
+                    {
+                        eligible.Add(soulFlame);
+                    }
+
+                    knightMove = PickBranch(eligible, rng);
+                }
+
+                enemy.LastMoveRepeats =
+                    knightMove == enemy.LastMove ? enemy.LastMoveRepeats + 1 : 1;
+                enemy.LastMove = knightMove;
+                return knightMove switch
+                {
+                    // HexMove: HexPower(2) on the target.
+                    hex => new Intent(IntentType.Debuff, 2),
+                    // SoulSlashDamage
+                    soulSlash => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 17, 15)
+                    ),
+                    // SOUL_FLAME: MultiAttackIntent(SoulFlameDamage, 3). The 12 was the
+                    // three hits folded, at the A9 damage besides.
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3),
+                        Hits: 3
+                    ),
                 };
+            }
 
             case KE.MagiKnight:
                 return (enemy.MoveIndex % 5) switch
@@ -1631,11 +1816,30 @@ public static class EnemyAI
                 };
 
             case KE.Aeonglass:
+                // EBB -> EYE_LASERS -> INCREASING_INTENSITY, cycling.
                 return (enemy.MoveIndex % 3) switch
                 {
-                    0 => new Intent(IntentType.Attack, 32),
-                    1 => new Intent(IntentType.Attack, 24),
-                    _ => new Intent(IntentType.Buff, 2),
+                    // EbbDamage, plus EbbBlock (a flat 33) -- the block used to sit in the
+                    // buff branch, which meant INCREASING_INTENSITY gained it and EBB did
+                    // not.
+                    0 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 32, 26)
+                    ),
+                    // EYE_LASERS: MultiAttackIntent(EyeLasersDamage, EyeLasersRepeat=2).
+                    // The 24 was the two hits folded, at the A9 damage besides.
+                    1 => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 12, 11),
+                        Hits: 2
+                    ),
+                    // INCREASING_INTENSITY declares StatusIntent BEFORE BuffIntent, so the
+                    // readout calls it a Debuff and its number is WitherAmount -- the
+                    // Withers it puts in the discard, not the Strength it takes.
+                    _ => new Intent(
+                        IntentType.Debuff,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 2, 1)
+                    ),
                 };
 
             case KE.CeremonialBeast:
@@ -1791,12 +1995,28 @@ public static class EnemyAI
                 };
 
             case KE.TorchHeadAmalgam:
-                return (enemy.MoveIndex % 5) switch
-                {
-                    0 or 1 => new Intent(IntentType.Attack, 19),
-                    2 => new Intent(IntentType.Attack, 24),
-                    _ => new Intent(IntentType.Attack, 15),
-                };
+                // TACKLE -> TACKLE_2 -> BEAM -> TACKLE_3 -> TACKLE_4 -> BEAM -> ...:
+                // TACKLE_4 follows up to BEAM, not back to the opening, so the two full
+                // tackles happen ONCE and the fight settles into a three-cycle of beam and
+                // two weak tackles. The old `% 5` handed it the opening pair again every
+                // fifth turn, at 19 apiece.
+                return enemy.MoveIndex < 2
+                    // TackleDamage
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 19, 18)
+                    )
+                    : ((enemy.MoveIndex - 2) % 3) switch
+                    {
+                        // BEAM_MOVE: MultiAttackIntent(SoulBeamDamage, 3). The 24 was the
+                        // three hits folded; SoulBeamDamage is 8 at both levels.
+                        0 => new Intent(IntentType.Attack, 8, Hits: 3),
+                        // WeakTackleDamage
+                        _ => new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 14)
+                        ),
+                    };
 
             case KE.SoulFysh:
                 return (enemy.MoveIndex % 5) switch
@@ -2605,25 +2825,43 @@ public static class EnemyAI
             case KE.TheAdversaryMkOne:
                 return (enemy.MoveIndex % 3) switch
                 {
+                    // SmashDamage
                     0 => new Intent(IntentType.Attack, 12),
+                    // BeamDamage
                     1 => new Intent(IntentType.Attack, 15),
-                    _ => new Intent(IntentType.Buff, 16),
+                    // BARRAGE_MOVE declares MultiAttackIntent(BarrageDamage, BarrageRepeat)
+                    // BEFORE its BuffIntent, so it announces as an Attack of 8 twice
+                    // over -- not as a Buff of 16, which is what the readout said and
+                    // what a policy read. The Strength it also takes is the secondary.
+                    _ => new Intent(IntentType.Attack, 8, Hits: 2),
                 };
 
             case KE.TheAdversaryMkTwo:
                 return (enemy.MoveIndex % 3) switch
                 {
+                    // BashDamage
                     0 => new Intent(IntentType.Attack, 13),
+                    // FlameBeamDamage
                     1 => new Intent(IntentType.Attack, 16),
-                    _ => new Intent(IntentType.Buff, 18),
+                    // BARRAGE_MOVE declares MultiAttackIntent(BarrageDamage, BarrageRepeat)
+                    // BEFORE its BuffIntent, so it announces as an Attack of 9 twice
+                    // over -- not as a Buff of 18, which is what the readout said and
+                    // what a policy read. The Strength it also takes is the secondary.
+                    _ => new Intent(IntentType.Attack, 9, Hits: 2),
                 };
 
             case KE.TheAdversaryMkThree:
                 return (enemy.MoveIndex % 3) switch
                 {
+                    // CrashDamage
                     0 => new Intent(IntentType.Attack, 15),
+                    // FlameBeamDamage
                     1 => new Intent(IntentType.Attack, 18),
-                    _ => new Intent(IntentType.Buff, 20),
+                    // BARRAGE_MOVE declares MultiAttackIntent(BarrageDamage, BarrageRepeat)
+                    // BEFORE its BuffIntent, so it announces as an Attack of 10 twice
+                    // over -- not as a Buff of 20, which is what the readout said and
+                    // what a policy read. The Strength it also takes is the secondary.
+                    _ => new Intent(IntentType.Attack, 10, Hits: 2),
                 };
 
             case KE.Architect:
@@ -2697,12 +2935,11 @@ public static class EnemyAI
                 IntentType.Attack,
                 enemy.CurrentIntent.Magnitude
             ),
-            KE.TheAdversaryMkOne
-            or KE.TheAdversaryMkTwo
-            or KE.TheAdversaryMkThree when enemy.MoveIndex % 3 == 2 => new Intent(
-                IntentType.Attack,
-                enemy.CurrentIntent.Magnitude
-            ),
+            // BARRAGE_MOVE's second declared intent is the Strength it takes, now that
+            // the attack it leads with is the primary one.
+            KE.TheAdversaryMkOne when enemy.MoveIndex % 3 == 2 => new Intent(IntentType.Buff, 2),
+            KE.TheAdversaryMkTwo when enemy.MoveIndex % 3 == 2 => new Intent(IntentType.Buff, 3),
+            KE.TheAdversaryMkThree when enemy.MoveIndex % 3 == 2 => new Intent(IntentType.Buff, 4),
             KE.Flyconid
                 when enemy.CurrentIntent.Type == IntentType.Debuff
                     && enemy.CurrentIntent.Magnitude > 2 => new Intent(
@@ -2881,11 +3118,6 @@ public static class EnemyAI
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
                 break;
 
-            case KE.GlobeHead:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
-                break;
-
             case KE.TurretOperator:
                 // RELOAD_MOVE is Strength and nothing else. The 25 block was RampartPower
                 // -- which lives on the LIVING SHIELD, grants at the start of the
@@ -2900,11 +3132,6 @@ public static class EnemyAI
                 // `AfterDamageGiven` fires when the scroll lands UNBLOCKED damage, so it
                 // belongs to the attack, not to the buff.
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
-                break;
-
-            case KE.SlimedBerserker:
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 3);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
                 break;
 
             case KE.TheObscura:
@@ -2965,12 +3192,6 @@ public static class EnemyAI
             case KE.Crusher:
             case KE.Rocket:
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
-                break;
-
-            case KE.Aeonglass:
-                AddStatus(state, ST.Wither, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 4);
-                enemy.Block += BuffSystem.IncomingBlock(33, enemy.Buffs);
                 break;
 
             case KE.Queen:
@@ -3067,24 +3288,6 @@ public static class EnemyAI
                 int hatchlingHp = rng.Next(20, 24);
                 enemy.Hp = hatchlingHp;
                 enemy.MaxHp = hatchlingHp;
-                break;
-
-            case KE.TheAdversaryMkOne:
-                DealAttackDamage(enemy, state, 8);
-                DealAttackDamage(enemy, state, 8);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 2);
-                break;
-
-            case KE.TheAdversaryMkTwo:
-                DealAttackDamage(enemy, state, 9);
-                DealAttackDamage(enemy, state, 9);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
-                break;
-
-            case KE.TheAdversaryMkThree:
-                DealAttackDamage(enemy, state, 10);
-                DealAttackDamage(enemy, state, 10);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 4);
                 break;
         }
     }
@@ -3211,8 +3414,21 @@ public static class EnemyAI
                 break;
 
             case KE.Aeonglass:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Ebb, 3);
+                // INCREASING_INTENSITY. The old code here dealt attack damage and applied
+                // an EbbPower(3) that nothing in the current build ever applies -- and
+                // BuffId.Ebb was read nowhere, so it was a debuff the player carried and
+                // never paid. What the move actually does is put WitherAmount Withers in
+                // the discard and take StrengthPower(IncreasingIntensityBaseStrength +
+                // AdditionalStrength), where AdditionalStrength counts the times this move
+                // has already run -- so the Strength climbs 4, 5, 6 rather than sitting at
+                // a flat 4. Every third move index is this one, which is that count.
+                AddStatus(state, ST.Wither, enemy.CurrentIntent.Magnitude);
+                BuffSystem.Apply(
+                    enemy.Buffs,
+                    BuffId.Strength,
+                    Ascension.Value(state.AscensionLevel, Ascension.DeadlyEnemies, 4, 3)
+                        + enemy.MoveIndex / 3
+                );
                 break;
 
             case KE.KnowledgeDemon:
@@ -3242,6 +3458,16 @@ public static class EnemyAI
                 break;
 
             case KE.SlimedBerserker:
+                // Two of the berserker's moves are Debuffs now that LEECHING_HUG is typed
+                // the way it announces, so the branch has to say which one it is.
+                if (enemy.MoveIndex % 4 == 2)
+                {
+                    // LEECHING_HUG: WeakPower(3) on the player, StrengthPower(3) on itself.
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 3);
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
+                    break;
+                }
+
                 AddStatus(state, ST.Slimed, enemy.CurrentIntent.Magnitude);
                 break;
 

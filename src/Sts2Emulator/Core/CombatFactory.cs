@@ -822,7 +822,9 @@ public static class CombatFactory
 
             ActOneEncounter.Axebot =>
             [
-                CreateEnemy(KE.Axebot, rng, new Intent(IntentType.Attack, 14), moveIndex: 2),
+                // The machine opens on HAMMER_UPPERCUT: BOOT_UP is index 0 and only a
+                // respawn, which builds the bot with a stock override, starts there.
+                CreateEnemy(KE.Axebot, rng, new Intent(IntentType.Attack, 14), moveIndex: 1),
             ],
 
             ActOneEncounter.DevotedSculptor =>

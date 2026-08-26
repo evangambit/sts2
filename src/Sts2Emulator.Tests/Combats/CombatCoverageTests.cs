@@ -36,22 +36,17 @@ public class CombatCoverageTests
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
-        "Aeonglass",
         "Architect",
-        "Axebot",
         "BattlewornDummy1",
         "BattlewornDummy2",
         "BattlewornDummy3",
         "Fabricator",
         "FrogKnight",
-        "GlobeHead",
         "Knights",
         "LostAndForgotten",
         "MechaKnight",
-        "OwlMagistrate",
         "Queen",
         "Scrolls",
-        "SlimedBerserker",
         "SoulNexus",
         "TestSubject",
     ];

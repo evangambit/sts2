@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **70 tested, 18 pending** — and the pending list is a
+  setup: 88 encounters modelled, **75 tested, 13 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1361,10 +1361,37 @@ turned out to exclude nothing in combat.
   **That sweep is now a script**, `scripts/audit_ascension_literals.py`, which cross-checks
   every monster's `GetValueIfAscension(DeadlyEnemies, high, low)` pairs against the bare
   literals in its `EnemyAI` case block. It reported 80; the Hive monsters are fixed (E83,
-  E86, E91, E95-E100) and **40 remain**, nearly all of them act 3.
+  E86, E91, E95-E100), Glory's lone monsters are fixed (E112-E116) and **37 remain**,
+  nearly all of them act 3.
   **Hive is DONE** — all four weak encounters, all eight normals, all three elites and all
-  three bosses now have suites. The remaining 27 pending encounters are Glory's 17 and
-  ten act-1 stragglers.
+  three bosses now have suites. Thirteen encounters are still pending, all of Glory's.
+
+  **`audit_enemy_moves.py`'s worklist is down from 36 flags to 24**, and the whole `[hits]`
+  class — a `MultiAttackIntent` the emulator folded into one number — is closed bar the
+  three big bosses (Queen, Soul Nexus, Test Subject), which are branching machines and are
+  the next batch. Eleven monsters came out of that pass with **six defects apiece on
+  average**, and only one per monster was the fold the audit flagged. Four lessons the
+  batch earned, on top of the ones already listed above:
+
+  - **A fold is a marker, not the defect.** Every one of the eleven had its hit count
+    wrong AND at least one other thing: an A9 literal at A8, a rider in a branch its
+    intents cannot reach, a machine walked as a cycle that is not one. Read the whole
+    monster when the audit names it; the flag is where to look, not what to fix.
+  - **An audit that asks "does the emulator ever SAY this type" is per-monster, not
+    per-move.** The Slimed Berserker's LEECHING_HUG announces a Debuff and was typed Buff,
+    and the `[types]` check stayed silent because the berserker says Debuff somewhere else.
+    Three of the eleven were like that. The check earns its keep on the ones it does flag;
+    it cannot be read as clearing the rest.
+  - **`MoveIndex % n` hides a machine that does not wrap even when every state is a plain
+    MoveState**, so the `[shape]` check — which looks for branch states — cannot see it.
+    The Axebot's BOOT_UP is reachable only as a respawned bot's INITIAL state and the Torch
+    Head's two opening tackles happen once; both were being dealt again every cycle. When
+    the last state's `FollowUpState` is not the first, the modulus is wrong.
+  - **A buff the emulator applies and never reads is worse than one it does not model.**
+    `BuffId.Ebb` was applied to the player by the Aeonglass and read nowhere — a debuff
+    carried and never paid, transcribed from a version of the source this build does not
+    have. Soar and Withering Presence are recorded as O19 and O20 rather than approximated
+    the same way.
 
   Two cautions the batch earned, both worth carrying into the next one:
 

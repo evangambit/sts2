@@ -1586,7 +1586,12 @@ public static class CombatEngine
         enemy.MaxHp = enemy.Hp;
         enemy.Block = 0;
         enemy.MoveIndex = 0;
-        enemy.CurrentIntent = new Intent(IntentType.Defend, 15);
+        // A respawned Axebot is built with a stock override, which starts its machine on
+        // BOOT_UP -- index 0 -- rather than on the HAMMER_UPPERCUT a fresh one opens with.
+        enemy.CurrentIntent = new Intent(
+            IntentType.Defend,
+            Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 10)
+        );
         BuffSystem.Apply(enemy.Buffs, BuffId.Stock, -1);
         return true;
     }
