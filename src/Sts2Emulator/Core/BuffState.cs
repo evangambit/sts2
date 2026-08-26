@@ -113,7 +113,8 @@ public enum BuffId
     Rampart, // Living Shield: block Turret Operators at player turn start
     CurlUp, // Louse Progenitor: block once after taking powered card damage
     Infested, // Phrog Parasite: spawn Wrigglers when killed
-    PainfulStabs, // Test Subject phase 2 marker
+    PainfulStabs, // Test Subject: every hit that lands unblocked adds a Wound
+    Nemesis, // Test Subject phase 3: toggles Intangible at the end of every enemy turn
     Tangled, // Vine Shambler card debuff, currently tracked as a player debuff
     Constrict, // Slithering Strangler pressure debuff, currently tracked
     Smoggy, // Living Fog card affliction debuff, currently tracked

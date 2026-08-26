@@ -45,10 +45,7 @@ public class CombatCoverageTests
         "Knights",
         "LostAndForgotten",
         "MechaKnight",
-        "Queen",
         "Scrolls",
-        "SoulNexus",
-        "TestSubject",
     ];
 
     [Fact]

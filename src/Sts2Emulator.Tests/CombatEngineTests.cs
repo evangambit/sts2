@@ -1105,8 +1105,19 @@ public class CombatEngineTests
         state.Energy = 3;
         var first = CombatEngine.Step(state, 0, new Random(0));
 
+        // RESPAWN_MOVE has MustPerformOnceBeforeTransitioning, so the kill buys a whole
+        // turn: the subject sits at 0 HP, cannot be hit, and announces the Heal-and-Buff
+        // it will spend the turn on. It used to be healed the instant it fell.
         Assert.False(first.Terminal);
+        Assert.Equal(0, state.Enemies[0].Hp);
+        Assert.Equal(IntentType.Buff, state.Enemies[0].CurrentIntent.Type);
+        Assert.Equal(0, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.PainfulStabs));
+
+        state.PlayerHp = 999;
+        CombatEngine.Step(state, state.Hand.Count, new Random(0)); // the respawn turn
+
         Assert.Equal(212, state.Enemies[0].Hp);
+        Assert.Equal(212, state.Enemies[0].MaxHp);
         Assert.Equal(1, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.PainfulStabs));
 
         state.Enemies[0].Hp = 1;
@@ -1115,10 +1126,17 @@ public class CombatEngineTests
         var second = CombatEngine.Step(state, 0, new Random(0));
 
         Assert.False(second.Terminal);
+        Assert.Equal(0, state.Enemies[0].Hp);
+
+        state.PlayerHp = 999;
+        CombatEngine.Step(state, state.Hand.Count, new Random(0)); // the second respawn
+
         Assert.Equal(313, state.Enemies[0].Hp);
         Assert.Equal(0, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.Adaptable));
         Assert.Equal(0, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.PainfulStabs));
-        Assert.Equal(1, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.Intangible));
+        // NemesisPower, which toggles Intangible at the end of each enemy turn -- so the
+        // third form arrives with it already on, and drops it the turn after.
+        Assert.Equal(1, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.Nemesis));
     }
 
     [Fact]

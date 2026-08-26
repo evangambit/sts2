@@ -253,25 +253,10 @@ public static class EnemyAI
                     break;
                 }
 
-                if (
-                    enemy.DefId == KE.TestSubject
-                    && BuffSystem.Get(enemy.Buffs, BuffId.PainfulStabs) > 0
-                )
-                {
-                    DealAttack(enemy, state, 11, 3 + Math.Max(0, enemy.LastMove));
-                    enemy.LastMove++;
-                    break;
-                }
-
-                if (
-                    enemy.DefId == KE.TestSubject
-                    && BuffSystem.Get(enemy.Buffs, BuffId.Adaptable) == 0
-                    && (enemy.MoveIndex - 4) % 3 == 0
-                )
-                {
-                    DealAttack(enemy, state, 11, 3);
-                    break;
-                }
+                // Two hand-rolled Test Subject multi-hits used to sit here, each with its
+                // damage and hit count written out beside a `break` that skipped every
+                // rider below. Both are ordinary `Hits:` intents now, so the generic path
+                // deals them and PainfulStabs counts what lands.
 
                 // A Fossil Stalker special case used to sit here, firing on whichever
                 // turn MoveIndex happened to be 2 and dealing a two-hit Lash at its A9
@@ -517,6 +502,15 @@ public static class EnemyAI
                     enemy.Block += BuffSystem.IncomingBlock(33, enemy.Buffs);
                 }
 
+                // DRAIN_LIFE applies VulnerablePower(2) and WeakPower(2) after it
+                // lands. It followed its attack into this branch when the intent was
+                // retyped to the Attack it declares first; move 2 is the drain.
+                if (enemy.DefId == KE.SoulNexus && enemy.LastMove == 2)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 2);
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 2);
+                }
+
                 // BarrageMove's StrengthPower, which followed its attack into the attack
                 // branch when the intent was retyped.
                 if (enemy.MoveIndex % 3 == 2)
@@ -656,6 +650,21 @@ public static class EnemyAI
         if (territorial > 0)
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.Strength, territorial);
+        }
+
+        // NemesisPower.AfterSideTurnEnd flips a private bool each time its owner takes
+        // part in a side turn: Intangible on, then off, then on. The Test Subject's third
+        // form was given a permanent Intangible instead of the alternation.
+        if (BuffSystem.Get(enemy.Buffs, BuffId.Nemesis) > 0)
+        {
+            if (BuffSystem.Get(enemy.Buffs, BuffId.Intangible) > 0)
+            {
+                BuffSystem.Remove(enemy.Buffs, BuffId.Intangible);
+            }
+            else
+            {
+                BuffSystem.Apply(enemy.Buffs, BuffId.Intangible, 1);
+            }
         }
     }
 
@@ -1645,12 +1654,59 @@ public static class EnemyAI
                     );
 
             case KE.SoulNexus:
-                return (enemy.MoveIndex % 3) switch
+            {
+                // SOUL_BURN opens, and all three moves return to one RandomBranchState
+                // whose three branches are weight 1 and CannotRepeat — so every turn after
+                // the first is a flat roll over the two moves it did not just make. The
+                // emulator ran a fixed three-cycle and never touched the AI stream.
+                const int soulBurn = 0;
+                const int maelstrom = 1;
+                const int drainLife = 2;
+                int nexusMove;
+                if (enemy.LastMove < 0)
                 {
-                    0 => new Intent(IntentType.Attack, 31),
-                    1 => new Intent(IntentType.Attack, 28),
-                    _ => new Intent(IntentType.Debuff, 19),
+                    nexusMove = soulBurn;
+                }
+                else
+                {
+                    var eligible = new List<int>();
+                    foreach (int candidate in (int[])[soulBurn, maelstrom, drainLife])
+                    {
+                        if (candidate != enemy.LastMove)
+                        {
+                            eligible.Add(candidate);
+                        }
+                    }
+
+                    nexusMove = PickBranch(eligible, rng);
+                }
+
+                enemy.LastMove = nexusMove;
+                return nexusMove switch
+                {
+                    // SoulBurnDamage
+                    soulBurn => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 31, 29)
+                    ),
+                    // MAELSTROM: MultiAttackIntent(MaelstromDamage, MaelstromRepeat). The
+                    // repeat is 4 at both levels; the 28 was the four hits folded, at the
+                    // A9 damage besides.
+                    maelstrom => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 7, 6),
+                        Hits: 4
+                    ),
+                    // DRAIN_LIFE declares SingleAttackIntent BEFORE its DebuffIntent, so
+                    // it announces as an Attack — it had been typed Debuff, which told a
+                    // policy a 19-damage turn was a debuff turn. Vulnerable 2 and Weak 2
+                    // ride with it in the attack branch.
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 19, 18)
+                    ),
                 };
+            }
 
             case KE.TerrorEel:
                 if (BuffSystem.Get(enemy.Buffs, BuffId.Stunned) > 0)
@@ -1987,12 +2043,58 @@ public static class EnemyAI
                     };
 
             case KE.Queen:
-                return enemy.MoveIndex switch
+            {
+                // PUPPET_STRINGS -> YOU_ARE_MINE -> a ConditionalBranchState on whether
+                // the Torch Head Amalgam has died. While it lives: BURN_BRIGHT_FOR_ME,
+                // which loops back through the same condition. Once it is dead:
+                // OFF_WITH_YOUR_HEAD -> EXECUTION -> ENRAGE, cycling.
+                //
+                // The emulator ran the first two moves and then burned bright FOREVER, so
+                // **the Queen never attacked at all** — three of her six moves were
+                // unreachable and the fight had no damage in it after turn two.
+                const int puppetStrings = 0;
+                const int youAreMine = 1;
+                const int burnBright = 2;
+                const int offWithYourHead = 3;
+                const int execution = 4;
+                const int enrage = 5;
+                bool amalgamAlive =
+                    roster is not null
+                    && roster.Any(other => other.DefId == KE.TorchHeadAmalgam && other.Hp > 0);
+                int queenMove = enemy.LastMove switch
                 {
-                    0 => new Intent(IntentType.Debuff, 3),
-                    1 => new Intent(IntentType.Debuff, 99),
-                    _ => new Intent(IntentType.Buff, 20),
+                    -1 => puppetStrings,
+                    puppetStrings => youAreMine,
+                    youAreMine or burnBright => amalgamAlive ? burnBright : offWithYourHead,
+                    offWithYourHead => execution,
+                    execution => enrage,
+                    _ => offWithYourHead,
                 };
+                enemy.LastMove = queenMove;
+                return queenMove switch
+                {
+                    // PUPPET_STRINGS: a CardDebuffIntent, ChainsOfBindingPower(3).
+                    puppetStrings => new Intent(IntentType.Debuff, 3),
+                    // YOU_ARE_MINE: Frail, Weak and Vulnerable at 99 apiece.
+                    youAreMine => new Intent(IntentType.Debuff, 99),
+                    // BURN_BRIGHT_FOR_ME declares BuffIntent then DefendIntent: Strength 1
+                    // to every teammate, then 20 block for herself.
+                    burnBright => new Intent(IntentType.Buff, 20),
+                    // OFF_WITH_YOUR_HEAD: MultiAttackIntent(OffWithYourHeadDamage, 5).
+                    offWithYourHead => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3),
+                        Hits: 5
+                    ),
+                    // ExecutionDamage
+                    execution => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 18, 15)
+                    ),
+                    // ENRAGE: StrengthPower(2) on herself.
+                    _ => new Intent(IntentType.Buff, 2),
+                };
+            }
 
             case KE.TorchHeadAmalgam:
                 // TACKLE -> TACKLE_2 -> BEAM -> TACKLE_3 -> TACKLE_4 -> BEAM -> ...:
@@ -2038,24 +2140,58 @@ public static class EnemyAI
                 };
 
             case KE.TestSubject:
+                // Three machines in one, chosen by which powers the respawns have left it
+                // holding. Every damage number here was the A9 branch.
                 if (BuffSystem.Get(enemy.Buffs, BuffId.PainfulStabs) > 0)
                 {
-                    return new Intent(IntentType.Attack, 11 * (3 + Math.Max(0, enemy.LastMove)));
+                    // Second form: MULTI_CLAW follows up to ITSELF and nothing else, and
+                    // each performance increments ExtraMultiClawCount — so the hit count
+                    // climbs 3, 4, 5. The respawn parks MoveIndex at 2, which makes
+                    // MoveIndex - 2 that count. The old announcement was
+                    // `11 * (3 + max(0, LastMove))`: folded, and off by one besides, since
+                    // LastMove started at -1 and the first two claws both read 3.
+                    return new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10),
+                        Hits: 3 + Math.Max(0, enemy.MoveIndex - 2)
+                    );
                 }
 
                 if (BuffSystem.Get(enemy.Buffs, BuffId.Adaptable) == 0)
                 {
+                    // Third form: PHASE3_LACERATE -> BIG_POUNCE -> BURNING_GROWL, cycling.
+                    // The respawn parks MoveIndex at 4.
                     return ((enemy.MoveIndex - 4) % 3) switch
                     {
-                        0 => new Intent(IntentType.Attack, 33),
+                        // PHASE3_LACERATE: MultiAttackIntent(Phase3LacerateDamage, 3),
+                        // folded into 33.
+                        0 => new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 11, 10),
+                            Hits: 3
+                        ),
+                        // BigPounceDamage, a flat 45 at both levels.
                         1 => new Intent(IntentType.Attack, 45),
-                        _ => new Intent(IntentType.Buff, 5),
+                        // BURNING_GROWL declares StatusIntent BEFORE BuffIntent, so it
+                        // announces as a Debuff whose number is BurningGrowlBurnCount --
+                        // the Burns it adds -- and not as the Buff of 5 the emulator said.
+                        _ => new Intent(
+                            IntentType.Debuff,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 3)
+                        ),
                     };
                 }
 
+                // First form: BITE <-> SKULL_BASH, which carries Vulnerable 1.
                 return (enemy.MoveIndex % 2) == 0
-                    ? new Intent(IntentType.Attack, 22)
-                    : new Intent(IntentType.Attack, 16);
+                    ? new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 22, 20)
+                    )
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
+                    );
 
             case KE.TheInsatiable:
                 // LIQUIFY once, then THRASH -> BITE -> SALIVATE -> THRASH_2 -> THRASH,
@@ -3195,6 +3331,15 @@ public static class EnemyAI
                 break;
 
             case KE.Queen:
+                // Two of the Queen's moves announce as Buffs. ENRAGE is StrengthPower(2)
+                // on herself and nothing else; BURN_BRIGHT_FOR_ME is Strength for the
+                // teammates and block for her.
+                if (enemy.LastMove == 5)
+                {
+                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
+                    break;
+                }
+
                 foreach (var ally in state.Enemies.Where(e => e.Hp > 0 && e.DefId != KE.Queen))
                 {
                     BuffSystem.Apply(ally.Buffs, BuffId.Strength, 1);
@@ -3268,11 +3413,6 @@ public static class EnemyAI
 
             case KE.TwoTailedRat:
                 SummonRatBackup(enemy, state, rng);
-                break;
-
-            case KE.TestSubject:
-                AddStatus(state, ST.Burn, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 3);
                 break;
 
             case KE.Guardbot:
@@ -3395,12 +3535,6 @@ public static class EnemyAI
                 AddStatus(state, ST.Infection, enemy.CurrentIntent.Magnitude);
                 break;
 
-            case KE.SoulNexus:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 2);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, 2);
-                break;
-
             case KE.SpectralKnight:
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Hex, enemy.CurrentIntent.Magnitude);
                 break;
@@ -3436,6 +3570,25 @@ public static class EnemyAI
                 break;
 
             case KE.Queen:
+                // Two of the Queen's moves announce as Debuffs, and they are not the same
+                // debuff: YOU_ARE_MINE is Frail, Weak and Vulnerable at 99 apiece, and it
+                // used to reach this branch and hand out ChainsOfBinding 99 instead.
+                if (enemy.LastMove == 1)
+                {
+                    BuffSystem.Apply(
+                        state.PlayerBuffs,
+                        BuffId.Frail,
+                        enemy.CurrentIntent.Magnitude
+                    );
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Weak, enemy.CurrentIntent.Magnitude);
+                    BuffSystem.Apply(
+                        state.PlayerBuffs,
+                        BuffId.Vulnerable,
+                        enemy.CurrentIntent.Magnitude
+                    );
+                    break;
+                }
+
                 BuffSystem.Apply(
                     state.PlayerBuffs,
                     BuffId.ChainsOfBinding,
@@ -3449,7 +3602,15 @@ public static class EnemyAI
                 break;
 
             case KE.TestSubject:
-                AddStatusToHand(state, ST.Burn, enemy.CurrentIntent.Magnitude);
+                // BURNING_GROWL: BurningGrowlBurnCount Burns into the DISCARD -- this
+                // case put them in the player's hand, and nothing reached it anyway while
+                // the move was typed Buff -- then BurningGrowlStrengthGain for itself.
+                AddStatus(state, ST.Burn, enemy.CurrentIntent.Magnitude);
+                BuffSystem.Apply(
+                    enemy.Buffs,
+                    BuffId.Strength,
+                    Ascension.Value(state.AscensionLevel, Ascension.DeadlyEnemies, 3, 2)
+                );
                 break;
 
             case KE.FrogKnight:
@@ -3547,6 +3708,17 @@ public static class EnemyAI
         }
 
         TriggerSuck(enemy, landed);
+
+        // PainfulStabsPower: `Amount` Wounds into the player's discard for each hit that
+        // landed UNBLOCKED damage. It is a per-instance hook, so it counts the Test
+        // Subject's climbing Multi Claw hit by hit -- which is precisely what the folded
+        // announcement could not have told anyone, and what the hand-rolled attack path
+        // that used to sit above `DealAttack` never triggered at all.
+        int painfulStabs = BuffSystem.Get(enemy.Buffs, BuffId.PainfulStabs);
+        if (painfulStabs > 0 && landed > 0)
+        {
+            AddStatus(state, ST.Wound, painfulStabs * landed);
+        }
     }
 
     private static bool DealAttackDamage(

@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **75 tested, 13 pending** — and the pending list is a
+  setup: 88 encounters modelled, **78 tested, 10 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1361,17 +1361,34 @@ turned out to exclude nothing in combat.
   **That sweep is now a script**, `scripts/audit_ascension_literals.py`, which cross-checks
   every monster's `GetValueIfAscension(DeadlyEnemies, high, low)` pairs against the bare
   literals in its `EnemyAI` case block. It reported 80; the Hive monsters are fixed (E83,
-  E86, E91, E95-E100), Glory's lone monsters are fixed (E112-E116) and **37 remain**,
-  nearly all of them act 3.
+  E86, E91, E95-E100), Glory's lone monsters are fixed (E112-E116) and its three bosses
+  with them (E118-E120), which leaves **16**.
   **Hive is DONE** — all four weak encounters, all eight normals, all three elites and all
   three bosses now have suites. Thirteen encounters are still pending, all of Glory's.
 
-  **`audit_enemy_moves.py`'s worklist is down from 36 flags to 24**, and the whole `[hits]`
-  class — a `MultiAttackIntent` the emulator folded into one number — is closed bar the
-  three big bosses (Queen, Soul Nexus, Test Subject), which are branching machines and are
-  the next batch. Eleven monsters came out of that pass with **six defects apiece on
-  average**, and only one per monster was the fold the audit flagged. Four lessons the
-  batch earned, on top of the ones already listed above:
+  **`audit_enemy_moves.py`'s worklist is down from 36 flags to 19, and the whole `[hits]`
+  class is CLOSED** — every `MultiAttackIntent` the emulator had folded into one number now
+  carries its hit count. Fourteen monsters over two batches, at **six defects apiece on
+  average**, and only one per monster was the fold the audit flagged. What is left is 17
+  `[shape]` flags and 2 `[types]`, and Glory is down to 10 pending encounters.
+
+  **The second batch was the three bosses, and each was worse than its flag.** The Queen
+  **never attacked at all** — her ConditionalBranchState on the amalgam's death was taken
+  unconditionally, so three of her six moves were unreachable and the fight had no damage
+  in it after turn two (E118). The Soul Nexus called a 19-damage attack a debuff and walked
+  a fixed cycle where the game rolls (E119). The Test Subject's respawn **cost it no turn**:
+  the game's RESPAWN_MOVE is `MustPerformOnceBeforeTransitioning`, so a kill buys the player
+  a whole free turn against a creature at 0 HP that cannot be hit, and the emulator healed
+  it on the spot instead (E120).
+
+  **The next batch is O21, and it is the biggest thing in this register.**
+  `IntangiblePower` caps incoming damage at 1. It is applied in ELEVEN places — six of them
+  player cards, including Wraith Form and Shadow Step — and read in NONE. That is `BuffId.Ebb`
+  again at scale, and it is a batch of its own because the damage path has nine separate
+  HP-subtracting sites and because pinning the cap will move expected values in several
+  committed card and boss suites.
+
+  Six lessons the two batches earned, on top of the ones already listed above:
 
   - **A fold is a marker, not the defect.** Every one of the eleven had its hit count
     wrong AND at least one other thing: an A9 literal at A8, a rider in a branch its
@@ -1391,7 +1408,19 @@ turned out to exclude nothing in combat.
     `BuffId.Ebb` was applied to the player by the Aeonglass and read nowhere — a debuff
     carried and never paid, transcribed from a version of the source this build does not
     have. Soar and Withering Presence are recorded as O19 and O20 rather than approximated
-    the same way.
+    the same way. **Grep for a BuffId that is applied and never read**; that is how O21
+    turned up.
+  - **A monster whose intent is assigned outside `EnemyAI` is invisible to the audit**,
+    which scrapes the case blocks. The Test Subject's RESPAWN_MOVE announces a Buff and is
+    still flagged as one the emulator "never says", because `CombatEngine` sets that intent
+    where the machine forces the move. Two of the remaining flags are this shape, not a
+    defect.
+  - **A monster that cannot die yet cannot be counted dead.** The Test Subject's respawn
+    turn needed `NoPrimaryEnemyLeft` to keep the fight open, and the exemption has to be
+    keyed on the power the GAME keys it on — `AdaptablePower.ShouldStopCombatFromEnding` is
+    the only override in the set. A blanket "anything reviving" would have made the
+    Decimillipede unkillable, since emptying all three segments in one window is how that
+    elite is won.
 
   Two cautions the batch earned, both worth carrying into the next one:
 

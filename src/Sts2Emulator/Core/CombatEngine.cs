@@ -460,8 +460,17 @@ public static class CombatEngine
                 //
                 // A Decimillipede segment reattaches for a FIXED amount instead, so it
                 // comes back hurt: 25 of a 46-to-52 pool.
-                int reattach = BuffSystem.Get(enemy.Buffs, BuffId.Reattach);
+                //
+                // The Test Subject comes back as a BIGGER creature, so its max HP moves
+                // too, and it swaps powers on the way.
                 BuffSystem.Remove(enemy.Buffs, BuffId.Reviving);
+                if (enemy.DefId == KE.TestSubject)
+                {
+                    RespawnTestSubject(enemy, state.AscensionLevel);
+                    continue;
+                }
+
+                int reattach = BuffSystem.Get(enemy.Buffs, BuffId.Reattach);
                 enemy.Hp = reattach > 0 ? Math.Min(enemy.MaxHp, enemy.Hp + reattach) : enemy.MaxHp;
                 continue;
             }
@@ -1278,6 +1287,11 @@ public static class CombatEngine
                 // Not a revive: the dead half stays dead, so this does not `continue`.
                 TurnPlayerToFaceSurvivor(state);
             }
+
+            if (state.Enemies[i].DefId == KE.TorchHeadAmalgam)
+            {
+                EnrageQueenIfWaitingToBurnBright(state);
+            }
             else if (TryRespawnTestSubject(state.Enemies[i]))
             {
                 continue;
@@ -1346,8 +1360,22 @@ public static class CombatEngine
     /// forever, so a fight it outlives could never be won; and a Gas Bomb left over after
     /// the Living Fog dies would keep a finished fight running.
     /// </remarks>
+    /// <summary>
+    /// Whether the fight is won. A creature at 0 HP normally is not in it any more — but
+    /// <c>AdaptablePower.ShouldStopCombatFromEnding</c> returns true, so a Test Subject
+    /// waiting out its respawn turn still is.
+    /// </summary>
+    /// <remarks>
+    /// Keyed on Adaptable rather than on Reviving, because Adaptable is the only power in
+    /// the set that overrides that hook: an Eye With Teeth mid-revive is not a primary
+    /// enemy at all, and a reattaching Decimillipede segment does NOT hold the fight open
+    /// — emptying all three inside one window is how that elite is won.
+    /// </remarks>
     private static bool NoPrimaryEnemyLeft(CombatState state) =>
-        !state.Enemies.Any(enemy => enemy.Hp > 0 && IsPrimaryEnemy(enemy));
+        !state.Enemies.Any(enemy =>
+            IsPrimaryEnemy(enemy)
+            && (enemy.Hp > 0 || BuffSystem.Get(enemy.Buffs, BuffId.Adaptable) > 0)
+        );
 
     /// <summary>
     /// <c>IllusionPower</c>: the owner is never removed from combat when it dies, keeps
@@ -1430,6 +1458,37 @@ public static class CombatEngine
     /// the Kaiser Crab enrages the other. None of it was modelled, which made halving the
     /// boss free — and the half left standing is the one the player then has to survive.
     /// </remarks>
+    /// <summary>
+    /// <c>Queen.AfterDeath</c>: when the Torch Head Amalgam dies and the Queen is alive,
+    /// she stops burning bright — and if the move she has ALREADY announced is the one she
+    /// was going to spend on her partner, <c>SetMoveImmediate(EnragedState)</c> replaces it
+    /// there and then. So a player who kills the amalgam on the turn she declared
+    /// BURN_BRIGHT_FOR_ME does not get a wasted enemy turn out of it; they get an enrage.
+    /// </summary>
+    /// <remarks>
+    /// Every other consequence of the amalgam's death is read off the roster by
+    /// <c>SelectIntent</c>, which is why only this one needs a hook: it is a change to an
+    /// intent that has already been chosen, the same shape as Ravenous's stun.
+    /// </remarks>
+    private static void EnrageQueenIfWaitingToBurnBright(CombatState state)
+    {
+        foreach (var queen in state.Enemies)
+        {
+            if (queen.DefId != KE.Queen || queen.Hp <= 0 || queen.LastMove != QueenBurnBrightMove)
+            {
+                continue;
+            }
+
+            queen.LastMove = QueenEnrageMove;
+            queen.CurrentIntent = new Intent(IntentType.Buff, 2);
+        }
+    }
+
+    /// <summary>The Queen's own move numbering, as <c>EnemyAI.SelectIntent</c> assigns it.</summary>
+    private const int QueenBurnBrightMove = 2;
+
+    private const int QueenEnrageMove = 5;
+
     private static bool TryEnrageCrabPartner(CombatState state, EnemyState dead)
     {
         if (BuffSystem.Get(dead.Buffs, BuffId.CrabRage) <= 0)
@@ -1596,6 +1655,14 @@ public static class CombatEngine
         return true;
     }
 
+    /// <summary>
+    /// <c>AdaptablePower.AfterDeath</c>: the Test Subject stops the combat ending, is not
+    /// removed, and <c>TriggerDeadState</c> puts it in RESPAWN_MOVE — a state with
+    /// <c>MustPerformOnceBeforeTransitioning</c>, so **the respawn costs it a turn**. The
+    /// emulator used to heal it the instant it fell and announce an attack for the turn
+    /// after, which handed the player neither the free turn nor the readout the game gives
+    /// them. It is the Fogmog illusion's shape, and it uses the same machinery.
+    /// </summary>
     private static bool TryRespawnTestSubject(EnemyState enemy)
     {
         if (enemy.DefId != KE.TestSubject || BuffSystem.Get(enemy.Buffs, BuffId.Adaptable) <= 0)
@@ -1603,26 +1670,48 @@ public static class CombatEngine
             return false;
         }
 
-        if (BuffSystem.Get(enemy.Buffs, BuffId.PainfulStabs) <= 0)
+        if (BuffSystem.Get(enemy.Buffs, BuffId.Reviving) > 0)
         {
-            enemy.Hp = 212;
-            enemy.MaxHp = 212;
-            enemy.Block = 0;
-            enemy.MoveIndex = 2;
-            enemy.CurrentIntent = new Intent(IntentType.Attack, 33);
-            BuffSystem.Apply(enemy.Buffs, BuffId.PainfulStabs, 1);
             return true;
         }
 
-        enemy.Hp = 313;
-        enemy.MaxHp = 313;
+        BuffSystem.Apply(enemy.Buffs, BuffId.Reviving, 1);
+        // RESPAWN_MOVE declares a HealIntent and then a BuffIntent, so the readout is a
+        // Buff — which is what the turn is spent on.
+        enemy.CurrentIntent = new Intent(IntentType.Buff, 0);
         enemy.Block = 0;
+        return true;
+    }
+
+    /// <summary>
+    /// <c>RespawnMove</c> itself, on the enemy turn the revive is spent. Respawns 1 heals
+    /// to SecondFormHp and takes PainfulStabs; respawns 2 heals to ThirdFormHp, takes
+    /// Nemesis, and drops both of the earlier powers — which is what ends the second
+    /// form's climbing Multi Claw.
+    /// </summary>
+    private static void RespawnTestSubject(EnemyState enemy, int ascension)
+    {
+        if (BuffSystem.Get(enemy.Buffs, BuffId.PainfulStabs) <= 0)
+        {
+            int second = Ascension.Value(ascension, Ascension.ToughEnemies, 212, 200);
+            enemy.Hp = second;
+            enemy.MaxHp = second;
+            enemy.Block = 0;
+            // MULTI_CLAW, whose hit count is read off MoveIndex - 2.
+            enemy.MoveIndex = 2;
+            BuffSystem.Apply(enemy.Buffs, BuffId.PainfulStabs, 1);
+            return;
+        }
+
+        int third = Ascension.Value(ascension, Ascension.ToughEnemies, 313, 300);
+        enemy.Hp = third;
+        enemy.MaxHp = third;
+        enemy.Block = 0;
+        // PHASE3_LACERATE, the head of the third form's three-cycle.
         enemy.MoveIndex = 4;
-        enemy.CurrentIntent = new Intent(IntentType.Attack, 33);
         BuffSystem.Remove(enemy.Buffs, BuffId.Adaptable);
         BuffSystem.Remove(enemy.Buffs, BuffId.PainfulStabs);
-        BuffSystem.Apply(enemy.Buffs, BuffId.Intangible, 1);
-        return true;
+        BuffSystem.Apply(enemy.Buffs, BuffId.Nemesis, 1);
     }
 
     private static void SpawnPhrogParasiteWrigglers(CombatState state, Random rng, EnemyState phrog)

@@ -1463,7 +1463,12 @@ public static class CombatFactory
     {
         var enemy = CreateEnemy(KE.TestSubject, rng, new Intent(IntentType.Attack, 22));
         BuffSystem.Apply(enemy.Buffs, BuffId.Adaptable, 1);
-        BuffSystem.Apply(enemy.Buffs, BuffId.Enrage, 3);
+        // EnrageAmount, which was on the A9 branch.
+        BuffSystem.Apply(
+            enemy.Buffs,
+            BuffId.Enrage,
+            Ascension.Value(_currentAscension, Ascension.DeadlyEnemies, 3, 2)
+        );
         return enemy;
     }
 
