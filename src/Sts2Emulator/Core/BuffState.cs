@@ -119,6 +119,10 @@ public enum BuffId
     VitalSpark, // Infested Prism: playing a Skill taints the player for the round
     Tainted, // the player: powered attacks land for this much more, until the enemy turn ends
     PossessSpeed, // The Forgotten: how much Dexterity it has stolen, returned when it dies
+    Accelerant, // the player: enemy Poison triggers this many EXTRA times each turn
+    CorrosiveWave, // the player: every card DRAWN poisons all enemies; lasts one turn
+    Outbreak, // the player: every third Poison applied damages all enemies for this much
+    OutbreakCounter, // how many of those three have been applied so far
     Tangled, // Vine Shambler card debuff, currently tracked as a player debuff
     Constrict, // Slithering Strangler pressure debuff, currently tracked
     Smoggy, // Living Fog card affliction debuff, currently tracked

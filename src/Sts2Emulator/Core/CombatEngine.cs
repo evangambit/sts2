@@ -500,10 +500,28 @@ public static class CombatEngine
             int poison = BuffSystem.Get(enemy.Buffs, BuffId.Poison);
             if (poison > 0)
             {
+                // PoisonPower.AfterSideTurnStart triggers `min(Amount, 1 + Accelerant)`
+                // times, dealing the CURRENT amount and decrementing after each -- so with
+                // Accelerant 1 a poison of 5 deals 5 then 4, and the stack falls by two.
+                // Accelerant lives on the PLAYER and is read from the poisoned creature's
+                // OPPONENTS, which for an enemy is the player.
+                //
                 // PoisonPower runs its own damage through Hook.ModifyDamage with the Cap
                 // flag set, so an intangible creature loses 1 to poison however deep it is.
-                enemy.Hp -= BuffSystem.CapHpLoss(poison, enemy.Buffs);
-                BuffSystem.Apply(enemy.Buffs, BuffId.Poison, -1);
+                int triggers = Math.Min(
+                    poison,
+                    1 + BuffSystem.Get(state.PlayerBuffs, BuffId.Accelerant)
+                );
+                for (int tick = 0; tick < triggers && enemy.Hp > 0; tick++)
+                {
+                    int amount = BuffSystem.Get(enemy.Buffs, BuffId.Poison);
+                    enemy.Hp -= BuffSystem.CapHpLoss(amount, enemy.Buffs);
+                    if (enemy.Hp > 0)
+                    {
+                        BuffSystem.Apply(enemy.Buffs, BuffId.Poison, -1);
+                    }
+                }
+
                 if (enemy.Hp <= 0)
                 {
                     continue;
@@ -598,6 +616,10 @@ public static class CombatEngine
 
         // FlameBarrier expires after enemies have acted.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.FlameBarrier);
+
+        // `CorrosiveWavePower.AfterSideTurnEnd` removes the power outright, so its
+        // poison-on-draw lasts the turn it was played and no longer.
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.CorrosiveWave);
 
         // ── Start of next player turn ─────────────────────────────────────────
         state.Turn++;

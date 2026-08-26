@@ -1047,8 +1047,12 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Thorns, upgraded ? 6 : 4);
                 break;
 
-            case SI.Accelerant: // 1-cost, poison support power; approximate with Envenom stacks
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Envenom, upgraded ? 2 : 1);
+            case SI.Accelerant: // 1-cost power, Accelerant 1/2
+                // AccelerantPower does nothing on its own: PoisonPower reads it and
+                // re-triggers itself. This was modelled as Envenom stacks, which is a
+                // different card doing a different thing -- Envenom poisons on an attack,
+                // Accelerant makes poison already applied tick again.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Accelerant, upgraded ? 2 : 1);
                 break;
 
             case SI.Accuracy: // 1-cost, Shivs deal 4/6 more damage
@@ -1112,10 +1116,18 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Barricade, 1);
                 break;
 
-            case SI.BouncingFlask: // 2-cost, apply 3 poison 3/4 times to random enemies
+            case SI.BouncingFlask: // 2-cost, 3 Poison to a RANDOM enemy, 3/4 times
+                // TargetType.RandomEnemy, and the card rolls
+                // `Rng.CombatTargets.NextItem(HittableEnemies)` for every bounce. This used
+                // ApplyEnemyDebuff, which takes the AIMED-AT enemy -- so all the bounces
+                // landed on one creature and the target stream was never drawn from.
                 for (int i = 0; i < (upgraded ? 4 : 3); i++)
                 {
-                    ApplyEnemyDebuff(state, BuffId.Poison, 3, rng);
+                    var bounce = RandomLivingEnemy(state, rng);
+                    if (bounce != null)
+                    {
+                        ApplyEnemyDebuffToTarget(state, bounce, BuffId.Poison, 3, rng);
+                    }
                 }
                 break;
 
@@ -1151,9 +1163,12 @@ public static class CardEffects
                 AddGeneratedCardsToHand(state, SI.Shiv, upgraded ? 2 : 1);
                 break;
 
-            case SI.CorrosiveWave: // 1-cost power; approximate as poison+weak to all
-                ApplyAllEnemyDebuff(state, BuffId.Poison, upgraded ? 5 : 3, rng);
-                ApplyAllEnemyDebuff(state, BuffId.Weak, upgraded ? 3 : 2, rng);
+            case SI.CorrosiveWave: // 1-cost, 2/3 Poison to all enemies per card DRAWN
+                // `CorrosiveWavePower.AfterCardDrawn` poisons every hittable enemy each
+                // time its owner draws a card, and `AfterSideTurnEnd` removes the power --
+                // so it is a one-TURN draw engine, not the one-shot poison-and-Weak the
+                // emulator played. The Weak was invented outright.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.CorrosiveWave, upgraded ? 3 : 2);
                 break;
 
             case SI.DaggerSpray: // 1-cost, 4/6 damage twice to all enemies
@@ -1394,8 +1409,8 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoxiousFumes, upgraded ? 3 : 2);
                 break;
 
-            case SI.Outbreak: // 1-cost power, poison burst approximation
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoxiousFumes, upgraded ? 5 : 3);
+            case SI.Outbreak: // 1-cost power: every third Poison applied hits all for 11/15
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Outbreak, upgraded ? 15 : 11);
                 break;
 
             case SI.PhantomBlades: // 1-cost power, retained Shivs approximation
@@ -1965,6 +1980,7 @@ public static class CardEffects
             var card = state.DrawPile[0];
             state.RemoveFromDrawPileAt(0);
             CountDrawnCardForAutomation(state);
+            PoisonAllForCorrosiveWave(state, rng);
 
             if (
                 BuffSystem.Get(state.PlayerBuffs, BuffId.Hellraiser) > 0
@@ -2007,6 +2023,25 @@ public static class CardEffects
 
         int cost = (state.EnergyCostRng as Random ?? rng).Next(4);
         return card with { CostForCombat = cost };
+    }
+
+    /// <summary>
+    /// <c>CorrosiveWavePower.AfterCardDrawn</c>: every card its owner draws poisons every
+    /// hittable enemy, and the power is removed at the end of the owner's side turn — so
+    /// it is a one-turn draw engine.
+    /// </summary>
+    private static void PoisonAllForCorrosiveWave(CombatState state, Random rng)
+    {
+        int wave = BuffSystem.Get(state.PlayerBuffs, BuffId.CorrosiveWave);
+        if (wave <= 0)
+        {
+            return;
+        }
+
+        foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
+        {
+            ApplyEnemyDebuffToTarget(state, enemy, BuffId.Poison, wave, rng);
+        }
     }
 
     private static void CountDrawnCardForAutomation(CombatState state)
@@ -5373,6 +5408,42 @@ public static class CardEffects
         int before = BuffSystem.Get(target.Buffs, id);
         BuffSystem.Apply(target.Buffs, id, magnitude);
         DrawForVicious(state, id, before, BuffSystem.Get(target.Buffs, id), rng);
+        if (id == BuffId.Poison && magnitude > 0)
+        {
+            CountPoisonForOutbreak(state);
+        }
+    }
+
+    /// <summary>
+    /// <c>OutbreakPower.AfterPowerAmountChanged</c>: it counts every Poison its owner
+    /// applies, and every THIRD one deals its amount to all enemies as unpowered damage.
+    /// </summary>
+    /// <remarks>
+    /// Counted here because this is the one place a card, a power or a relic can put Poison
+    /// on an enemy — the game hooks the same event for the same reason, so Noxious Fumes,
+    /// Corrosive Wave and Envenom all feed the count as well as the cards that apply it
+    /// directly. The emulator used to model Outbreak as Noxious Fumes at a bigger number,
+    /// which is a different card.
+    /// </remarks>
+    internal static void CountPoisonForOutbreak(CombatState state)
+    {
+        int outbreak = BuffSystem.Get(state.PlayerBuffs, BuffId.Outbreak);
+        if (outbreak <= 0)
+        {
+            return;
+        }
+
+        BuffSystem.Apply(state.PlayerBuffs, BuffId.OutbreakCounter, 1);
+        if (BuffSystem.Get(state.PlayerBuffs, BuffId.OutbreakCounter) < 3)
+        {
+            return;
+        }
+
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.OutbreakCounter);
+        foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
+        {
+            DealUnpoweredDamageToEnemy(state, enemy, outbreak);
+        }
     }
 
     private static void ApplyTemporaryStrengthDownToEnemy(CombatState state, int amount)
@@ -5392,13 +5463,21 @@ public static class CardEffects
         BuffSystem.Apply(target.Buffs, BuffId.TemporaryStrength, amount);
     }
 
+    /// <summary>The same debuff on every living enemy.</summary>
+    /// <remarks>
+    /// Goes through <see cref="ApplyEnemyDebuffToTarget" /> rather than repeating its
+    /// body, which is what it used to do — and the copy quietly skipped everything that
+    /// hangs off applying a debuff. Outbreak counts Poison there, so a Noxious Fumes tick
+    /// fed the count through one path and not the other.
+    ///
+    /// The roster is copied first because the hooks can kill: Outbreak's every-third burst
+    /// damages all enemies from inside this loop.
+    /// </remarks>
     private static void ApplyAllEnemyDebuff(CombatState state, BuffId id, int magnitude, Random rng)
     {
-        foreach (var enemy in state.Enemies.Where(e => e.Hp > 0))
+        foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
         {
-            int before = BuffSystem.Get(enemy.Buffs, id);
-            BuffSystem.Apply(enemy.Buffs, id, magnitude);
-            DrawForVicious(state, id, before, BuffSystem.Get(enemy.Buffs, id), rng);
+            ApplyEnemyDebuffToTarget(state, enemy, id, magnitude, rng);
         }
     }
 
