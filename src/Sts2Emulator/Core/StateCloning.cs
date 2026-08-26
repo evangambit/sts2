@@ -79,6 +79,7 @@ public static class StateCloning
             SourceCardDefId = selection.SourceCardDefId,
             Amount = selection.Amount,
             GeneratedCandidates = [.. selection.GeneratedCandidates],
+            AfterSelectionToHand = [.. selection.AfterSelectionToHand],
         };
 
     public static CombatState Clone(this CombatState combat) =>

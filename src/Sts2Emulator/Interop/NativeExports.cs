@@ -36,7 +36,7 @@ public static class NativeExports
     public const int MAX_ENEMY_BUFFS = 5;
 
     // v17: observation carries an open card selection (kind, count, candidates).
-    public const int NATIVE_API_VERSION = 20;
+    public const int NATIVE_API_VERSION = 21;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -527,6 +527,26 @@ public static class NativeExports
         );
         WriteObs(combat.State, obsBuf);
     }
+
+    /// <summary>
+    /// Whether <paramref name="enchantment"/> may be applied to <paramref name="cardId"/>,
+    /// i.e. <c>Card.CanEnchant</c>.
+    /// </summary>
+    /// <remarks>
+    /// Exposed so a position sampler asks the engine rather than restating the rule. The
+    /// arena reset applies whatever enchantment it is handed WITHOUT filtering — it has
+    /// to, since it rebuilds a position the run already produced — so nothing downstream
+    /// catches an illegal pairing, and a sampler that re-implements the switch drifts
+    /// silently the moment an enchantment is added.
+    /// </remarks>
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_CanEnchant")]
+    public static int Sts2_CanEnchant(int cardId, int enchantment) =>
+        Enchantments.CanEnchant(
+            new CardInstance(Math.Abs(cardId), cardId < 0),
+            (Enchantment)enchantment
+        )
+            ? 1
+            : 0;
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_Step")]
     public static unsafe int Sts2_Step(int handle, int action, int* obsBuf, float* rewardOut)

@@ -11,7 +11,7 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 20
+_REQUIRED_NATIVE_API_VERSION = 21
 _REQUIRED_RUN_NATIVE_API_VERSION = 16
 
 
@@ -268,6 +268,9 @@ _lib.Sts2_ResetArena.argtypes = [
     ctypes.c_int,  # completed combat rooms
     ctypes.POINTER(ctypes.c_int),  # obs
 ]
+
+_lib.Sts2_CanEnchant.restype = ctypes.c_int
+_lib.Sts2_CanEnchant.argtypes = [ctypes.c_int, ctypes.c_int]
 
 _lib.Sts2_Step.restype = ctypes.c_int
 _lib.Sts2_Step.argtypes = [
@@ -597,6 +600,16 @@ def reset_encounter_with_extra_cards(
         ascension,
         obs_buf,
     )
+
+
+def can_enchant(card_id: int, enchantment: int) -> bool:
+    """Whether the enchantment may legally be applied to the card.
+
+    ``reset_arena`` applies whatever it is handed without filtering, so this is the only
+    thing standing between a sampler and an illegal position. Asked of the engine rather
+    than restated here: the rule changes whenever an enchantment is added.
+    """
+    return bool(_lib.Sts2_CanEnchant(card_id, enchantment))
 
 
 def reset_arena(

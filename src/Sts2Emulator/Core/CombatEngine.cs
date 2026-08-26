@@ -1190,6 +1190,32 @@ public static class CombatEngine
 
                 break;
 
+            case CardSelectionKind.DiscardFromHandRepeated:
+                if (index < state.Hand.Count)
+                {
+                    var discarded = state.Hand[index];
+                    state.Hand.RemoveAt(index);
+                    state.DiscardPile.Add(discarded with { FreeThisTurn = false });
+                }
+
+                // Ask again until the picks are spent or the hand empties; the follow-up
+                // rides along and is flushed by whichever call finds nothing left to ask.
+                if (selection.Amount > 1 && state.Hand.Count > 0)
+                {
+                    Effects.CardEffects.ReopenDiscardSelection(
+                        state,
+                        selection.SourceCardDefId,
+                        selection.Amount - 1,
+                        selection.AfterSelectionToHand
+                    );
+                }
+                else
+                {
+                    Effects.CardEffects.AddCardsToHand(state, selection.AfterSelectionToHand);
+                }
+
+                break;
+
             case CardSelectionKind.CurseOfKnowledge:
                 if (index < selection.GeneratedCandidates.Count)
                 {

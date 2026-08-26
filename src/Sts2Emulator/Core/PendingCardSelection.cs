@@ -49,6 +49,18 @@ public enum CardSelectionKind
     /// no choice at all — the same picking-for-the-player this type exists to stop.
     /// </remarks>
     CurseOfKnowledge = 8,
+
+    /// <summary>
+    /// Survivor, Acrobatics, Dagger Throw, Prepared and Hidden Daggers: a card in hand is
+    /// DISCARDED, and the screen reopens until <see cref="PendingCardSelection.Amount" />
+    /// picks are spent or the hand runs out — the same shape as Purity's exhaust.
+    /// </summary>
+    /// <remarks>
+    /// All five used to discard the FIRST card in hand. That is not a small
+    /// simplification: choosing what to throw away is the whole point of Survivor, and an
+    /// agent told it discards the leftmost card learns a rule the game does not have.
+    /// </remarks>
+    DiscardFromHandRepeated = 9,
 }
 
 /// <summary>
@@ -86,4 +98,11 @@ public sealed class PendingCardSelection
     /// the draw pile.
     /// </summary>
     public List<int> GeneratedCandidates { get; init; } = [];
+
+    /// <summary>
+    /// Cards that join the hand once the LAST pick is made — Hidden Daggers' Shivs, which
+    /// the game creates after the discard and so must not be discard candidates
+    /// themselves.
+    /// </summary>
+    public List<CardInstance> AfterSelectionToHand { get; init; } = [];
 }

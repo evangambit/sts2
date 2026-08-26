@@ -1055,9 +1055,9 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.ShivDamage, upgraded ? 6 : 4);
                 break;
 
-            case SI.Acrobatics: // 1-cost, draw 3/4 and discard 1
+            case SI.Acrobatics: // 1-cost, draw 3/4 then discard a CHOSEN card
                 DrawCards(state, upgraded ? 4 : 3, rng);
-                DiscardFirstCardsFromHand(state, 1);
+                OpenDiscardSelection(state, def.Id, 1);
                 break;
 
             case SI.Adrenaline: // 0-cost, gain 1/2 energy and draw 2, exhaust
@@ -1160,10 +1160,10 @@ public static class CardEffects
                 DealDamageToAllMultiHit(state, Dmg(def, upgraded, card), 2);
                 break;
 
-            case SI.DaggerThrow: // 1-cost, 9/12 damage, draw 1, discard 1
+            case SI.DaggerThrow: // 1-cost, 9/12 damage, draw 1, discard a CHOSEN card
                 DealDamage(state, Dmg(def, upgraded, card));
                 DrawCards(state, 1, rng);
-                DiscardFirstCardsFromHand(state, 1);
+                OpenDiscardSelection(state, def.Id, 1);
                 break;
 
             case SI.Dash: // 2-cost, 10/13 block and 10/13 damage
@@ -1285,9 +1285,21 @@ public static class CardEffects
                 GainBlock(state, Blk(def, upgraded, card), rng);
                 break;
 
-            case SI.HiddenDaggers: // 1-cost, 2/3 Shiv-like damage and add 2/3 Shivs
-                DealDamage(state, Dmg(def, upgraded, card));
-                AddGeneratedCardsToHand(state, SI.Shiv, upgraded ? 3 : 2);
+            case SI.HiddenDaggers: // 1-cost, discard 2 CHOSEN cards, then add 2 Shivs
+                // The card deals NO damage: its two vars are CardsVar(2) -- how many to
+                // discard -- and Shivs = 2. The emulator was dealing the CardsVar as
+                // damage and reading the upgrade as a third Shiv, where upgrading in fact
+                // leaves the count at two and UPGRADES the Shivs it makes.
+                //
+                // The discard comes first and the Shivs after, which is the ordering the
+                // selection's follow-up exists for: a Shiv created before the screen
+                // opened would be a candidate for the discard it was created by.
+                OpenDiscardSelection(
+                    state,
+                    def.Id,
+                    2,
+                    [.. Enumerable.Repeat(new CardInstance(SI.Shiv, upgraded), 2)]
+                );
                 break;
 
             case SI.InfiniteBlades: // 1-cost, add one Shiv each turn
@@ -1410,9 +1422,9 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, upgraded ? 3 : 2);
                 break;
 
-            case SI.Prepared: // 0-cost, draw/discard 1 or 2
+            case SI.Prepared: // 0-cost, draw 1/2 then discard that many CHOSEN cards
                 DrawCards(state, upgraded ? 2 : 1, rng);
-                DiscardFirstCardsFromHand(state, upgraded ? 2 : 1);
+                OpenDiscardSelection(state, def.Id, upgraded ? 2 : 1);
                 break;
 
             case SI.Reflex: // 3-cost, draw 2/3
@@ -1497,9 +1509,9 @@ public static class CardEffects
                 break;
             }
 
-            case SI.Survivor: // 1-cost, 8/11 block and discard 1
+            case SI.Survivor: // 1-cost, 8/11 block and discard a CHOSEN card
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                DiscardFirstCardsFromHand(state, 1);
+                OpenDiscardSelection(state, def.Id, 1);
                 break;
 
             case SI.Tactician: // 3-cost, gain 1/2 energy
@@ -2580,6 +2592,73 @@ public static class CardEffects
         };
     }
 
+    /// <summary>
+    /// Opens the discard screen the five discard-a-CHOSEN-card Silent cards raise, and
+    /// carries whatever the card does afterwards.
+    /// </summary>
+    /// <remarks>
+    /// The tail matters for Hidden Daggers, whose Shivs are created AFTER the discard and
+    /// so must not be candidates for it. It is flushed here rather than at the call site
+    /// because there are two ways the screen never opens — an empty hand, and an
+    /// auto-played card that answers its own selections — and the tail has to run in both.
+    /// </remarks>
+    internal static void OpenDiscardSelection(
+        CombatState state,
+        int sourceCardDefId,
+        int amount,
+        List<CardInstance>? afterwards = null
+    )
+    {
+        var tail = afterwards ?? [];
+        if (state.Hand.Count == 0)
+        {
+            AddCardsToHand(state, tail);
+            return;
+        }
+
+        if (state.AutoPlaying)
+        {
+            for (int pick = 0; pick < amount && state.Hand.Count > 0; pick++)
+            {
+                ResolveSelectionImmediately(state, CardSelectionKind.DiscardFromHandRepeated, 0);
+            }
+
+            AddCardsToHand(state, tail);
+            return;
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.DiscardFromHandRepeated,
+            Candidates = [.. Enumerable.Range(0, state.Hand.Count)],
+            SourceCardDefId = sourceCardDefId,
+            Amount = amount,
+            AfterSelectionToHand = tail,
+        };
+    }
+
+    /// <summary>Reopens the discard screen for its next pick.</summary>
+    internal static void ReopenDiscardSelection(
+        CombatState state,
+        int sourceCardDefId,
+        int remaining,
+        List<CardInstance> afterwards
+    ) => OpenDiscardSelection(state, sourceCardDefId, remaining, afterwards);
+
+    internal static void AddCardsToHand(CombatState state, List<CardInstance> cards)
+    {
+        foreach (var card in cards)
+        {
+            if (state.Hand.Count >= MaxCardsInHand)
+            {
+                state.DiscardPile.Add(card);
+                continue;
+            }
+
+            state.Hand.Add(card);
+        }
+    }
+
     /// <summary>Reopens Purity's screen for its next pick; see CardSelectionKind.</summary>
     internal static void ReopenExhaustSelection(
         CombatState state,
@@ -2634,6 +2713,14 @@ public static class CardEffects
                 var card = state.Hand[index];
                 state.Hand.RemoveAt(index);
                 state.TopDeck(card);
+                break;
+            }
+
+            case CardSelectionKind.DiscardFromHandRepeated when index < state.Hand.Count:
+            {
+                var card = state.Hand[index];
+                state.Hand.RemoveAt(index);
+                state.DiscardPile.Add(card with { FreeThisTurn = false });
                 break;
             }
         }
