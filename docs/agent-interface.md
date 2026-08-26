@@ -290,3 +290,42 @@ That is not a claim about the agent — the value function is "how far did the r
 get". It is a claim about the plumbing: the clone, the mask, the value and the backup are
 all connected, and more search buys more floors, which is what a working search does.
 Cost at 120 sims/move is about 6s of wall clock per run.
+
+
+## Where a step's time actually goes (`StepCostProbe`)
+
+    dotnet test src/Sts2Emulator.Tests --filter StepCostProbe -c Release
+    cat /tmp/sts2-step-cost.txt
+
+The probe is skipped by default and lives in the test assembly rather than in `scripts/`
+because the number that matters is `GC.GetAllocatedBytesForCurrentThread`, which only C#
+can see. **A step that allocates kilobytes is paying a GC bill no algorithmic tidying
+will refund**, and that is the shape of the problem here.
+
+| scenario | time | alloc |
+| --- | ---: | ---: |
+| `WriteObservation` | 1.3 us | 0 KB |
+| end turn, baseline | 79.5 us | 14.6 KB |
+| end turn, **combat already over** | **2.7 us** | **1.0 KB** |
+| end turn, one enemy instead of two | 75.7 us | 13.1 KB |
+| end turn, draw pile stocked (no reshuffle) | 75.5 us | 14.6 KB |
+
+Reading down the table rules out three suspects and leaves one:
+
+- **Not the observation.** 1.3us against a ~72us step; 1.3% of it.
+- **Not the enemy phase.** One enemy costs *more* than two. Whatever this is does not
+  scale with the number of creatures acting.
+- **Not the reshuffle.** Stocking the draw pile saves ~4us and allocates identically.
+- **It is the START OF THE NEXT PLAYER TURN.** "Combat already over" is the only row that
+  falls off a cliff — 2.7us and 1.0KB — and the only thing it skips is the next turn's
+  setup. That path costs roughly **77us and 13.6KB per step**.
+
+Two further pieces of scale, from `scripts/agent_probe.py`: combat is about **61% of a
+run's total step time**, and within a combat, ending the turn costs about **12x playing a
+card** (125us vs 10us). So the next-player-turn path is the single hottest thing in the
+emulator, and it is a path that allocates.
+
+Worth recording how this was found, because two plausible readings were wrong first. The
+enemy phase looked like the answer until enemy count was varied; the reshuffle looked
+like the answer until allocation was compared. **The measurement that settled it was
+turning the next turn off**, not looking harder at what was on.
