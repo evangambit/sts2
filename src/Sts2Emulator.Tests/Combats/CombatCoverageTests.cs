@@ -42,7 +42,6 @@ public class CombatCoverageTests
         "BattlewornDummy1",
         "BattlewornDummy2",
         "BattlewornDummy3",
-        "DevotedSculptor",
         "Fabricator",
         "FrogKnight",
         "GlobeHead",
@@ -52,11 +51,9 @@ public class CombatCoverageTests
         "OwlMagistrate",
         "Queen",
         "Scrolls",
-        "ScrollsWeak",
         "SlimedBerserker",
         "SoulNexus",
         "TestSubject",
-        "TurretOperator",
     ];
 
     [Fact]

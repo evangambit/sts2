@@ -1229,15 +1229,21 @@ public static class CombatFactory
         return enemy;
     }
 
+    /// <summary>
+    /// The Living Shield, which is what keeps the Turret Operator alive.
+    /// </summary>
+    /// <remarks>
+    /// <c>AfterAddedToRoom</c> applies RampartPower at 25 to the SHIELD, and Rampart's
+    /// <c>AfterSideTurnStart</c> grants that block to every TurretOperator at the start
+    /// of each PLAYER turn — both of which CreateEnemy's rider block and CombatEngine
+    /// already do. What was wrong was the turret ALSO handing itself 25 at creation and
+    /// another 25 on every reload, so killing the shield cost the player nothing.
+    /// </remarks>
     private static EnemyState CreateLivingShield(Random rng) =>
         CreateEnemy(KE.LivingShield, rng, new Intent(IntentType.Attack, 6));
 
-    private static EnemyState CreateTurretOperator(Random rng)
-    {
-        var enemy = CreateEnemy(KE.TurretOperator, rng, new Intent(IntentType.Attack, 20));
-        enemy.Block = 25;
-        return enemy;
-    }
+    private static EnemyState CreateTurretOperator(Random rng) =>
+        CreateEnemy(KE.TurretOperator, rng, new Intent(IntentType.Attack, 3));
 
     /// <summary>
     /// Three or four Scrolls of Biting, whose opening moves are one roll and two offsets.
@@ -1260,13 +1266,15 @@ public static class CombatFactory
         var enemies = new List<EnemyState>();
         for (int i = 0; i < count; i++)
         {
-            int moveIndex = count == 4 && i == 3 ? 2 : (firstMove + i) % 3;
-            var scroll = CreateEnemy(KE.ScrollOfBiting, rng, ScrollIntent(moveIndex), moveIndex);
-            if (i < 3)
-            {
-                BuffSystem.Apply(scroll.Buffs, BuffId.PaperCuts, 2);
-            }
-
+            // StarterMoveIdx, not a turn count -- the scroll's own case walks the chain
+            // from it. The fourth scroll, which only the normal encounter has, is pinned
+            // at 2 and takes no draw.
+            int starter = count == 4 && i == 3 ? 2 : (firstMove + i) % 3;
+            var scroll = CreateEnemy(KE.ScrollOfBiting, rng, ScrollIntent(starter));
+            scroll.StarterMove = starter;
+            // AfterAddedToRoom gives PaperCutsPower 2 to EVERY scroll. The `i < 3` here
+            // left the normal encounter's fourth one without it.
+            BuffSystem.Apply(scroll.Buffs, BuffId.PaperCuts, 2);
             enemies.Add(scroll);
         }
         return enemies;

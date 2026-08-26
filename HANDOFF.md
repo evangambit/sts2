@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **67 tested, 21 pending** — and the pending list is a
+  setup: 88 encounters modelled, **70 tested, 18 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as

@@ -1267,9 +1267,15 @@ public static class EnemyAI
                 };
 
             case KE.DevotedSculptor:
+                // FORBIDDEN_INCANTATION once (RitualPower at a flat 9), then SAVAGE,
+                // which follows up to itself.
                 return enemy.MoveIndex == 0
                     ? new Intent(IntentType.Buff, 9)
-                    : new Intent(IntentType.Attack, 15);
+                    // SavageDamage
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 12)
+                    );
 
             case KE.Fabricator:
                 return rng.Next(2) == 0
@@ -1293,12 +1299,38 @@ public static class EnemyAI
                 };
 
             case KE.LivingShield:
-                return new Intent(IntentType.Attack, enemy.MoveIndex == 0 ? 6 : 18);
+            {
+                // SHIELD_SLAM, then a ConditionalBranchState: slam again while it still
+                // has an ally, and SMASH -- which follows up to itself -- once it is
+                // alone. The emulator slammed once and smashed forever regardless, so a
+                // shield guarding a live turret hit three times as hard as it should.
+                bool alone =
+                    roster is null
+                    || !roster.Any(other => !ReferenceEquals(other, enemy) && other.Hp > 0);
+                if (enemy.MoveIndex == 0 || !alone)
+                {
+                    // ShieldSlamDamage, a flat 6 with no ascension term.
+                    return new Intent(IntentType.Attack, 6);
+                }
+
+                // SmashDamage, with EnrageStr riding it.
+                return new Intent(
+                    IntentType.Attack,
+                    Ascension.Value(ascension, Ascension.DeadlyEnemies, 18, 16)
+                );
+            }
 
             case KE.TurretOperator:
+                // UNLOAD -> UNLOAD_2 -> RELOAD, cycling. Both unloads are
+                // MultiAttackIntent(FireDamage, 5) -- the 20 was 4x5 folded, at A9.
                 return (enemy.MoveIndex % 3) == 2
+                    // RELOAD_MOVE's Strength.
                     ? new Intent(IntentType.Buff, 1)
-                    : new Intent(IntentType.Attack, 20);
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 4, 3),
+                        Hits: 5
+                    );
 
             case KE.OwlMagistrate:
                 return (enemy.MoveIndex % 4) switch
@@ -1310,12 +1342,7 @@ public static class EnemyAI
                 };
 
             case KE.ScrollOfBiting:
-                return (enemy.MoveIndex % 3) switch
-                {
-                    0 => new Intent(IntentType.Attack, 16),
-                    1 => new Intent(IntentType.Attack, 12),
-                    _ => new Intent(IntentType.Buff, 2),
-                };
+                return ScrollOfBitingIntent(enemy, rng, ascension);
 
             case KE.SlimedBerserker:
                 return (enemy.MoveIndex % 4) switch
@@ -2860,13 +2887,19 @@ public static class EnemyAI
                 break;
 
             case KE.TurretOperator:
+                // RELOAD_MOVE is Strength and nothing else. The 25 block was RampartPower
+                // -- which lives on the LIVING SHIELD, grants at the start of the
+                // PLAYER's turn, and stops the moment the shield dies. Handing it to the
+                // turret on its own reload made the shield's death cost nothing.
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
-                enemy.Block += 25;
                 break;
 
             case KE.ScrollOfBiting:
+                // MORE_TEETH_MOVE is Strength and nothing else. PaperCuts used to be
+                // applied here too, which is the wrong trigger AND the wrong branch:
+                // `AfterDamageGiven` fires when the scroll lands UNBLOCKED damage, so it
+                // belongs to the attack, not to the buff.
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
-                ApplyPaperCuts(enemy, state);
                 break;
 
             case KE.SlimedBerserker:
@@ -3337,6 +3370,19 @@ public static class EnemyAI
             TriggerSuck(enemy);
         }
 
+        // PaperCutsPower.AfterDamageGiven: the player loses max HP when this creature
+        // lands UNBLOCKED damage on them. It used to fire on the scroll's BUFF instead,
+        // which is both the wrong trigger and the wrong branch.
+        if (unblocked > 0)
+        {
+            int paperCuts = BuffSystem.Get(enemy.Buffs, BuffId.PaperCuts);
+            if (paperCuts > 0)
+            {
+                state.PlayerMaxHp = Math.Max(1, state.PlayerMaxHp - paperCuts);
+                state.PlayerHp = Math.Min(state.PlayerHp, state.PlayerMaxHp);
+            }
+        }
+
         // ImbalancedPower.AfterDamageGiven, which only the Bowlbug Rock carries: an
         // attack of its own that block swallowed WHOLE knocks it off balance, and it
         // spends the following turn dizzy. `damage > 0` matters -- a zeroed attack was
@@ -3700,6 +3746,77 @@ public static class EnemyAI
         BuffSystem.Apply(enemy.Buffs, BuffId.Stunned, 1);
         // The stunned turn increments MoveIndex on its way past, so -1 lands on BITE.
         enemy.MoveIndex = -1;
+    }
+
+    /// <summary>
+    /// The Scroll of Biting: CHOMP -> MORE_TEETH -> CHEW, then a branch back into it.
+    /// </summary>
+    /// <remarks>
+    /// Not a three-cycle, which is what `MoveIndex % 3` made it. CHEW's follow-up is a
+    /// RandomBranchState over CHOMP (CannotRepeat) and CHEW (at most twice running) —
+    /// so a scroll can chew twice in a row and then must chomp, and the chain restarts
+    /// only through CHOMP. The opening is `StarterMoveIdx % 3`, which numbers the moves
+    /// 0/1/2 = CHOMP/CHEW/MORE_TEETH — a different order again from the chain.
+    ///
+    /// The current move is carried in <c>LastBranch</c> rather than derived from
+    /// MoveIndex, because after the branch there is no arithmetic that gives it.
+    /// </remarks>
+    private static Intent ScrollOfBitingIntent(EnemyState enemy, Random rng, int ascension)
+    {
+        const int chomp = 0;
+        const int moreTeeth = 1;
+        const int chew = 2;
+
+        // ChompDamage; CHEW is MultiAttackIntent(ChewDamage, 2), folded into 12 before;
+        // MORE_TEETH's Strength.
+        Intent[] moves =
+        [
+            new Intent(
+                IntentType.Attack,
+                Ascension.Value(ascension, Ascension.DeadlyEnemies, 16, 14)
+            ),
+            new Intent(IntentType.Buff, 2),
+            new Intent(
+                IntentType.Attack,
+                Ascension.Value(ascension, Ascension.DeadlyEnemies, 6, 5),
+                Hits: 2
+            ),
+        ];
+
+        if (enemy.MoveIndex == 0)
+        {
+            // StarterMoveIdx, seeded into MoveIndex by the encounter: 0/1/2 is
+            // CHOMP/CHEW/MORE_TEETH.
+            enemy.LastBranch = enemy.StarterMove switch
+            {
+                0 => chomp,
+                1 => chew,
+                _ => moreTeeth,
+            };
+            enemy.RepeatStreak = 1;
+            return moves[enemy.LastBranch];
+        }
+
+        int next;
+        if (enemy.LastBranch == chomp)
+        {
+            next = moreTeeth;
+        }
+        else if (enemy.LastBranch == moreTeeth)
+        {
+            next = chew;
+        }
+        else
+        {
+            // The RandomBranchState, reached only from CHEW. CHOMP is always eligible
+            // here (the last move was a chew); CHEW is out once it has run twice.
+            bool chewSpent = enemy.RepeatStreak >= 2;
+            next = chewSpent ? chomp : (rng.Next(2) == 0 ? chomp : chew);
+        }
+
+        enemy.RepeatStreak = next == enemy.LastBranch ? enemy.RepeatStreak + 1 : 1;
+        enemy.LastBranch = next;
+        return moves[next];
     }
 
     private static void SummonParafright(EnemyState enemy, CombatState state)

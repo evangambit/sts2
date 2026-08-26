@@ -97,6 +97,19 @@ public sealed class EnemyState
     /// (StarterMoveIndex == -1) and one that began the fight does not.
     /// </summary>
     public bool StartsOnBranch;
+
+    /// <summary>
+    /// The game's <c>StarterMoveIdx</c>: which move this creature's machine opens on.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="MoveIndex"/> because the two mean different things and
+    /// conflating them has bitten twice. The starter is an index into the monster's own
+    /// numbering of its moves, which need not match the order the machine walks them —
+    /// the Decimillipede's is 0/1/2 = WRITHE/BULK/CONSTRICT against a cycle of
+    /// WRITHE -> CONSTRICT -> BULK (E95), and the Scroll of Biting's is CHOMP/CHEW/
+    /// MORE_TEETH against a chain of CHOMP -> MORE_TEETH -> CHEW.
+    /// </remarks>
+    public int StarterMove;
     public int StolenGold;
     public int HeistGold;
 
