@@ -1652,9 +1652,24 @@ public static class EnemyAI
                     );
 
             case KE.TheForgotten:
+                // MIASMA <-> DREAD. MIASMA declares DebuffIntent first of three, so it
+                // announces as the Dexterity it steals.
+                //
+                // DreadDamage is not a constant: it is
+                // `GetValueIfAscension(Deadly, 15, 13) + its own DexterityPower`, and
+                // MIASMA hands it two Dexterity every other turn -- so the dread CLIMBS,
+                // 15, 17, 19. The flat 15 was right for exactly one turn at A8, by the
+                // coincidence of 13 + 2, which is why it read as a plausible A9 literal
+                // and why the ascension audit never flagged it: `DreadDamage` is a
+                // property with a BODY, not the one-line `=> GetValueIfAscension(...)` the
+                // audit's regex looks for.
                 return (enemy.MoveIndex % 2) == 0
                     ? new Intent(IntentType.Debuff, 2)
-                    : new Intent(IntentType.Attack, 15);
+                    : new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 15, 13)
+                            + BuffSystem.Get(enemy.Buffs, BuffId.Dexterity)
+                    );
 
             case KE.TheObscura:
             {
@@ -3917,6 +3932,11 @@ public static class EnemyAI
                     -enemy.CurrentIntent.Magnitude
                 );
                 BuffSystem.Apply(enemy.Buffs, BuffId.Dexterity, enemy.CurrentIntent.Magnitude);
+                // PossessSpeedPower keeps a tally of the Dexterity it has taken off the
+                // player and gives ALL of it back when it dies, which the emulator did not
+                // do -- so killing The Forgotten was worth nothing and the debuff was
+                // permanent.
+                BuffSystem.Apply(enemy.Buffs, BuffId.PossessSpeed, enemy.CurrentIntent.Magnitude);
                 break;
 
             case KE.EyeWithTeeth:

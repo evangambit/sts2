@@ -118,6 +118,7 @@ public enum BuffId
     Soar, // Owl Magistrate: halves powered attack damage against it while it flies
     VitalSpark, // Infested Prism: playing a Skill taints the player for the round
     Tainted, // the player: powered attacks land for this much more, until the enemy turn ends
+    PossessSpeed, // The Forgotten: how much Dexterity it has stolen, returned when it dies
     Tangled, // Vine Shambler card debuff, currently tracked as a player debuff
     Constrict, // Slithering Strangler pressure debuff, currently tracked
     Smoggy, // Living Fog card affliction debuff, currently tracked

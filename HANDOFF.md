@@ -1206,7 +1206,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **82 tested, 6 pending** — and the pending list is a
+  setup: 88 encounters modelled, **all 88 tested, `Pending` is EMPTY** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1375,8 +1375,14 @@ turned out to exclude nothing in combat.
   rather than the emulator: it read only `case KE.X:` arms, and every rider added since the
   Hive batches lives in an `if (enemy.DefId == KE.X && ...)` block or a switch expression
   instead (H20). It reads all four shapes now.
-  **Hive is DONE** — all four weak encounters, all eight normals, all three elites and all
-  three bosses now have suites. Thirteen encounters are still pending, all of Glory's.
+  **The burn-down is finished.** `CombatCoverageTests.Pending` is empty: every encounter
+  `CombatFactory` can build has either a hand-written suite or a committed live capture.
+  Read that narrowly. **A suite written from the decompiled source agrees with your reading
+  of the source** — it cannot tell you the reading was partial, which is what E101-E105 cost
+  when three Hive bosses written that way each turned out wrong on first live contact. What
+  the empty list means is that nothing is unexamined, not that everything is confirmed.
+  Live captures remain the only ground truth, and `scripts/combat_sweep.py --encounters
+  <name>` reaches any act.
 
   **`audit_enemy_moves.py` reports ZERO flags.** From 36 down to none over four batches:
   every `MultiAttackIntent` the emulator folded now carries its hit count, every intent

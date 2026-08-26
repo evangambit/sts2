@@ -34,15 +34,7 @@ public class CombatCoverageTests
     /// these are known-wrong rather than merely unchecked, and the captures were not
     /// committed precisely because they would have been committing failures.
     /// </summary>
-    private static readonly HashSet<string> Pending =
-    [
-        "Architect",
-        "BattlewornDummy1",
-        "BattlewornDummy2",
-        "BattlewornDummy3",
-        "LostAndForgotten",
-        "Scrolls",
-    ];
+    private static readonly HashSet<string> Pending = [];
 
     [Fact]
     public void EveryModelledEncounterHasATestSuite()

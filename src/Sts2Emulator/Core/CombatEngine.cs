@@ -1279,6 +1279,29 @@ public static class CombatEngine
                 Effects.CardEffects.DrawCards(state, 1, rng);
             }
 
+            // Side effects of a death that are nobody's revive, and so must not sit in
+            // the chain below: an `else if` there means "this creature came back, stop
+            // looking", and these two are neither exclusive with a revive nor with each
+            // other. Threading one of them into the chain is how the Test Subject's
+            // respawn briefly ended up guarded on the creature not being an amalgam.
+            if (state.Enemies[i].DefId == KE.TorchHeadAmalgam)
+            {
+                EnrageQueenIfWaitingToBurnBright(state);
+            }
+
+            if (BuffSystem.Get(state.Enemies[i].Buffs, BuffId.PossessSpeed) > 0)
+            {
+                // PossessSpeedPower.AfterDeath returns every point of Dexterity its owner
+                // took off the player -- so killing The Forgotten hands the whole debuff
+                // back, which the emulator never did.
+                int possessed = BuffSystem.Get(state.Enemies[i].Buffs, BuffId.PossessSpeed);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, possessed);
+                BuffSystem.Remove(state.Enemies[i].Buffs, BuffId.PossessSpeed);
+            }
+
+            // The revive chain proper: at most one of these applies, and the ones that
+            // bring the creature back `continue` rather than falling through to the
+            // it-really-died work below.
             if (BuffSystem.Get(state.Enemies[i].Buffs, BuffId.Surprise) > 0)
             {
                 SpawnGremlinMercReinforcements(state, rng, state.Enemies[i].StolenGold);
@@ -1295,21 +1318,17 @@ public static class CombatEngine
             {
                 continue;
             }
+            else if (TryRespawnTestSubject(state.Enemies[i]))
+            {
+                continue;
+            }
             else if (TryEnrageCrabPartner(state, state.Enemies[i]))
             {
                 // Not a revive: the dead half stays dead, so this does not `continue`.
                 TurnPlayerToFaceSurvivor(state);
             }
 
-            if (state.Enemies[i].DefId == KE.TorchHeadAmalgam)
-            {
-                EnrageQueenIfWaitingToBurnBright(state);
-            }
-            else if (TryRespawnTestSubject(state.Enemies[i]))
-            {
-                continue;
-            }
-            else if (BuffSystem.Get(state.Enemies[i].Buffs, BuffId.Infested) > 0)
+            if (BuffSystem.Get(state.Enemies[i].Buffs, BuffId.Infested) > 0)
             {
                 SpawnPhrogParasiteWrigglers(state, rng, state.Enemies[i]);
                 BuffSystem.Remove(state.Enemies[i].Buffs, BuffId.Infested);
