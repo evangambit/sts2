@@ -112,6 +112,18 @@ public sealed class EnemyState
     public bool RollsNextMove;
 
     /// <summary>
+    /// <c>NemesisPower</c>'s private flip bool: false, then true, then false, once per
+    /// enemy side turn. True means the power applied Intangible on this flip.
+    /// </summary>
+    /// <remarks>
+    /// Kept as its own state rather than read back off the Intangible stack, which is the
+    /// obvious shortcut and is wrong: Intangible decrements itself at the same moment, so
+    /// by the time Nemesis looks the stack is already gone and "is it on?" answers no
+    /// every round. The power alternates because the BOOL alternates.
+    /// </remarks>
+    public bool NemesisIntangibleOn;
+
+    /// <summary>
     /// The game's <c>StarterMoveIdx</c>: which move this creature's machine opens on.
     /// </summary>
     /// <remarks>

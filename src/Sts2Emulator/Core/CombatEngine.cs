@@ -408,7 +408,12 @@ public static class CombatEngine
             }
             else if (def.Id == Effects.ST.Beckon)
             {
-                state.PlayerHp = Math.Max(0, state.PlayerHp - 6); // Beckon is unblockable
+                // Beckon is unblockable -- but not uncappable: Intangible caps the HP
+                // lost by any route, which is what its second hook is for.
+                state.PlayerHp = Math.Max(
+                    0,
+                    state.PlayerHp - BuffSystem.CapHpLoss(6, state.PlayerBuffs)
+                );
             }
 
             if (retainHand > 0 || card.IsRetained())
@@ -484,7 +489,9 @@ public static class CombatEngine
             int poison = BuffSystem.Get(enemy.Buffs, BuffId.Poison);
             if (poison > 0)
             {
-                enemy.Hp -= poison;
+                // PoisonPower runs its own damage through Hook.ModifyDamage with the Cap
+                // flag set, so an intangible creature loses 1 to poison however deep it is.
+                enemy.Hp -= BuffSystem.CapHpLoss(poison, enemy.Buffs);
                 BuffSystem.Apply(enemy.Buffs, BuffId.Poison, -1);
                 if (enemy.Hp <= 0)
                 {
@@ -512,6 +519,7 @@ public static class CombatEngine
         state.Enemies.RemoveAll(e => e.Hp <= 0 && e.DefId == KE.GasBomb);
 
         TickDurationDebuffs(state);
+        EnemyAI.ToggleNemesisIntangible(state);
 
         HandleEnemyDeaths(state, enemyHpsBefore, rng);
 
@@ -599,7 +607,7 @@ public static class CombatEngine
         int playerPoison = BuffSystem.Get(state.PlayerBuffs, BuffId.Poison);
         if (playerPoison > 0)
         {
-            state.PlayerHp -= playerPoison;
+            state.PlayerHp -= BuffSystem.CapHpLoss(playerPoison, state.PlayerBuffs);
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Poison, -1);
             if (PlayerIsDead(state))
             {

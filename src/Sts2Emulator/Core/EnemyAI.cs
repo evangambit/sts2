@@ -685,19 +685,42 @@ public static class EnemyAI
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.Strength, territorial);
         }
+    }
 
-        // NemesisPower.AfterSideTurnEnd flips a private bool each time its owner takes
-        // part in a side turn: Intangible on, then off, then on. The Test Subject's third
-        // form was given a permanent Intangible instead of the alternation.
-        if (BuffSystem.Get(enemy.Buffs, BuffId.Nemesis) > 0)
+    /// <summary>
+    /// <c>NemesisPower.AfterSideTurnEnd</c> flips a private bool each time its owner takes
+    /// part in a side turn, applying Intangible on the flip up and removing it on the flip
+    /// down — so the Test Subject's third form spends every other player turn untouchable.
+    /// </summary>
+    /// <remarks>
+    /// Runs AFTER the duration tick, not with the rest of the end-of-enemy-turn riders,
+    /// and the ordering is the whole mechanic. Intangible decrements itself at this same
+    /// moment; if Nemesis applied first, the tick would take the stack straight back off
+    /// and the power would never be observable at all. The game gets the same ordering
+    /// from snapshotting its hook listeners before the pass — a power applied DURING the
+    /// pass does not also fire during it.
+    /// </remarks>
+    public static void ToggleNemesisIntangible(CombatState state)
+    {
+        foreach (var enemy in state.Enemies)
         {
-            if (BuffSystem.Get(enemy.Buffs, BuffId.Intangible) > 0)
+            if (enemy.Hp <= 0 || BuffSystem.Get(enemy.Buffs, BuffId.Nemesis) <= 0)
             {
-                BuffSystem.Remove(enemy.Buffs, BuffId.Intangible);
+                continue;
+            }
+
+            enemy.NemesisIntangibleOn = !enemy.NemesisIntangibleOn;
+            if (enemy.NemesisIntangibleOn)
+            {
+                BuffSystem.Apply(enemy.Buffs, BuffId.Intangible, 1);
             }
             else
             {
-                BuffSystem.Apply(enemy.Buffs, BuffId.Intangible, 1);
+                // A no-op in practice: Intangible's own tick, which runs just before this,
+                // has already taken the stack off. The game's flip-down does the same
+                // nothing for the same reason, and it is written out here because the
+                // alternation is a property of the bool and not of the stack.
+                BuffSystem.Remove(enemy.Buffs, BuffId.Intangible);
             }
         }
     }
@@ -3965,9 +3988,10 @@ public static class EnemyAI
             return;
         }
 
-        int absorbed = Math.Min(enemy.Block, flameBarrier);
+        int barrier = BuffSystem.CapIncomingDamage(flameBarrier, enemy.Buffs);
+        int absorbed = Math.Min(enemy.Block, barrier);
         enemy.Block -= absorbed;
-        enemy.Hp = Math.Max(0, enemy.Hp - (flameBarrier - absorbed));
+        enemy.Hp = Math.Max(0, enemy.Hp - (barrier - absorbed));
     }
 
     private static void TriggerSuck(EnemyState enemy, int hitCount = 1)
@@ -3987,9 +4011,10 @@ public static class EnemyAI
             return;
         }
 
-        int absorbed = Math.Min(enemy.Block, thorns);
+        int spikes = BuffSystem.CapIncomingDamage(thorns, enemy.Buffs);
+        int absorbed = Math.Min(enemy.Block, spikes);
         enemy.Block -= absorbed;
-        enemy.Hp = Math.Max(0, enemy.Hp - (thorns - absorbed));
+        enemy.Hp = Math.Max(0, enemy.Hp - (spikes - absorbed));
     }
 
     /// <summary>

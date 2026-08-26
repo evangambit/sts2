@@ -1392,12 +1392,18 @@ turned out to exclude nothing in combat.
   a whole free turn against a creature at 0 HP that cannot be hit, and the emulator healed
   it on the spot instead (E120).
 
-  **The next batch is O21, and it is the biggest thing in this register.**
-  `IntangiblePower` caps incoming damage at 1. It is applied in ELEVEN places — six of them
-  player cards, including Wraith Form and Shadow Step — and read in NONE. That is `BuffId.Ebb`
-  again at scale, and it is a batch of its own because the damage path has nine separate
-  HP-subtracting sites and because pinning the cap will move expected values in several
-  committed card and boss suites.
+  **O21 is closed (E125).** `IntangiblePower` caps everything that takes HP off its owner
+  at 1, it was applied in ELEVEN places — six of them player cards, including Wraith Form
+  and Shadow Step — and it was read in NONE. Both hooks are modelled now, at every one of
+  the nine HP-subtracting sites, and the cap reaches the intent READOUT as well as the
+  blow: `AttackIntent.GetSingleDamage` runs the move through the same `Hook.ModifyDamage`
+  call, so an intangible player is told the enemy will hit them for 1.
+
+  The prediction that this would move expected values across several committed suites was
+  **wrong, and the way it was wrong is the finding**: all 2,074 tests stayed green. Nothing
+  in the suite had ever asserted anything about Intangible, which is exactly how a buff
+  gets applied in eleven places and read in none for as long as this one did. A green suite
+  is evidence about what the suite covers before it is evidence about the code.
 
   **The third batch went at the `[shape]` flags and found the AUDIT was the defect**
   (H19). Of the four it ranked highest — "the game ROLLS and the emulator never touches

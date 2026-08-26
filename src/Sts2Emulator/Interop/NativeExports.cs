@@ -36,7 +36,7 @@ public static class NativeExports
     public const int MAX_ENEMY_BUFFS = 5;
 
     // v17: observation carries an open card selection (kind, count, candidates).
-    public const int NATIVE_API_VERSION = 19;
+    public const int NATIVE_API_VERSION = 20;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -54,7 +54,13 @@ public static class NativeExports
             CombatFactory.Reset(State, Rng);
         }
 
-        public void Reset()
+        /// <summary>
+        /// Re-seeds every per-subsystem stream from the handle's seed and clears the
+        /// win flag. Every Reset overload below opens with exactly this, so it lives in
+        /// one place: six copies is six chances for a new stream to be added to five of
+        /// them.
+        /// </summary>
+        private void SeedStreams()
         {
             Rng = new CountingRandom(Seed);
             State.NicheHpRng = new CountingRandom(
@@ -91,86 +97,23 @@ public static class NativeExports
                 new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
             );
             LastPlayerWon = false;
+        }
+
+        public void Reset()
+        {
+            SeedStreams();
             CombatFactory.Reset(State, Rng);
         }
 
         public void Reset(ReadOnlySpan<int> deckIds)
         {
-            Rng = new CountingRandom(Seed);
-            State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
-            );
-            State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
-            );
-            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
-            // unset silently fell back to the combat rng, so every enemy whose opening
-            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
-            // from the wrong generator — invisible for the many enemies whose opening
-            // move is deterministic, wrong for the ones that roll.
-            State.AiRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
-            );
-            // Which enemy a random-target effect hits comes off "combat_targets"
-            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
-            // above: unset, it silently drew from the combat rng.
-            State.TargetRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
-            );
-            // Picking WHICH card to exhaust or transform comes off
-            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
-            State.CardSelectionRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
-            );
-            // Rolling up a NEW card comes off "combat_card_generation".
-            State.CardGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
-            );
-            // Alchemize rolls its potion off "combat_potion_generation".
-            State.PotionGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
-            );
-            LastPlayerWon = false;
+            SeedStreams();
             CombatFactory.Reset(State, Rng, deckIds);
         }
 
         public void Reset(ReadOnlySpan<int> deckIds, int encounterId)
         {
-            Rng = new CountingRandom(Seed);
-            State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
-            );
-            State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
-            );
-            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
-            // unset silently fell back to the combat rng, so every enemy whose opening
-            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
-            // from the wrong generator — invisible for the many enemies whose opening
-            // move is deterministic, wrong for the ones that roll.
-            State.AiRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
-            );
-            // Which enemy a random-target effect hits comes off "combat_targets"
-            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
-            // above: unset, it silently drew from the combat rng.
-            State.TargetRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
-            );
-            // Picking WHICH card to exhaust or transform comes off
-            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
-            State.CardSelectionRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
-            );
-            // Rolling up a NEW card comes off "combat_card_generation".
-            State.CardGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
-            );
-            // Alchemize rolls its potion off "combat_potion_generation".
-            State.PotionGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
-            );
-            LastPlayerWon = false;
+            SeedStreams();
             CombatFactory.Reset(State, Rng, deckIds, encounterId);
         }
 
@@ -188,41 +131,7 @@ public static class NativeExports
         )
         {
             State.AscensionLevel = ascension;
-            Rng = new CountingRandom(Seed);
-            State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
-            );
-            State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
-            );
-            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
-            // unset silently fell back to the combat rng, so every enemy whose opening
-            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
-            // from the wrong generator — invisible for the many enemies whose opening
-            // move is deterministic, wrong for the ones that roll.
-            State.AiRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
-            );
-            // Which enemy a random-target effect hits comes off "combat_targets"
-            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
-            // above: unset, it silently drew from the combat rng.
-            State.TargetRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
-            );
-            // Picking WHICH card to exhaust or transform comes off
-            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
-            State.CardSelectionRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
-            );
-            // Rolling up a NEW card comes off "combat_card_generation".
-            State.CardGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
-            );
-            // Alchemize rolls its potion off "combat_potion_generation".
-            State.PotionGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
-            );
-            LastPlayerWon = false;
+            SeedStreams();
             int? encounterRngSeed = Sts2Emulator.Core.Run.EncounterRng.SeedFor(
                 Seed,
                 totalFloor,
@@ -241,82 +150,74 @@ public static class NativeExports
 
         public void Reset(ReadOnlySpan<int> deckIds, int encounterId, int completedCombatRooms)
         {
-            Rng = new CountingRandom(Seed);
-            State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
-            );
-            State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
-            );
-            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
-            // unset silently fell back to the combat rng, so every enemy whose opening
-            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
-            // from the wrong generator — invisible for the many enemies whose opening
-            // move is deterministic, wrong for the ones that roll.
-            State.AiRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
-            );
-            // Which enemy a random-target effect hits comes off "combat_targets"
-            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
-            // above: unset, it silently drew from the combat rng.
-            State.TargetRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
-            );
-            // Picking WHICH card to exhaust or transform comes off
-            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
-            State.CardSelectionRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
-            );
-            // Rolling up a NEW card comes off "combat_card_generation".
-            State.CardGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
-            );
-            // Alchemize rolls its potion off "combat_potion_generation".
-            State.PotionGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
-            );
-            LastPlayerWon = false;
+            SeedStreams();
             CombatFactory.Reset(State, Rng, deckIds, encounterId, completedCombatRooms);
         }
 
         public void Reset(ReadOnlySpan<int> deckIds, int encounterId, ReadOnlySpan<int> relicIds)
         {
-            Rng = new CountingRandom(Seed);
-            State.NicheHpRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "niche").RawSeed
-            );
-            State.ShuffleRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "shuffle").RawSeed
-            );
-            // Enemy intent rolls come off the run's "monster_ai" stream. Leaving this
-            // unset silently fell back to the combat rng, so every enemy whose opening
-            // move is a random branch (LeafSlimeS, SludgeSpinner, Exoskeleton...) drew
-            // from the wrong generator — invisible for the many enemies whose opening
-            // move is deterministic, wrong for the ones that roll.
-            State.AiRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "monster_ai").RawSeed
-            );
-            // Which enemy a random-target effect hits comes off "combat_targets"
-            // (JuggernautPower, Volley, Sword Boomerang). Same failure mode as AiRng
-            // above: unset, it silently drew from the combat rng.
-            State.TargetRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_targets").RawSeed
-            );
-            // Picking WHICH card to exhaust or transform comes off
-            // "combat_card_selection" (Cinder, Thrash, True Grit, Entropy).
-            State.CardSelectionRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_selection").RawSeed
-            );
-            // Rolling up a NEW card comes off "combat_card_generation".
-            State.CardGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_card_generation").RawSeed
-            );
-            // Alchemize rolls its potion off "combat_potion_generation".
-            State.PotionGenerationRng = new CountingRandom(
-                new Sts2Emulator.Core.Rng.GameRng((uint)Seed, "combat_potion_generation").RawSeed
-            );
-            LastPlayerWon = false;
+            SeedStreams();
             CombatFactory.Reset(State, Rng, deckIds, encounterId, relicIds);
+        }
+
+        /// <summary>
+        /// The full combat entry point: an arbitrary deck, relic set, potion set, HP and
+        /// ascension against a chosen encounter. This is what a deck-conditioned value
+        /// function needs — every other overload starts from the fixed starter deck at
+        /// default HP with no relics, which is one point in the space the agent has to
+        /// evaluate over.
+        /// </summary>
+        /// <remarks>
+        /// A negative card id means UPGRADED, matching <c>CombatFactory.Reset</c>'s own
+        /// <c>new CardInstance(Math.Abs(id), id &lt; 0)</c>. Enchantments are not
+        /// expressible in a flat id list and are not carried here; a deck sampled for
+        /// training therefore has none, which is honest for act 1 and a gap in acts 2-3
+        /// where the ancients hand them out.
+        /// </remarks>
+        public void ResetArena(
+            ReadOnlySpan<int> deckIds,
+            int encounterId,
+            ReadOnlySpan<int> relicIds,
+            ReadOnlySpan<int> potionIds,
+            int playerHp,
+            int playerMaxHp,
+            int playerGold,
+            int ascension,
+            int totalFloor,
+            int completedCombatRooms
+        )
+        {
+            State.AscensionLevel = ascension;
+            SeedStreams();
+            // -1 means "no forced encounter": the factory rolls the seeded first combat.
+            // It has to become null rather than travel as -1, which would be looked up as
+            // an encounter id and found missing.
+            int? encounter = encounterId >= 0 ? encounterId : null;
+            int? encounterRngSeed = encounter is { } id
+                ? Sts2Emulator.Core.Run.EncounterRng.SeedFor(
+                    Seed,
+                    totalFloor,
+                    id,
+                    completedCombatRooms is >= 0 and < 3
+                )
+                : null;
+            CombatFactory.Reset(
+                State,
+                Rng,
+                deckIds,
+                encounter,
+                relicIds,
+                playerHp,
+                playerMaxHp,
+                potionIds,
+                playerGold,
+                deckPreShuffled: false,
+                shuffleRng: null,
+                encounterRngSeed: encounterRngSeed,
+                nicheSkipCount: 0,
+                aiRng: null,
+                completedCombatRoomsBeforeCurrent: completedCombatRooms
+            );
         }
     }
 
@@ -554,6 +455,48 @@ public static class NativeExports
             new ReadOnlySpan<int>(deckIds, deckLen),
             encounterId,
             new ReadOnlySpan<int>(relicIds, relicLen)
+        );
+        WriteObs(combat.State, obsBuf);
+    }
+
+    /// <summary>
+    /// Start a combat from an arbitrary run position: any deck, relics, potions, HP and
+    /// ascension against any encounter. The deck-conditioned value function trains on
+    /// this — nothing else in the native surface can express a deck that is not the
+    /// starter deck plus appended cards at full HP with no relics.
+    /// </summary>
+    /// <param name="encounterId">-1 rolls the seeded first-combat encounter instead.</param>
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ResetArena")]
+    public static unsafe void Sts2_ResetArena(
+        int handle,
+        int* deckIds,
+        int deckLen,
+        int encounterId,
+        int* relicIds,
+        int relicLen,
+        int* potionIds,
+        int potionLen,
+        int playerHp,
+        int playerMaxHp,
+        int playerGold,
+        int ascension,
+        int totalFloor,
+        int completedCombatRooms,
+        int* obsBuf
+    )
+    {
+        var combat = _pool[handle]!;
+        combat.ResetArena(
+            new ReadOnlySpan<int>(deckIds, deckLen),
+            encounterId,
+            new ReadOnlySpan<int>(relicIds, relicLen),
+            new ReadOnlySpan<int>(potionIds, potionLen),
+            playerHp,
+            playerMaxHp,
+            playerGold,
+            ascension,
+            totalFloor,
+            completedCombatRooms
         );
         WriteObs(combat.State, obsBuf);
     }

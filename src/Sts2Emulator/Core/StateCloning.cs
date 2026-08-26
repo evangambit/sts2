@@ -59,6 +59,7 @@ public static class StateCloning
             MoveHistory = [.. enemy.MoveHistory],
             StartsOnBranch = enemy.StartsOnBranch,
             RollsNextMove = enemy.RollsNextMove,
+            NemesisIntangibleOn = enemy.NemesisIntangibleOn,
             StarterMove = enemy.StarterMove,
             Slot = enemy.Slot,
             StolenGold = enemy.StolenGold,

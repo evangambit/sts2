@@ -124,6 +124,20 @@ public static class BuffSystem
                 // SlumberPower.AfterSideTurnEnd, which ticks for its OWNER's side only --
                 // the beetle is an enemy, and this runs for the enemies. Its other
                 // decrement, on unblocked damage, is in DealDamageToEnemy.
+                // IntangiblePower.AfterSideTurnEnd decrements at the end of the ENEMY
+                // side turn whoever owns it, which is this moment. Listed apart from the
+                // duration DEBUFFS below because it is a Buff: PowerCmd.Apply's
+                // skip-a-tick grace is only given to a debuff landing on a player-side
+                // creature, so an Intangible the player gains this turn ticks tonight.
+                case BuffId.Intangible:
+                    buffs[i] = b with { Magnitude = b.Magnitude - 1 };
+                    if (buffs[i].Magnitude <= 0)
+                    {
+                        buffs.RemoveAt(i);
+                    }
+
+                    break;
+
                 case BuffId.Slumber:
                 case BuffId.Vulnerable:
                 case BuffId.Weak:
@@ -207,8 +221,39 @@ public static class BuffSystem
             dmg *= 1.5f;
         }
 
-        return Math.Max(0, (int)dmg);
+        return CapIncomingDamage(Math.Max(0, (int)dmg), defenderBuffs);
     }
+
+    /// <summary>
+    /// <c>IntangiblePower.ModifyDamageCap</c>: damage aimed at its owner is capped at 1.
+    /// </summary>
+    /// <remarks>
+    /// The cap runs inside <c>Hook.ModifyDamage</c> under the <c>Cap</c> flag, and
+    /// <c>ModifyDamageHookType.All</c> — which is what almost every back-end call passes —
+    /// includes it. So this belongs with the additive and multiplicative modifiers rather
+    /// than at the point of damage, and it reaches the READOUT as well as the blow:
+    /// <c>AttackIntent.GetSingleDamage</c> runs the move through the same hook, so an
+    /// intangible player is told the enemy will hit them for 1, not for thirty.
+    ///
+    /// Applied per HIT, which is where the game applies it: a two-hit attack against an
+    /// intangible creature announces 2 and lands two ones.
+    /// </remarks>
+    public static int CapIncomingDamage(int damage, List<BuffState> defenderBuffs) =>
+        Get(defenderBuffs, BuffId.Intangible) > 0 ? Math.Min(damage, 1) : damage;
+
+    /// <summary>
+    /// <c>IntangiblePower.ModifyHpLostAfterOsty</c>: any HP loss of 1 or more becomes 1.
+    /// </summary>
+    /// <remarks>
+    /// The second half of Intangible, and the reason the power carries two hooks: the cap
+    /// above governs the damage NUMBER — what block absorbs, what a preview shows — and
+    /// this one is the backstop on HP itself. It is what covers HP lost by a route that is
+    /// not an attack at all. Poison happens to be capped by the first hook rather than this
+    /// one, since <c>PoisonPower</c> runs its own damage through
+    /// <c>Hook.ModifyDamage(..., All, ...)</c>, but either way the answer is 1.
+    /// </remarks>
+    public static int CapHpLoss(int hpLoss, List<BuffState> defenderBuffs) =>
+        Get(defenderBuffs, BuffId.Intangible) > 0 ? Math.Min(hpLoss, 1) : hpLoss;
 
     public static int IncomingBlock(int baseBlock, List<BuffState> buffs, bool isDefend = false)
     {

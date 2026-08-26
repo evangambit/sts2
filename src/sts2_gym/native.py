@@ -11,7 +11,7 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 19
+_REQUIRED_NATIVE_API_VERSION = 20
 _REQUIRED_RUN_NATIVE_API_VERSION = 16
 
 
@@ -244,6 +244,25 @@ _lib.Sts2_ResetWithDeckEncounterAndRelics.argtypes = [
     ctypes.c_int,
     ctypes.c_int,
     ctypes.POINTER(ctypes.c_int),
+]
+
+_lib.Sts2_ResetArena.restype = None
+_lib.Sts2_ResetArena.argtypes = [
+    ctypes.c_int,  # handle
+    ctypes.POINTER(ctypes.c_int),  # deck ids
+    ctypes.c_int,  # deck len
+    ctypes.c_int,  # encounter id (-1 = roll it)
+    ctypes.POINTER(ctypes.c_int),  # relic ids
+    ctypes.c_int,  # relic len
+    ctypes.POINTER(ctypes.c_int),  # potion ids
+    ctypes.c_int,  # potion len
+    ctypes.c_int,  # player hp
+    ctypes.c_int,  # player max hp
+    ctypes.c_int,  # player gold
+    ctypes.c_int,  # ascension
+    ctypes.c_int,  # total floor
+    ctypes.c_int,  # completed combat rooms
+    ctypes.POINTER(ctypes.c_int),  # obs
 ]
 
 _lib.Sts2_Step.restype = ctypes.c_int
@@ -572,6 +591,57 @@ def reset_encounter_with_extra_cards(
         completed_combat_rooms,
         total_floor,
         ascension,
+        obs_buf,
+    )
+
+
+def reset_arena(
+    handle: int,
+    deck_ids: list[int],
+    obs_buf: ctypes.Array,
+    encounter_id: int = -1,
+    relic_ids: list[int] | None = None,
+    potion_ids: list[int] | None = None,
+    player_hp: int = 64,
+    player_max_hp: int = 80,
+    player_gold: int = 0,
+    ascension: int = 8,
+    total_floor: int = 0,
+    completed_combat_rooms: int = -1,
+) -> None:
+    """Start a combat from an arbitrary run position.
+
+    Every other reset here starts from the fixed starter deck at full HP with no
+    relics, which is one point in the space a deck-conditioned value function has to
+    evaluate over. This one takes the whole position: deck, relics, potions, HP and
+    ascension against a chosen encounter.
+
+    A NEGATIVE card id means upgraded, matching CombatFactory's own
+    ``new CardInstance(Math.Abs(id), id < 0)``. Enchantments cannot be expressed in a
+    flat id list and are not carried.
+
+    encounter_id of -1 rolls the seeded first-combat encounter instead of forcing one.
+    """
+    deck_buf = (ctypes.c_int * len(deck_ids))(*deck_ids)
+    relics = list(relic_ids or [])
+    relic_buf = (ctypes.c_int * max(1, len(relics)))(*relics)
+    potions = list(potion_ids or [])
+    potion_buf = (ctypes.c_int * max(1, len(potions)))(*potions)
+    _lib.Sts2_ResetArena(
+        handle,
+        deck_buf,
+        len(deck_ids),
+        encounter_id,
+        relic_buf,
+        len(relics),
+        potion_buf,
+        len(potions),
+        player_hp,
+        player_max_hp,
+        player_gold,
+        ascension,
+        total_floor,
+        completed_combat_rooms,
         obs_buf,
     )
 

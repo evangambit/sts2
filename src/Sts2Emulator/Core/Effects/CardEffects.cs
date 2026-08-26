@@ -2160,6 +2160,7 @@ public static class CardEffects
 
     public static void DealDamageToPlayer(CombatState state, int amount)
     {
+        amount = BuffSystem.CapIncomingDamage(amount, state.PlayerBuffs);
         int absorbed = Math.Min(state.PlayerBlock, amount);
         state.PlayerBlock -= absorbed;
         int hpLoss = amount - absorbed;
@@ -5123,7 +5124,7 @@ public static class CardEffects
             TriggerEnemyThorns(state, target);
         }
 
-        int damage = Math.Max(0, amount);
+        int damage = BuffSystem.CapIncomingDamage(Math.Max(0, amount), target.Buffs);
         int cap = BuffSystem.Get(target.Buffs, BuffId.HardToKill);
         if (cap > 0)
         {
@@ -5221,7 +5222,10 @@ public static class CardEffects
         }
 
         int hpBeforeThorns = state.PlayerHp;
-        state.PlayerHp = Math.Max(0, state.PlayerHp - thorns);
+        state.PlayerHp = Math.Max(
+            0,
+            state.PlayerHp - BuffSystem.CapIncomingDamage(thorns, state.PlayerBuffs)
+        );
         state.PlayerHpLostThisTurn += Math.Max(0, hpBeforeThorns - state.PlayerHp);
     }
 
