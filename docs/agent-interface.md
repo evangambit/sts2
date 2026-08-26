@@ -210,3 +210,44 @@ None of the above weakens the differential harness, by construction:
 - Resampling is opt-in and off by default, so nothing in the test path touches it.
 - Known-order tracking is bookkeeping beside the pile, not a change to it; the
   order the game produces is untouched.
+
+
+---
+
+## What the interface actually measures (`scripts/agent_probe.py`)
+
+The sections above are design. This is what the interface *does* when something walks
+it, and the numbers are here so later emulator work has a target rather than a feeling.
+Re-run after any change to the observation, the action encoding or the step path:
+
+    uv run python scripts/agent_probe.py
+
+Findings worth carrying, from the first run:
+
+**The simulator is not the bottleneck people assume, and it is also not as fast as a
+single microbenchmark suggests.** Timing `run_step` with a fixed action mostly measures
+REJECTED actions — the mask says no, it returns in ~2us, and you conclude the simulator
+runs at 500k/s. Timing a loop that resets folds whole-run generation into the average
+instead. The honest figure is a per-phase mixture: **~72us/step overall, about 14,000
+steps/s on one env**, with combat around 54us median and act entry carrying a long tail
+because it generates a map. PLAN.md's AlphaZero target is 1e5–1e6 transitions/s/core, so
+the step path is **roughly an order of magnitude short** and that is where the work is.
+
+**Clone is the cheap half of search**, ~59,000/s including hidden-state resampling — so
+a tree search's ceiling is set by the step, not by forking. The handle pool caps
+CONCURRENT runs at 256, which is fine for clone-simulate-destroy and not fine for a
+design that holds a handle per tree node.
+
+**Card ids reach the network as raw integers.** Nothing in the observation says slot N is
+categorical, so a network reading it as a magnitude learns that card 473 is *more* than
+card 472. That is an embedding on the agent side, but it is the observation's shape that
+forces the issue, and it is worth stating here rather than rediscovering it in a training
+run.
+
+**About a fifth of the observation is ever non-zero** under random play. Some of that is
+genuinely dead width and some is screens a random policy never reaches — those are worth
+telling apart before a network is sized around 630 inputs.
+
+**A dozen action indices are legal in more than one phase.** The mask keeps that safe, but
+it means one output neuron means different things on different screens, so the phase has
+to be prominent in the observation for the network to disambiguate.
