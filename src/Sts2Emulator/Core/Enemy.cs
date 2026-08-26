@@ -99,6 +99,19 @@ public sealed class EnemyState
     public bool StartsOnBranch;
 
     /// <summary>
+    /// The machine has just been forced through a state whose FollowUpState is a
+    /// RandomBranchState, so the NEXT selection is a roll rather than the next step of a
+    /// cycle. A reattached Decimillipede segment is the case: DEAD_MOVE -> REATTACH_MOVE
+    /// -> RAND, so a segment that comes back does not resume where it fell.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="StartsOnBranch"/>, which is about the machine's INITIAL
+    /// state and is answered once at creation. Conflating the two would make a summoned
+    /// creature and a revived one the same thing, and they are not.
+    /// </remarks>
+    public bool RollsNextMove;
+
+    /// <summary>
     /// The game's <c>StarterMoveIdx</c>: which move this creature's machine opens on.
     /// </summary>
     /// <remarks>

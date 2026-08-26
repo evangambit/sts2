@@ -353,3 +353,98 @@ public class SlimedBerserkerTests
         Assert.Equal(10, GloryNormal.Copies(fight, ST.Slimed));
     }
 }
+
+/// <summary>
+/// FrogKnightNormal: one Frog Knight, behind Plating.
+/// </summary>
+public class FrogKnightTests
+{
+    private static Fight Knight(int ascension = 8) =>
+        Fight.Encounter(CombatFactory.ActOneEncounter.FrogKnight, ascension);
+
+    /// <summary>
+    /// TONGUE_LASH -> STRIKE_DOWN_EVIL -> FOR_THE_QUEEN, and the conditional branch after
+    /// the buff sends it back to the lash while the knight is above half HP. The emulator
+    /// ran a `% 3` with the strike and the buff the wrong way round.
+    /// </summary>
+    [Theory]
+    [InlineData(8, 13, 21)]
+    [InlineData(9, 14, 23)]
+    public void ItLashesStrikesThenCallsForTheQueen(int ascension, int lash, int strike)
+    {
+        var fight = Knight(ascension);
+        var seen = GloryNormal.Cycle(fight, fight.State.Enemies[0], 5);
+
+        Assert.Equal(
+            [
+                (IntentType.Attack, lash, 1),
+                (IntentType.Attack, strike, 1),
+                (IntentType.Buff, 5, 1),
+                // FOR_THE_QUEEN's Strength, which used to land a turn early.
+                (IntentType.Attack, lash + 5, 1),
+                (IntentType.Attack, strike + 5, 1),
+            ],
+            seen
+        );
+    }
+
+    /// <summary>
+    /// BEETLE_CHARGE is offered only once, and only when the branch is reached with the
+    /// knight below half HP and not yet charged. It was **unreachable** — the emulator's
+    /// three-cycle had no arm for it at all, so the knight's biggest move never happened.
+    /// </summary>
+    [Theory]
+    [InlineData(8, 35)]
+    [InlineData(9, 40)]
+    public void ItChargesOnceItIsHurt(int ascension, int charge)
+    {
+        var fight = Knight(ascension);
+        var knight = fight.State.Enemies[0];
+        fight.State.PlayerHp = 9999;
+
+        fight.Turns(2); // TONGUE_LASH, STRIKE_DOWN_EVIL -> it announces FOR_THE_QUEEN
+        knight.Hp = knight.MaxHp / 2 - 1;
+        fight.State.PlayerHp = 9999;
+        fight.EndTurn(); // FOR_THE_QUEEN resolves, and the branch is taken
+
+        // The intent's Magnitude is BeetleChargeDamage itself; FOR_THE_QUEEN's Strength
+        // is added when the announcement is read, not when the move is chosen.
+        Assert.Equal(new Intent(IntentType.Attack, charge), knight.CurrentIntent);
+
+        // Once charged the branch never offers it again, however hurt the knight gets.
+        fight.State.PlayerHp = 9999;
+        fight.Turns(4);
+        knight.Hp = 1;
+        fight.State.PlayerHp = 9999;
+        fight.EndTurn();
+
+        Assert.NotEqual(charge, knight.CurrentIntent.Magnitude);
+    }
+
+    /// <summary>
+    /// TongueLashMove applies FrailPower(2). It sat in <c>ApplyDebuffIntent</c>, and the
+    /// Frog Knight has no Debuff intent at all, so it never ran — the fourth rider found
+    /// in the wrong branch.
+    /// </summary>
+    [Fact]
+    public void TheTongueLashFrails()
+    {
+        var fight = Knight();
+        fight.State.PlayerHp = 9999;
+
+        fight.EndTurn(); // TONGUE_LASH
+        Assert.Equal(2, BuffSystem.Get(fight.State.PlayerBuffs, BuffId.Frail));
+    }
+
+    /// <summary>PlatingAmount was on the ToughEnemies branch, so it was 19 below A8 too.</summary>
+    [Theory]
+    [InlineData(8, 19)]
+    [InlineData(0, 15)]
+    public void ItsPlatingFollowsAscension(int ascension, int plating)
+    {
+        var knight = Knight(ascension).State.Enemies[0];
+
+        Assert.Equal(plating, knight.Block);
+        Assert.Equal(plating, BuffSystem.Get(knight.Buffs, BuffId.Plating));
+    }
+}

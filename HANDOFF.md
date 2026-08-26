@@ -1196,7 +1196,7 @@ turned out to exclude nothing in combat.
 
 - ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 88 encounters modelled, **78 tested, 10 pending** — and the pending list is a
+  setup: 88 encounters modelled, **79 tested, 9 pending** — and the pending list is a
   burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
   and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
@@ -1366,7 +1366,7 @@ turned out to exclude nothing in combat.
   **Hive is DONE** — all four weak encounters, all eight normals, all three elites and all
   three bosses now have suites. Thirteen encounters are still pending, all of Glory's.
 
-  **`audit_enemy_moves.py`'s worklist is down from 36 flags to 19, and the whole `[hits]`
+  **`audit_enemy_moves.py`'s worklist is down from 36 flags to 15, and the whole `[hits]`
   class is CLOSED** — every `MultiAttackIntent` the emulator had folded into one number now
   carries its hit count. Fourteen monsters over two batches, at **six defects apiece on
   average**, and only one per monster was the fold the audit flagged. What is left is 17
@@ -1388,7 +1388,30 @@ turned out to exclude nothing in combat.
   HP-subtracting sites and because pinning the cap will move expected values in several
   committed card and boss suites.
 
-  Six lessons the two batches earned, on top of the ones already listed above:
+  **The third batch went at the `[shape]` flags and found the AUDIT was the defect**
+  (H19). Of the four it ranked highest — "the game ROLLS and the emulator never touches
+  rng" — three were wrong: two monsters roll through `PickBranch(eligible, rng)`, which the
+  check's `rng\.` regex could not see, and the Phrog Parasite's RandomBranchState is
+  DECLARED and unreachable, so the emulator's fixed alternation is right. Worse, the check
+  matched `MoveIndex %` inside COMMENTS, so a fix that documented what it replaced
+  re-flagged itself; the Mawler was reported for three batches running on the strength of
+  the comment saying it no longer walks a cycle. All three are fixed and the checks strip
+  comments now.
+
+  **And one of the emulator's own comments was lying.** `PickBranch`'s docstring said the
+  game's weighted walk "is not the same draw as `Next(n)` — same stream, different number".
+  It is the same: `Rng.NextFloat(max)` is `(float)(NextDouble() * max)`, `MegaRandom.Next(max)`
+  is `(int)(NextDouble() * max)`, both one draw, agreeing on every roll that is not an
+  exact integer (checked over 400,000). Six correct call sites were nearly rewritten on
+  the strength of that sentence. **A comment claiming code is wrong is a hypothesis, not
+  evidence** — and this file is full of comments that were written when they were true.
+
+  What the batch DID find, once the audit stopped lying: a reattached Decimillipede segment
+  rolls rather than resuming its cycle (E121), and the Frog Knight's cycle had
+  STRIKE_DOWN_EVIL and FOR_THE_QUEEN transposed with BEETLE_CHARGE — its biggest move —
+  unreachable (E122).
+
+  Nine lessons the three batches earned, on top of the ones already listed above:
 
   - **A fold is a marker, not the defect.** Every one of the eleven had its hit count
     wrong AND at least one other thing: an A9 literal at A8, a rider in a branch its
@@ -1415,6 +1438,15 @@ turned out to exclude nothing in combat.
     still flagged as one the emulator "never says", because `CombatEngine` sets that intent
     where the machine forces the move. Two of the remaining flags are this shape, not a
     defect.
+  - **An audit is code, and code that reads code needs its own reading.** Three separate
+    over-reports in one checker, each of which would have cost a batch: a regex that could
+    not see the helper the codebase actually uses, a branch counted without asking whether
+    anything reaches it, and a pattern matched inside comments. Before working a worklist,
+    spend ten minutes checking two or three of its entries against the source by hand.
+  - **A declared branch is not a reachable one.** The Phrog Parasite builds a
+    RandomBranchState, adds both arms, puts it in the state list — and nothing ever points
+    at it, because its two moves follow up to each other. Reading `GenerateMoveStateMachine`
+    means tracing the FollowUpStates, not counting the states.
   - **A monster that cannot die yet cannot be counted dead.** The Test Subject's respawn
     turn needed `NoPrimaryEnemyLeft` to keep the fight open, and the exemption has to be
     keyed on the power the GAME keys it on — `AdaptablePower.ShouldStopCombatFromEnding` is

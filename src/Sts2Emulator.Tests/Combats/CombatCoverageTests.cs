@@ -41,7 +41,6 @@ public class CombatCoverageTests
         "BattlewornDummy2",
         "BattlewornDummy3",
         "Fabricator",
-        "FrogKnight",
         "Knights",
         "LostAndForgotten",
         "MechaKnight",

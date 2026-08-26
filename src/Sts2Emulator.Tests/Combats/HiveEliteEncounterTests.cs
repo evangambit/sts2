@@ -108,6 +108,44 @@ public class DecimillipedeTests
     }
 
     /// <summary>
+    /// REATTACH_MOVE's FollowUpState is the machine's RandomBranchState, not the cycle, so
+    /// a segment that comes back ROLLS its next move — and every branch is CannotRepeat,
+    /// so it cannot roll the one it last performed. The emulator resumed the cycle where
+    /// the segment fell, which is both the wrong move and a draw on the AI stream the
+    /// game makes and it did not.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void AReattachedSegmentRollsRatherThanResuming(int seed)
+    {
+        var fight = Fight.EncounterWithStream(RunConstants.DecimillipedeEncounterId, seed);
+        var segment = fight.State.Enemies[0];
+        fight.State.PlayerHp = 999;
+
+        // One whole turn first, so the segment has actually PERFORMED a move: the repeat
+        // rule is scored against that, not against the announcement it dies holding.
+        fight.EndTurn();
+        fight.State.PlayerHp = 999;
+        int performed = (segment.MoveIndex - 1 + 3) % 3;
+
+        fight.State.Hand.Clear();
+        fight.State.Hand.Add(new CardInstance(472, Upgraded: false));
+        fight.State.Energy = 5;
+        segment.Hp = 1;
+        segment.Block = 0;
+        fight.Play(0, target: 0);
+        fight.EndTurn(); // the reattach turn
+
+        fight.State.PlayerHp = 999;
+        fight.EndTurn(); // and the roll it announces afterwards
+
+        Assert.NotEqual(performed, (segment.MoveIndex - 1 + 3) % 3);
+    }
+
+    /// <summary>
     /// `if (!AreAllOtherSegmentsDead())` is the whole fight: the last one standing stays
     /// down. Without it the elite is unkillable.
     /// </summary>

@@ -84,6 +84,21 @@ NOT_A_MONSTER = {
 ALIASES = {"FakeMerchantMonster": "FakeMerchant"}
 
 
+COMMENT = re.compile(r"//[^\n]*")
+
+
+def strip_comments(source: str) -> str:
+    """C# with its line comments blanked out.
+
+    Every check here asks what the CODE does, and a comment saying what the code used to
+    do reads identically to a regex. The Mawler was reported as walking `MoveIndex % 3`
+    for three batches after it stopped doing so, on the strength of the comment explaining
+    that it no longer does -- so a fix that documents what it replaced re-flagged itself,
+    and the better the comment the longer the false report survived.
+    """
+    return COMMENT.sub("", source)
+
+
 def emulator_blocks() -> dict[str, str]:
     """EnemyAI's text for each monster: its `case KE.X:` arms AND its helper methods.
 
@@ -91,7 +106,7 @@ def emulator_blocks() -> dict[str, str]:
     named for them (`ExoskeletonIntent`, `FakeMerchantIntent`), and an audit that reads
     only the switch reports those as missing everything they have.
     """
-    text = ENEMY_AI.read_text(encoding="utf-8")
+    text = strip_comments(ENEMY_AI.read_text(encoding="utf-8"))
     blocks: dict[str, str] = {}
 
     marks = [(m.start(), m.group(1)) for m in re.finditer(r"case KE\.(\w+):", text)]
@@ -142,17 +157,50 @@ def check_types(monster: str, source: str, block: str) -> list[str]:
     return rows
 
 
+def is_reachable(source: str, kind: str) -> bool:
+    """Whether a branch state of this kind can actually be ENTERED.
+
+    A monster can DECLARE a branch, add its arms and put it in the state list without
+    anything ever pointing at it -- the Phrog Parasite's RAND is exactly that, and its two
+    moves follow up to each other instead. A declared-but-orphaned branch is not a shape
+    the emulator is getting wrong; it is a shape the GAME does not use, and reporting it
+    sends the next reader off to add a roll the live game never makes.
+
+    Reachable means the variable holding it turns up in a `FollowUpState` assignment, is
+    handed to the machine as its initial state, or is added to a conditional as an arm.
+    The chained idiom counts: several monsters write
+    `RandomBranchState x = (RandomBranchState)(a.FollowUpState = new RandomBranchState(..))`,
+    so the declaration line is itself the assignment.
+    """
+    for match in re.finditer(rf"(\w+)\s*=\s*(?:\([^)]*\)\s*)?[^;]*new {kind}\(", source):
+        name = match.group(1)
+        for line in source.splitlines():
+            if name not in line:
+                continue
+            if "FollowUpState" in line or "MonsterMoveStateMachine(" in line:
+                return True
+    return False
+
+
 def check_shape(monster: str, source: str, block: str) -> list[str]:
     """Machines whose shape `MoveIndex %` arithmetic cannot express.
 
     Ranked, because the shapes are not equally suspicious. A **RandomBranchState** cannot
-    be a cycle at all: if the emulator's block never touches `rng`, the monster is
-    walking a fixed order where the game rolls. A ConditionalBranchState or a
-    slot-keyed opening, on the other hand, is often modelled correctly by seeding
-    MoveIndex per creature -- which is what the Myte and the Decimillipede do -- so those
-    are a read-the-source prompt rather than a finding.
+    be a cycle at all: if the emulator's block never rolls, the monster is walking a fixed
+    order where the game rolls. A ConditionalBranchState or a slot-keyed opening, on the
+    other hand, is often modelled correctly by seeding MoveIndex per creature -- which is
+    what the Myte and the Decimillipede do -- so those are a read-the-source prompt rather
+    than a finding.
+
+    Two things this check got wrong before, both of which made it over-report:
+
+    - **A declared branch is not a reachable one** (see `is_reachable`).
+    - **"Touches rng" was a regex for `rng.`**, and the emulator rolls through
+      `PickBranch(eligible, rng)` and `PickWeightedBranch(...)` far more often than it
+      calls a method on the stream. Four monsters were reported as walking a fixed order
+      while rolling on the line below.
     """
-    shapes = [s for s in BRANCHING if s in source]
+    shapes = [s for s in BRANCHING if s in source and is_reachable(source, s)]
     if re.search(r"(\w+)\.FollowUpState = \1\b", source):
         shapes.append("a move that follows up to ITSELF")
     if "StarterMoveIdx" in source or "SlotName ==" in source:
@@ -163,7 +211,10 @@ def check_shape(monster: str, source: str, block: str) -> list[str]:
     if not re.search(r"MoveIndex\s*%", block):
         return []
 
-    rolls = re.search(r"\brng\.", block) is not None
+    # Any use of the stream, not just a method call on it: the emulator rolls through
+    # `PickBranch(eligible, rng)` and `PickWeightedBranch([...], rng)` much more often
+    # than it calls `rng.NextDouble()` directly.
+    rolls = re.search(r"\brng\b", block) is not None
     if "RandomBranchState" in shapes and not rolls:
         joined = ", ".join(shapes)
         strong = (
@@ -195,7 +246,7 @@ def main() -> None:
         monster = path.stem
         if args.monster and monster != args.monster:
             continue
-        source = path.read_text(encoding="utf-8")
+        source = strip_comments(path.read_text(encoding="utf-8"))
         if "GenerateMoveStateMachine" not in source:
             continue
         if monster in NOT_A_MONSTER:

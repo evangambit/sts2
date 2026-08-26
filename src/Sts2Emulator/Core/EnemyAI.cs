@@ -496,6 +496,13 @@ public static class EnemyAI
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Vulnerable, 4);
                 }
 
+                // TongueLashMove applies FrailPower(2) after it swings. This lived in
+                // ApplyDebuffIntent, and the knight has no Debuff intent at all.
+                if (enemy.DefId == KE.FrogKnight && enemy.LastMove == 0)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
+                }
+
                 // EbbMove attacks and then gains EbbBlock, a flat 33.
                 if (enemy.DefId == KE.Aeonglass && enemy.MoveIndex % 3 == 0)
                 {
@@ -1370,12 +1377,56 @@ public static class EnemyAI
                     : new Intent(IntentType.Attack, 21);
 
             case KE.FrogKnight:
-                return (enemy.MoveIndex % 3) switch
+            {
+                // TONGUE_LASH -> STRIKE_DOWN_EVIL -> FOR_THE_QUEEN -> a
+                // ConditionalBranchState that sends it back to the lash unless the knight
+                // has dropped below half HP without having charged yet, in which case
+                // BEETLE_CHARGE -> TONGUE_LASH.
+                //
+                // The emulator ran a flat `% 3` with STRIKE_DOWN_EVIL and FOR_THE_QUEEN
+                // the wrong way round -- so every Strength the knight took landed a turn
+                // early and its 23 came before its 14 rather than after. BEETLE_CHARGE,
+                // its biggest move by a distance, was unreachable.
+                const int tongueLash = 0;
+                const int strikeDownEvil = 1;
+                const int forTheQueen = 2;
+                const int beetleCharge = 3;
+                int knightMove = enemy.LastMove switch
                 {
-                    0 => new Intent(IntentType.Buff, 5),
-                    1 => new Intent(IntentType.Attack, 23),
-                    _ => new Intent(IntentType.Attack, 14),
+                    tongueLash => strikeDownEvil,
+                    strikeDownEvil => forTheQueen,
+                    // HasBeetleCharged is set by the charge and never cleared, so the
+                    // branch is a one-off: past half HP it lashes from here forever.
+                    forTheQueen => !enemy.OnceOnlyMoveUsed && enemy.Hp < enemy.MaxHp / 2
+                        ? beetleCharge
+                        : tongueLash,
+                    _ => tongueLash,
                 };
+                enemy.OnceOnlyMoveUsed |= knightMove == beetleCharge;
+                enemy.LastMove = knightMove;
+                return knightMove switch
+                {
+                    // TongueLashDamage, plus FrailPower(2) -- which sat in the debuff
+                    // branch, and every one of the knight's moves that deals damage
+                    // announces as an Attack, so it never ran.
+                    tongueLash => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 14, 13)
+                    ),
+                    // StrikeDownEvilDamage
+                    strikeDownEvil => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 23, 21)
+                    ),
+                    // FOR_THE_QUEEN: StrengthPower(5) on itself.
+                    forTheQueen => new Intent(IntentType.Buff, 5),
+                    // BeetleChargeDamage
+                    _ => new Intent(
+                        IntentType.Attack,
+                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 40, 35)
+                    ),
+                };
+            }
 
             case KE.GlobeHead:
                 // SHOCKING_SLAP -> THUNDER_STRIKE -> GALVANIC_BURST, cycling. Index 0 had
@@ -1753,6 +1804,36 @@ public static class EnemyAI
                 // numbering as though it were the cycle put every segment's second and
                 // third moves the wrong way round. MoveIndex is seeded with the CYCLE
                 // POSITION now, so this is the cycle itself.
+                //
+                // Except once. DEAD_MOVE -> REATTACH_MOVE -> a RandomBranchState over all
+                // three moves, each CannotRepeat -- so a segment that comes back ROLLS
+                // rather than picking the cycle up where it fell, and that roll is a draw
+                // on the AI stream the emulator was not making. The branch is reached from
+                // nowhere else, which is why this is the only place it appears.
+                if (enemy.RollsNextMove)
+                {
+                    enemy.RollsNextMove = false;
+                    // All three branches are CannotRepeat, and that is scored against the
+                    // last move LOGGED -- the last one the segment actually performed, not
+                    // the one it was announcing when it fell, since that turn never
+                    // happened. MoveIndex is the announcement; MoveIndex - 1 is the
+                    // performance.
+                    int lastPerformed = ((enemy.MoveIndex - 1) % 3 + 3) % 3;
+                    var reattached = new List<int>();
+                    for (int candidate = 0; candidate < 3; candidate++)
+                    {
+                        if (candidate != lastPerformed)
+                        {
+                            reattached.Add(candidate);
+                        }
+                    }
+
+                    // MoveIndex IS the cycle position here, so writing the rolled move
+                    // into it both announces that move and leaves ExecuteIntent to walk
+                    // the ordinary cycle on from it.
+                    enemy.MoveIndex = PickBranch(reattached, rng);
+                }
+
                 return (enemy.MoveIndex % 3) switch
                 {
                     // WRITHE_MOVE: MultiAttackIntent(WritheDamage, 2). The 12 was 6x2
@@ -3016,11 +3097,22 @@ public static class EnemyAI
 
     /// <summary>
     /// RandomBranchState.GetNextState: roll NextFloat(total weight), then walk the branches
-    /// in the order they were added, subtracting each weight until the roll runs out. With
-    /// every weight at 1 the distribution is uniform, but the DRAW is not the same as
-    /// Next(n) — same stream, different number — so a fight only tracks the live game if
-    /// the roll is taken the way the game takes it.
+    /// in the order they were added, subtracting each weight until the roll runs out.
     /// </summary>
+    /// <remarks>
+    /// This used to claim that the draw differs from <c>rng.Next(n)</c>. It does not, and
+    /// the claim sent a reader off to "fix" six correct call sites. Both take exactly one
+    /// value: the game's <c>Rng.NextFloat(max)</c> is <c>(float)(NextDouble() * max)</c>
+    /// and <c>MegaRandom.Next(max)</c> is <c>(int)(NextDouble() * max)</c>. With every
+    /// eligible branch at weight 1 the walk returns <c>ceil(roll) - 1</c> and the cast
+    /// returns <c>floor(roll)</c>, which agree for every roll that is not an exact integer
+    /// — checked over 400,000 draws, no mismatch. So <c>eligible[rng.Next(eligible.Count)]</c>
+    /// is a faithful uniform branch and needs no rewriting.
+    ///
+    /// What the weighted form below IS needed for is weights that are not 1 — a Two-Tailed
+    /// Rat's summon at 0.75 against three twelfths — and for keeping the branch ORDER,
+    /// which is AddBranch order and not the emulator's move numbering when the two differ.
+    /// </remarks>
     private static int PickBranch(List<int> eligible, Random rng) =>
         PickWeightedBranch([.. eligible.Select(move => (move, 1f))], rng);
 
@@ -3611,11 +3703,6 @@ public static class EnemyAI
                     BuffId.Strength,
                     Ascension.Value(state.AscensionLevel, Ascension.DeadlyEnemies, 3, 2)
                 );
-                break;
-
-            case KE.FrogKnight:
-                DealAttackDamage(enemy, state, enemy.CurrentIntent.Magnitude);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Frail, 2);
                 break;
 
             case KE.SlimedBerserker:

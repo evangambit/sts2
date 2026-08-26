@@ -472,6 +472,11 @@ public static class CombatEngine
 
                 int reattach = BuffSystem.Get(enemy.Buffs, BuffId.Reattach);
                 enemy.Hp = reattach > 0 ? Math.Min(enemy.MaxHp, enemy.Hp + reattach) : enemy.MaxHp;
+                // REATTACH_MOVE's FollowUpState is the machine's RandomBranchState, not
+                // the cycle -- so a segment that comes back ROLLS its next move rather
+                // than resuming where it fell. The Fogmog's eye returns to the move it was
+                // on, which is why this is keyed on the reattach rather than on reviving.
+                enemy.RollsNextMove = reattach > 0;
                 continue;
             }
 

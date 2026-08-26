@@ -1220,14 +1220,13 @@ public static class CombatFactory
 
     private static EnemyState CreateFrogKnight(Random rng)
     {
-        var enemy = CreateEnemy(
-            KE.FrogKnight,
-            rng,
-            new Intent(IntentType.Attack, 14),
-            moveIndex: 2
-        );
-        enemy.Block = 19;
-        BuffSystem.Apply(enemy.Buffs, BuffId.Plating, 19);
+        // The machine opens on TONGUE_LASH and is walked by LastMove, not by MoveIndex,
+        // so the old `moveIndex: 2` no longer selects anything.
+        var enemy = CreateEnemy(KE.FrogKnight, rng, new Intent(IntentType.Attack, 14));
+        // PlatingAmount, which was on the ToughEnemies branch.
+        int plating = Ascension.Value(_currentAscension, Ascension.ToughEnemies, 19, 15);
+        enemy.Block = plating;
+        BuffSystem.Apply(enemy.Buffs, BuffId.Plating, plating);
         return enemy;
     }
 
