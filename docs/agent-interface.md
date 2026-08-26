@@ -329,3 +329,38 @@ Worth recording how this was found, because two plausible readings were wrong fi
 enemy phase looked like the answer until enemy count was varied; the reshuffle looked
 like the answer until allocation was compared. **The measurement that settled it was
 turning the next turn off**, not looking harder at what was on.
+
+
+### What the allocation fix bought, and what it did not
+
+Two allocations found by the table above, both in the enemy phase:
+
+**`BuffSystem.Get` allocated on every call.** It read
+`buffs.FindIndex(b => b.Id == id)`, and that lambda CAPTURES `id` — so a display class
+and a delegate on every one of its 242 call sites, several of them per point of damage.
+A hand-written loop over what is always a handful of entries costs less than the closure
+did.
+
+**`ShuffleDiscardIntoDraw` sorted by string through LINQ.** The pile is canonicalised by
+card `Entry` before being permuted, so the same cards in a different pile order shuffle
+alike — but `OrderBy(...).ThenBy(...).ToList()` builds a buffer, a key array and a
+comparer chain each reshuffle, keyed on strings. It now sorts in place against a
+precomputed int rank, with the original position in the low bits of the key so the sort
+stays STABLE — two cards can match on Entry and Upgraded while differing in an
+enchantment the key does not see, and an unstable sort would shuffle them differently.
+
+| | before | after |
+| --- | ---: | ---: |
+| `ExecuteIntent`, attacking enemy | 3,080 B | **352 B** |
+| `ExecuteIntent`, buff or unknown intent | ~570 B | **0 B** |
+| end turn, whole step | 14.6 KB | **4.1 KB** |
+
+**Wall-clock throughput did not measurably move** — 12,500 steps/s against 13,900 before,
+which is inside the run-to-run spread. So the garbage was not what the time was going on
+at this scale, and the honest reading is that this buys headroom for sustained parallel
+training rather than a faster step today. A combat step is still ~56us median while
+allocating 4KB, which means the remaining cost is compute and **has not been located yet**.
+That is the next thread, and the table at the top of this section is how to pull it.
+
+The 32 committed run traces are what makes this kind of change safe: any drift in shuffle
+order or buff resolution breaks them loudly, and they stayed clean throughout.

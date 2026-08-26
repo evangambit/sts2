@@ -17,7 +17,7 @@ public static class BuffSystem
             }
         }
 
-        int idx = buffs.FindIndex(b => b.Id == id);
+        int idx = IndexOf(buffs, id);
         if (idx >= 0)
         {
             int newVal = buffs[idx].Magnitude + magnitude;
@@ -36,15 +36,48 @@ public static class BuffSystem
         }
     }
 
+    /// <summary>
+    /// Index of <paramref name="id" /> in <paramref name="buffs" />, or -1.
+    /// </summary>
+    /// <remarks>
+    /// A hand-written loop rather than <c>FindIndex(b =&gt; b.Id == id)</c>, because that
+    /// lambda CAPTURES `id` — so it allocates a closure and a delegate on every call, and
+    /// this is the most-called function in the emulator (242 call sites, several of them
+    /// per point of damage). It was ~3KB of garbage per attacking enemy, which is most of
+    /// what made the enemy phase the hottest path in a step. Buff lists are a handful of
+    /// entries; the scan is cheaper than the allocation was.
+    /// </remarks>
+    private static int IndexOf(List<BuffState> buffs, BuffId id)
+    {
+        for (int i = 0; i < buffs.Count; i++)
+        {
+            if (buffs[i].Id == id)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     public static int Get(List<BuffState> buffs, BuffId id)
     {
-        int idx = buffs.FindIndex(b => b.Id == id);
+        int idx = IndexOf(buffs, id);
         return idx >= 0 ? buffs[idx].Magnitude : 0;
     }
 
     public static bool Has(List<BuffState> buffs, BuffId id) => Get(buffs, id) > 0;
 
-    public static void Remove(List<BuffState> buffs, BuffId id) => buffs.RemoveAll(b => b.Id == id);
+    public static void Remove(List<BuffState> buffs, BuffId id)
+    {
+        for (int i = buffs.Count - 1; i >= 0; i--)
+        {
+            if (buffs[i].Id == id)
+            {
+                buffs.RemoveAt(i);
+            }
+        }
+    }
 
     public static bool TryConsumeArtifact(List<BuffState> buffs)
     {
@@ -54,7 +87,7 @@ public static class BuffSystem
             return false;
         }
 
-        int artifactIdx = buffs.FindIndex(b => b.Id == BuffId.Artifact);
+        int artifactIdx = IndexOf(buffs, BuffId.Artifact);
         if (artifact == 1)
         {
             buffs.RemoveAt(artifactIdx);

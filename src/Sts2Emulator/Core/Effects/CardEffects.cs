@@ -2005,18 +2005,102 @@ public static class CardEffects
     /// instead lands the pile in a different order, and Fisher-Yates over a different
     /// order draws a different sequence out of the same stream.
     /// </summary>
+    /// <summary>
+    /// Ordinal rank of each card's <c>Entry</c>, indexed by def id.
+    /// </summary>
+    /// <remarks>
+    /// The shuffle canonicalises the pile by Entry before permuting it, so that the same
+    /// cards in a different pile order still shuffle to the same result. Comparing the
+    /// STRINGS to do that was the single largest allocation in the emulator's hottest
+    /// path — LINQ's OrderBy builds its own buffer, key array and comparer chain on every
+    /// reshuffle. The ranks are the same ordering, precomputed once, as ints.
+    /// </remarks>
+    private static readonly int[] EntryRank = BuildEntryRank();
+
+    private static int[] BuildEntryRank()
+    {
+        var all = GeneratedData.Cards.All;
+        var ids = new int[all.Length];
+        var entries = new string[all.Length];
+        int highest = 0;
+        for (int i = 0; i < all.Length; i++)
+        {
+            ids[i] = all[i].Id;
+            entries[i] = all[i].Entry;
+            highest = Math.Max(highest, all[i].Id);
+        }
+
+        Array.Sort(entries, ids, StringComparer.Ordinal);
+        var rank = new int[highest + 1];
+        for (int i = 0; i < ids.Length; i++)
+        {
+            rank[ids[i]] = i;
+        }
+
+        return rank;
+    }
+
+    // Reused across shuffles so a reshuffle allocates nothing once the piles have been
+    // this big before. ThreadStatic because a tree search forks runs, and two handles on
+    // two threads must not share a scratch buffer.
+    [ThreadStatic]
+    private static CardInstance[]? _shuffleCards;
+
+    [ThreadStatic]
+    private static long[]? _shuffleKeys;
+
     public static void ShuffleDiscardIntoDraw(CombatState state, Random rng)
     {
-        var merged = new List<CardInstance>(state.DiscardPile);
-        merged.AddRange(state.DrawPile);
-        state.DrawPile = merged
-            .OrderBy(c => GeneratedData.Cards.Get(c.DefId).Entry, StringComparer.Ordinal)
-            .ThenBy(c => c.Upgraded ? 1 : 0)
-            .ToList();
+        int count = state.DiscardPile.Count + state.DrawPile.Count;
+        if (_shuffleCards is null || _shuffleCards.Length < count)
+        {
+            int size = Math.Max(64, count * 2);
+            _shuffleCards = new CardInstance[size];
+            _shuffleKeys = new long[size];
+        }
+
+        var cards = _shuffleCards;
+        var keys = _shuffleKeys!;
+
+        // Discard first and then draw, which is the order the merged list used to be
+        // built in -- and the low bits of the key are the position, so equal cards keep
+        // it. That is what makes this sort STABLE, as OrderBy's was: two cards can match
+        // on Entry and Upgraded while differing in an enchantment the key does not see,
+        // and an unstable sort would put them either way round and shuffle differently.
+        int index = 0;
+        foreach (var card in state.DiscardPile)
+        {
+            cards[index] = card;
+            keys[index] = Key(card, index);
+            index++;
+        }
+
+        foreach (var card in state.DrawPile)
+        {
+            cards[index] = card;
+            keys[index] = Key(card, index);
+            index++;
+        }
+
+        Array.Sort(keys, cards, 0, count);
+
+        state.DrawPile.Clear();
+        for (int i = 0; i < count; i++)
+        {
+            state.DrawPile.Add(cards[i]);
+        }
+
         ShufflePile(state.DrawPile, state.ShuffleRng ?? rng);
         state.ForgetDrawOrder();
         state.DiscardPile.Clear();
         MoveStratagemCardsToHandAfterShuffle(state);
+
+        static long Key(CardInstance card, int position)
+        {
+            int id = Math.Abs(card.DefId);
+            int rank = id < EntryRank.Length ? EntryRank[id] : EntryRank.Length;
+            return ((long)rank << 32) | ((long)(card.Upgraded ? 1 : 0) << 31) | (uint)position;
+        }
     }
 
     public static void ShufflePile<T>(IList<T> pile, Random rng)
