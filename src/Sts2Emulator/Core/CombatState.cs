@@ -65,6 +65,14 @@ public sealed class CombatState
     /// is answered.
     /// </summary>
     public bool EndTurnAwaitingSelection;
+
+    /// <summary>
+    /// `AfterimagePower.BeforeCardPlayed` records the power's amount for the card about to
+    /// be played, and `AfterCardPlayed` spends THAT rather than whatever the amount has
+    /// become. Read before the card resolves for the reason its own Data comment gives:
+    /// so an Afterimage does not pay out on its own play.
+    /// </summary>
+    public int AfterimageBeforePlay;
     public List<CardInstance> AutoPlayQueue = [];
 
     // Defect-style orb queue.

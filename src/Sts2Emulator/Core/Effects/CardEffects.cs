@@ -1678,13 +1678,24 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.SerpentForm, upgraded ? 6 : 4);
                 break;
 
-            case SI.ShadowStep: // 1/0-cost, discard hand and gain Intangible
+            case SI.ShadowStep: // 1/0-cost, discard the hand; NEXT turn your damage doubles
+                // `ShadowStepPower.AfterSideTurnStart` applies `DoubleDamagePower` and
+                // removes itself, so the payload lands at the start of the next turn and
+                // lasts that turn. The emulator gave INTANGIBLE 1 -- a defensive buff
+                // where the card is an offensive one, and immediate where the card is
+                // delayed. Discarding your hand to take less damage is a different plan
+                // from discarding it to hit twice as hard next turn.
                 DiscardFirstCardsFromHand(state, state.Hand.Count);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.ShadowStep, 1);
                 break;
 
-            case SI.Shadowmeld: // 1/0-cost, retain hand for one turn
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, 1);
+            case SI.Shadowmeld: // 1/0-cost, all block this turn is DOUBLED
+                // `ShadowmeldPower.ModifyBlockMultiplicative` returns `2^Amount` for its
+                // owner and `AfterSideTurnEnd` removes it. The emulator applied
+                // `BuffId.RetainHand` -- keep your hand for a turn -- which is a different
+                // card doing a different thing, and the second time this batch that a
+                // Silent rare was standing in for RetainHand (see Well-Laid Plans, E170).
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Shadowmeld, 1);
                 break;
 
             case SI.Skewer: // X-cost, 8/11 damage X times
@@ -3294,6 +3305,16 @@ public static class CardEffects
         int effective = powered
             ? BuffSystem.IncomingBlock(amount, state.PlayerBuffs, isDefend)
             : amount;
+
+        // `ShadowmeldPower.ModifyBlockMultiplicative` does not look at `props`, so it
+        // doubles UNPOWERED block too -- Afterimage's, for one, which can land in the same
+        // turn. That is why it sits here rather than inside IncomingBlock.
+        int shadowmeld = BuffSystem.Get(state.PlayerBuffs, BuffId.Shadowmeld);
+        for (int i = 0; i < shadowmeld; i++)
+        {
+            effective *= 2;
+        }
+
         if (effective <= 0)
         {
             // The game clamps with `Math.Max(modifiedAmount, 0m)` and returns it even

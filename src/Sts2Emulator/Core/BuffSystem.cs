@@ -245,6 +245,20 @@ public static class BuffSystem
             dmg *= tracking;
         }
 
+        // DoubleDamagePower.ModifyDamageMultiplicative returns a flat `2m` for a powered
+        // CARD attack by its owner. The amount is a STACK COUNT and not a multiplier --
+        // two stacks are still double, and buy a second turn of it rather than quadruple
+        // damage.
+        //
+        // The game also requires `cardSource != null`, which this function cannot see.
+        // Player damage that is not from a card is Unpowered in the emulator and does not
+        // reach here, so the two agree for every source that exists today -- the same
+        // standing caveat Tracking above carries.
+        if (Get(attackerBuffs, BuffId.DoubleDamage) > 0)
+        {
+            dmg *= 2;
+        }
+
         // SoarPower.ModifyDamageMultiplicative: a flying Owl Magistrate takes half from a
         // POWERED attack, which is the only kind that reaches this function.
         if (Get(defenderBuffs, BuffId.Soar) > 0)

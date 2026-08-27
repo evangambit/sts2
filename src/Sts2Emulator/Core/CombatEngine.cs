@@ -157,6 +157,10 @@ public static class CombatEngine
                 : 0;
         int serpentFormBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.SerpentForm);
 
+        // Read here, with Burst and Serpent Form, for the same reason all three are:
+        // the power records what it was worth when the play STARTED.
+        state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
+
         ApplyEnchantmentOnPlay(state, card, rng);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
         if (burstPlays > 0)
@@ -397,6 +401,18 @@ public static class CombatEngine
         AutoPlayStampedeAttacks(state, rng);
 
         Effects.RelicEffects.ApplyEndOfPlayerTurn(state, rng);
+
+        // `DoubleDamagePower.AfterSideTurnEnd` DECREMENTS -- so a stack bought by one
+        // Shadow Step covers exactly the turn it arrived for.
+        int doubleDamage = BuffSystem.Get(state.PlayerBuffs, BuffId.DoubleDamage);
+        if (doubleDamage > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.DoubleDamage, -1);
+        }
+
+        // `ShadowmeldPower.AfterSideTurnEnd` removes itself outright, so the doubling is
+        // for the turn it was played and no part of the next one.
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.Shadowmeld);
 
         // TangledPower.AfterSideTurnEnd removes itself when its OWNER's side turn ends —
         // the player's. Removing it at the start of the player turn instead meant the Vine
@@ -891,6 +907,15 @@ public static class CombatEngine
         ReturnQueuedCardsToHandBeforeDraw(state);
         DeliverQueuedCardCopiesBeforeDraw(state);
 
+        // `ShadowStepPower.AfterSideTurnStart` converts itself into DoubleDamage and then
+        // removes itself, which is what makes Shadow Step's payload land a turn late.
+        int shadowStep = BuffSystem.Get(state.PlayerBuffs, BuffId.ShadowStep);
+        if (shadowStep > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.DoubleDamage, shadowStep);
+            BuffSystem.Remove(state.PlayerBuffs, BuffId.ShadowStep);
+        }
+
         // `InfiniteBladesPower.BeforeHandDraw` -- so the Shivs are in hand BEFORE the five
         // are drawn, not after. It matters at the hand limit: the Shivs take their slots
         // first and the draw is what gets cut short, which is the opposite of what the
@@ -926,11 +951,27 @@ public static class CombatEngine
             Effects.CardEffects.DrawCards(state, nextTurnDraw, rng);
             BuffSystem.Remove(state.PlayerBuffs, BuffId.NextTurnDraw);
         }
+        // `ToolsOfTheTradePower` is two hooks. `ModifyHandDraw` adds its amount to the
+        // hand draw, and `AfterPlayerTurnStart` raises a DISCARD SELECTION for that many
+        // cards -- `CardSelectCmd.FromHandForDiscard` with a `CardSelectorPrefs(prompt,
+        // Amount)`, whose single-count constructor sets min and max alike, so the discard
+        // is compulsory but the CHOICE is the player's.
+        //
+        // The emulator threw away the leftmost card. Tools of the Trade is a filtering
+        // card -- drawing one more and pitching your worst is the whole engine -- and
+        // pitching whatever happens to be first is closer to a downside than an upside.
+        //
+        // The screen is left standing when the turn-start work finishes: nothing is owed
+        // afterwards, so `ValidActions` simply restricts to it until it is answered.
         int toolsOfTheTrade = BuffSystem.Get(state.PlayerBuffs, BuffId.ToolsOfTheTrade);
         if (toolsOfTheTrade > 0)
         {
             Effects.CardEffects.DrawCards(state, toolsOfTheTrade, rng);
-            Effects.CardEffects.DiscardFirstCardsFromHand(state, toolsOfTheTrade);
+            Effects.CardEffects.OpenDiscardSelection(
+                state,
+                Effects.SI.ToolsOfTheTrade,
+                toolsOfTheTrade
+            );
         }
 
         // `WraithFormPower.AfterSideTurnStart` takes its Amount in Dexterity every turn.
@@ -2270,6 +2311,8 @@ public static class CombatEngine
         }
 
         state.Hand.RemoveAt(handIndex);
+        // BeforeCardPlayed fires for an auto-play too -- it is an ordinary CardModel.Play.
+        state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
         if (def.Type == CardType.Attack)
         {
@@ -2427,10 +2470,18 @@ public static class CombatEngine
             }
         }
 
-        int afterimage = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
-        if (afterimage > 0)
+        // `AfterimagePower` records its amount in `BeforeCardPlayed` and spends THAT in
+        // `AfterCardPlayed` -- the comment on its internal Data says so outright: "avoid
+        // triggering on cards that started play before it was applied, and avoid gaining
+        // extra block on multiple plays of After Image". So the first Afterimage pays out
+        // nothing for its own play, and the second pays 1 rather than 2. Reading the
+        // amount here, after the card resolved, gave both of them a turn's head start --
+        // the same defect Burst had.
+        //
+        // The block is `ValueProp.Unpowered`, so Dexterity does not touch it.
+        if (state.AfterimageBeforePlay > 0)
         {
-            Effects.CardEffects.GainBlock(state, afterimage, rng);
+            Effects.CardEffects.GainUnpoweredBlock(state, state.AfterimageBeforePlay, rng);
         }
 
         foreach (var enemy in state.Enemies.Where(e => e.Hp > 0))
@@ -2604,6 +2655,7 @@ public static class CombatEngine
         }
 
         // Apply card effects.
+        state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
         int callerTarget = state.TargetEnemyIndex;
         state.TargetEnemyIndex = targetIndex;
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);

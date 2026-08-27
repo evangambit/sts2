@@ -336,6 +336,7 @@ public static class CombatFactory
         state.ReturnToHandBeforeDraw = [];
         state.CopiesToHandBeforeDraw = [];
         state.EndTurnAwaitingSelection = false;
+        state.AfterimageBeforePlay = 0;
         state.PotionSlots = new int[3];
         for (int i = 0; i < Math.Min(state.PotionSlots.Length, potionIds.Length); i++)
         {

@@ -261,6 +261,28 @@ public enum BuffId
     /// after it and silently changes the meaning of every committed fixture.
     /// </remarks>
     WellLaidPlans,
+
+    /// <summary>
+    /// <c>ShadowStepPower</c>: converts itself into <see cref="DoubleDamage" /> at the
+    /// start of its owner's next turn and then removes itself. Shadow Step's real payload,
+    /// held for a turn.
+    /// </summary>
+    ShadowStep,
+
+    /// <summary>
+    /// <c>DoubleDamagePower.ModifyDamageMultiplicative</c>: a flat <c>2m</c> on a powered
+    /// CARD attack by its owner — the amount is a stack count, not a multiplier, so two
+    /// stacks are still double and last two turns. Decrements at the end of the owner's
+    /// side turn.
+    /// </summary>
+    DoubleDamage,
+
+    /// <summary>
+    /// <c>ShadowmeldPower.ModifyBlockMultiplicative</c>: block its owner gains is
+    /// multiplied by <c>2^Amount</c>, and the power is removed at the end of their side
+    /// turn — so it doubles a single turn's block, however that block was gained.
+    /// </summary>
+    Shadowmeld,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);
