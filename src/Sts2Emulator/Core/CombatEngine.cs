@@ -656,6 +656,16 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, -1);
         }
 
+        // `TemporaryDexterityPower` hands its Dexterity back at the end of the turn --
+        // Anticipate's is the Silent's, and reading its VAR rather than the power it
+        // applies made a 0-cost common a permanent buff.
+        int temporaryDexterity = BuffSystem.Get(state.PlayerBuffs, BuffId.TemporaryDexterity);
+        if (temporaryDexterity > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, -temporaryDexterity);
+            BuffSystem.Remove(state.PlayerBuffs, BuffId.TemporaryDexterity);
+        }
+
         // FlameBarrier expires after enemies have acted.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.FlameBarrier);
 
@@ -1125,6 +1135,19 @@ public static class CombatEngine
         card.DefId != Effects.ST.Enthralled
         && state.Hand.Any(handCard => handCard.DefId == Effects.ST.Enthralled);
 
+    /// <summary>
+    /// `CardModel.IsPlayable`, for the cards that override it: a rule about the STATE
+    /// rather than about the cost or a debuff.
+    /// </summary>
+    /// <remarks>
+    /// Grand Finale is the Silent's: playable only with an empty draw pile. The emulator
+    /// used to check that inside the card's effect and deal nothing otherwise, which is a
+    /// different game — the play was allowed, the energy and the card were spent, and an
+    /// agent was offered an action the real game does not have.
+    /// </remarks>
+    private static bool IsPlayableNow(CombatState state, CardDef def) =>
+        def.Name != "GrandFinale" || state.DrawPile.Count == 0;
+
     public static int[] ValidActions(CombatState state)
     {
         var actions = new List<int>();
@@ -1146,6 +1169,7 @@ public static class CombatEngine
             int energyToSpend = Math.Max(0, effectiveCost);
             if (
                 !def.Unplayable
+                && IsPlayableNow(state, def)
                 && energyToSpend <= state.Energy
                 && !IsBlockedBySmoggy(def, state)
                 && !IsBlockedByEnthralled(state.Hand[i], state)

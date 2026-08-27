@@ -1073,8 +1073,13 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Afterimage, 1);
                 break;
 
-            case SI.Anticipate: // 0-cost, gain 2/3 Dexterity via AnticipatePower
+            case SI.Anticipate: // 0-cost, TEMPORARY 2/3 Dexterity
+                // The var is a `PowerVar<DexterityPower>`, but the card applies
+                // `AnticipatePower` -- which is a `TemporaryDexterityPower`, handed back at
+                // the end of the turn. Reading the var and not the Apply gave the player
+                // permanent Dexterity from a 0-cost common.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, upgraded ? 3 : 2);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryDexterity, upgraded ? 3 : 2);
                 break;
 
             case SI.Assassinate: // 0-cost, 10/13 damage + Vulnerable 1/2, exhaust
@@ -1141,9 +1146,12 @@ public static class CardEffects
                 break;
             }
 
-            case SI.BulletTime: // 3/2-cost, make hand free this turn and prevent draw
+            case SI.BulletTime: // 3/2-cost, hand costs nothing this turn and you cannot DRAW
+                // `NoDrawPower`, not NoBlock. The comment beside it said "prevent draw" and
+                // the line applied the wrong buff, so the card stopped the player blocking
+                // and left them drawing freely.
                 MakeHandFreeThisTurn(state);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoDraw, 1);
                 break;
 
             case SI.Burst: // 1-cost, the next 1/2 SKILLS are played twice
@@ -1237,7 +1245,11 @@ public static class CardEffects
                 if (target != null)
                 {
                     target.Block = 0;
-                    BuffSystem.TryConsumeArtifact(target.Buffs);
+                    // `PowerCmd.Remove<ArtifactPower>` takes the whole power off, not one
+                    // stack -- and it happens BEFORE the Vulnerable, so the debuff always
+                    // lands. Consuming a single charge left a two-Artifact enemy holding
+                    // one, which then swallowed the Vulnerable this card exists to apply.
+                    BuffSystem.Remove(target.Buffs, BuffId.Artifact);
                     ApplyEnemyDebuffToTarget(
                         state,
                         target,
@@ -1284,19 +1296,24 @@ public static class CardEffects
                 break;
 
             case SI.Scare: // 0-cost, Weak 2/3
-            case SI.Haze: // 1-cost, Weak 2/3
-                ApplyEnemyDebuff(state, BuffId.Weak, upgraded ? 3 : 2, rng);
+            case SI.Haze: // 1-cost, Poison 4/6 to EVERY enemy
+                // The card applies PoisonPower to every hittable enemy. The emulator gave
+                // Weak to ONE -- the wrong debuff, on the wrong number of creatures, for a
+                // card whose var is `PowerVar<PoisonPower>(4m)`.
+                ApplyAllEnemyDebuff(state, BuffId.Poison, upgraded ? 6 : 4, rng);
                 break;
 
             case SI.Footwork: // 1-cost, 2/3 Dexterity
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, upgraded ? 3 : 2);
                 break;
 
-            case SI.GrandFinale: // 0-cost, playable with empty draw pile, 60/75 to all
-                if (state.DrawPile.Count == 0)
-                {
-                    DealDamageToAll(state, Dmg(def, upgraded, card));
-                }
+            case SI.GrandFinale: // 0-cost, 60/75 to all -- UNPLAYABLE unless the draw pile is empty
+                // `IsPlayable => PileType.Draw.GetPile(owner).Cards.Count == 0` is a
+                // playability rule, so the action mask has to carry it. Checking it inside
+                // the effect instead let the card be played for nothing -- a wasted card
+                // and a wasted energy that the game does not allow, and an action an agent
+                // was offered and punished for taking.
+                DealDamageToAll(state, Dmg(def, upgraded, card));
                 break;
 
             case SI.HandTrick: // 1-cost, 7/10 block and mark a CHOSEN Skill Sly
@@ -1366,8 +1383,12 @@ public static class CardEffects
 
             case SI.Malaise: // X-cost, enemy loses X Strength and gains X Weak
             {
-                int x = state.Energy;
-                ApplyTemporaryStrengthDownToEnemy(state, x);
+                // X, plus one more when upgraded -- `if (base.IsUpgraded) powerAmount++`,
+                // which the emulator ignored entirely. And the Strength loss is a plain
+                // `StrengthPower(-powerAmount)`: PERMANENT, not the temporary one that is
+                // handed back at end of turn.
+                int x = state.Energy + (upgraded ? 1 : 0);
+                ApplyEnemyDebuff(state, BuffId.Strength, -x, rng);
                 ApplyEnemyDebuff(state, BuffId.Weak, x, rng);
                 state.Energy = 0;
                 break;
@@ -1391,8 +1412,18 @@ public static class CardEffects
                 DealDamage(state, 9);
                 break;
 
-            case SI.Mirage: // 1-cost, 10/14 block
-                GainBlock(state, upgraded ? 14 : 10, rng);
+            case SI.Mirage: // 1/0-cost, block equal to all the Poison on the board
+                // `CalculatedBlockVar` with a multiplier of the total PoisonPower across
+                // living enemies, base 0 and extra 1 -- so the block IS the poison, and the
+                // upgrade is a cost cut rather than a bigger number. The flat 10/14 was a
+                // guess at what that averages to.
+                GainBlock(
+                    state,
+                    state
+                        .Enemies.Where(e => e.Hp > 0)
+                        .Sum(e => BuffSystem.Get(e.Buffs, BuffId.Poison)),
+                    rng
+                );
                 break;
 
             case SI.Murder: // 3-cost, 1 damage per card drawn this combat
