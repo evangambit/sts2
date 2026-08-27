@@ -1188,7 +1188,7 @@ when the real number is 552.
 | ----------- | ----: | ----------: | -----: |
 | Ironclad    |    87 |          85 |     86 |
 | Colourless  |    64 |          64 |     64 |
-| Silent      |    88 |          88 |     41 |
+| Silent      |    88 |          88 |     42 |
 | Defect      |    88 |          87 |      0 |
 | Necrobinder |    88 |          88 |      0 |
 | Regent      |    88 |          88 |      0 |

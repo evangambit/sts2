@@ -711,10 +711,20 @@ public static class CombatEngine
             Effects.CardEffects.TransformRandomCardInHand(state, rng);
         }
 
-        // Barricade: block does not reset.
-        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Barricade) == 0)
+        // Barricade: block does not reset. Blur is the same rule with a counter --
+        // `BlurPower.ShouldClearBlock` is false for its owner while any remains -- and it
+        // decrements at every side turn start its owner takes part in, whether or not it
+        // was the thing that saved the block. Barricade does NOT decrement, which is the
+        // whole difference between the two and why they cannot share an id.
+        int blur = BuffSystem.Get(state.PlayerBuffs, BuffId.Blur);
+        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Barricade) == 0 && blur == 0)
         {
             state.PlayerBlock = 0;
+        }
+
+        if (blur > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Blur, -1);
         }
 
         ApplyBlockNextTurn(state, rng);

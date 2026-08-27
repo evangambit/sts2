@@ -1116,9 +1116,17 @@ public static class CardEffects
                 AddGeneratedCardsToHand(state, SI.Shiv, upgraded ? 4 : 3);
                 break;
 
-            case SI.Blur: // 1-cost, 5/8 block and retain block next turn
+            case SI.Blur: // 1-cost, 5/8 block, and the block survives ONE turn start
+                // `BlurPower.ShouldClearBlock` returns false for its owner, and
+                // `AfterSideTurnStart` DECREMENTS it -- so a counter of 1 saves the block
+                // once and is then gone. The emulator stood Barricade in, which is the
+                // Ironclad rare whose block never expires at all: a 1-cost common was
+                // playing as a 3-cost rare, permanently, for the rest of the combat.
+                //
+                // The card's Blur var is a flat 1 at both levels; the upgrade raises the
+                // BLOCK.
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Barricade, 1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Blur, 1);
                 break;
 
             case SI.BouncingFlask: // 2-cost, 3 Poison to a RANDOM enemy, 3/4 times

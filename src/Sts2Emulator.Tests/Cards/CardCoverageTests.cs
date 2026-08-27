@@ -47,7 +47,6 @@ public class CardCoverageTests
         "BladeDance",
         "BladeOfInk",
         "BlightStrike",
-        "Blur",
         "Bodyguard",
         "Bombardment",
         "BoneShards",
