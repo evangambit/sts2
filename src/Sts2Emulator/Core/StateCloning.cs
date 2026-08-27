@@ -143,6 +143,7 @@ public static class StateCloning
             CardsDrawnThisCombat = combat.CardsDrawnThisCombat,
             ShivsPlayedThisTurn = combat.ShivsPlayedThisTurn,
             ExtraCardRewards = combat.ExtraCardRewards,
+            AutoPlayTargetIndex = combat.AutoPlayTargetIndex,
             CardsPlayedSincePanacheProc = combat.CardsPlayedSincePanacheProc,
             BlockGainsThisTurn = combat.BlockGainsThisTurn,
             PlayerHpLostThisTurn = combat.PlayerHpLostThisTurn,

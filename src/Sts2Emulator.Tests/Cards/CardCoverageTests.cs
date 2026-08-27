@@ -198,7 +198,6 @@ public class CardCoverageTests
         "Iteration",
         "KinglyKick",
         "KinglyPunch",
-        "KnifeTrap",
         "KnockoutBlow",
         "KnowThyPlace",
         "Largesse",

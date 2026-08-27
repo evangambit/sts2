@@ -213,6 +213,18 @@ public sealed class CombatState
     /// `StolenBackGold` is, because a combat cannot reach the reward generator.
     /// </summary>
     public int ExtraCardRewards;
+
+    /// <summary>
+    /// The enemy an auto-play was given EXPLICITLY, or -1 when it has to pick its own.
+    /// </summary>
+    /// <remarks>
+    /// `CardCmd.AutoPlay` takes a target parameter. Almost everything that auto-plays
+    /// passes null and the card rolls `Rng.CombatTargets` for itself — but Knife Trap
+    /// hands each Shiv it replays the target the TRAP was aimed at, so those plays must
+    /// not roll at all. Rolling for them would hit the wrong creature and move the
+    /// stream for everything after it.
+    /// </remarks>
+    public int AutoPlayTargetIndex = -1;
     public int CardsPlayedSincePanacheProc;
     public int BlockGainsThisTurn;
     public int PlayerHpLostThisTurn;

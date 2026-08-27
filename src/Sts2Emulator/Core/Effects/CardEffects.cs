@@ -1384,9 +1384,35 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.InfiniteBlades, 1);
                 break;
 
-            case SI.KnifeTrap: // 1-cost, 4/6 Thorns
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Thorns, upgraded ? 6 : 4);
+            case SI.KnifeTrap: // 2-cost, REPLAY every Shiv in the exhaust pile
+            {
+                // The card takes every Shiv-tagged card out of the EXHAUST pile, upgrades
+                // each one if the trap is upgraded, and auto-plays them all at the trap's
+                // own target. `CalculatedShivs` is a display var counting them; there is no
+                // damage and no block on the card at all.
+                //
+                // Thorns 4/6 was not a smaller version of that. It was a different card.
+                var trapped = state.ExhaustPile.Where(c => c.DefId == SI.Shiv).ToList();
+                foreach (var shiv in trapped)
+                {
+                    state.ExhaustPile.Remove(shiv);
+                }
+
+                // Given a target, so the replays must not roll for one -- see
+                // CombatState.AutoPlayTargetIndex. The trap is TargetType.AnyEnemy, so the
+                // target is whichever enemy the play was aimed at.
+                var aim = FirstEnemy(state);
+                state.AutoPlayTargetIndex = aim is null ? -1 : state.Enemies.IndexOf(aim);
+                foreach (var shiv in trapped)
+                {
+                    // `CardCmd.Upgrade(item)` happens before the play, so an upgraded trap
+                    // replays UPGRADED Shivs -- the upgrade is on what it throws, not on
+                    // how many.
+                    state.AutoPlayQueue.Add(upgraded ? shiv with { Upgraded = true } : shiv);
+                }
+
                 break;
+            }
 
             case SI.LeadingStrike: // 1-cost Strike, 3/6 damage and add 2 Shivs
                 DealDamage(state, Dmg(def, upgraded, card));

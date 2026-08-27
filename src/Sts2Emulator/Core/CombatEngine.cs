@@ -78,6 +78,10 @@ public static class CombatEngine
             }
         }
 
+        // An explicit auto-play target belongs to the queue that was given it and nothing
+        // after: Knife Trap aims its Shivs, and the next Hellraiser must roll its own.
+        state.AutoPlayTargetIndex = -1;
+
         return result;
     }
 
@@ -2354,6 +2358,7 @@ public static class CombatEngine
     /// </remarks>
     private static void DrainAutoPlayQueue(CombatState state, Random rng)
     {
+        state.AutoPlayTargetIndex = -1;
         while (state.AutoPlayQueue.Count > 0)
         {
             var next = state.AutoPlayQueue[0];
@@ -2403,9 +2408,16 @@ public static class CombatEngine
         }
 
         // Auto-play picks its target the way CardCmd does when a played card has no
-        // explicit one: Rng.CombatTargets.NextItem(HittableEnemies).
-        int targetIndex = -1;
-        if (def.Type == CardType.Attack)
+        // explicit one: Rng.CombatTargets.NextItem(HittableEnemies) -- unless it was GIVEN
+        // one, which is what Knife Trap does to each Shiv it replays. A given target must
+        // not roll.
+        //
+        // The roll used to happen and its result was then thrown away: `targetIndex` was
+        // assigned and never read, so every auto-played attack drew from the combat-targets
+        // stream and hit the first living enemy regardless. Invisible against one creature
+        // and wrong against several, in both the target and the stream position.
+        int targetIndex = state.AutoPlayTargetIndex;
+        if (targetIndex < 0 && def.Type == CardType.Attack)
         {
             var target = Effects.CardEffects.RandomLivingEnemy(state, rng);
             if (target != null)
@@ -2415,7 +2427,10 @@ public static class CombatEngine
         }
 
         // Apply card effects.
+        int callerTarget = state.TargetEnemyIndex;
+        state.TargetEnemyIndex = targetIndex;
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
+        state.TargetEnemyIndex = callerTarget;
         if (def.Type == CardType.Attack)
         {
             QueueAttackPlayLifecycleEffects(state, card);
