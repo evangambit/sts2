@@ -68,6 +68,17 @@ public enum CardSelectionKind
     /// Weapon's does.
     /// </summary>
     MarkHandCardSly = 10,
+
+    /// <summary>
+    /// Nightmare: a card in hand is chosen, LEFT WHERE IT IS, and three copies of it join
+    /// the hand at the start of the next turn.
+    /// </summary>
+    /// <remarks>
+    /// The only selection so far that does not move the card it picks. Nightmare reads the
+    /// choice into <c>NightmarePower</c> and the power does the work a turn later, so the
+    /// pick is a question about the future rather than an edit to a pile.
+    /// </remarks>
+    QueueHandCardCopies = 11,
 }
 
 /// <summary>

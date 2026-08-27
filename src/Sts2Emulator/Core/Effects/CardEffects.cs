@@ -1108,8 +1108,18 @@ public static class CardEffects
                 DealDamage(state, Dmg(def, upgraded, card));
                 break;
 
-            case SI.BladeOfInk: // 1-cost, add 2/3 Inky Shivs
-                AddGeneratedCardsToHand(state, SI.Shiv, upgraded ? 3 : 2);
+            case SI.BladeOfInk: // 1-cost, add 2/3 Shivs, every one of them Inky
+                // `foreach (... Shiv.CreateInHand(...)) CardCmd.Enchant<Inky>(item, 1m)`.
+                // The enchantment is the card: an Inky Shiv hits for 5 rather than 4 and
+                // Weakens what it hit. Without it Blade of Ink is a worse Blade Dance --
+                // one fewer Shiv for the same cost -- which is what the emulator played.
+                AddGeneratedCardsToHand(
+                    state,
+                    SI.Shiv,
+                    upgraded ? 3 : 2,
+                    Enchantment.Inky,
+                    enchantAmount: 1
+                );
                 break;
 
             case SI.BladeDance: // 1-cost, add 3/4 Shivs, exhaust
@@ -1222,9 +1232,26 @@ public static class CardEffects
                 break;
             }
 
-            case SI.EchoingSlash: // 1-cost, 10/13 to all; gains damage per kill in the real game
-                DealDamageToAll(state, Dmg(def, upgraded, card));
+            case SI.EchoingSlash: // 1-cost, 10/13 to ALL, re-thrown once per enemy it kills
+            {
+                // `while (attackCount > 0) { attackCount--; ... attackCount +=
+                // enumerable.Count(r => r.WasTargetKilled); }` -- the volley repeats once
+                // for every creature the previous one killed, and those repeats can kill
+                // in turn. Against a row of small enemies it cascades until nothing is
+                // standing.
+                //
+                // The old comment here said the card "gains damage per kill", which is a
+                // different card: the damage never changes, the number of volleys does.
+                int damage = Dmg(def, upgraded, card);
+                int volleys = 1;
+                while (volleys > 0)
+                {
+                    volleys--;
+                    volleys += DealDamageToAllCountingKills(state, damage);
+                }
+
                 break;
+            }
 
             case SI.Envenom: // 2-cost, attacks apply 1/2 poison on damage
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Envenom, upgraded ? 2 : 1);
@@ -1487,8 +1514,28 @@ public static class CardEffects
                 break;
             }
 
-            case SI.Nightmare: // 3/2-cost, duplicate first hand card 3 times
-                DuplicateFirstCardInHand(state, 3);
+            case SI.Nightmare: // 3/2-cost: THREE copies of a CHOSEN card, next turn
+                // Two things were wrong and each was the whole card. It picked the
+                // leftmost card in hand -- Nightmare's entire point is that you choose,
+                // and a Nightmare that duplicates whatever happens to be first is a
+                // coin-flip rather than a plan. And it handed the copies over
+                // IMMEDIATELY, where `NightmarePower.BeforeHandDraw` delivers them at the
+                // start of the next turn: paying three energy for cards you cannot use
+                // this turn is why the card costs three.
+                //
+                // The upgrade only takes a point off the cost. The count is 3 either way,
+                // and the by-name fallback beneath this switch used to read it as 2/3.
+                //
+                // `CardSelectCmd.FromHand` is given a null filter, so every card in hand
+                // is a candidate -- the Nightmare itself is already out of hand by now.
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.QueueHandCardCopies,
+                    state.Hand.Count,
+                    def.Id,
+                    autoPick: 0,
+                    amount: 3
+                );
                 break;
 
             case SI.NoxiousFumes: // 1-cost, poison all enemies each turn
@@ -2615,7 +2662,7 @@ public static class CardEffects
 
         if (state.AutoPlaying)
         {
-            ResolveSelectionImmediately(state, kind, autoPick);
+            ResolveSelectionImmediately(state, kind, autoPick, amount);
             return;
         }
 
@@ -2917,7 +2964,8 @@ public static class CardEffects
     private static void ResolveSelectionImmediately(
         CombatState state,
         CardSelectionKind kind,
-        int index
+        int index,
+        int amount = 0
     )
     {
         switch (kind)
@@ -2958,6 +3006,11 @@ public static class CardEffects
 
             case CardSelectionKind.MarkHandCardSly when index < state.Hand.Count:
                 state.Hand[index] = state.Hand[index] with { SlyThisTurn = true };
+                break;
+
+            case CardSelectionKind.QueueHandCardCopies when index < state.Hand.Count:
+                // The chosen card stays exactly where it is; only copies of it are owed.
+                QueueHandCardCopies(state, state.Hand[index], amount);
                 break;
 
             case CardSelectionKind.DiscardFromHandRepeated when index < state.Hand.Count:
@@ -4594,7 +4647,6 @@ public static class CardEffects
             case "Sacrifice":
                 GainBlock(state, upgraded ? 14 : 10, rng);
                 break;
-            case "BladeOfInk":
             case "ForegoneConclusion":
             case "HiddenCache":
             case "Hotfix":
@@ -4704,7 +4756,6 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, upgraded ? 2 : 1);
                 break;
             case "DualWield":
-            case "Nightmare":
                 DuplicateFirstCardInHand(state, upgraded ? 3 : 2);
                 break;
             case "Dualcast":
@@ -5029,6 +5080,15 @@ public static class CardEffects
         if (card.Enchantment == Enchantment.TezcatarasEmber)
         {
             damage += card.EnchantAmount;
+        }
+
+        // Inky.EnchantDamageAdditive pays its own `DamageVar(1m)` rather than the amount
+        // it was applied at -- the enchantment declares `ShowAmount => false` because its
+        // numbers are vars on itself. So an Inky Shiv is 5, and would still be 5 if
+        // something applied Inky at 2.
+        if (card.Enchantment == Enchantment.Inky)
+        {
+            damage += 1;
         }
 
         // Corrupted.EnchantDamageMultiplicative is 1.5x on a powered attack, every play --
@@ -5807,11 +5867,86 @@ public static class CardEffects
         state.AutoPlayQueue.AddRange(sly);
     }
 
-    public static void AddGeneratedCardsToHand(CombatState state, int cardId, int count)
+    public static void AddGeneratedCardsToHand(
+        CombatState state,
+        int cardId,
+        int count,
+        Enchantment enchantment = Enchantment.None,
+        int enchantAmount = 0
+    )
     {
         for (int i = 0; i < count && state.Hand.Count < MaxCardsInHand; i++)
         {
-            state.Hand.Add(new CardInstance(cardId, false, FreeThisTurn: true));
+            state.Hand.Add(
+                new CardInstance(
+                    cardId,
+                    false,
+                    FreeThisTurn: true,
+                    Enchantment: enchantment,
+                    EnchantAmount: enchantAmount
+                )
+            );
+        }
+    }
+
+    /// <summary>
+    /// Damage to every hittable enemy, returning how many of them it KILLED --
+    /// `enumerable.Count(r => r.WasTargetKilled)`, which Echoing Slash spends as extra
+    /// volleys.
+    /// </summary>
+    private static int DealDamageToAllCountingKills(CombatState state, int amount)
+    {
+        int killed = 0;
+        foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToList())
+        {
+            DealDamageToEnemy(state, enemy, amount);
+            if (enemy.Hp <= 0)
+            {
+                killed++;
+            }
+        }
+
+        return killed;
+    }
+
+    /// <summary>
+    /// `Inky.OnPlay`: Weak 1 on what the card hit — its single target, or every hittable
+    /// enemy when the card is AllEnemies. The 1 is the enchantment's own
+    /// <c>PowerVar&lt;WeakPower&gt;(1m)</c>, not the amount it carries.
+    /// </summary>
+    /// <remarks>
+    /// The game reads <c>cardPlay.Target</c> for the non-AllEnemies case, which on a
+    /// Self-targeted card would be the PLAYER — so Inky on a skill would Weaken its owner.
+    /// Nothing can reach that: Blade of Ink is the only source of Inky and it enchants
+    /// Shivs, so only the enemy-targeted branches are modelled.
+    /// </remarks>
+    internal static void ApplyInkyOnPlay(CombatState state, CardDef def, Random rng)
+    {
+        if (def.Target == CardTarget.AllEnemies)
+        {
+            ApplyAllEnemyDebuff(state, BuffId.Weak, 1, rng);
+            return;
+        }
+
+        var target = FirstEnemy(state);
+        if (target is not null)
+        {
+            ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, 1, rng);
+        }
+    }
+
+    /// <summary>
+    /// `NightmarePower.SetSelectedCard` clones the chosen card and the power hands out
+    /// <paramref name="count" /> further clones of it before the next draw. A clone keeps
+    /// the upgrade and the enchantment — <c>CreateClone</c>, not <c>CreateDupe</c>, so it
+    /// keeps Exhaust too — while Nightmare itself clears the affliction, which the
+    /// emulator does not model at all.
+    /// </summary>
+    internal static void QueueHandCardCopies(CombatState state, CardInstance card, int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            state.CopiesToHandBeforeDraw.Add(card with { FreeThisTurn = false });
         }
     }
 

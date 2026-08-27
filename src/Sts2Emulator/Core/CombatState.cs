@@ -51,6 +51,13 @@ public sealed class CombatState
     public List<CardInstance> DiscardPile = [];
     public List<CardInstance> ExhaustPile = [];
     public List<CardInstance> ReturnToHandBeforeDraw = [];
+
+    /// <summary>
+    /// Clones queued by <c>NightmarePower</c>, delivered to hand at the start of the next
+    /// turn BEFORE the draw and then dropped — the power removes itself once it fires, so
+    /// this is a one-shot queue and not a standing effect.
+    /// </summary>
+    public List<CardInstance> CopiesToHandBeforeDraw = [];
     public List<CardInstance> AutoPlayQueue = [];
 
     // Defect-style orb queue.

@@ -100,6 +100,7 @@ public static class StateCloning
             DiscardPile = [.. combat.DiscardPile],
             ExhaustPile = [.. combat.ExhaustPile],
             ReturnToHandBeforeDraw = [.. combat.ReturnToHandBeforeDraw],
+            CopiesToHandBeforeDraw = [.. combat.CopiesToHandBeforeDraw],
             AutoPlayQueue = [.. combat.AutoPlayQueue],
             Orbs = [.. combat.Orbs],
             OrbCapacity = combat.OrbCapacity,

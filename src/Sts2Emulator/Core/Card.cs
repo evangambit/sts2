@@ -177,6 +177,14 @@ public enum Enchantment
 
     /// <summary>Costs nothing, gains Eternal, and adds its amount to a powered attack.</summary>
     TezcatarasEmber,
+
+    /// <summary>
+    /// Blade of Ink's rider on the Shivs it makes: +1 damage on a powered attack, and Weak
+    /// 1 on what the card hit. Both numbers are the enchantment's OWN vars — a
+    /// <c>DamageVar(1)</c> and a <c>PowerVar&lt;WeakPower&gt;(1)</c> — rather than the
+    /// amount it was applied at, which is why it declares <c>ShowAmount =&gt; false</c>.
+    /// </summary>
+    Inky,
 }
 
 /// <summary>

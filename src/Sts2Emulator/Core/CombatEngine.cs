@@ -861,6 +861,7 @@ public static class CombatEngine
         state.CardsExhaustedThisTurn = 0;
 
         ReturnQueuedCardsToHandBeforeDraw(state);
+        DeliverQueuedCardCopiesBeforeDraw(state);
 
         int creativeAi = BuffSystem.Get(state.PlayerBuffs, BuffId.CreativeAi);
         if (creativeAi > 0)
@@ -1064,6 +1065,15 @@ public static class CombatEngine
             case Enchantment.Corrupted:
                 // Unblockable, unpowered, and every play -- not once.
                 Effects.CardEffects.DealDamageToPlayer(state, 2);
+                break;
+            case Enchantment.Inky:
+                // Inky.OnPlay applies Weak 1 to what the card hit. It is the only modelled
+                // enchantment whose payload lands on an ENEMY rather than on its owner.
+                Effects.CardEffects.ApplyInkyOnPlay(
+                    state,
+                    GeneratedData.Cards.Get(card.DefId),
+                    rng
+                );
                 break;
             case Enchantment.Goopy:
                 // AfterCardPlayed bumps the amount, and bumps the DECK version's too --
@@ -1315,6 +1325,19 @@ public static class CombatEngine
                 if (index < state.Hand.Count)
                 {
                     state.Hand[index] = state.Hand[index] with { SlyThisTurn = true };
+                }
+
+                break;
+
+            case CardSelectionKind.QueueHandCardCopies:
+                if (index < state.Hand.Count)
+                {
+                    // The chosen card is not moved -- Nightmare only reads it.
+                    Effects.CardEffects.QueueHandCardCopies(
+                        state,
+                        state.Hand[index],
+                        selection.Amount
+                    );
                 }
 
                 break;
@@ -2037,6 +2060,27 @@ public static class CombatEngine
             state.Hand.Add(card with { FreeThisTurn = false });
         }
         state.ReturnToHandBeforeDraw.Clear();
+    }
+
+    /// <summary>
+    /// `NightmarePower.BeforeHandDraw` adds its clones and then removes itself, so they
+    /// arrive ONCE, at the start of the next turn and before the draw. Delivering them
+    /// when the card was played -- what the emulator used to do -- gives away the reason
+    /// the card costs three energy.
+    /// </summary>
+    private static void DeliverQueuedCardCopiesBeforeDraw(CombatState state)
+    {
+        foreach (var copy in state.CopiesToHandBeforeDraw)
+        {
+            if (state.Hand.Count >= Effects.CardEffects.MaxCardsInHand)
+            {
+                break;
+            }
+
+            state.Hand.Add(copy);
+        }
+
+        state.CopiesToHandBeforeDraw.Clear();
     }
 
     private static void RemoveFirstMatchingCard(List<CardInstance> pile, CardInstance card)
