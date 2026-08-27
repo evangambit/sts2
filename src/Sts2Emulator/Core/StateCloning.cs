@@ -103,6 +103,7 @@ public static class StateCloning
             CopiesToHandBeforeDraw = [.. combat.CopiesToHandBeforeDraw],
             EndTurnAwaitingSelection = combat.EndTurnAwaitingSelection,
             AfterimageBeforePlay = combat.AfterimageBeforePlay,
+            ResolvingDefendCard = combat.ResolvingDefendCard,
             AutoPlayQueue = [.. combat.AutoPlayQueue],
             Orbs = [.. combat.Orbs],
             OrbCapacity = combat.OrbCapacity,

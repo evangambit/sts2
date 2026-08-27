@@ -73,6 +73,14 @@ public sealed class CombatState
     /// so an Afterimage does not pay out on its own play.
     /// </summary>
     public int AfterimageBeforePlay;
+
+    /// <summary>
+    /// Whether the card currently resolving is tagged <c>CardTag.Defend</c>, which is what
+    /// `FastenPower.ModifyBlockAdditive` asks about the block's `cardSource`. Set for the
+    /// duration of the card so any block it gains carries the tag, rather than every arm
+    /// that blocks having to remember to say so.
+    /// </summary>
+    public bool ResolvingDefendCard;
     public List<CardInstance> AutoPlayQueue = [];
 
     // Defect-style orb queue.

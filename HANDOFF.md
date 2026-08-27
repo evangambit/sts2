@@ -177,11 +177,18 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   than the game would.
 - **Enemy HP now rolled faithfully** (was hardcoded `fixedHp`; now uses the game's
   Niche stream + unique-HP set — commit `123fecf`).
+- ✅ **Every Silent card — all 89, the whole `SilentCardPool` plus the Shiv — has tests.**
+  The last 40 were swept in four batches by rarity, and **the hit rate did not fall as the
+  cards got simpler**: 4 of 15 commons wrong, 6 of 12 uncommons, 4 of 9 rares, 1 of 4
+  basics. A third to a half at every tier. That is the argument against triaging card work
+  by rarity — a simple card is not a card that was got right, it is a card nobody looked
+  at. The three hardest (Nightmare, Echoing Slash, Blade of Ink) had been deferred as O24
+  and are done. See E112-E175.
 - ✅ **Every Ironclad card — all 92 — has tests**, written against `decompiled/` with the
   source cited per file, never against emulator output. `CardCoverageTests` is the guard:
   `scripts/generate_card_coverage.py` scrapes the `case` labels out of `CardEffects.Apply`
   into `ImplementedCards.g.cs`, and implementing a card now fails the build until it is
-  tested or explicitly deferred in `Pending` (**314 left**).
+  tested or explicitly deferred in `Pending` (**310 left**).
   Caveat worth knowing: the guard only sees cards with their own `case`. Strike, Defend
   and Giant Rock run on the generic damage-and-block path and were invisible to it — they
   have tests now, but an empty `Pending` still means "every card with effect code", not

@@ -10,7 +10,48 @@ public static class CardEffects
     public static bool BurnsHolderAtTurnEnd(int defId) =>
         defId is ST.Burn or ST.Infection or ST.Toxic or ST.Wither;
 
+    /// <summary>
+    /// Resolves a card, with the Defend tag hoisted out of it.
+    /// </summary>
+    /// <remarks>
+    /// `FastenPower.ModifyBlockAdditive` asks whether the block's `cardSource` is tagged
+    /// <c>CardTag.Defend</c>, and that is a fact about the CARD rather than about the call
+    /// that gained the block. Carrying it on the state for the duration means every arm
+    /// that blocks honours it, where passing it per call site meant the two Defends with
+    /// their own `case` silently did not — the same shape as the discard chokepoint and
+    /// the temporary-strength helper.
+    /// </remarks>
     public static void Apply(
+        CardDef def,
+        bool upgraded,
+        CombatState state,
+        Random rng,
+        CardInstance card = default
+    )
+    {
+        bool wasDefend = state.ResolvingDefendCard;
+        state.ResolvingDefendCard = IsDefendTagged(def);
+        try
+        {
+            ApplyCore(def, upgraded, state, rng, card);
+        }
+        finally
+        {
+            state.ResolvingDefendCard = wasDefend;
+        }
+    }
+
+    /// <summary>
+    /// The game's <c>CardTag.Defend</c>. Tags are not extracted yet; the NAME stands in,
+    /// and here it is exact rather than approximate — the six cards whose names contain
+    /// "Defend" are precisely the six the decompiled source tags, `UltimateDefend`
+    /// included. The Strike side of the same question is not so lucky, which is why
+    /// <c>Card.IsStrikeOrDefend</c> keeps its caveat.
+    /// </summary>
+    private static bool IsDefendTagged(CardDef def) =>
+        def.Name.Contains("Defend", StringComparison.Ordinal);
+
+    private static void ApplyCore(
         CardDef def,
         bool upgraded,
         CombatState state,
@@ -3303,7 +3344,11 @@ public static class CardEffects
     )
     {
         int effective = powered
-            ? BuffSystem.IncomingBlock(amount, state.PlayerBuffs, isDefend)
+            ? BuffSystem.IncomingBlock(
+                amount,
+                state.PlayerBuffs,
+                isDefend || state.ResolvingDefendCard
+            )
             : amount;
 
         // `ShadowmeldPower.ModifyBlockMultiplicative` does not look at `props`, so it
@@ -5165,7 +5210,7 @@ public static class CardEffects
 
         if (blk > 0)
         {
-            GainBlock(state, blk, rng, isDefend: def.Name.Contains("Defend"));
+            GainBlock(state, blk, rng);
         }
     }
 
