@@ -133,6 +133,7 @@ public enum BuffId
     TheHunt, // the player: a marker that The Hunt landed a kill; the reward is the effect
     TemporaryDexterity, // the player: Dexterity that is handed back at the end of the turn
     Blur, // the player: block survives this many more turn starts, then stops
+    FanOfKnives, // the player: every Shiv targets ALL enemies rather than one
     Tangled, // Vine Shambler card debuff, currently tracked as a player debuff
     Constrict, // Slithering Strangler pressure debuff, currently tracked
     Smoggy, // Living Fog card affliction debuff, currently tracked

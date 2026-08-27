@@ -21,7 +21,6 @@ public class CardCoverageTests
     private static readonly HashSet<string> Pending =
     [
         "Abrasive",
-        "Accuracy",
         "AdaptiveStrike",
         "Adrenaline",
         "Afterimage",
@@ -142,7 +141,6 @@ public class CardCoverageTests
         "Expertise",
         "Exterminate",
         "FallingStar",
-        "FanOfKnives",
         "Fear",
         "FeedingFrenzy",
         "Feral",
@@ -299,7 +297,6 @@ public class CardCoverageTests
         "SharedFate",
         "Shatter",
         "ShiningStrike",
-        "Shiv",
         "Shroud",
         "SicEm",
         "SignalBoost",

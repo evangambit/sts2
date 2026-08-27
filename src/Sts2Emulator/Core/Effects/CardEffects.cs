@@ -1269,9 +1269,18 @@ public static class CardEffects
                 break;
             }
 
-            case SI.FanOfKnives: // 2-cost power, create 4/5 Shivs and continue creating each turn
+            case SI.FanOfKnives: // FanOfKnivesPower, and 4/5 Shivs into hand
+                // `FanOfKnivesPower` does nothing on its own: the SHIV card reads it and
+                // returns `TargetType.AllEnemies` instead of `AnyEnemy`. It is
+                // `PowerStackType.Single`, so a second Fan of Knives adds Shivs and not a
+                // second stack.
+                //
+                // The emulator applied InfiniteBlades at the SHIV COUNT -- a different
+                // card (one Shiv every turn, forever) wearing this one's number, and the
+                // retarget that is the whole point of Fan of Knives was absent.
+                BuffSystem.Remove(state.PlayerBuffs, BuffId.FanOfKnives);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.FanOfKnives, 1);
                 AddGeneratedCardsToHand(state, SI.Shiv, upgraded ? 5 : 4);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.InfiniteBlades, upgraded ? 5 : 4);
                 break;
 
             case SI.Finisher: // 1-cost, 6/8 damage once per Attack played this turn
@@ -4408,8 +4417,22 @@ public static class CardEffects
                 DrawCards(state, 1, rng);
                 return true;
             case "Shiv":
-                DealDamage(state, ShivDamage(state, def, upgraded, card));
+            {
+                // `Shiv.TargetType` is AllEnemies while its owner holds FanOfKnivesPower,
+                // and AnyEnemy otherwise -- the retarget lives on the SHIV, read from the
+                // power, rather than in anything Fan of Knives does when it is played.
+                int shivDamage = ShivDamage(state, def, upgraded, card);
+                if (BuffSystem.Get(state.PlayerBuffs, BuffId.FanOfKnives) > 0)
+                {
+                    DealDamageToAll(state, shivDamage);
+                }
+                else
+                {
+                    DealDamage(state, shivDamage);
+                }
+
                 return true;
+            }
             case "SovereignBlade":
                 DealDamageMultiHit(state, Dmg(def, upgraded, card), 1, rng);
                 if (state.PlayerBlock > 0)
