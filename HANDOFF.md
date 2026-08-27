@@ -84,7 +84,9 @@ went from ~2m to ~6m inside one session; the cause was another job on the box, p
 ways rather than guessed: the UNCHANGED commit from the session's start also went to
 4m15s in the same window, and an interleaved A/B of that commit against HEAD on an
 untouched suite came out 34/29/27s against 30/30/28s. If the suite feels slow, check
-`uptime` before checking the diff.
+`uptime` before checking the diff — and expect the answer to be a neighbour rather than a
+mystery: the RL work lives in `~/Projects/STSS/emulator-rl`, a training run there will sit
+on a core or more for hours, and a serial suite feels every bit of it.
 
 Where the time actually goes, on any machine: **1906 of the tests average 186ms**, because
 so many of them generate a whole run. The card and combat suites added later are ~2ms
