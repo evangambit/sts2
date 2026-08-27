@@ -245,6 +245,22 @@ public enum BuffId
     /// block with it.
     /// </remarks>
     Burrowed,
+
+    /// <summary>
+    /// <c>WellLaidPlansPower</c>: how many cards its owner may CHOOSE to keep at the end
+    /// of each turn, for the rest of the combat.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="RetainHand" />, which keeps the WHOLE hand and counts
+    /// down — "keep everything for one turn" and "keep one card every turn forever" are
+    /// two different rules and cannot share an id, the same way Blur could not share
+    /// Barricade's (E154).
+    ///
+    /// Appended rather than filed next to RetainHand ON PURPOSE: the observation writes
+    /// `(int)buff.Id` straight into the vector, so inserting a value renumbers every buff
+    /// after it and silently changes the meaning of every committed fixture.
+    /// </remarks>
+    WellLaidPlans,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

@@ -338,6 +338,24 @@ public static class CombatEngine
 
     private static StepResult EndTurn(CombatState state, Random rng)
     {
+        // `WellLaidPlansPower.BeforeFlushLate` asks which cards to keep, every turn, for
+        // as long as the power stands. It is the only selection the emulator raises
+        // outside a card play, so the end turn is parked here and resumed by whichever
+        // answer finishes the screen.
+        //
+        // The game asks in BeforeFlushLate rather than BeforeFlush "so that the player can
+        // have full information about the other BeforeFlush effects", which puts it after
+        // the end-of-turn self-damage. Asking at the top instead is the same question:
+        // nothing between here and the flush touches the hand, and losing HP does not
+        // change which card is worth keeping.
+        if (!state.EndTurnAwaitingSelection && OpenRetainSelection(state))
+        {
+            state.EndTurnAwaitingSelection = true;
+            return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
+        }
+
+        state.EndTurnAwaitingSelection = false;
+
         // Snapshot HP before enemies act.
         int playerHpBefore = state.PlayerHp;
         Span<int> enemyHpsBefore = stackalloc int[state.Enemies.Count];
@@ -475,7 +493,17 @@ public static class CombatEngine
                 && BuffSystem.Get(state.PlayerBuffs, BuffId.PhantomBlades) > 0;
             if (retainHand > 0 || card.IsRetained() || phantomRetain)
             {
-                nextHand.Add(card with { FreeThisTurn = false, SlyThisTurn = false });
+                // Well-Laid Plans' grant is for ONE flush -- `GiveSingleTurnRetain` -- so
+                // it comes off as the card lands in the next hand, the same way Hand
+                // Trick's Sly does.
+                nextHand.Add(
+                    card with
+                    {
+                        FreeThisTurn = false,
+                        SlyThisTurn = false,
+                        RetainThisTurn = false,
+                    }
+                );
             }
             else
             {
@@ -863,6 +891,16 @@ public static class CombatEngine
         ReturnQueuedCardsToHandBeforeDraw(state);
         DeliverQueuedCardCopiesBeforeDraw(state);
 
+        // `InfiniteBladesPower.BeforeHandDraw` -- so the Shivs are in hand BEFORE the five
+        // are drawn, not after. It matters at the hand limit: the Shivs take their slots
+        // first and the draw is what gets cut short, which is the opposite of what the
+        // emulator did by adding them at the end.
+        int infiniteBlades = BuffSystem.Get(state.PlayerBuffs, BuffId.InfiniteBlades);
+        if (infiniteBlades > 0)
+        {
+            Effects.CardEffects.AddGeneratedCardsToHand(state, 430, infiniteBlades);
+        }
+
         int creativeAi = BuffSystem.Get(state.PlayerBuffs, BuffId.CreativeAi);
         if (creativeAi > 0)
         {
@@ -893,11 +931,6 @@ public static class CombatEngine
         {
             Effects.CardEffects.DrawCards(state, toolsOfTheTrade, rng);
             Effects.CardEffects.DiscardFirstCardsFromHand(state, toolsOfTheTrade);
-        }
-        int infiniteBlades = BuffSystem.Get(state.PlayerBuffs, BuffId.InfiniteBlades);
-        if (infiniteBlades > 0)
-        {
-            Effects.CardEffects.AddGeneratedCardsToHand(state, 430, infiniteBlades);
         }
 
         // `WraithFormPower.AfterSideTurnStart` takes its Amount in Dexterity every turn.
@@ -1183,6 +1216,13 @@ public static class CombatEngine
                 actions.Add(i);
             }
 
+            // A screen with a minimum of zero can be declined, and the decline is one past
+            // the last candidate. Well-Laid Plans is the only one so far.
+            if (selection.Skippable)
+            {
+                actions.Add(selection.Candidates.Count);
+            }
+
             return [.. actions];
         }
 
@@ -1257,9 +1297,18 @@ public static class CombatEngine
     private static StepResult ResolveCardSelection(CombatState state, int action, Random rng)
     {
         var selection = state.PendingSelection!;
-        if (action < 0 || action >= selection.Candidates.Count)
+        int skipAction = selection.Skippable ? selection.Candidates.Count : -1;
+        if (action < 0 || (action >= selection.Candidates.Count && action != skipAction))
         {
             return StepResult.Invalid;
+        }
+
+        if (action == skipAction)
+        {
+            // Declining answers the whole screen: the game's minimum is zero, not "at
+            // least one per reopen", so keeping nothing ends it rather than asking again.
+            state.PendingSelection = null;
+            return ResumeOwedEndTurn(state, rng);
         }
 
         int index = selection.Candidates[action];
@@ -1402,10 +1451,55 @@ public static class CombatEngine
                 }
 
                 break;
+
+            case CardSelectionKind.RetainForNextTurn:
+                if (index < state.Hand.Count)
+                {
+                    state.Hand[index] = state.Hand[index] with { RetainThisTurn = true };
+                }
+
+                // Ask again until the picks are spent or nothing is left to offer.
+                if (selection.Amount > 1)
+                {
+                    var again = new PendingCardSelection
+                    {
+                        Kind = CardSelectionKind.RetainForNextTurn,
+                        Candidates = [],
+                        SourceCardDefId = selection.SourceCardDefId,
+                        Amount = selection.Amount - 1,
+                        Skippable = true,
+                    };
+                    var left = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
+                    {
+                        if (!state.Hand[i].IsRetained())
+                        {
+                            left.Add(i);
+                        }
+                    }
+
+                    if (left.Count > 0)
+                    {
+                        again.Candidates.AddRange(left);
+                        state.PendingSelection = again;
+                        return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
+                    }
+                }
+
+                return ResumeOwedEndTurn(state, rng);
         }
 
         return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
     }
+
+    /// <summary>
+    /// Runs the end turn that was parked while a `RetainForNextTurn` screen stood, if one
+    /// was. A selection raised any other way owes nothing and just returns.
+    /// </summary>
+    private static StepResult ResumeOwedEndTurn(CombatState state, Random rng) =>
+        state.EndTurnAwaitingSelection
+            ? EndTurn(state, rng)
+            : new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
 
     /// <summary>
     /// Weak, Frail and Vulnerable count down once a round, AFTER the enemy side's turn —
@@ -2081,6 +2175,45 @@ public static class CombatEngine
         }
 
         state.CopiesToHandBeforeDraw.Clear();
+    }
+
+    /// <summary>
+    /// Opens the Well-Laid Plans screen if the power is up and there is anything to offer,
+    /// and reports whether it did. The filter is the power's own `RetainFilter`,
+    /// `!card.ShouldRetainThisTurn` — a card that will survive the flush anyway is not
+    /// worth spending a pick on and the game does not offer it.
+    /// </summary>
+    private static bool OpenRetainSelection(CombatState state)
+    {
+        int picks = BuffSystem.Get(state.PlayerBuffs, BuffId.WellLaidPlans);
+        if (picks <= 0)
+        {
+            return false;
+        }
+
+        var candidates = new List<int>();
+        for (int i = 0; i < state.Hand.Count; i++)
+        {
+            if (!state.Hand[i].IsRetained())
+            {
+                candidates.Add(i);
+            }
+        }
+
+        if (candidates.Count == 0)
+        {
+            return false;
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.RetainForNextTurn,
+            Candidates = candidates,
+            SourceCardDefId = Effects.SI.WellLaidPlans,
+            Amount = picks,
+            Skippable = true,
+        };
+        return true;
     }
 
     private static void RemoveFirstMatchingCard(List<CardInstance> pile, CardInstance card)

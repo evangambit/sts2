@@ -1262,16 +1262,24 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Envenom, upgraded ? 2 : 1);
                 break;
 
-            case SI.EscapePlan: // 0-cost, draw 1; if Skill, gain 3/5 block
+            case SI.EscapePlan: // 0-cost, draw 1; if it is a Skill, gain 3/5 block
             {
-                bool drewSkill =
-                    state.DrawPile.Count > 0
-                    && GeneratedData.Cards.Get(state.DrawPile[0].DefId).Type == CardType.Skill;
+                // `(await CardPileCmd.Draw(...)).FirstOrDefault()` and then a type check on
+                // what came back. The emulator peeked at `DrawPile[0]` BEFORE drawing,
+                // which is the same card only while the draw pile is non-empty: with an
+                // empty pile the draw reshuffles the discard and the peek describes a card
+                // that no longer exists, and with a full hand the draw returns nothing at
+                // all while the peek still says Skill.
+                int handBefore = state.Hand.Count;
                 DrawCards(state, 1, rng);
+                bool drewSkill =
+                    state.Hand.Count > handBefore
+                    && GeneratedData.Cards.Get(state.Hand[^1].DefId).Type == CardType.Skill;
                 if (drewSkill)
                 {
                     GainBlock(state, Blk(def, upgraded, card), rng);
                 }
+
                 break;
             }
 
@@ -1344,7 +1352,18 @@ public static class CardEffects
                 DealDamageToAll(state, Dmg(def, upgraded, card));
                 break;
 
-            case SI.Scare: // 0-cost, Weak 2/3
+            case SI.Scare: // 0-cost, Weak 1 to EVERY enemy; the upgrade removes Exhaust
+                // It was sharing Haze's arm, so it applied POISON 4/6 -- a different
+                // debuff, at a number this card does not have. Scare's Weak is a literal
+                // `1m` in the loop with no var behind it at all, and `OnUpgrade` only does
+                // `RemoveKeyword(CardKeyword.Exhaust)`, so the upgrade changes nothing
+                // about what it applies.
+                //
+                // Merged case labels are how this happens: two cards that looked alike got
+                // one body, and the body belonged to the other one.
+                ApplyAllEnemyDebuff(state, BuffId.Weak, 1, rng);
+                break;
+
             case SI.Haze: // 1-cost, Poison 4/6 to EVERY enemy
                 // The card applies PoisonPower to every hittable enemy. The emulator gave
                 // Weak to ONE -- the wrong debuff, on the wrong number of creatures, for a
@@ -1451,9 +1470,12 @@ public static class CardEffects
                 AddGeneratedCardsToHand(state, SI.Shiv, 2);
                 break;
 
-            case SI.LegSweep: // 2-cost, 11/14 block and Weak 3/4
+            case SI.LegSweep: // 2-cost, 11/14 block and Weak 2/3
+                // `PowerVar<WeakPower>(2m)` with `UpgradeValueBy(1m)`. The emulator gave
+                // 3/4 -- a whole extra stack at both levels, on a card whose block half
+                // was already right.
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                ApplyEnemyDebuff(state, BuffId.Weak, upgraded ? 4 : 3, rng);
+                ApplyEnemyDebuff(state, BuffId.Weak, upgraded ? 3 : 2, rng);
                 break;
 
             case SI.Malaise: // X-cost, enemy loses X Strength and gains X Weak
@@ -1783,12 +1805,32 @@ public static class CardEffects
                 GainBlock(state, Blk(def, upgraded, card), rng);
                 break;
 
-            case SI.UpMySleeve: // 2-cost, add 2 Shivs; cost drops in combat in real game
-                AddGeneratedCardsToHand(state, SI.Shiv, upgraded ? 3 : 2);
+            case SI.UpMySleeve: // 2-cost, 3/4 Shivs, and a point cheaper on every play
+                // `CardsVar(3)` +1, not 2/3 -- the emulator was one Shiv short at both
+                // levels. And `base.EnergyCost.AddThisCombat(-1)` at the end of OnPlay is
+                // the card's whole shape: a 2-cost that becomes a 1-cost, then a free one,
+                // for the rest of the combat. The comment beside this line already said
+                // the cost "drops in combat in real game" and no code did it.
+                //
+                // The bump rides on the CARD through the piles, exactly as Frantic
+                // Escape's does in the other direction -- so a second Up My Sleeve in the
+                // deck is still full price.
+                AddGeneratedCardsToHand(state, SI.Shiv, upgraded ? 4 : 3);
+                state.PlayedCardCostBump--;
                 break;
 
-            case SI.WellLaidPlans: // 1-cost, retain 1/2 cards
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, upgraded ? 2 : 1);
+            case SI.WellLaidPlans: // 1-cost power: keep 1/2 CHOSEN cards, every turn
+                // `WellLaidPlansPower.BeforeFlushLate` opens a card-selection screen over
+                // the hand -- min 0, max Amount, filtered to cards not already retaining
+                // -- and gives each pick `GiveSingleTurnRetain()`. It is a POWER, so it
+                // does that every turn for the rest of the combat.
+                //
+                // The emulator applied `BuffId.RetainHand`, which keeps the WHOLE hand and
+                // counts down: 1 meant "retain everything for one turn, then nothing".
+                // Two different cards. The real one keeps less and keeps it forever, and
+                // the choosing is the card -- an agent told which card survives has been
+                // handed the decision the card exists to make.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.WellLaidPlans, upgraded ? 2 : 1);
                 break;
 
             case SI.WraithForm: // 3-cost, Intangible 2/3 and WraithFormPower(1)

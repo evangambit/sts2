@@ -101,6 +101,7 @@ public static class StateCloning
             ExhaustPile = [.. combat.ExhaustPile],
             ReturnToHandBeforeDraw = [.. combat.ReturnToHandBeforeDraw],
             CopiesToHandBeforeDraw = [.. combat.CopiesToHandBeforeDraw],
+            EndTurnAwaitingSelection = combat.EndTurnAwaitingSelection,
             AutoPlayQueue = [.. combat.AutoPlayQueue],
             Orbs = [.. combat.Orbs],
             OrbCapacity = combat.OrbCapacity,

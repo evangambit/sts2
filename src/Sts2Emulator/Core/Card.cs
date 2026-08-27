@@ -253,7 +253,11 @@ public readonly record struct CardInstance(
     // `CardCmd.ApplyKeyword(card, CardKeyword.Sly)`, which Master Planner does to every
     // Skill its owner plays. Unlike Hand Trick's grant this one is permanent for the
     // combat, so it rides on the copy through the piles rather than expiring with the turn.
-    bool SlyForCombat = false
+    bool SlyForCombat = false,
+    // `CardModel.GiveSingleTurnRetain()`, which Well-Laid Plans' power hands to the cards
+    // its owner picks just before the hand is flushed. Single-turn like Hand Trick's Sly:
+    // it survives one flush and is cleared as the card lands in the next hand.
+    bool RetainThisTurn = false
 );
 
 public static class CardInstanceExtensions
@@ -296,7 +300,8 @@ public static class CardInstanceExtensions
         var def = GeneratedData.Cards.Get(card.DefId);
         return def.Retain
             || (card.Upgraded && def.RetainWhenUpgraded)
-            || card.Enchantment == Enchantment.Steady;
+            || card.Enchantment == Enchantment.Steady
+            || card.RetainThisTurn;
     }
 
     /// <summary>

@@ -79,6 +79,19 @@ public enum CardSelectionKind
     /// pick is a question about the future rather than an edit to a pile.
     /// </remarks>
     QueueHandCardCopies = 11,
+
+    /// <summary>
+    /// Well-Laid Plans: cards in hand are chosen to survive the end-of-turn flush, up to
+    /// <see cref="PendingCardSelection.Amount" /> of them, and the screen reopens until
+    /// the picks are spent or nothing is left to offer.
+    /// </summary>
+    /// <remarks>
+    /// The first selection raised OUTSIDE a card play — `WellLaidPlansPower` asks in
+    /// `BeforeFlushLate`, every turn, for as long as the power stands. It is also the
+    /// first that may be DECLINED: `CardSelectorPrefs(prompt, 0, Amount)` has a minimum of
+    /// zero, so keeping nothing is a legal answer and the action space has to offer it.
+    /// </remarks>
+    RetainForNextTurn = 12,
 }
 
 /// <summary>
@@ -123,4 +136,12 @@ public sealed class PendingCardSelection
     /// themselves.
     /// </summary>
     public List<CardInstance> AfterSelectionToHand { get; init; } = [];
+
+    /// <summary>
+    /// Whether declining is a legal answer, for a screen whose `CardSelectorPrefs` has a
+    /// minimum of zero. The skip is offered as the action one past the last candidate,
+    /// which is free: while a selection is open only candidate indices are valid, so
+    /// nothing else claims that index.
+    /// </summary>
+    public bool Skippable { get; init; }
 }

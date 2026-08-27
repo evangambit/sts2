@@ -58,6 +58,13 @@ public sealed class CombatState
     /// this is a one-shot queue and not a standing effect.
     /// </summary>
     public List<CardInstance> CopiesToHandBeforeDraw = [];
+
+    /// <summary>
+    /// Set while a `RetainForNextTurn` screen stands between the player ending their turn
+    /// and the turn actually ending — the end turn is owed and runs as soon as the screen
+    /// is answered.
+    /// </summary>
+    public bool EndTurnAwaitingSelection;
     public List<CardInstance> AutoPlayQueue = [];
 
     // Defect-style orb queue.
