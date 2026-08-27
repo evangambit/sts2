@@ -49,7 +49,7 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 1899 pass, ~2m)
+# C# unit tests (2248 pass; ~2m on a quiet machine, and see the note below)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
@@ -69,6 +69,27 @@ python scripts/extract_data.py                # → src/Sts2Emulator/Generated/*
 python scripts/diff_patch.py                  # summarize data drift vs baseline
 bash scripts/patch_update.sh "<game dir>"     # runs the whole chain + build + test
 ```
+
+**On the C# suite's runtime, before you go looking for a regression.** It runs
+SERIALLY: `AssemblyInfo.cs` has carried
+`[assembly: CollectionBehavior(DisableTestParallelization = true)]` since the initial
+commit, and that is load-bearing rather than left over. `CombatFactory` holds three
+mutable statics (`_currentNicheHpRng`, `_usedNicheHps`, `_currentAscension`) and
+`CardEffects` two more (`_shuffleCards`, `_shuffleKeys`, the reused scratch buffers the
+allocation work added) — parallel collections would race on all five. Enabling
+parallelism means removing that state first.
+
+So the wall clock is one core's worth and tracks whatever else the machine is doing. It
+went from ~2m to ~6m inside one session; the cause was another job on the box, proven two
+ways rather than guessed: the UNCHANGED commit from the session's start also went to
+4m15s in the same window, and an interleaved A/B of that commit against HEAD on an
+untouched suite came out 34/29/27s against 30/30/28s. If the suite feels slow, check
+`uptime` before checking the diff.
+
+Where the time actually goes, on any machine: **1906 of the tests average 186ms**, because
+so many of them generate a whole run. The card and combat suites added later are ~2ms
+each. A serial suite of full run generations is the cost, not any one slow test — the
+twenty slowest are 64s of 356s.
 
 `<game dir>` = `~/Library/Application Support/Steam/steamapps/common/Slay the Spire 2`
 (the scripts auto-detect it on macOS). The decompile/extract scripts were adapted for
