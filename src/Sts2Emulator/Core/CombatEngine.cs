@@ -151,6 +151,7 @@ public static class CombatEngine
             def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.Burst) > 0
                 ? 1
                 : 0;
+        int serpentFormBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.SerpentForm);
 
         ApplyEnchantmentOnPlay(state, card, rng);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
@@ -299,6 +300,24 @@ public static class CombatEngine
         state.PlayedCardEnchantSpent = false;
         state.PlayedCardEnchantGrew = false;
         state.PlayedCardCostBump = 0;
+        if (def.Name == "Shiv")
+        {
+            state.ShivsPlayedThisTurn++;
+        }
+
+        // `SerpentFormPower.AfterCardPlayed` spends the amount it recorded BEFORE the play,
+        // on a random hittable enemy. Recording before and spending after is what stops the
+        // Serpent Form that applied the power from triggering it -- so the amount is read
+        // from `serpentFormBefore`, captured above the card's own effect.
+        if (serpentFormBefore > 0)
+        {
+            var serpentTarget = Effects.CardEffects.RandomLivingEnemyFor(state, rng);
+            if (serpentTarget != null)
+            {
+                Effects.CardEffects.DealUnpoweredDamage(state, serpentTarget, serpentFormBefore);
+            }
+        }
+
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
@@ -444,7 +463,13 @@ public static class CombatEngine
             // through DiscardMovedCards: the end-of-turn discard is not a
             // `CardCmd.Discard` in the game and does not trigger Sly, so holding a
             // Tactician to the end of the turn buys nothing.
-            if (retainHand > 0 || card.IsRetained())
+            // `PhantomBladesPower.AfterCardEnteredCombat` gives the Retain KEYWORD to
+            // every Shiv the player owns, so a Shiv in hand survives the turn while the
+            // power is up.
+            bool phantomRetain =
+                GeneratedData.Cards.Get(card.DefId).Name == "Shiv"
+                && BuffSystem.Get(state.PlayerBuffs, BuffId.PhantomBlades) > 0;
+            if (retainHand > 0 || card.IsRetained() || phantomRetain)
             {
                 nextHand.Add(card with { FreeThisTurn = false, SlyThisTurn = false });
             }
@@ -644,6 +669,7 @@ public static class CombatEngine
         state.Energy = EffectiveMaxEnergy(state);
         state.PlayerHpLostThisTurn = 0;
         state.CardsPlayedThisTurn = 0;
+        state.ShivsPlayedThisTurn = 0;
 
         Effects.CardEffects.TriggerAllOrbAfterTurnStartPassives(state, rng);
 

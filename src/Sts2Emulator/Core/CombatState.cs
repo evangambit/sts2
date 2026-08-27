@@ -198,6 +198,21 @@ public sealed class CombatState
     /// read off the combat HISTORY, so it counts the whole fight and not the turn.
     /// </summary>
     public int CardsDrawnThisCombat;
+
+    /// <summary>
+    /// Shivs whose play has FINISHED this turn. Phantom Blades' bonus lands on the
+    /// first Shiv of the turn only — the power counts `CardPlayFinishedEntry` rows
+    /// tagged Shiv and pays nothing once any exist.
+    /// </summary>
+    public int ShivsPlayedThisTurn;
+
+    /// <summary>
+    /// Extra card-reward rows this combat has earned. The Hunt adds one for every
+    /// enemy its attack KILLS — `combatRoom.AddExtraReward(new CardReward(..., 3, ...))`.
+    /// Carried here rather than pushed straight at the run, exactly as a Heist's
+    /// `StolenBackGold` is, because a combat cannot reach the reward generator.
+    /// </summary>
+    public int ExtraCardRewards;
     public int CardsPlayedSincePanacheProc;
     public int BlockGainsThisTurn;
     public int PlayerHpLostThisTurn;

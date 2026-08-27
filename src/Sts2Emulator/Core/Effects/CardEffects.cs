@@ -1425,8 +1425,13 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Outbreak, upgraded ? 15 : 11);
                 break;
 
-            case SI.PhantomBlades: // 1-cost power, retained Shivs approximation
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.InfiniteBlades, upgraded ? 4 : 3);
+            case SI.PhantomBlades: // 1-cost power: Shivs Retain, and the first each turn hits harder
+                // `PhantomBladesPower` does two things and the emulator modelled neither:
+                // every Shiv entering combat takes the Retain keyword, and
+                // `ModifyDamageAdditive` pays its Amount to a Shiv attack only while NO
+                // Shiv play has finished this turn -- the first Shiv of the turn, once.
+                // It was stacking InfiniteBlades, which adds a Shiv each turn instead.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.PhantomBlades, upgraded ? 12 : 9);
                 break;
 
             case SI.PiercingWail: // 1-cost, all enemies lose 6/8 Strength this turn
@@ -1488,8 +1493,12 @@ public static class CardEffects
                 DealDamageMultiHit(state, Dmg(def, upgraded, card), upgraded ? 5 : 4, rng);
                 break;
 
-            case SI.SerpentForm: // 3-cost power, poison-like scaling approximation
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoxiousFumes, upgraded ? 6 : 4);
+            case SI.SerpentForm: // 3-cost power: every card played hits a RANDOM enemy for 4/6
+                // `SerpentFormPower` records its amount before each card the player plays
+                // and spends it after -- so a card played before the power existed does
+                // not trigger, and neither does the Serpent Form that applied it. The
+                // emulator stacked NoxiousFumes, which poisons every enemy each turn.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.SerpentForm, upgraded ? 6 : 4);
                 break;
 
             case SI.ShadowStep: // 1/0-cost, discard hand and gain Intangible
@@ -1575,9 +1584,25 @@ public static class CardEffects
                 state.Energy += upgraded ? 2 : 1;
                 break;
 
-            case SI.TheHunt: // 1-cost, 10/15 damage; kill power approximation
-                DealDamage(state, Dmg(def, upgraded, card));
+            case SI.TheHunt: // 1-cost, 10/15 damage; a KILL earns an extra card reward
+            {
+                // `TheHuntPower` is a visual marker and nothing else -- the behaviour is in
+                // the card. If the attack kills its target, the room gains a whole extra
+                // CardReward of three, which is the entire reason to play the card and was
+                // simply absent.
+                var quarry = FirstEnemy(state);
+                if (quarry != null)
+                {
+                    DealDamageToEnemy(state, quarry, Dmg(def, upgraded, card));
+                    if (quarry.Hp <= 0)
+                    {
+                        state.ExtraCardRewards++;
+                        BuffSystem.Apply(state.PlayerBuffs, BuffId.TheHunt, 1);
+                    }
+                }
+
                 break;
+            }
 
             case SI.ToolsOfTheTrade: // 1/0-cost, draw then discard each turn
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.ToolsOfTheTrade, 1);
@@ -2059,6 +2084,35 @@ public static class CardEffects
     /// hittable enemy, and the power is removed at the end of the owner's side turn — so
     /// it is a one-turn draw engine.
     /// </summary>
+    /// <summary>
+    /// What a Shiv actually hits for: its printed damage, plus Accuracy's bonus, plus
+    /// Phantom Blades' — which pays only while NO Shiv play has finished this turn.
+    /// </summary>
+    /// <remarks>
+    /// A helper because the Shiv is dealt from two places, the by-NAME arm and the shared
+    /// base-damage path, and they had drifted: the bonus went into one of them and the
+    /// card kept hitting for its printed value. The third instance this session of a rule
+    /// reaching half its call sites.
+    /// </remarks>
+    private static int ShivDamage(CombatState state, CardDef def, bool upgraded, CardInstance card)
+    {
+        int dmg = Dmg(def, upgraded, card) + BuffSystem.Get(state.PlayerBuffs, BuffId.ShivDamage);
+        if (def.Name == "Shiv" && state.ShivsPlayedThisTurn == 0)
+        {
+            dmg += BuffSystem.Get(state.PlayerBuffs, BuffId.PhantomBlades);
+        }
+
+        return dmg;
+    }
+
+    /// <summary>The combat-targets roll, for callers outside this file.</summary>
+    internal static EnemyState? RandomLivingEnemyFor(CombatState state, Random rng) =>
+        RandomLivingEnemy(state, rng);
+
+    /// <summary>Unpowered damage to one enemy, for callers outside this file.</summary>
+    internal static void DealUnpoweredDamage(CombatState state, EnemyState target, int amount) =>
+        DealUnpoweredDamageToEnemy(state, target, amount);
+
     /// <summary>Murder: `CalculationBase(1)` plus `ExtraDamage(1)` per card drawn this combat.</summary>
     internal static int MurderDamage(CombatState state, bool upgraded) =>
         (upgraded ? 2 : 1) + state.CardsDrawnThisCombat;
@@ -4315,10 +4369,7 @@ public static class CardEffects
                 DrawCards(state, 1, rng);
                 return true;
             case "Shiv":
-                DealDamage(
-                    state,
-                    Dmg(def, upgraded, card) + BuffSystem.Get(state.PlayerBuffs, BuffId.ShivDamage)
-                );
+                DealDamage(state, ShivDamage(state, def, upgraded, card));
                 return true;
             case "SovereignBlade":
                 DealDamageMultiHit(state, Dmg(def, upgraded, card), 1, rng);
@@ -4851,7 +4902,7 @@ public static class CardEffects
 
         if (def.Name is "Shiv" or "HiddenDaggers")
         {
-            dmg += BuffSystem.Get(state.PlayerBuffs, BuffId.ShivDamage);
+            dmg = ShivDamage(state, def, upgraded, card);
         }
 
         int blk = Blk(def, upgraded, card);

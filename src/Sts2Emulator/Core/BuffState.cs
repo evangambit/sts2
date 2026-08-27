@@ -128,6 +128,9 @@ public enum BuffId
     WraithForm, // the player: lose this much Dexterity at the start of every turn
     Speedster, // the player: a card drawn MID-TURN damages all enemies for this much
     Tracking, // the player: card attacks against a Weak target are multiplied by this
+    PhantomBlades, // the player: Shivs Retain, and the FIRST Shiv each turn hits for this much more
+    SerpentForm, // the player: every card played damages a random enemy for this much
+    TheHunt, // the player: a marker that The Hunt landed a kill; the reward is the effect
     Tangled, // Vine Shambler card debuff, currently tracked as a player debuff
     Constrict, // Slithering Strangler pressure debuff, currently tracked
     Smoggy, // Living Fog card affliction debuff, currently tracked

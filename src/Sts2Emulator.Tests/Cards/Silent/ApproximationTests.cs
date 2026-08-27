@@ -273,3 +273,149 @@ public class SneakyTests
     [Fact]
     public void ASoloRunIsNeverOfferedIt() => MultiplayerOnlyCard.IsNeverOfferedSolo(SI.Sneaky);
 }
+
+public class PhantomBladesTests
+{
+    /// <summary>
+    /// `PhantomBladesPower` does two things and the emulator modelled neither: every Shiv
+    /// the player owns takes the Retain keyword, and `ModifyDamageAdditive` pays its
+    /// amount to a Shiv attack only while NO Shiv play has finished this turn — the FIRST
+    /// Shiv of the turn, once. It was stacking InfiniteBlades, which adds a Shiv per turn.
+    /// </summary>
+    [Theory]
+    [InlineData(false, 9)]
+    [InlineData(true, 12)]
+    public void OnlyTheFirstShivOfTheTurnHitsHarder(bool upgraded, int bonus)
+    {
+        var fight = Fight
+            .Hand(Card(SI.PhantomBlades, upgraded), Card(SI.Shiv), Card(SI.Shiv))
+            .Energy(9)
+            .Enemy(hp: 200);
+
+        fight.Play();
+        int shiv = GeneratedData.Cards.Get(SI.Shiv).BaseDamage;
+        int before = fight.Enemy0.Hp;
+
+        fight.Play(); // the first Shiv: base plus the bonus
+        int afterFirst = fight.Enemy0.Hp;
+        Assert.Equal(before - (shiv + bonus), afterFirst);
+
+        fight.Play(); // the second: base only
+        Assert.Equal(afterFirst - shiv, fight.Enemy0.Hp);
+    }
+
+    /// <summary>And the bonus comes back next turn, since the count is per TURN.</summary>
+    [Fact]
+    public void TheBonusReturnsTheFollowingTurn()
+    {
+        var fight = Fight.Hand(Card(SI.PhantomBlades), Card(SI.Shiv)).Energy(9).Enemy(hp: 200);
+        fight.State.PlayerHp = 999;
+        fight.Play();
+        fight.Play();
+        Assert.Equal(1, fight.State.ShivsPlayedThisTurn);
+
+        fight.EndTurn();
+
+        Assert.Equal(0, fight.State.ShivsPlayedThisTurn);
+    }
+
+    /// <summary>A Shiv in hand survives the turn while the power is up.</summary>
+    [Fact]
+    public void ShivsRetain()
+    {
+        var fight = Fight.Hand(Card(SI.PhantomBlades), Card(SI.Shiv)).Energy(9);
+        fight.State.PlayerHp = 999;
+
+        fight.Play();
+        fight.EndTurn();
+
+        Assert.Contains(fight.State.Hand, c => c.DefId == SI.Shiv);
+    }
+
+    [Fact]
+    public void WithoutThePowerAShivIsDiscardedAsUsual()
+    {
+        var fight = Fight.Hand(Card(SI.Shiv)).Energy(9);
+        fight.State.PlayerHp = 999;
+
+        fight.EndTurn();
+
+        Assert.DoesNotContain(fight.State.Hand, c => c.DefId == SI.Shiv);
+    }
+}
+
+public class SerpentFormTests
+{
+    /// <summary>
+    /// `SerpentFormPower` records its amount before each card the player plays and spends
+    /// it after, on a RANDOM hittable enemy. The emulator stacked NoxiousFumes, which
+    /// poisons every enemy each turn — a different card.
+    /// </summary>
+    [Theory]
+    [InlineData(false, 4)]
+    [InlineData(true, 6)]
+    public void EveryCardPlayedHitsARandomEnemy(bool upgraded, int amount)
+    {
+        var fight = Fight
+            .Hand(Card(SI.SerpentForm, upgraded), Card(SI.DefendSilent))
+            .Energy(9)
+            .Enemy(hp: 200);
+
+        fight.Play(); // the power itself
+        int before = fight.Enemy0.Hp;
+
+        fight.Play(); // a Defend, which is not an attack and still triggers it
+
+        Assert.Equal(before - amount, fight.Enemy0.Hp);
+        Assert.Equal(0, fight.EnemyBuffAmount(BuffId.Poison));
+    }
+
+    /// <summary>
+    /// The card that APPLIES the power does not trigger it: the amount is recorded before
+    /// the play, and before this play there was no power to record.
+    /// </summary>
+    [Fact]
+    public void TheSerpentFormThatAppliedItDoesNotTrigger()
+    {
+        var fight = Fight.Hand(Card(SI.SerpentForm)).Energy(9).Enemy(hp: 200);
+        int before = fight.Enemy0.Hp;
+
+        fight.Play();
+
+        Assert.Equal(before, fight.Enemy0.Hp);
+    }
+}
+
+public class TheHuntTests
+{
+    /// <summary>
+    /// `TheHuntPower` is a visual marker and nothing else — the behaviour is in the card.
+    /// A kill adds a whole extra CardReward of three to the room, which is the entire
+    /// reason to play it and was simply absent.
+    /// </summary>
+    [Theory]
+    [InlineData(false, 10)]
+    [InlineData(true, 15)]
+    public void ItDealsItsDamageAndEarnsNothingWithoutAKill(bool upgraded, int damage)
+    {
+        var fight = Fight.Hand(Card(SI.TheHunt, upgraded)).Energy(1).Enemy(hp: 200);
+
+        fight.Play();
+
+        Assert.Equal(200 - damage, fight.Enemy0.Hp);
+        Assert.Equal(0, fight.State.ExtraCardRewards);
+        Assert.Equal(0, fight.PlayerBuffAmount(BuffId.TheHunt));
+    }
+
+    [Fact]
+    public void AKillEarnsAnExtraCardReward()
+    {
+        var fight = Fight.Hand(Card(SI.TheHunt)).Energy(1).Enemy(hp: 4);
+
+        fight.Play();
+
+        Assert.Equal(0, fight.Enemy0.Hp);
+        Assert.Equal(1, fight.State.ExtraCardRewards);
+        Assert.Equal(1, fight.PlayerBuffAmount(BuffId.TheHunt));
+    }
+}

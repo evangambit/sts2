@@ -198,6 +198,28 @@ public static class RunRewardGenerator
             state.ActiveCombat.StolenBackGold = 0;
         }
 
+        // The Hunt's kill adds a whole extra CardReward to the room. `CardReward` does not
+        // roll its cards in the constructor -- `Populate()` does, when the screen is built
+        // -- so the extra offer's three cards come off the rewards stream here with the
+        // rest, not at the moment of the kill.
+        //
+        // UNVERIFIED: whether the extra offer populates BEFORE or AFTER the room's
+        // ordinary one. Both are RewardsSetIndex 5, so the order is the order they were
+        // added, and the extra was added during the combat while the ordinary set is built
+        // at its end. Taken as "after" here; a capture of a run that plays The Hunt to a
+        // kill would settle it, and until then every card the rewards stream produces from
+        // the second offer on is a guess.
+        int extraCardRewards = state.ActiveCombat?.ExtraCardRewards ?? 0;
+        for (int i = 0; i < extraCardRewards; i++)
+        {
+            state.PendingCardOffers.Add(RollExtraCardOffer(state));
+        }
+
+        if (state.ActiveCombat is not null)
+        {
+            state.ActiveCombat.ExtraCardRewards = 0;
+        }
+
         if (hasPotionReward)
         {
             state.RewardPotion = NextPotion(state, state.PlayerRng.Rewards);
@@ -647,6 +669,40 @@ public static class RunRewardGenerator
         }
 
         return [.. offers];
+    }
+
+    /// <summary>
+    /// A whole extra card-reward offer, rolled the way the room's ordinary one is.
+    /// </summary>
+    /// <remarks>
+    /// The draws matter more than the cards: each option costs a rarity roll, a card
+    /// choice and an upgrade roll off `PlayerRng.Rewards`, in that order, and an offer
+    /// that skipped any of them would shift every reward the run generated afterwards.
+    ///
+    /// `PendingCardOffers` carries ids only, so the upgrade flag an option rolled is lost
+    /// when the offer is shown — a limitation of that mechanism rather than of this
+    /// caller, and the same one every other pending offer already has. The roll is still
+    /// made, so the STREAM is right even where the flag is dropped.
+    /// </remarks>
+    private static int[] RollExtraCardOffer(RunState state)
+    {
+        var blacklist = new List<int>();
+        var offer = new int[3];
+        for (int i = 0; i < offer.Length; i++)
+        {
+            int rarity = RollRewardCardRarity(state);
+            int cardId = ChooseCardWithRarity(
+                IroncladRewardPool,
+                rarity,
+                blacklist,
+                state.PlayerRng.Rewards
+            );
+            offer[i] = cardId;
+            blacklist.Add(cardId);
+            RollCardUpgrade(state, cardId, state.PlayerRng.Rewards);
+        }
+
+        return offer;
     }
 
     internal static void PopulateCardReward(RunState state)
