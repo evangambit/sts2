@@ -1224,13 +1224,18 @@ public static class CardEffects
                 GainBlock(state, Blk(def, upgraded, card), rng);
                 break;
 
-            case SI.DodgeAndRoll: // 1-cost, 4/6 block and same block next turn
-            {
-                int amount = Blk(def, upgraded, card);
-                GainBlock(state, amount, rng);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.BlockNextTurn, amount);
+            case SI.DodgeAndRoll: // 1-cost, 4/6 block, and THAT MUCH block again next turn
+                // `decimal amount = await CreatureCmd.GainBlock(...)`, and the power is
+                // applied at that amount -- the block actually GAINED, after Dexterity and
+                // Frail, not the number printed on the card. The emulator granted the
+                // printed number, so a Dodge and Roll played under Dexterity was short
+                // next turn and one played under Frail was over.
+                BuffSystem.Apply(
+                    state.PlayerBuffs,
+                    BuffId.BlockNextTurn,
+                    GainBlock(state, Blk(def, upgraded, card), rng)
+                );
                 break;
-            }
 
             case SI.EchoingSlash: // 1-cost, 10/13 to ALL, re-thrown once per enemy it kills
             {
@@ -1555,16 +1560,20 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.PhantomBlades, upgraded ? 12 : 9);
                 break;
 
-            case SI.PiercingWail: // 1-cost, all enemies lose 6/8 Strength this turn
-                foreach (var enemy in state.Enemies.Where(e => e.Hp > 0))
+            case SI.PiercingWail: // 1-cost, EVERY enemy loses 6/8 Strength for the turn
+                // `PiercingWailPower : TemporaryStrengthPower` with `IsPositive => false`:
+                // `BeforeApplied` applies StrengthPower at -amount, and `AfterSideTurnEnd`
+                // hands it back when the owner's side finishes. So the loss lands now and
+                // is returned after the enemies have taken their turn with it.
+                //
+                // Goes through the shared per-target helper rather than repeating its body
+                // -- the copy here was already drifting apart from it, and a duplicated
+                // body is how the Artifact check gets applied at half its call sites.
+                foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToList())
                 {
-                    if (BuffSystem.TryConsumeArtifact(enemy.Buffs))
-                    {
-                        continue;
-                    }
-                    BuffSystem.Apply(enemy.Buffs, BuffId.Strength, upgraded ? -8 : -6);
-                    BuffSystem.Apply(enemy.Buffs, BuffId.TemporaryStrength, upgraded ? 8 : 6);
+                    ApplyTemporaryStrengthDownTo(enemy, upgraded ? 8 : 6);
                 }
+
                 break;
 
             case SI.Pinpoint: // 3-cost, 15/19 damage; cost reduces this turn in game
@@ -1596,9 +1605,12 @@ public static class CardEffects
                 DealDamage(state, Math.Max(0, (upgraded ? 16 : 13) - 2 * state.Hand.Count));
                 break;
 
-            case SI.Predator: // 2-cost, 15/20 damage and draw 2 more next turn
+            case SI.Predator: // 2-cost, 15/20 damage, and draw 2 more NEXT turn
+                // `PowerCmd.Apply<DrawCardsNextTurnPower>(..., 2m, ...)` is a literal at
+                // both levels -- `OnUpgrade` raises the DAMAGE and nothing else. The
+                // emulator read the upgrade as a third card as well.
                 DealDamage(state, Dmg(def, upgraded, card));
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, upgraded ? 3 : 2);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, 2);
                 break;
 
             case SI.Prepared: // 0-cost, draw 1/2 then discard that many CHOSEN cards
@@ -1610,9 +1622,31 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 3 : 2, rng);
                 break;
 
-            case SI.Ricochet: // 2-cost, 3 damage 4/5 times to random enemies
-                DealDamageMultiHit(state, Dmg(def, upgraded, card), upgraded ? 5 : 4, rng);
+            case SI.Ricochet: // 2-cost, 3 damage to a RANDOM enemy, 4/5 times
+            {
+                // TargetType.RandomEnemy, and `AttackCommand.Execute` rolls
+                // `Rng.CombatTargets.NextItem(validTargets)` INSIDE its per-hit loop, with
+                // the living targets recomputed each time round. The emulator used
+                // DealDamageMultiHit, which lands every hit on the AIMED-AT creature -- so
+                // a card that sprays hits across the room put all of them on one enemy,
+                // and the target stream was never drawn from, which desynchronises every
+                // roll downstream. Bouncing Flask had the same defect (E139).
+                //
+                // The damage never upgrades. `RepeatVar(4)` does: 4 hits, 5 upgraded.
+                int damage = Dmg(def, upgraded, card);
+                for (int i = 0; i < (upgraded ? 5 : 4); i++)
+                {
+                    var target = RandomLivingEnemy(state, rng);
+                    if (target == null)
+                    {
+                        break;
+                    }
+
+                    DealDamageToEnemy(state, target, damage);
+                }
+
                 break;
+            }
 
             case SI.SerpentForm: // 3-cost power: every card played hits a RANDOM enemy for 4/6
                 // `SerpentFormPower` records its amount before each card the player plays
@@ -1741,8 +1775,12 @@ public static class CardEffects
                 );
                 break;
 
-            case SI.Untouchable: // 2-cost, gain block equal to remaining draw pile plus 6/9
-                GainBlock(state, Blk(def, upgraded, card) + state.DrawPile.Count, rng);
+            case SI.Untouchable: // 2-cost, 6/9 block, Sly
+                // The draw pile does not come into it. `OnPlay` is one
+                // `CreatureCmd.GainBlock` and nothing else; the emulator added
+                // `state.DrawPile.Count` on top, which is another ten block or more early
+                // in a combat and grew with the deck for the whole run.
+                GainBlock(state, Blk(def, upgraded, card), rng);
                 break;
 
             case SI.UpMySleeve: // 2-cost, add 2 Shivs; cost drops in combat in real game
@@ -3188,13 +3226,22 @@ public static class CardEffects
         }
     }
 
-    public static void GainBlock(CombatState state, int amount, Random? rng = null) =>
+    /// <summary>
+    /// Gains block, and returns how much was ACTUALLY gained — Dexterity and Frail
+    /// applied, clamped at zero, Unmovable's doubling included.
+    /// </summary>
+    /// <remarks>
+    /// The return value exists because `CreatureCmd.GainBlock` has one: it hands back
+    /// `modifiedAmount`, and a card that pays out from its own block reads THAT rather
+    /// than its printed number. Dodge and Roll is the case in Silent's commons.
+    /// </remarks>
+    public static int GainBlock(CombatState state, int amount, Random? rng = null) =>
         GainBlock(state, amount, rng, powered: true);
 
-    public static void GainUnpoweredBlock(CombatState state, int amount, Random? rng = null) =>
+    public static int GainUnpoweredBlock(CombatState state, int amount, Random? rng = null) =>
         GainBlock(state, amount, rng, powered: false);
 
-    private static void GainBlock(
+    private static int GainBlock(
         CombatState state,
         int amount,
         Random? rng = null,
@@ -3207,7 +3254,9 @@ public static class CardEffects
             : amount;
         if (effective <= 0)
         {
-            return;
+            // The game clamps with `Math.Max(modifiedAmount, 0m)` and returns it even
+            // when nothing is gained, so a Dodge and Roll under heavy Frail owes nothing.
+            return 0;
         }
 
         int unmovable = BuffSystem.Get(state.PlayerBuffs, BuffId.UnmovablePower);
@@ -3230,6 +3279,8 @@ public static class CardEffects
                 DealUnpoweredDamageToEnemy(state, target, jug);
             }
         }
+
+        return effective;
     }
 
     // Deals unblockable, unpowered HP loss to the player and triggers Rupture.
@@ -4689,7 +4740,6 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Thorns, upgraded ? 5 : 3);
                 break;
             case "ChargeBattery":
-            case "DodgeAndRoll":
             case "Prolong":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.BlockNextTurn, upgraded ? 8 : 5);
                 break;
@@ -5699,11 +5749,18 @@ public static class CardEffects
     private static void ApplyTemporaryStrengthDownToEnemy(CombatState state, int amount)
     {
         var target = FirstEnemy(state);
-        if (target == null)
+        if (target != null)
         {
-            return;
+            ApplyTemporaryStrengthDownTo(target, amount);
         }
+    }
 
+    /// <summary>
+    /// `TemporaryStrengthPower` with `IsPositive => false`: Strength down now, handed back
+    /// at the end of the owner's side turn. It is a Debuff, so Artifact eats it whole.
+    /// </summary>
+    private static void ApplyTemporaryStrengthDownTo(EnemyState target, int amount)
+    {
         if (BuffSystem.TryConsumeArtifact(target.Buffs))
         {
             return;

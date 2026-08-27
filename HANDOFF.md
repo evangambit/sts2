@@ -181,7 +181,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   source cited per file, never against emulator output. `CardCoverageTests` is the guard:
   `scripts/generate_card_coverage.py` scrapes the `case` labels out of `CardEffects.Apply`
   into `ImplementedCards.g.cs`, and implementing a card now fails the build until it is
-  tested or explicitly deferred in `Pending` (**350 left**).
+  tested or explicitly deferred in `Pending` (**335 left**).
   Caveat worth knowing: the guard only sees cards with their own `case`. Strike, Defend
   and Giant Rock run on the generic damage-and-block path and were invisible to it — they
   have tests now, but an empty `Pending` still means "every card with effect code", not
