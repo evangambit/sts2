@@ -1146,8 +1146,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
                 break;
 
-            case SI.Burst: // 1-cost, next 1/2 Skills are played twice; approximated by Attack duplicate hook
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.OneTwoPunch, upgraded ? 2 : 1);
+            case SI.Burst: // 1-cost, the next 1/2 SKILLS are played twice
+                // `BurstPower.ModifyCardPlayCount` adds a play to a SKILL and decrements
+                // itself. The emulator stacked OneTwoPunch, which is the same rule for
+                // ATTACKS -- so Burst doubled the wrong half of the deck.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Burst, upgraded ? 2 : 1);
                 break;
 
             case SI.CalculatedGamble: // 0-cost, discard hand and draw that many; upgrade retains
@@ -1370,8 +1373,14 @@ public static class CardEffects
                 break;
             }
 
-            case SI.MasterPlanner: // power approximation: extra card next turn
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, upgraded ? 2 : 1);
+            case SI.MasterPlanner: // 2/1-cost power: every Skill played becomes Sly
+                // `MasterPlannerPower.AfterCardPlayed` calls
+                // `CardCmd.ApplyKeyword(card, CardKeyword.Sly)` on every Skill its owner
+                // plays -- permanently, for the rest of the combat, so the copy plays
+                // itself the next time anything discards it. The emulator drew a card
+                // next turn instead, which is a different card entirely; the upgrade is a
+                // cost cut, not a bigger effect.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.MasterPlanner, 1);
                 break;
 
             case SI.MementoMori: // 1-cost, 9 damage + 4/5 per card discarded this turn
@@ -1386,8 +1395,11 @@ public static class CardEffects
                 GainBlock(state, upgraded ? 14 : 10, rng);
                 break;
 
-            case SI.Murder: // 2-cost, high damage approximation
-                DealDamage(state, upgraded ? 35 : 25);
+            case SI.Murder: // 3-cost, 1 damage per card drawn this combat
+                // CalculationBaseVar(1) + ExtraDamageVar(1) x the number of CardDrawnEntry
+                // rows for this player, which is every card drawn this COMBAT. The flat
+                // 25/35 was a guess at what that averages to.
+                DealDamage(state, MurderDamage(state, upgraded));
                 break;
 
             case SI.Neutralize: // 0-cost, 3/4 damage and Weak 1/2
@@ -1509,8 +1521,12 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Afterimage, upgraded ? 2 : 1);
                 break;
 
-            case SI.Speedster: // 2-cost, draw/energy next-turn power approximation
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 3 : 2);
+            case SI.Speedster: // 2-cost power: a card drawn MID-TURN hits all enemies for 2
+                // `SpeedsterPower.AfterCardDrawn` fires only when `!fromHandDraw` and the
+                // player's own side is acting -- so the opening hand does not count, and
+                // every extra draw does. The upgrade adds Innate rather than raising the
+                // damage, which the table already carries.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Speedster, 2);
                 break;
 
             case SI.StormOfSteel: // 1-cost, discard hand and add upgraded Shivs if upgraded
@@ -1567,8 +1583,16 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.ToolsOfTheTrade, 1);
                 break;
 
-            case SI.Tracking: // 2/1-cost, weak-tracking power approximation
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Vicious, upgraded ? 2 : 1);
+            case SI.Tracking: // 2/1-cost power: card attacks on a WEAK target are multiplied
+                // `TrackingPower.ModifyDamageMultiplicative` returns its own Amount when
+                // the target has Weak and the damage is a powered CARD attack -- so
+                // Tracking 2 is double damage. Playing it again adds one rather than
+                // another two, which is why the card reads its own power first.
+                BuffSystem.Apply(
+                    state.PlayerBuffs,
+                    BuffId.Tracking,
+                    BuffSystem.Get(state.PlayerBuffs, BuffId.Tracking) > 0 ? 1 : 2
+                );
                 break;
 
             case SI.Untouchable: // 2-cost, gain block equal to remaining draw pile plus 6/9
@@ -1583,9 +1607,12 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, upgraded ? 2 : 1);
                 break;
 
-            case SI.WraithForm: // 3-cost, Intangible 2/3 and lose Dexterity each turn approximation
+            case SI.WraithForm: // 3-cost, Intangible 2/3 and WraithFormPower(1)
+                // The Dexterity loss is not a one-off: `WraithFormPower.AfterSideTurnStart`
+                // takes `Amount` Dexterity at the start of EVERY turn, which is the price
+                // the card is built around. This charged it once.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, upgraded ? 3 : 2);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, -1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.WraithForm, 1);
                 break;
 
             // -- Remaining generated cards ----------------------------------------------
@@ -1979,8 +2006,10 @@ public static class CardEffects
 
             var card = state.DrawPile[0];
             state.RemoveFromDrawPileAt(0);
+            state.CardsDrawnThisCombat++;
             CountDrawnCardForAutomation(state);
             PoisonAllForCorrosiveWave(state, rng);
+            DamageAllForSpeedster(state);
 
             if (
                 BuffSystem.Get(state.PlayerBuffs, BuffId.Hellraiser) > 0
@@ -2030,6 +2059,10 @@ public static class CardEffects
     /// hittable enemy, and the power is removed at the end of the owner's side turn — so
     /// it is a one-turn draw engine.
     /// </summary>
+    /// <summary>Murder: `CalculationBase(1)` plus `ExtraDamage(1)` per card drawn this combat.</summary>
+    internal static int MurderDamage(CombatState state, bool upgraded) =>
+        (upgraded ? 2 : 1) + state.CardsDrawnThisCombat;
+
     private static void PoisonAllForCorrosiveWave(CombatState state, Random rng)
     {
         int wave = BuffSystem.Get(state.PlayerBuffs, BuffId.CorrosiveWave);
@@ -2041,6 +2074,24 @@ public static class CardEffects
         foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
         {
             ApplyEnemyDebuffToTarget(state, enemy, BuffId.Poison, wave, rng);
+        }
+    }
+
+    /// <summary>
+    /// `SpeedsterPower.AfterCardDrawn`: a card drawn while the player's own side is acting,
+    /// and NOT as part of the hand draw, deals `Amount` unpowered damage to every enemy.
+    /// </summary>
+    private static void DamageAllForSpeedster(CombatState state)
+    {
+        int speedster = BuffSystem.Get(state.PlayerBuffs, BuffId.Speedster);
+        if (speedster <= 0 || !state.PlayerTurn)
+        {
+            return;
+        }
+
+        foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
+        {
+            DealUnpoweredDamageToEnemy(state, enemy, speedster);
         }
     }
 

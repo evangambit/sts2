@@ -123,6 +123,11 @@ public enum BuffId
     CorrosiveWave, // the player: every card DRAWN poisons all enemies; lasts one turn
     Outbreak, // the player: every third Poison applied damages all enemies for this much
     OutbreakCounter, // how many of those three have been applied so far
+    Burst, // the player: the next N SKILLS are played twice
+    MasterPlanner, // the player: every Skill played becomes Sly for the rest of the combat
+    WraithForm, // the player: lose this much Dexterity at the start of every turn
+    Speedster, // the player: a card drawn MID-TURN damages all enemies for this much
+    Tracking, // the player: card attacks against a Weak target are multiplied by this
     Tangled, // Vine Shambler card debuff, currently tracked as a player debuff
     Constrict, // Slithering Strangler pressure debuff, currently tracked
     Smoggy, // Living Fog card affliction debuff, currently tracked

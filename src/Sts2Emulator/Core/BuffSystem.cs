@@ -236,6 +236,15 @@ public static class BuffSystem
             dmg *= 1.5f;
         }
 
+        // TrackingPower.ModifyDamageMultiplicative: a powered CARD attack against a target
+        // that has Weak is multiplied by the power's own amount, so Tracking 2 is double
+        // damage. It reads the DEFENDER's Weak and the ATTACKER's Tracking.
+        int tracking = Get(attackerBuffs, BuffId.Tracking);
+        if (tracking > 0 && Get(defenderBuffs, BuffId.Weak) > 0)
+        {
+            dmg *= tracking;
+        }
+
         // SoarPower.ModifyDamageMultiplicative: a flying Owl Magistrate takes half from a
         // POWERED attack, which is the only kind that reaches this function.
         if (Get(defenderBuffs, BuffId.Soar) > 0)

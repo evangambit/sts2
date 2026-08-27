@@ -191,6 +191,13 @@ public sealed class CombatState
     public int CardPlaysThisTurn;
     public int CardsPlayedThisCombat;
     public int DrawnCardsSinceAutomationProc;
+
+    /// <summary>
+    /// Every card drawn this combat. Murder's damage is one per entry —
+    /// `CalculatedDamageVar.WithMultiplier(count of CardDrawnEntry for this player)`,
+    /// read off the combat HISTORY, so it counts the whole fight and not the turn.
+    /// </summary>
+    public int CardsDrawnThisCombat;
     public int CardsPlayedSincePanacheProc;
     public int BlockGainsThisTurn;
     public int PlayerHpLostThisTurn;

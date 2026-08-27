@@ -241,7 +241,11 @@ public readonly record struct CardInstance(
     // `CardModel.HasSingleTurnSly`, which Hand Trick sets on a chosen Skill. Sly is
     // otherwise a keyword on the DEFINITION, so this is the per-copy half of the same
     // question -- see CardInstanceExtensions.IsSlyThisTurn.
-    bool SlyThisTurn = false
+    bool SlyThisTurn = false,
+    // `CardCmd.ApplyKeyword(card, CardKeyword.Sly)`, which Master Planner does to every
+    // Skill its owner plays. Unlike Hand Trick's grant this one is permanent for the
+    // combat, so it rides on the copy through the piles rather than expiring with the turn.
+    bool SlyForCombat = false
 );
 
 public static class CardInstanceExtensions
@@ -314,7 +318,7 @@ public static class CardInstanceExtensions
     /// joining the pile.
     /// </summary>
     public static bool IsSlyThisTurn(this CardInstance card) =>
-        GeneratedData.Cards.Get(card.DefId).Sly || card.SlyThisTurn;
+        GeneratedData.Cards.Get(card.DefId).Sly || card.SlyForCombat || card.SlyThisTurn;
 }
 
 public static class Enchantments

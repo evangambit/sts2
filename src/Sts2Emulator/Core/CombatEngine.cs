@@ -143,8 +143,22 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FreeSkillPower, -1);
         }
 
+        // `BurstPower.ModifyCardPlayCount` is OneTwoPunch's rule for SKILLS -- but the
+        // play count is settled when the play is SET UP, before the card resolves, which
+        // is why a Burst does not double itself. Read here for that reason; the emulator
+        // used to stack OneTwoPunch instead, which doubled Attacks rather than Skills.
+        int burstPlays =
+            def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.Burst) > 0
+                ? 1
+                : 0;
+
         ApplyEnchantmentOnPlay(state, card, rng);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
+        if (burstPlays > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Burst, -1);
+        }
+
         int extraPlays =
             state.CardPlaysThisTurn < BuffSystem.Get(state.PlayerBuffs, BuffId.EchoForm) ? 1 : 0;
 
@@ -153,6 +167,7 @@ public static class CombatEngine
 
         // Hidden Gem's Replay rides on the copy it was granted to, the same way.
         extraPlays += card.ReplayCount;
+        extraPlays += burstPlays;
         int signalBoost = BuffSystem.Get(state.PlayerBuffs, BuffId.SignalBoost);
         if (def.Type == CardType.Power && signalBoost > 0)
         {
@@ -171,6 +186,7 @@ public static class CombatEngine
         {
             Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
         }
+
         if (def.Type == CardType.Attack)
         {
             int oneTwoPunch = BuffSystem.Get(state.PlayerBuffs, BuffId.OneTwoPunch);
@@ -274,6 +290,7 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
+                    SlyForCombat = card.SlyForCombat || MasterPlannerMarks(state, def),
                 }
             );
         }
@@ -830,6 +847,13 @@ public static class CombatEngine
         if (infiniteBlades > 0)
         {
             Effects.CardEffects.AddGeneratedCardsToHand(state, 430, infiniteBlades);
+        }
+
+        // `WraithFormPower.AfterSideTurnStart` takes its Amount in Dexterity every turn.
+        int wraithForm = BuffSystem.Get(state.PlayerBuffs, BuffId.WraithForm);
+        if (wraithForm > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, -wraithForm);
         }
 
         int noxiousFumes = BuffSystem.Get(state.PlayerBuffs, BuffId.NoxiousFumes);
@@ -2065,7 +2089,13 @@ public static class CombatEngine
         }
         else
         {
-            state.DiscardPile.Add(card with { FreeThisTurn = false });
+            state.DiscardPile.Add(
+                card with
+                {
+                    FreeThisTurn = false,
+                    SlyForCombat = card.SlyForCombat || MasterPlannerMarks(state, def),
+                }
+            );
         }
 
         IncrementPlayedCardTypeCounters(state, def);
@@ -2226,6 +2256,19 @@ public static class CombatEngine
         return card.IsExhaust();
     }
 
+    /// <summary>
+    /// `MasterPlannerPower.AfterCardPlayed` applies the Sly KEYWORD to every Skill its
+    /// owner plays — permanently for the combat, so that copy plays itself the next time
+    /// anything discards it.
+    /// </summary>
+    /// <remarks>
+    /// Asked at each of the three places a played card can land in the discard pile. The
+    /// game hooks "a card was played" once; the emulator has three disposal paths, and a
+    /// rule applied to one of them is the shape this codebase keeps turning up.
+    /// </remarks>
+    private static bool MasterPlannerMarks(CombatState state, CardDef def) =>
+        def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.MasterPlanner) > 0;
+
     private static bool ShouldPlaceOnDrawPileAfterPlay(CombatState state, CardDef def)
     {
         int nostalgia = BuffSystem.Get(state.PlayerBuffs, BuffId.Nostalgia);
@@ -2335,7 +2378,13 @@ public static class CombatEngine
         }
         else
         {
-            state.DiscardPile.Add(card with { FreeThisTurn = false });
+            state.DiscardPile.Add(
+                card with
+                {
+                    FreeThisTurn = false,
+                    SlyForCombat = card.SlyForCombat || MasterPlannerMarks(state, def),
+                }
+            );
         }
 
         IncrementPlayedCardTypeCounters(state, def);
