@@ -74,6 +74,21 @@ public static class RelicEffects
     public const int Vambrace = 280;
     public const int VenerableTeaSet = 282;
     public const int AmethystAubergine = 3;
+    // The shared pool's rares.
+    public const int BeatingRemnant = 11;
+    public const int Bellows = 13;
+    public const int Chandelier = 44;
+    public const int GamePiece = 98;
+    public const int IceCream = 115;
+    public const int IntimidatingHelmet = 117;
+    public const int PrayerWheel = 204;
+    public const int RainbowRing = 212;
+    public const int SturdyClamp = 254;
+    public const int TheCourier = 262;
+    public const int TungstenRod = 273;
+    public const int UnceasingTop = 276;
+    public const int VexingPuzzlebox = 284;
+    public const int WhiteStar = 291;
     public const int JuzuBracelet = 123;
     public const int Pantograph = 186;
     public const int Planisphere = 198;
@@ -847,6 +862,154 @@ public static class RelicEffects
     /// </summary>
     internal static bool DoublesCardBlock(CombatState state) =>
         HasRelic(state, Vambrace) && !state.VambraceSpent;
+
+    /// <summary>
+    /// `ModifyHpLostAfterOsty` from the two relics that reduce or cap HP loss. Both are
+    /// `Late`-ish modifiers on the amount that would actually come off, so they run after
+    /// block has been taken off and before the HP is.
+    /// </summary>
+    internal static int ModifyHpLost(CombatState state, int hpLoss)
+    {
+        // TungstenRod: `Math.Max(0m, amount - 1m)`.
+        if (HasRelic(state, TungstenRod))
+        {
+            hpLoss = Math.Max(0, hpLoss - 1);
+        }
+
+        // BeatingRemnant: `Math.Min(amount, 20 - DamageReceivedThisTurn)` -- a cap on the
+        // TURN's total unblocked damage, not on one hit, and the running total resets at
+        // the owner's side-turn start.
+        if (HasRelic(state, BeatingRemnant))
+        {
+            hpLoss = Math.Max(0, Math.Min(hpLoss, 20 - state.UnblockedDamageThisTurn));
+        }
+
+        return hpLoss;
+    }
+
+    /// <summary>
+    /// `IceCream.ShouldPlayerResetEnergy` returns FALSE from turn two onwards — so energy
+    /// carries over instead of being refilled. Turn one still resets, which is what puts
+    /// the starting energy on the board at all.
+    /// </summary>
+    internal static bool ShouldResetEnergy(CombatState state, int turnNumber) =>
+        turnNumber <= 1 || !HasRelic(state, IceCream);
+
+    /// <summary>
+    /// `SturdyClamp.ShouldClearBlock` returns false for its owner, and
+    /// `AfterPreventingBlockClear` then trims whatever is over ten. So it is not
+    /// Barricade: block survives, but only ten of it.
+    /// </summary>
+    internal static bool KeepsBlockCappedAtTen(CombatState state) => HasRelic(state, SturdyClamp);
+
+    /// <summary>
+    /// `Bellows`, `Chandelier`, `VexingPuzzlebox` — the rest of the turn-start rares.
+    /// </summary>
+    internal static void ApplyStartOfPlayerTurnRares(CombatState state, int turnNumber, Random? rng)
+    {
+        if (turnNumber == 3 && HasRelic(state, Chandelier))
+        {
+            state.Energy += 3;
+        }
+
+        if (turnNumber == 1 && HasRelic(state, Bellows))
+        {
+            // `CardCmd.Upgrade(PileType.Hand.GetPile(owner).Cards)` -- the opening hand,
+            // and only the opening hand.
+            for (int i = 0; i < state.Hand.Count; i++)
+            {
+                state.Hand[i] = state.Hand[i] with { Upgraded = true };
+            }
+        }
+
+        if (turnNumber == 1 && HasRelic(state, VexingPuzzlebox) && rng is not null)
+        {
+            // A card from the character's WHOLE pool, not just the powers -- Creative Ai
+            // filters to Power and this does not.
+            CardEffects.AddRandomPoolCardToHand(state, rng);
+        }
+    }
+
+    /// <summary>
+    /// `GamePiece` (draw after a Power) and `RainbowRing` (one Attack, one Skill and one
+    /// Power in a turn pays Strength and Dexterity, once).
+    /// </summary>
+    internal static void ApplyAfterCardPlayedRares(CombatState state, CardDef def, Random? rng)
+    {
+        if (def.Type == CardType.Power && HasRelic(state, GamePiece) && rng is not null)
+        {
+            CardEffects.DrawCards(state, 1, rng);
+        }
+
+        if (!HasRelic(state, RainbowRing) || state.RainbowRingPaidThisTurn)
+        {
+            return;
+        }
+
+        // `ActivationCountThisTurn < 1` -- once a turn, and the counts are only advanced
+        // while it has not yet paid.
+        switch (def.Type)
+        {
+            case CardType.Attack:
+                state.RainbowRingAttacks++;
+                break;
+            case CardType.Skill:
+                state.RainbowRingSkills++;
+                break;
+            case CardType.Power:
+                state.RainbowRingPowers++;
+                break;
+        }
+
+        if (
+            state.RainbowRingAttacks > 0
+            && state.RainbowRingSkills > 0
+            && state.RainbowRingPowers > 0
+        )
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 1);
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, 1);
+            state.RainbowRingPaidThisTurn = true;
+        }
+    }
+
+    /// <summary>
+    /// `IntimidatingHelmet.BeforeCardPlayed`: 4 unpowered block when the card actually
+    /// COST two or more — `cardPlay.Resources.EnergyValue`, so a cost reduction or a free
+    /// play stops it paying.
+    /// </summary>
+    internal static void ApplyBeforeCardPlayedRares(CombatState state, int energySpent, Random? rng)
+    {
+        if (energySpent >= 2 && HasRelic(state, IntimidatingHelmet))
+        {
+            CardEffects.GainUnpoweredBlock(state, 4, rng);
+        }
+    }
+
+    /// <summary>
+    /// `UnceasingTop.AfterHandEmptied`: draw a card whenever the hand runs out during the
+    /// PLAY phase — not at turn start, and not while a screen is up.
+    /// </summary>
+    internal static void ApplyAfterHandEmptied(CombatState state, Random? rng)
+    {
+        if (state.Hand.Count == 0 && HasRelic(state, UnceasingTop) && rng is not null)
+        {
+            CardEffects.DrawCards(state, 1, rng);
+        }
+    }
+
+    /// <summary>
+    /// `PrayerWheel` and `WhiteStar` each add a whole extra `CardReward` — the Wheel after
+    /// a MONSTER room, the Star after an ELITE, and the Star's three come from the BOSS
+    /// pool rather than the room's own.
+    /// </summary>
+    internal static bool AddsExtraCardReward(Run.RunState state, int roomNodeType) =>
+        (roomNodeType == Run.RunConstants.NodeNormal && Has(state.Relics, PrayerWheel))
+        || (roomNodeType == Run.RunConstants.NodeElite && Has(state.Relics, WhiteStar));
+
+    /// <summary>`TheCourier.ModifyMerchantPrice`: a flat 20% off everything the shop sells.</summary>
+    internal static int ModifyMerchantPrice(Run.RunState state, int price) =>
+        Has(state.Relics, TheCourier) ? (int)(price * 0.8m) : price;
 
     /// <summary>
     /// `Hook.AfterRoomEntered`, which the game fires from each room's `Enter()` — Combat,

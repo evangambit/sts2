@@ -155,6 +155,56 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "BeatingRemnant": (
+        "0071ec697a57",
+        "caps the TURN's total unblocked damage at 20, not one hit; the running total resets at side-turn start",
+    ),
+    "Bellows": (
+        "720fc94e1c7f",
+        "AfterPlayerTurnStart on turn 1 upgrades every card in the OPENING hand",
+    ),
+    "Chandelier": (
+        "057b30d9f8f4",
+        "AfterSideTurnStart on TurnNumber == 3 exactly, EnergyVar(3)",
+    ),
+    "GamePiece": ("9d01bc3a78a2", "AfterCardPlayed on a POWER draws CardsVar(1)"),
+    "IceCream": (
+        "37fe63ac1cd9",
+        "ShouldPlayerResetEnergy is false from turn two on, so unspent energy CARRIES",
+    ),
+    "IntimidatingHelmet": (
+        "78a6f3b85a41",
+        "BeforeCardPlayed with Resources.EnergyValue >= 2 gains BlockVar(4, Unpowered)",
+    ),
+    "PrayerWheel": (
+        "f0d485d1704e",
+        "TryModifyRewards adds a whole extra CardReward of three after a MONSTER room",
+    ),
+    "RainbowRing": (
+        "4d48d3922c06",
+        "one Attack, one Skill and one Power in a turn pays 1 Strength and 1 Dexterity, ONCE",
+    ),
+    "SturdyClamp": (
+        "d7d32c98d21c",
+        "ShouldClearBlock false, then AfterPreventingBlockClear trims anything over 10",
+    ),
+    "TheCourier": (
+        "09d0dd9f1a48",
+        "ModifyMerchantPrice times (1 - 20/100), and it refills merchant entries",
+    ),
+    "TungstenRod": ("42898f97e3a9", "ModifyHpLostAfterOsty is Math.Max(0, amount - 1)"),
+    "UnceasingTop": (
+        "122c6a203064",
+        "AfterHandEmptied draws one, during the PLAY phase only",
+    ),
+    "VexingPuzzlebox": (
+        "8f845e1b070f",
+        "AfterPlayerTurnStart on turn 1 adds a card from the WHOLE pool, free for the turn",
+    ),
+    "WhiteStar": (
+        "c8f0af5c2f10",
+        "TryModifyRewards adds an extra CardReward after an ELITE, drawn from the BOSS pool",
+    ),
     "AmethystAubergine": (
         "3da23ab46ccb",
         "TryModifyRewards adds GoldVar(15) after any combat room except the final act's boss",

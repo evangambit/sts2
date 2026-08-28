@@ -124,6 +124,19 @@ public sealed class RunState
     /// is what proved it moves at all.
     /// </remarks>
     public int MaxPotionSlots = 2;
+
+    /// <summary>
+    /// Extra `CardReward`s owed by Prayer Wheel or White Star. Counted rather than
+    /// generated here because the reward SCREEN is a phase the run steps through, and the
+    /// emulator offers one card reward at a time.
+    /// </summary>
+    /// <remarks>
+    /// The count is honoured by the card-reward phase; what is NOT modelled is White
+    /// Star's pool switch — its three should come from the BOSS pool and come from the
+    /// room's own here. Recorded rather than guessed: the boss card pool is a separate
+    /// generator and wiring it through the reward phase is its own change.
+    /// </remarks>
+    public int ExtraCardRewardsOwed;
     public int CurrentNodeType;
     public int[] NeowOptions = new int[3];
     public int[] RewardCards = new int[3];

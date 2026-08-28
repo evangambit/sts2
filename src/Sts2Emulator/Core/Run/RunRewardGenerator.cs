@@ -183,6 +183,17 @@ public static class RunRewardGenerator
             && state.CurrentActIndex >= state.Acts.Count - 1;
         state.Gold += Effects.RelicEffects.ExtraCombatRewardGold(state, finalActBoss);
 
+        // `PrayerWheel.TryModifyRewards` after a Monster room and `WhiteStar` after an
+        // Elite each add a WHOLE extra CardReward of three. The room type is the gate, and
+        // the Star's three come from the BOSS pool rather than the room's own -- which is
+        // the part a "one more card reward" reading would lose.
+        state.ExtraCardRewardsOwed += Effects.RelicEffects.AddsExtraCardReward(
+            state,
+            state.LastResolvedRoomType
+        )
+            ? 1
+            : 0;
+
         if (HasRelic(state, RunConstants.RelicBlackBlood))
         {
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 12);
@@ -842,7 +853,7 @@ public static class RunRewardGenerator
                 cost = ShopCardCost(cardId, colorless: false, state.PlayerRng.Shops) / 2;
             }
 
-            state.ShopCosts[i] = cost;
+            state.ShopCosts[i] = Effects.RelicEffects.ModifyMerchantPrice(state, cost);
         }
 
         for (int i = 0; i < 2; i++)
@@ -858,7 +869,10 @@ public static class RunRewardGenerator
             state.ShopCards[action] = cardId;
             blacklist.Add(cardId);
             state.PlayerRng.Rewards.NextDouble();
-            state.ShopCosts[action] = ShopCardCost(cardId, colorless: true, state.PlayerRng.Shops);
+            state.ShopCosts[action] = Effects.RelicEffects.ModifyMerchantPrice(
+                state,
+                ShopCardCost(cardId, colorless: true, state.PlayerRng.Shops)
+            );
         }
 
         // MerchantInventory.PopulateRelicEntries builds its three slots as
@@ -875,7 +889,10 @@ public static class RunRewardGenerator
         for (int i = 0; i < state.ShopRelics.Length; i++)
         {
             state.ShopRelics[i] = NextShopRelic(state, slotRarities[i]);
-            state.ShopCosts[7 + i] = ShopRelicCost(state.ShopRelics[i], state.PlayerRng.Shops);
+            state.ShopCosts[7 + i] = Effects.RelicEffects.ModifyMerchantPrice(
+                state,
+                ShopRelicCost(state.ShopRelics[i], state.PlayerRng.Shops)
+            );
         }
 
         // MerchantInventory.PopulatePotionEntries rolls all three potions in one
@@ -894,7 +911,10 @@ public static class RunRewardGenerator
 
         for (int i = 0; i < state.ShopPotions.Length; i++)
         {
-            state.ShopCosts[10 + i] = ShopPotionCost(state.ShopPotions[i], state.PlayerRng.Shops);
+            state.ShopCosts[10 + i] = Effects.RelicEffects.ModifyMerchantPrice(
+                state,
+                ShopPotionCost(state.ShopPotions[i], state.PlayerRng.Shops)
+            );
         }
         state.ShopCosts[RunConstants.ShopRemoveAction] = 100 + 50 * state.ShopRemovalsUsed;
         // A fresh merchant stocks the service again -- the price carries across shops,

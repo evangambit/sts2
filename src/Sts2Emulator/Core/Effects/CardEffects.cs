@@ -2640,7 +2640,7 @@ public static class CardEffects
         amount = BuffSystem.CapIncomingDamage(amount, state.PlayerBuffs);
         int absorbed = Math.Min(state.PlayerBlock, amount);
         state.PlayerBlock -= absorbed;
-        int hpLoss = amount - absorbed;
+        int hpLoss = RelicEffects.ModifyHpLost(state, amount - absorbed);
         if (hpLoss > 0)
         {
             int buffer = BuffSystem.Get(state.PlayerBuffs, BuffId.Buffer);
@@ -2660,6 +2660,8 @@ public static class CardEffects
 
             state.PlayerHp -= hpLoss;
             state.PlayerHpLostThisTurn += hpLoss;
+            // Beating Remnant measures its 20-per-turn cap against what actually landed.
+            state.UnblockedDamageThisTurn += hpLoss;
             // Hook.AfterDamageReceived does not care who dealt the damage, so a card that
             // hits its own owner arms Centennial Puzzle and Self-Forming Clay too.
             RelicEffects.ApplyAfterUnblockedDamageReceived(state);
@@ -3620,6 +3622,28 @@ public static class CardEffects
                 TriggerOrbPassive(state, i, rng);
             }
         }
+    }
+
+    /// <summary>
+    /// `CardFactory.GetDistinctForCombat` over the character's WHOLE unlocked pool, free
+    /// for the turn, into hand — Vexing Puzzlebox's card. Unlike Creative Ai's it is not
+    /// filtered to Powers.
+    /// </summary>
+    /// <remarks>
+    /// Rolled on the card-generation stream, which is the same one Creative Ai and White
+    /// Noise use. The pool here is the IRONCLAD one, because the run engine is Ironclad
+    /// only; a character-selectable run would need this to follow the character.
+    /// </remarks>
+    internal static void AddRandomPoolCardToHand(CombatState state, Random rng)
+    {
+        var pool = GeneratedData.CardPools.Ironclad;
+        if (pool.Length == 0 || state.Hand.Count >= MaxCardsInHand)
+        {
+            return;
+        }
+
+        int id = pool[(state.CardGenerationRng ?? rng).Next(pool.Length)];
+        state.Hand.Add(new CardInstance(id, false, FreeThisTurn: true));
     }
 
     public static void AddRandomDefectPowerCardsToHand(CombatState state, int count, Random rng)

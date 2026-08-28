@@ -417,6 +417,11 @@ public static class CombatFactory
             state.RemoveFromDrawPileAt(0);
         }
 
+        // Bellows and Vexing Puzzlebox are `AfterPlayerTurnStart` on turn ONE, which is
+        // after the opening hand has been dealt -- so they cannot ride the ordinary
+        // turn-start seam, which only runs from turn two.
+        RelicEffects.ApplyStartOfPlayerTurnRares(state, 1, rng);
+
         RelicEffects.ApplyCombatStart(state, rng);
         RelicEffects.ApplyStartOfPlayerTurn(state, rng);
 

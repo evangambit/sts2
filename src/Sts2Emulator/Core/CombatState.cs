@@ -234,6 +234,24 @@ public sealed class CombatState
     public bool VambraceSpent;
 
     /// <summary>
+    /// `BeatingRemnant.DamageReceivedThisTurn` — the running total its 20-per-turn cap is
+    /// measured against, reset at the owner's side-turn start.
+    /// </summary>
+    public int UnblockedDamageThisTurn;
+
+    /// <summary>`RainbowRing`'s three counters and its once-a-turn latch.</summary>
+    public int RainbowRingAttacks;
+
+    /// <inheritdoc cref="RainbowRingAttacks" />
+    public int RainbowRingSkills;
+
+    /// <inheritdoc cref="RainbowRingAttacks" />
+    public int RainbowRingPowers;
+
+    /// <inheritdoc cref="RainbowRingAttacks" />
+    public bool RainbowRingPaidThisTurn;
+
+    /// <summary>
     /// A once-per-combat enchantment on the card being played has just fired, so the copy
     /// that lands in its result pile must carry the spent flag. CardEffects takes the card
     /// by value and cannot hand a mutation back, which is the same reason

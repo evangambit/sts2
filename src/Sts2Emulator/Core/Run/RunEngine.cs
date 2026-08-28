@@ -1536,6 +1536,18 @@ public sealed class RunEngine
 
         Array.Clear(State.RewardCards);
         Array.Clear(State.RewardUpgraded);
+
+        // Prayer Wheel and White Star each add a WHOLE extra CardReward, so the screen
+        // comes back rather than the run moving on. Rolled here, when the previous offer
+        // is answered, because `CardReward.Populate()` draws its three when the screen is
+        // BUILT -- not when the relic added it.
+        if (State.ExtraCardRewardsOwed > 0)
+        {
+            State.ExtraCardRewardsOwed--;
+            RunRewardGenerator.PopulateCardReward(State);
+            return 0;
+        }
+
         if (State.ReturnToRewardScreenAfterCardReward)
         {
             State.ReturnToRewardScreenAfterCardReward = false;

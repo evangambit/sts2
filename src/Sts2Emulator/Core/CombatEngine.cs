@@ -109,6 +109,7 @@ public static class CombatEngine
         // subtracts its own cost, which is zero -- so the count excludes the drill itself
         // either way, and this runs before the card resolves.
         state.EnergySpentThisTurn += energyToSpend;
+        Effects.RelicEffects.ApplyBeforeCardPlayedRares(state, energyToSpend, rng);
         bool feralReturn =
             def.Type == CardType.Attack
             && energyToSpend == 0
@@ -369,6 +370,8 @@ public static class CombatEngine
 
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
+        Effects.RelicEffects.ApplyAfterCardPlayedRares(state, def, rng);
+        Effects.RelicEffects.ApplyAfterHandEmptied(state, rng);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         bool playerDead = PlayerIsDead(state);
@@ -767,7 +770,12 @@ public static class CombatEngine
         // ── Start of next player turn ─────────────────────────────────────────
         state.Turn++;
         state.PlayerTurn = true;
-        state.Energy = EffectiveMaxEnergy(state);
+        // `IceCream.ShouldPlayerResetEnergy` is false from turn two on, so the energy
+        // carries instead of refilling.
+        if (Effects.RelicEffects.ShouldResetEnergy(state, state.Turn + 1))
+        {
+            state.Energy = EffectiveMaxEnergy(state);
+        }
         state.PlayerHpLostThisTurn = 0;
         state.CardsPlayedThisTurn = 0;
         state.ShivsPlayedThisTurn = 0;
@@ -808,7 +816,13 @@ public static class CombatEngine
         // was the thing that saved the block. Barricade does NOT decrement, which is the
         // whole difference between the two and why they cannot share an id.
         int blur = BuffSystem.Get(state.PlayerBuffs, BuffId.Blur);
-        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Barricade) == 0 && blur == 0)
+        // Sturdy Clamp keeps the block and then trims it to ten -- not Barricade, which
+        // keeps all of it.
+        if (Effects.RelicEffects.KeepsBlockCappedAtTen(state))
+        {
+            state.PlayerBlock = Math.Min(state.PlayerBlock, 10);
+        }
+        else if (BuffSystem.Get(state.PlayerBuffs, BuffId.Barricade) == 0 && blur == 0)
         {
             state.PlayerBlock = 0;
         }
@@ -829,6 +843,7 @@ public static class CombatEngine
         }
 
         Effects.RelicEffects.ApplyStartOfPlayerTurnShared(state, state.Turn + 1, rng);
+        Effects.RelicEffects.ApplyStartOfPlayerTurnRares(state, state.Turn + 1, rng);
 
         int coolant = BuffSystem.Get(state.PlayerBuffs, BuffId.Coolant);
         if (coolant > 0)
@@ -969,6 +984,11 @@ public static class CombatEngine
         state.CardsExhaustedThisTurn = 0;
         state.StatusCardsDrawnThisTurn = 0;
         state.EnergySpentThisTurn = 0;
+        state.UnblockedDamageThisTurn = 0;
+        state.RainbowRingAttacks = 0;
+        state.RainbowRingSkills = 0;
+        state.RainbowRingPowers = 0;
+        state.RainbowRingPaidThisTurn = false;
 
         ReturnQueuedCardsToHandBeforeDraw(state);
         DeliverQueuedCardCopiesBeforeDraw(state);
