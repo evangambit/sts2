@@ -310,6 +310,13 @@ public enum BuffId
     /// this many cards. A status-shaped draw engine, not a flat next-turn draw.
     /// </summary>
     Iteration,
+
+    /// <summary>
+    /// <c>BiasedCognitionPower.AfterSideTurnStart</c>: takes this much Focus back at the
+    /// start of every turn, for the rest of the combat. The drain is the card's cost, and
+    /// the emulator granted the Focus without it.
+    /// </summary>
+    BiasedCognition,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

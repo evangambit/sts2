@@ -3534,8 +3534,13 @@ public static class CardEffects
         state.Orbs.RemoveAt(state.Orbs.Count - 1);
     }
 
+    /// <summary>
+    /// `OrbModel.GetRandomOrb(Rng.CombatOrbGeneration)` — a roll over ALL FIVE valid orbs,
+    /// on the orb-generation stream. Chaos and Trash to Treasure both go through here so
+    /// they cannot disagree about what "a random orb" means.
+    /// </summary>
     public static void ChannelRandomOrb(CombatState state, Random rng) =>
-        ChannelOrb(state, (OrbType)rng.Next(4));
+        ChannelOrb(state, (OrbType)(state.OrbGenerationRng ?? rng).Next(5), rng);
 
     public static void TriggerOrbPassive(CombatState state, int index, Random rng)
     {
@@ -3822,7 +3827,12 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, upgraded ? 2 : 1);
                 return true;
             case "BiasedCognition":
+                // Two vars, and the emulator read one. `PowerVar<FocusPower>(4m)` +1 is the
+                // Focus, and `PowerVar<BiasedCognitionPower>(1m)` is the DRAIN: a point of
+                // Focus handed back at the start of every turn, for the rest of the combat.
+                // Without it an Ancient card is 4 Focus for one energy and no downside.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, upgraded ? 5 : 4);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.BiasedCognition, 1);
                 return true;
             case "Buffer":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Buffer, upgraded ? 2 : 1);
@@ -3877,8 +3887,7 @@ public static class CardEffects
                 // stream, which desynchronises every roll downstream of it.
                 for (int i = 0; i < (upgraded ? 2 : 1); i++)
                 {
-                    Random orbStream = state.OrbGenerationRng ?? rng;
-                    ChannelOrb(state, (OrbType)orbStream.Next(5), rng);
+                    ChannelRandomOrb(state, rng);
                 }
 
                 return true;
@@ -4025,13 +4034,32 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryFocus, upgraded ? 2 : 1);
                 return true;
             case "GeneticAlgorithm":
-                GainBlock(state, Blk(def, upgraded, card), rng);
+                // `BlockVar(CurrentBlock)` where CurrentBlock STARTS AT 1 and rises by
+                // `IntVar("Increase", 3m)` on every play -- permanently, on the card. The
+                // extractor reads 0 for the base because the var is a property rather than
+                // a literal, so the 1 is written out here.
+                //
+                // The growth rides on the copy, as Rampage's damage does. The game also
+                // buffs `base.DeckVersion`, so a Genetic Algorithm that grew in one fight
+                // starts the NEXT one bigger -- that half is run state and is not modelled;
+                // combat builds its card list fresh from the deck.
+                GainBlock(state, 1 + card.BonusBlock, rng);
+                state.PlayedCardBonusBlock += upgraded ? 4 : 3;
                 return true;
             case "Hailstorm":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Hailstorm, upgraded ? 8 : 6);
                 return true;
             case "HelixDrill":
-                DealDamageMultiHit(state, Dmg(def, upgraded, card), state.Energy, rng);
+                // The hit count is the turn's `EnergySpentEntry` total, minus the drill's
+                // own cost -- which is zero, so it is simply the energy spent BEFORE it.
+                // The emulator read `state.Energy`, the energy REMAINING, which is very
+                // nearly the opposite: it paid most on a turn nothing had been spent.
+                DealDamageMultiHit(
+                    state,
+                    Dmg(def, upgraded, card),
+                    state.EnergySpentThisTurn,
+                    rng
+                );
                 return true;
             case "Hologram":
                 // `CardSelectCmd.FromCombatPile` over the DISCARD pile: the player picks
@@ -4098,7 +4126,14 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Smokestack, upgraded ? 7 : 5);
                 return true;
             case "Spinner":
-                ChannelOrb(state, OrbType.Glass);
+                // `if (base.IsUpgraded) { await OrbCmd.Channel<GlassOrb>(...); }` -- the orb
+                // on play is the WHOLE upgrade, and the emulator gave it at both levels.
+                // The power itself is 1 either way.
+                if (upgraded)
+                {
+                    ChannelOrb(state, OrbType.Glass, rng);
+                }
+
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Spinner, 1);
                 return true;
             case "Subroutine":
@@ -4127,12 +4162,23 @@ public static class CardEffects
                 AutoPlayRandomDrawPileAttack(state, rng);
                 return true;
             case "Voltaic":
-                for (int i = 0; i < state.LightningOrbsChanneledThisCombat; i++)
+            {
+                // `CalculatedVar.Calculate` runs ONCE, before the loop, over the combat's
+                // OrbChanneledEntry history. The emulator re-read
+                // `LightningOrbsChanneledThisCombat` as its loop BOUND while the body
+                // incremented it -- `i` and the bound rose together, so the loop never
+                // terminated. It ran until both overflowed: four minutes of channelling
+                // for one card, and a hang for any agent stepping the environment.
+                //
+                // Snapshotting the count is the fix and also the faithful reading.
+                int channelled = state.LightningOrbsChanneledThisCombat;
+                for (int i = 0; i < channelled; i++)
                 {
-                    ChannelOrb(state, OrbType.Lightning);
+                    ChannelOrb(state, OrbType.Lightning, rng);
                 }
 
                 return true;
+            }
             case "WhiteNoise":
                 AddRandomDefectPowerCardsToHand(state, 1, rng);
                 if (state.Hand.Count > 0)

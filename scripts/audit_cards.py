@@ -97,6 +97,102 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "AdaptiveStrike": (
+        "5a7e572eee34",
+        "a clone of itself with SetThisCombat(0) into the discard",
+    ),
+    "AllForOne": (
+        "078fa2a6ae3b",
+        "every 0-cost Attack/Skill/Power in the DISCARD returns to hand; the filter excludes Status and Curse",
+    ),
+    "BiasedCognition": (
+        "d4f233f5adf2",
+        "TWO vars: FocusPower(4m) +1, and BiasedCognitionPower(1m) which drains a Focus every turn",
+    ),
+    "Buffer": (
+        "6d70e0ecc365",
+        "PowerVar<BufferPower>(1m) +1; each charge zeroes one instance of HP loss",
+    ),
+    "ConsumingShadow": (
+        "ab55da889c51",
+        "RepeatVar(2) +1 Dark orbs, and a power that evokes the LAST orb at each side turn end",
+    ),
+    "Coolant": (
+        "5b1ac7befd20",
+        "AfterSideTurnStart blocks distinct-orb-types times Amount, unpowered",
+    ),
+    "CreativeAi": (
+        "19982becfe13",
+        "BeforeHandDraw adds Amount random POWER cards to hand; the upgrade is the cost",
+    ),
+    "Defragment": ("3e9d0372c793", "PowerVar<FocusPower>(1m) +1, permanent"),
+    "EchoForm": (
+        "53673a33b554",
+        "ModifyCardPlayCount +1 while the turn's first-in-series plays are under Amount; upgrade removes Ethereal",
+    ),
+    "FlakCannon": (
+        "5dea026eae0b",
+        "exhausts every Status outside the exhaust pile FIRST, then hits once per status at rolled targets",
+    ),
+    "GeneticAlgorithm": (
+        "9c7cc2b93b94",
+        "BlockVar(CurrentBlock) starts at 1 and rises by IntVar(Increase, 3m) per play, on the card AND its DeckVersion",
+    ),
+    "HelixDrill": (
+        "0cf3cb9ebaea",
+        "hit count is the turn's EnergySpentEntry total minus its own cost, which is zero",
+    ),
+    "Hyperbeam": (
+        "9f924a47ae24",
+        "PowerVar<FocusPower>(3m) is NOT upgraded -- only the damage is; the Focus is spent, not gained",
+    ),
+    "IceLance": ("52b81d7a8986", "RepeatVar(3) Frost, not upgraded; the damage is"),
+    "Ignition": (
+        "8f6b9df8dc23",
+        "MultiplayerOnly; channels Plasma on the TARGET ally, which is the player alone",
+    ),
+    "MachineLearning": (
+        "b89f428eb295",
+        "ModifyHandDraw + CardsVar(1); the upgrade adds Innate",
+    ),
+    "MeteorStrike": ("15edd7313998", "5-cost, 24 +6, and three Plasma"),
+    "MultiCast": (
+        "f22064bd3dad",
+        "X-cost; evokes the FRONT orb X times, dequeuing only on the last",
+    ),
+    "Quadcast": (
+        "152560e8ca9a",
+        "RepeatVar(4) evokes of the FRONT orb, dequeuing on the last; the upgrade is the cost",
+    ),
+    "Rainbow": (
+        "8e12f5e76a5e",
+        "one of Lightning, Frost, Dark; the upgrade removes Exhaust",
+    ),
+    "Reboot": (
+        "ec209d59f6ad",
+        "hand into the draw pile, shuffle, then draw CardsVar(4) +2",
+    ),
+    "Shatter": (
+        "31e3abaee6cc",
+        "hits all, then evokes the front orb TWICE per orb held",
+    ),
+    "SignalBoost": (
+        "ad8073ddb8d1",
+        "ModifyCardPlayCount +1 for POWER cards, then decrements",
+    ),
+    "Spinner": (
+        "2e4bbee2ca95",
+        "the Glass orb on play is the WHOLE upgrade; the power channels one at each energy reset",
+    ),
+    "Supercritical": ("f347dfeb9219", "EnergyVar(4) +2, Exhaust"),
+    "TrashToTreasure": (
+        "5176cb66ae7c",
+        "a generated Status channels Amount RANDOM orbs on Rng.CombatOrbGeneration",
+    ),
+    "Voltaic": (
+        "2acb93296cb5",
+        "CalculatedChannels is computed ONCE from the combat's OrbChanneledEntry history",
+    ),
     "BootSequence": ("e01dbe9af7e2", "BlockVar(10m) +3, Innate and Exhaust"),
     "BulkUp": (
         "0a2421e342a9",

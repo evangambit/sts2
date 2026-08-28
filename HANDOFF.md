@@ -185,6 +185,22 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   by rarity — a simple card is not a card that was got right, it is a card nobody looked
   at. The three hardest (Nightmare, Echoing Slash, Blade of Ink) had been deferred as O24
   and are done. See E112-E175.
+- ✅ **Every Defect card — all 88 — has tests**, and the ORBS underneath them are pinned
+  and observable. Read the note below for how it went.
+  The orbs came first on purpose — most of the pool channels, evokes or counts them, and a
+  card test written against a wrong orb passes and cements the wrong answer. Three of the
+  five orbs were wrong (E176-E178) and the ring was missing from the observation
+  altogether (E179). Then the cards, by rarity: **6 of 24 basics-and-commons wrong, 10 of
+  36 uncommons, 5 of 27 rares-and-ancients** (E180-E201). **The observation grew**:
+  `OBS_SIZE` 219 → 250, `RUN_OBS_SIZE` 630 → 661, `NATIVE_API_VERSION` 22. Anything
+  holding a trained policy needs a rebuild and a retrain.
+- ✅ **Every Silent card — all 89, the whole `SilentCardPool` plus the Shiv — has tests.**
+  The last 40 were swept in four batches by rarity, and **the hit rate did not fall as the
+  cards got simpler**: 4 of 15 commons wrong, 6 of 12 uncommons, 4 of 9 rares, 1 of 4
+  basics. A third to a half at every tier. That is the argument against triaging card work
+  by rarity — a simple card is not a card that was got right, it is a card nobody looked
+  at. The three hardest (Nightmare, Echoing Slash, Blade of Ink) had been deferred as O24
+  and are done. See E112-E175.
 - 🔨 **Defect: the ORBS are pinned and observable; the 87 unpinned cards are not.** The
   orbs came first on purpose — most of Defect's pool channels, evokes or counts them, and
   a card test written against a wrong orb passes and cements the wrong answer. Three of
@@ -199,7 +215,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   source cited per file, never against emulator output. `CardCoverageTests` is the guard:
   `scripts/generate_card_coverage.py` scrapes the `case` labels out of `CardEffects.Apply`
   into `ImplementedCards.g.cs`, and implementing a card now fails the build until it is
-  tested or explicitly deferred in `Pending` (**250 left**).
+  tested or explicitly deferred in `Pending` (**223 left**).
   Caveat worth knowing: the guard only sees cards with their own `case`. Strike, Defend
   and Giant Rock run on the generic damage-and-block path and were invisible to it — they
   have tests now, but an empty `Pending` still means "every card with effect code", not

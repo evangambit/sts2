@@ -105,6 +105,10 @@ public static class CombatEngine
         }
 
         state.CardsPlayedThisTurn++;
+        // `EnergySpentEntry` amounts, summed over the turn. Helix Drill reads it and
+        // subtracts its own cost, which is zero -- so the count excludes the drill itself
+        // either way, and this runs before the card resolves.
+        state.EnergySpentThisTurn += energyToSpend;
         bool feralReturn =
             def.Type == CardType.Attack
             && energyToSpend == 0
@@ -265,6 +269,10 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
+                    // Genetic Algorithm Exhausts, and its growth is on the CARD -- so the
+                    // copy that lands in the exhaust pile carries it. This branch is the
+                    // only one that had no bonus fields at all.
+                    BonusBlock = card.BonusBlock + state.PlayedCardBonusBlock,
                     CostForCombat = state.PlayedCardCostForCombat != int.MinValue
                         ? state.PlayedCardCostForCombat
                         : card.CostForCombat,
@@ -281,6 +289,7 @@ public static class CombatEngine
                 {
                     FreeThisTurn = false,
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                    BonusBlock = card.BonusBlock + state.PlayedCardBonusBlock,
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
@@ -300,6 +309,7 @@ public static class CombatEngine
                 {
                     FreeThisTurn = false,
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                    BonusBlock = card.BonusBlock + state.PlayedCardBonusBlock,
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
@@ -318,6 +328,7 @@ public static class CombatEngine
                 {
                     FreeThisTurn = false,
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                    BonusBlock = card.BonusBlock + state.PlayedCardBonusBlock,
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
@@ -332,6 +343,7 @@ public static class CombatEngine
         }
 
         state.PlayedCardBonusDamage = 0;
+        state.PlayedCardBonusBlock = 0;
         state.PlayedCardEnchantSpent = false;
         state.PlayedCardEnchantGrew = false;
         state.PlayedCardCostBump = 0;
@@ -805,6 +817,14 @@ public static class CombatEngine
 
         ApplyBlockNextTurn(state, rng);
 
+        // `BiasedCognitionPower.AfterSideTurnStart` hands a point of Focus BACK every
+        // turn. Without it the card is 4 Focus for one energy and no downside at all.
+        int biasedCognition = BuffSystem.Get(state.PlayerBuffs, BuffId.BiasedCognition);
+        if (biasedCognition > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, -biasedCognition);
+        }
+
         int coolant = BuffSystem.Get(state.PlayerBuffs, BuffId.Coolant);
         if (coolant > 0)
         {
@@ -943,6 +963,7 @@ public static class CombatEngine
         state.BlockGainsThisTurn = 0;
         state.CardsExhaustedThisTurn = 0;
         state.StatusCardsDrawnThisTurn = 0;
+        state.EnergySpentThisTurn = 0;
 
         ReturnQueuedCardsToHandBeforeDraw(state);
         DeliverQueuedCardCopiesBeforeDraw(state);

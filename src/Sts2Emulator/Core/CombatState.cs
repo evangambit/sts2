@@ -211,6 +211,16 @@ public sealed class CombatState
     // the CardInstance by value and cannot hand a mutation back any other way.
     public int PlayedCardBonusDamage;
 
+    /// <summary>The same channel for block. Genetic Algorithm is the only card using it.</summary>
+    public int PlayedCardBonusBlock;
+
+    /// <summary>
+    /// Energy SPENT this turn, which Helix Drill counts its hits from — the sum of the
+    /// turn's `EnergySpentEntry` amounts. Not the energy REMAINING, which is what the
+    /// emulator was reading and is very nearly its opposite.
+    /// </summary>
+    public int EnergySpentThisTurn;
+
     /// <summary>
     /// A once-per-combat enchantment on the card being played has just fired, so the copy
     /// that lands in its result pile must carry the spent flag. CardEffects takes the card

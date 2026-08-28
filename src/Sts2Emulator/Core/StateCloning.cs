@@ -137,6 +137,8 @@ public static class StateCloning
             PendingSelection = combat.PendingSelection?.Clone(),
             AutoPlaying = combat.AutoPlaying,
             PlayedCardBonusDamage = combat.PlayedCardBonusDamage,
+            PlayedCardBonusBlock = combat.PlayedCardBonusBlock,
+            EnergySpentThisTurn = combat.EnergySpentThisTurn,
             PlayedCardEnchantSpent = combat.PlayedCardEnchantSpent,
             PlayedCardEnchantGrew = combat.PlayedCardEnchantGrew,
             PlayedCardCostBump = combat.PlayedCardCostBump,

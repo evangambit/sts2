@@ -261,7 +261,11 @@ public readonly record struct CardInstance(
     // `EnergyCost.SetUntilPlayed(0)`, which Rocket Punch does to ITSELF when its owner
     // generates a Status card. Unlike FreeThisTurn this survives the turn boundary and is
     // spent by the play rather than by the clock.
-    bool FreeUntilPlayed = false
+    bool FreeUntilPlayed = false,
+    // Block this copy has permanently gained during the combat. Genetic Algorithm raises
+    // its own block every time it is played, and the growth rides on the CARD -- the same
+    // shape as Rampage's BonusDamage, and for the same reason: two copies grow apart.
+    int BonusBlock = 0
 );
 
 public static class CardInstanceExtensions
