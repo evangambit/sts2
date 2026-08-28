@@ -103,6 +103,9 @@ public static class StateCloning
             CopiesToHandBeforeDraw = [.. combat.CopiesToHandBeforeDraw],
             EndTurnAwaitingSelection = combat.EndTurnAwaitingSelection,
             AfterimageBeforePlay = combat.AfterimageBeforePlay,
+            StormBeforePlay = combat.StormBeforePlay,
+            SubroutineBeforePlay = combat.SubroutineBeforePlay,
+            StatusCardsDrawnThisTurn = combat.StatusCardsDrawnThisTurn,
             ResolvingDefendCard = combat.ResolvingDefendCard,
             PlayedCardCostForCombat = combat.PlayedCardCostForCombat,
             AutoPlayQueue = [.. combat.AutoPlayQueue],
@@ -125,6 +128,7 @@ public static class StateCloning
             EnergyCostRng = combat.EnergyCostRng?.Clone(),
             CardGenerationRng = combat.CardGenerationRng?.Clone(),
             PotionGenerationRng = combat.PotionGenerationRng?.Clone(),
+            OrbGenerationRng = combat.OrbGenerationRng?.Clone(),
             // A CountingRandom carries its seed and position, so it clones exactly. A
             // plain Random does not, and only the combat-only environment supplies one
             // -- that path has no clone export, so the shared reference is unreachable.

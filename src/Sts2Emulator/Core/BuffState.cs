@@ -296,6 +296,20 @@ public enum BuffId
     /// turn — so it doubles a single turn's block, however that block was gained.
     /// </summary>
     Shadowmeld,
+
+    /// <summary>
+    /// <c>FreePowerPower.TryModifyEnergyCostInCombatLate</c>: the next N POWER cards cost
+    /// nothing. Synthesis grants it. Sibling of <see cref="FreeAttackPower" /> and
+    /// <see cref="FreeSkillPower" />, and distinct from both — the emulator was granting
+    /// FreeAttackPower for it, which is a different card type entirely.
+    /// </summary>
+    FreePowerPower,
+
+    /// <summary>
+    /// <c>IterationPower.AfterCardDrawn</c>: the FIRST Status card drawn in a turn draws
+    /// this many cards. A status-shaped draw engine, not a flat next-turn draw.
+    /// </summary>
+    Iteration,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

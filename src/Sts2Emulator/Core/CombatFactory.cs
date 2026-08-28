@@ -337,6 +337,9 @@ public static class CombatFactory
         state.CopiesToHandBeforeDraw = [];
         state.EndTurnAwaitingSelection = false;
         state.AfterimageBeforePlay = 0;
+        state.StormBeforePlay = 0;
+        state.SubroutineBeforePlay = 0;
+        state.StatusCardsDrawnThisTurn = 0;
         state.ResolvingDefendCard = false;
         state.PlayedCardCostForCombat = int.MinValue;
         state.PotionSlots = new int[3];

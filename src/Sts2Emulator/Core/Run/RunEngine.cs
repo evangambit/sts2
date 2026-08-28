@@ -210,6 +210,17 @@ public sealed class RunEngine
 
         combat.PotionGenerationRng = potionGenerationRng;
 
+        // `Rng.CombatOrbGeneration` -- Chaos and Trash to Treasure roll their orb type on
+        // it. `RunRngSet` has carried the stream since it was written; nothing had reached
+        // for it, because the one card that needed it was rolling on the combat rng.
+        var orbGenerationRng = new CountingRandom(State.Rng.CombatOrbs.RawSeed);
+        for (int i = 0; i < State.Rng.CombatOrbs.CallCount; i++)
+        {
+            orbGenerationRng.Next();
+        }
+
+        combat.OrbGenerationRng = orbGenerationRng;
+
         CombatFactory.Reset(
             combat,
             combatRng,
@@ -712,6 +723,7 @@ public sealed class RunEngine
             combat.PotionGenerationRng,
             State.Rng.CombatPotionGeneration
         );
+        combat.OrbGenerationRng = Restream(combat.OrbGenerationRng, State.Rng.CombatOrbs);
         combat.AiRng = Restream(combat.AiRng as CountingRandom, State.Rng.MonsterAi);
         State.ActiveCombatRng = Restream(State.ActiveCombatRng, State.Rng.Niche);
 

@@ -146,6 +146,13 @@ public static class CombatEngine
         {
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FreeSkillPower, -1);
         }
+        else if (
+            def.Type == CardType.Power
+            && BuffSystem.Get(state.PlayerBuffs, BuffId.FreePowerPower) > 0
+        )
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.FreePowerPower, -1);
+        }
 
         // `BurstPower.ModifyCardPlayCount` is OneTwoPunch's rule for SKILLS -- but the
         // play count is settled when the play is SET UP, before the card resolves, which
@@ -159,7 +166,7 @@ public static class CombatEngine
 
         // Read here, with Burst and Serpent Form, for the same reason all three are:
         // the power records what it was worth when the play STARTED.
-        state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
+        CaptureBeforePlayPowers(state);
 
         ApplyEnchantmentOnPlay(state, card, rng);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
@@ -261,6 +268,8 @@ public static class CombatEngine
                     CostForCombat = state.PlayedCardCostForCombat != int.MinValue
                         ? state.PlayedCardCostForCombat
                         : card.CostForCombat,
+                    // SetUntilPlayed -- and this is the play, so it is spent.
+                    FreeUntilPlayed = false,
                 },
                 rng: rng
             );
@@ -278,6 +287,8 @@ public static class CombatEngine
                     CostForCombat = state.PlayedCardCostForCombat != int.MinValue
                         ? state.PlayedCardCostForCombat
                         : card.CostForCombat,
+                    // SetUntilPlayed -- and this is the play, so it is spent.
+                    FreeUntilPlayed = false,
                 }
             );
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FeralUsed, 1);
@@ -295,6 +306,8 @@ public static class CombatEngine
                     CostForCombat = state.PlayedCardCostForCombat != int.MinValue
                         ? state.PlayedCardCostForCombat
                         : card.CostForCombat,
+                    // SetUntilPlayed -- and this is the play, so it is spent.
+                    FreeUntilPlayed = false,
                 }
             );
         }
@@ -311,6 +324,8 @@ public static class CombatEngine
                     CostForCombat = state.PlayedCardCostForCombat != int.MinValue
                         ? state.PlayedCardCostForCombat
                         : card.CostForCombat,
+                    // SetUntilPlayed -- and this is the play, so it is spent.
+                    FreeUntilPlayed = false,
                     SlyForCombat = card.SlyForCombat || MasterPlannerMarks(state, def),
                 }
             );
@@ -927,6 +942,7 @@ public static class CombatEngine
         state.CardPlaysThisTurn = 0;
         state.BlockGainsThisTurn = 0;
         state.CardsExhaustedThisTurn = 0;
+        state.StatusCardsDrawnThisTurn = 0;
 
         ReturnQueuedCardsToHandBeforeDraw(state);
         DeliverQueuedCardCopiesBeforeDraw(state);
@@ -1224,6 +1240,13 @@ public static class CombatEngine
         // every escape in the deck cost more the moment one was used, and a live capture
         // caught it as an energy shortfall: the game could still afford a Strike on turn
         // three where the emulator could not.
+        // `EnergyCost.SetUntilPlayed(0)` -- Rocket Punch primed by a generated Status.
+        // Spent by the PLAY rather than by the turn, which is why it is not FreeThisTurn.
+        if (card.FreeUntilPlayed)
+        {
+            return 0;
+        }
+
         cost += card.CostBump;
 
         if (def.Type == CardType.Attack)
@@ -1233,6 +1256,11 @@ public static class CombatEngine
             {
                 return 0;
             }
+        }
+
+        if (def.Type == CardType.Power && BuffSystem.Get(state.PlayerBuffs, BuffId.FreePowerPower) > 0)
+        {
+            return 0;
         }
 
         if (
@@ -2291,6 +2319,24 @@ public static class CombatEngine
         return true;
     }
 
+    /// <summary>
+    /// The three powers that record what they were worth in `BeforeCardPlayed` and spend
+    /// THAT in `AfterCardPlayed`, rather than reading the amount afterwards.
+    /// </summary>
+    /// <remarks>
+    /// All three keep a `Dictionary&lt;CardModel, int&gt; amountsForPlayedCards`, and
+    /// `AfterimagePower`'s carries the comment that explains all of them: it avoids
+    /// "triggering on cards that started play before it was applied" and "gaining extra
+    /// block on multiple plays". Reading the amount after the card resolves makes each
+    /// power pay out on its own play, which is a whole turn of value it does not have.
+    /// </remarks>
+    private static void CaptureBeforePlayPowers(CombatState state)
+    {
+        state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
+        state.StormBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Storm);
+        state.SubroutineBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Subroutine);
+    }
+
     private static void RemoveFirstMatchingCard(List<CardInstance> pile, CardInstance card)
     {
         int index = pile.FindIndex(pileCard =>
@@ -2346,7 +2392,7 @@ public static class CombatEngine
 
         state.Hand.RemoveAt(handIndex);
         // BeforeCardPlayed fires for an auto-play too -- it is an ordinary CardModel.Play.
-        state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
+        CaptureBeforePlayPowers(state);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
         if (def.Type == CardType.Attack)
         {
@@ -2452,16 +2498,14 @@ public static class CombatEngine
 
         if (def.Type == CardType.Power)
         {
-            int storm = BuffSystem.Get(state.PlayerBuffs, BuffId.Storm);
-            for (int i = 0; i < storm; i++)
+            for (int i = 0; i < state.StormBeforePlay; i++)
             {
                 Effects.CardEffects.ChannelOrb(state, OrbType.Lightning);
             }
 
-            int subroutine = BuffSystem.Get(state.PlayerBuffs, BuffId.Subroutine);
-            if (subroutine > 0)
+            if (state.SubroutineBeforePlay > 0)
             {
-                state.Energy += subroutine;
+                state.Energy += state.SubroutineBeforePlay;
             }
 
             int galvanic = state
@@ -2689,7 +2733,7 @@ public static class CombatEngine
         }
 
         // Apply card effects.
-        state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
+        CaptureBeforePlayPowers(state);
         int callerTarget = state.TargetEnemyIndex;
         state.TargetEnemyIndex = targetIndex;
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);

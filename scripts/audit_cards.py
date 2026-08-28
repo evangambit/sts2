@@ -97,6 +97,120 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "BootSequence": ("e01dbe9af7e2", "BlockVar(10m) +3, Innate and Exhaust"),
+    "BulkUp": (
+        "0a2421e342a9",
+        "OrbSlots is a literal 1 at both levels; Strength and Dexterity are what upgrade",
+    ),
+    "Capacitor": ("e508f28ff29f", "RepeatVar(2) +1 orb slots"),
+    "Chaos": (
+        "0f62a91d3f72",
+        "GetRandomOrb rolls over all FIVE valid orbs on Rng.CombatOrbGeneration",
+    ),
+    "Chill": (
+        "9b26e393b3c2",
+        "one Frost per hittable enemy; the upgrade removes Exhaust",
+    ),
+    "Compact": (
+        "710b256c3dcd",
+        "BlockVar(6m) upgrades by ONE; transforms every transformable Status in hand to Fuel",
+    ),
+    "Darkness": (
+        "a12b11f0b2b2",
+        "channel Dark, then fire EVERY Dark orb's passive, twice each when upgraded",
+    ),
+    "DoubleEnergy": (
+        "570b80131645",
+        "GainEnergy(current energy) -- doubles what is left after paying for it",
+    ),
+    "EnergySurge": (
+        "e58d97272713",
+        "MultiplayerOnly; EnergyVar(2) +1 to every living ally",
+    ),
+    "Feral": (
+        "7ef74f19df0f",
+        "FeralPower returns a 0-cost ATTACK to hand instead of the discard, Amount times a turn",
+    ),
+    "FightThrough": ("3aef3edb6d12", "BlockVar(13m) +4 and two Wounds"),
+    "Ftl": (
+        "b176bb6a6ce8",
+        "CardPlaysFinished this turn excludes the Ftl itself, which has not finished",
+    ),
+    "Fusion": ("3eeb08ffc723", "one Plasma; the upgrade removes Exhaust"),
+    "Glacier": ("c73f81cce1b2", "BlockVar(6m) +3 and TWO Frost"),
+    "Glasswork": ("5b76d459d83e", "BlockVar(5m) +3 and one Glass"),
+    "Hailstorm": (
+        "2ef18de7a9e5",
+        "BeforeSideTurnEnd, gated on holding at least one FROST orb",
+    ),
+    "Iteration": (
+        "16078bc1e3a9",
+        "AfterCardDrawn on the FIRST Status of the turn draws Amount -- not a next-turn draw",
+    ),
+    "Loop": (
+        "721bb266ec01",
+        "AfterPlayerTurnStart fires the FRONT orb's passive Amount times",
+    ),
+    "Null": ("42a9e3faad6f", "both vars upgrade, then a Dark orb"),
+    "Overclock": ("27e70081f004", "CardsVar(2) +1 and a Burn"),
+    "Refract": (
+        "0416ab50ef9a",
+        "WithHitCount(2) -- 9 twice; RepeatVar(2) is the ORB count and does not upgrade",
+    ),
+    "RocketPunch": (
+        "be1632392101",
+        "AfterCardGeneratedForCombat on a Status calls EnergyCost.SetUntilPlayed(0) on itself",
+    ),
+    "Scavenge": (
+        "f3117ff2fd54",
+        "CardSelectCmd.FromHand for the exhaust -- the player picks what burns",
+    ),
+    "Scrape": (
+        "189e0c727d6f",
+        "draws, then discards the drawn cards that do not cost zero",
+    ),
+    "ShadowShield": ("67396ea772fc", "BlockVar(11m) +4 and one Dark"),
+    "Skim": ("e8d7f3058e7d", "CardsVar(3) +1"),
+    "Smokestack": (
+        "31a949c4f69a",
+        "AfterCardGeneratedForCombat on a Status hits every enemy for Amount, unpowered",
+    ),
+    "Storm": (
+        "53893dc93a20",
+        "BeforeCardPlayed records the amount for POWER cards; AfterCardPlayed channels THAT",
+    ),
+    "Subroutine": (
+        "b8ae1c4472ca",
+        "the same before/after reading as Storm, paying energy instead of orbs; literal 1m",
+    ),
+    "Sunder": (
+        "6175a3ee5d03",
+        "EnergyVar(3) refunded only if the attack KILLED; the damage is what upgrades",
+    ),
+    "Synchronize": (
+        "fea9f4dcf64c",
+        "CalculatedFocus is extra 2 times the DISTINCT orb count, and it is temporary",
+    ),
+    "Synthesis": (
+        "d0ef7cdc7869",
+        "FreePowerPower -- the next POWER is free, and Synthesis is an Attack",
+    ),
+    "Tempest": (
+        "448d97582b3a",
+        "X-cost, one Lightning per energy spent, plus one when upgraded",
+    ),
+    "TeslaCoil": (
+        "f37f58d22b32",
+        "every LIGHTNING orb fires its passive at the card's target, twice when upgraded",
+    ),
+    "Thunder": (
+        "a42888593e4b",
+        "AfterOrbEvoked on a Lightning orb adds Amount at that orb's targets",
+    ),
+    "WhiteNoise": (
+        "fb9249522b8f",
+        "a random POWER from the character's pool, free this turn, into HAND",
+    ),
     "Abrasive": (
         "e152f4afdd1e",
         "OnUpgrade names THORNS only, so the Dexterity is 1 at both levels",

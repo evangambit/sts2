@@ -45,6 +45,7 @@ internal sealed class Fight
         state.CardSelectionRng = new CountingRandom(0);
         state.CardGenerationRng = new CountingRandom(0);
         state.PotionGenerationRng = new CountingRandom(0);
+        state.OrbGenerationRng = new CountingRandom(0);
         return new Fight(state);
     }
 
@@ -86,6 +87,7 @@ internal sealed class Fight
         state.CardSelectionRng = new CountingRandom(seed);
         state.CardGenerationRng = new CountingRandom(seed);
         state.PotionGenerationRng = new CountingRandom(seed);
+        state.OrbGenerationRng = new CountingRandom(seed);
         return new Fight(state);
     }
 
@@ -141,6 +143,7 @@ internal sealed class Fight
         state.CardSelectionRng = new CountingRandom(0);
         state.CardGenerationRng = new CountingRandom(0);
         state.PotionGenerationRng = new CountingRandom(0);
+        state.OrbGenerationRng = new CountingRandom(0);
         return new Fight(state);
     }
 
@@ -152,6 +155,7 @@ internal sealed class Fight
         state.CardSelectionRng = new CountingRandom(0);
         state.CardGenerationRng = new CountingRandom(0);
         state.PotionGenerationRng = new CountingRandom(0);
+        state.OrbGenerationRng = new CountingRandom(0);
         return new Fight(state);
     }
 

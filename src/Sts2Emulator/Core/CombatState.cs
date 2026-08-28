@@ -75,6 +75,32 @@ public sealed class CombatState
     public int AfterimageBeforePlay;
 
     /// <summary>
+    /// The same reading, for the two powers that pay out AFTER a Power card resolves.
+    /// `StormPower` and `SubroutinePower` both keep a
+    /// `Dictionary&lt;CardModel, int&gt; amountsForPlayedCards` filled in
+    /// `BeforeCardPlayed`, with the same comment on it that `AfterimagePower` has: it
+    /// stops the power triggering on its own play, and stops a second copy paying out
+    /// twice on the turn it arrives.
+    /// </summary>
+    public int StormBeforePlay;
+
+    /// <inheritdoc cref="StormBeforePlay" />
+    public int SubroutineBeforePlay;
+
+    /// <summary>
+    /// Status cards drawn this turn, for `IterationPower` — which fires only on the FIRST
+    /// one, and so needs the count rather than a flag per draw.
+    /// </summary>
+    public int StatusCardsDrawnThisTurn;
+
+    /// <summary>
+    /// `Rng.CombatOrbGeneration`: the stream Chaos rolls its orb type on. Kept apart from
+    /// the card-generation and target streams for the same reason those are kept apart
+    /// from each other — sharing one desynchronises everything downstream.
+    /// </summary>
+    public CountingRandom? OrbGenerationRng;
+
+    /// <summary>
     /// Whether the card currently resolving is tagged <c>CardTag.Defend</c>, which is what
     /// `FastenPower.ModifyBlockAdditive` asks about the block's `cardSource`. Set for the
     /// duration of the card so any block it gains carries the tag, rather than every arm

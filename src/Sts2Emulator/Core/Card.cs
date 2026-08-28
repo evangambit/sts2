@@ -257,7 +257,11 @@ public readonly record struct CardInstance(
     // `CardModel.GiveSingleTurnRetain()`, which Well-Laid Plans' power hands to the cards
     // its owner picks just before the hand is flushed. Single-turn like Hand Trick's Sly:
     // it survives one flush and is cleared as the card lands in the next hand.
-    bool RetainThisTurn = false
+    bool RetainThisTurn = false,
+    // `EnergyCost.SetUntilPlayed(0)`, which Rocket Punch does to ITSELF when its owner
+    // generates a Status card. Unlike FreeThisTurn this survives the turn boundary and is
+    // spent by the play rather than by the clock.
+    bool FreeUntilPlayed = false
 );
 
 public static class CardInstanceExtensions
