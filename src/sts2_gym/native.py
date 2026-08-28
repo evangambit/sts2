@@ -11,7 +11,7 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 21
+_REQUIRED_NATIVE_API_VERSION = 22
 _REQUIRED_RUN_NATIVE_API_VERSION = 16
 
 
@@ -155,6 +155,18 @@ _lib.Sts2_ObsEnemySlotSize.argtypes = []
 
 _lib.Sts2_ObsSecondaryIntentOffset.restype = ctypes.c_int
 _lib.Sts2_ObsSecondaryIntentOffset.argtypes = []
+
+_lib.Sts2_ObsOrbCapacityOffset.restype = ctypes.c_int
+_lib.Sts2_ObsOrbCapacityOffset.argtypes = []
+
+_lib.Sts2_ObsOrbOffset.restype = ctypes.c_int
+_lib.Sts2_ObsOrbOffset.argtypes = []
+
+_lib.Sts2_ObsMaxOrbs.restype = ctypes.c_int
+_lib.Sts2_ObsMaxOrbs.argtypes = []
+
+_lib.Sts2_ObsOrbSlotSize.restype = ctypes.c_int
+_lib.Sts2_ObsOrbSlotSize.argtypes = []
 
 _lib.Sts2_Create.restype = ctypes.c_int
 _lib.Sts2_Create.argtypes = [ctypes.c_int]
@@ -453,6 +465,16 @@ OBS_MAX_ENEMY_BUFFS: int = _lib.Sts2_ObsMaxEnemyBuffs()
 OBS_ENEMY_OFFSET: int = _lib.Sts2_ObsEnemyOffset()
 OBS_ENEMY_SLOT_SIZE: int = _lib.Sts2_ObsEnemySlotSize()
 OBS_SECONDARY_INTENT_OFFSET: int = _lib.Sts2_ObsSecondaryIntentOffset()
+
+# Defect's orb ring. Each slot is (type + 1, passive value, evoke value), with 0 in the
+# first field for an empty slot -- Lightning is type 0, so a raw type could not be told
+# from an empty one. The two values are what the orb is WORTH right now, Focus already in
+# them, because a Dark orb's evoke is whatever it has banked and a Glass orb's is whatever
+# it has left; neither is derivable from the type.
+OBS_ORB_CAPACITY_OFFSET: int = _lib.Sts2_ObsOrbCapacityOffset()
+OBS_ORB_OFFSET: int = _lib.Sts2_ObsOrbOffset()
+OBS_MAX_ORBS: int = _lib.Sts2_ObsMaxOrbs()
+OBS_ORB_SLOT_SIZE: int = _lib.Sts2_ObsOrbSlotSize()
 RUN_OBS_SIZE: int = _lib.Sts2Run_ObsSize()
 RUN_MAX_ACTIONS: int = _lib.Sts2Run_MaxActions()
 RUN_INFO_SIZE: int = _lib.Sts2Run_InfoSize()

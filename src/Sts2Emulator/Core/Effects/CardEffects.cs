@@ -5817,6 +5817,29 @@ public static class CardEffects
     private static int DarkPassiveValue(CombatState state) =>
         Math.Max(0, 6 + BuffSystem.Get(state.PlayerBuffs, BuffId.Focus));
 
+    /// <summary>
+    /// What an orb's two numbers READ as right now — Focus applied where the game applies
+    /// it, Dark's banked total and Glass's remaining charge as they stand.
+    /// </summary>
+    /// <remarks>
+    /// The observation carries these rather than the raw fields, for the same reason it
+    /// carries an intent's ANNOUNCED damage rather than the move's: the number a policy
+    /// should learn from is the number a player would read off the screen. Focus is in the
+    /// buff block too, so a policy could in principle derive these — but only by learning
+    /// five different formulas, one of which (Plasma) is "ignore Focus" and another
+    /// (Dark's evoke) is "ignore Focus on this half only".
+    /// </remarks>
+    internal static (int Passive, int Evoke) OrbDisplayValues(CombatState state, OrbState orb) =>
+        orb.Type switch
+        {
+            OrbType.Lightning => (LightningPassiveValue(state), LightningEvokeValue(state)),
+            OrbType.Frost => (FrostPassiveValue(state), FrostEvokeValue(state)),
+            OrbType.Dark => (DarkPassiveValue(state), orb.EvokeValue),
+            OrbType.Plasma => (1, 2),
+            OrbType.Glass => (GlassValue(state, orb), GlassValue(state, orb) * 2),
+            _ => (0, 0),
+        };
+
     /// <summary>`DarkOrb._evokeVal = 6m` — a literal, with no Focus on it.</summary>
     private const int DarkBaseEvokeValue = 6;
 

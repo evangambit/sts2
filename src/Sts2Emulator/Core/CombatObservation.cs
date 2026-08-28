@@ -40,7 +40,37 @@ public static class CombatObservation
     public const int SelectionKindOffset = GoldOffset + 1;
     public const int SelectionCountOffset = SelectionKindOffset + 1;
     public const int SelectionOffset = SelectionCountOffset + 1;
-    public const int ObsSize = SelectionOffset + MaxSelectionCandidates * CardSlotSize;
+    /// <summary>
+    /// The orb ring. <c>Recursion</c> and its kin cap capacity at 10, so ten slots hold
+    /// any legal ring.
+    /// </summary>
+    public const int MaxOrbs = 10;
+
+    /// <summary>
+    /// Per orb: type + 1 (so an empty slot reads 0, since Lightning is 0), then what the
+    /// orb's passive and evoke are WORTH right now.
+    /// </summary>
+    /// <remarks>
+    /// The two values are carried rather than left to be derived because they are not
+    /// derivable from the type alone: a Dark orb's evoke is whatever it has banked, and a
+    /// Glass orb's is whatever it has left to spend. Neither appears anywhere else in the
+    /// observation, and both are the whole reason to hold the orb rather than evoke it.
+    /// </remarks>
+    public const int OrbSlotSize = 3;
+
+    /// <summary>
+    /// How many orbs the player can hold. Channelling into a full ring evokes the oldest
+    /// orb, so an agent that cannot see the capacity cannot tell channelling from
+    /// channelling-and-spending.
+    /// </summary>
+    public const int OrbCapacityOffset = SelectionOffset + MaxSelectionCandidates * CardSlotSize;
+
+    public const int OrbOffset = OrbCapacityOffset + 1;
+
+    // Appended after the selection block, not filed with the player's own scalars: every
+    // offset above is a committed layout that fixtures and any trained policy are written
+    // against, and inserting a field renumbers all of them. Same discipline as BuffId.
+    public const int ObsSize = OrbOffset + MaxOrbs * OrbSlotSize;
 
     /// <summary>Writes one card into a slot: what it is, and what has been done to it.</summary>
     private static void WriteCard(Span<int> obs, int at, CardInstance card)
@@ -181,6 +211,22 @@ public static class CombatObservation
                     }
                 }
             }
+        }
+
+        // Defect's whole character is the ring, and none of it was here: not the orbs, not
+        // their order, not Dark's banked total or Glass's remaining charge. An agent
+        // cannot learn when to evoke something it cannot see (O26).
+        obs[OrbCapacityOffset] = s.OrbCapacity;
+        for (int i = 0; i < MaxOrbs && i < s.Orbs.Count; i++)
+        {
+            var orb = s.Orbs[i];
+            var (passive, evoke) = Effects.CardEffects.OrbDisplayValues(s, orb);
+            int at = OrbOffset + i * OrbSlotSize;
+            // Type + 1: Lightning is 0, so a raw type cannot be told from an empty slot.
+            // The secondary-intent block uses the same offset for the same reason.
+            obs[at] = (int)orb.Type + 1;
+            obs[at + 1] = passive;
+            obs[at + 2] = evoke;
         }
     }
 }

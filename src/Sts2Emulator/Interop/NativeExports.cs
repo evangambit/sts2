@@ -36,7 +36,7 @@ public static class NativeExports
     public const int MAX_ENEMY_BUFFS = 5;
 
     // v17: observation carries an open card selection (kind, count, candidates).
-    public const int NATIVE_API_VERSION = 21;
+    public const int NATIVE_API_VERSION = 22;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -280,6 +280,18 @@ public static class NativeExports
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsSecondaryIntentOffset")]
     public static int Sts2_ObsSecondaryIntentOffset() => CombatObservation.SecondaryIntentOffset;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsOrbCapacityOffset")]
+    public static int Sts2_ObsOrbCapacityOffset() => CombatObservation.OrbCapacityOffset;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsOrbOffset")]
+    public static int Sts2_ObsOrbOffset() => CombatObservation.OrbOffset;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsMaxOrbs")]
+    public static int Sts2_ObsMaxOrbs() => CombatObservation.MaxOrbs;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsOrbSlotSize")]
+    public static int Sts2_ObsOrbSlotSize() => CombatObservation.OrbSlotSize;
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_NativeApiVersion")]
     public static int Sts2_NativeApiVersion() => NATIVE_API_VERSION;

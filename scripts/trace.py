@@ -33,6 +33,23 @@ def summarize_observation(obs: np.ndarray) -> dict:
         for i in range(native.OBS_MAX_PLAYER_BUFFS)
         if int(obs[native.OBS_PLAYER_BUFF_OFFSET + i * 2]) != 0
     ]
+    # Defect's ring, in order. Each slot is (type + 1, passive, evoke) with 0 for empty,
+    # and the two values already carry Focus -- a Dark orb's evoke is what it has banked
+    # and a Glass orb's is what it has left, neither of which is derivable from the type.
+    orbs = []
+    for orb_index in range(native.OBS_MAX_ORBS):
+        base = native.OBS_ORB_OFFSET + orb_index * native.OBS_ORB_SLOT_SIZE
+        kind = int(obs[base])
+        if kind == 0:
+            continue
+        orbs.append(
+            {
+                "index": orb_index,
+                "type": kind - 1,
+                "passive": int(obs[base + 1]),
+                "evoke": int(obs[base + 2]),
+            },
+        )
     enemies = []
     for enemy_index in range(native.MAX_ENEMIES):
         base = native.OBS_ENEMY_OFFSET + enemy_index * native.OBS_ENEMY_SLOT_SIZE
@@ -74,6 +91,8 @@ def summarize_observation(obs: np.ndarray) -> dict:
             "exhaust_pile_count": int(obs[7]),
             "hand": hand,
             "status": player_buffs,
+            "orb_capacity": int(obs[native.OBS_ORB_CAPACITY_OFFSET]),
+            "orbs": orbs,
         },
         "enemies": enemies,
     }

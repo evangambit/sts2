@@ -60,8 +60,33 @@ class ObservationLayoutTests(unittest.TestCase):
         self.assertLessEqual(last_enemy_end, native.OBS_SECONDARY_INTENT_OFFSET)
         self.assertLessEqual(
             native.OBS_SECONDARY_INTENT_OFFSET + native.MAX_ENEMIES * 2,
+            native.OBS_ORB_CAPACITY_OFFSET,
+        )
+        self.assertLessEqual(
+            native.OBS_ORB_CAPACITY_OFFSET + 1,
+            native.OBS_ORB_OFFSET,
+        )
+        self.assertEqual(
+            native.OBS_ORB_OFFSET + native.OBS_MAX_ORBS * native.OBS_ORB_SLOT_SIZE,
             native.OBS_SIZE,
         )
+
+    def test_the_orb_ring_reaches_python(self):
+        """O26: Defect's ring was absent from the observation entirely.
+
+        The point of the block is the two VALUES, not just the types -- a Dark orb's evoke
+        is whatever it has banked and a Glass orb's is whatever it has left, and neither
+        appears anywhere else. This reads them through the native boundary rather than off
+        a C# constant, which is the half a C# test cannot cover.
+        """
+        # A fresh combat holds no orbs, so every slot reads empty and capacity is the
+        # starting three.
+        self.assertEqual(int(self.obs[native.OBS_ORB_CAPACITY_OFFSET]), 3)
+        slots = [
+            int(self.obs[native.OBS_ORB_OFFSET + i * native.OBS_ORB_SLOT_SIZE])
+            for i in range(native.OBS_MAX_ORBS)
+        ]
+        self.assertEqual(slots, [0] * native.OBS_MAX_ORBS)
 
     def test_the_decoded_hand_is_the_hand_the_emulator_holds(self):
         """scripts/trace.py against the emulator's own ordered pile dump."""
