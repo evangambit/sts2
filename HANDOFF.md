@@ -2411,7 +2411,11 @@ no game running:
   The number worth watching is `tested but unread`: cards that LOOK covered, which is
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
 
-- `audit_relics.py` — which relics the emulator **models**, and which have been read. The
+- `audit_relics.py` — which relics the emulator **models**, and which have been read.
+  **127/296**, and 19 read. The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
+  `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
+  looked like "room entered" turned out to be four different hooks. The
   only one of the four that answers "is this implemented at all", because relics have no
   `CardCoverageTests.Pending` equivalent and nothing else could: **107 of 296**. The
   distinction it draws that a name search cannot is between a relic the reward code can

@@ -73,6 +73,10 @@ public static class RelicEffects
     public const int StrikeDummy = 253;
     public const int Vambrace = 280;
     public const int VenerableTeaSet = 282;
+    public const int AmethystAubergine = 3;
+    public const int JuzuBracelet = 123;
+    public const int Pantograph = 186;
+    public const int Planisphere = 198;
 
     /// <summary>The token potion Petrified Toad procures before every combat.</summary>
     private const int PotionShapedRock = 45;
@@ -843,6 +847,68 @@ public static class RelicEffects
     /// </summary>
     internal static bool DoublesCardBlock(CombatState state) =>
         HasRelic(state, Vambrace) && !state.VambraceSpent;
+
+    /// <summary>
+    /// `Hook.AfterRoomEntered`, which the game fires from each room's `Enter()` — Combat,
+    /// Merchant, Treasure, Event and RestSite, and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="cameFromUnknown" /> is separate from the room type on purpose.
+    /// Planisphere asks about the MAP POINT (`CurrentMapPoint.PointType == Unknown`) and
+    /// not about what the point resolved into, so it pays out on whichever room a "?"
+    /// turned out to be — including a fight.
+    /// </remarks>
+    public static void ApplyAfterRoomEntered(
+        Run.RunState state,
+        bool isRestSite,
+        bool cameFromUnknown
+    )
+    {
+        // `EternalFeather.AfterRoomEntered(room is RestSiteRoom)`: HealVar(3) per
+        // CardsVar(5) cards in the deck, integer division -- 12 cards is two, not two and
+        // a bit.
+        if (isRestSite && Has(state.Relics, EternalFeather))
+        {
+            int heal = state.Deck.Count / 5 * 3;
+            state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + heal);
+        }
+
+        if (cameFromUnknown && Has(state.Relics, Planisphere))
+        {
+            state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 5);
+        }
+    }
+
+    /// <summary>
+    /// `Pantograph.BeforeCombatStart`: 25 HP, but only when the room is a BOSS. Its
+    /// `AfterRoomEntered` sets a display status and nothing else, which is why the heal
+    /// lives here rather than in the room hook above.
+    /// </summary>
+    public static void ApplyBeforeBossCombat(Run.RunState state)
+    {
+        if (Has(state.Relics, Pantograph))
+        {
+            state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 25);
+        }
+    }
+
+    /// <summary>
+    /// `AmethystAubergine.TryModifyRewards`: a GoldVar(15) reward after any COMBAT room,
+    /// except the boss of the final act — there is no reward screen to add it to when the
+    /// run is over.
+    /// </summary>
+    public static int ExtraCombatRewardGold(Run.RunState state, bool isFinalActBoss) =>
+        !isFinalActBoss && Has(state.Relics, AmethystAubergine)
+            ? ModifyGoldGained(state.Relics, 15)
+            : 0;
+
+    /// <summary>
+    /// `JuzuBracelet.ModifyUnknownMapPointRoomTypes`: a "?" can never be a Monster room.
+    /// The relic removes the type from the allowed SET before the odds are rolled, so the
+    /// probability mass redistributes rather than the roll being re-taken.
+    /// </summary>
+    public static bool ForbidsUnknownMonsterRooms(Run.RunState state) =>
+        Has(state.Relics, JuzuBracelet);
 
     /// <summary>
     /// `ReptileTrinket.AfterPotionUsed`: 3 Strength, and it is a TemporaryStrengthPower --

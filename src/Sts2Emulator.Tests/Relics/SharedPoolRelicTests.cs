@@ -429,3 +429,224 @@ public class PotionBeltTests
         Assert.Equal(before + 2, state.MaxPotionSlots);
     }
 }
+
+// The five that needed the room-entered seam. `Hook.AfterRoomEntered` fires from each
+// room's Enter() -- Combat, Merchant, Treasure, Event and RestSite -- and the emulator's
+// map dispatch is the equivalent point.
+
+public class EternalFeatherTests
+{
+    /// <summary>Three HP per FIVE cards in the deck, integer division, on entering a rest site.</summary>
+    [Theory]
+    [InlineData(4, 0)]
+    [InlineData(5, 3)]
+    [InlineData(12, 6)]
+    public void HealsPerFiveCardsAtARestSite(int deckSize, int heal)
+    {
+        var state = new RunState
+        {
+            Relics = [new RelicInstance(RelicEffects.EternalFeather)],
+            PlayerHp = 10,
+            PlayerMaxHp = 200,
+            Deck = [.. Enumerable.Range(0, deckSize).Select(_ => new CardInstance(SI.Slice, false))],
+        };
+
+        RelicEffects.ApplyAfterRoomEntered(state, isRestSite: true, cameFromUnknown: false);
+
+        Assert.Equal(10 + heal, state.PlayerHp);
+    }
+
+    [Fact]
+    public void OtherRoomsPayNothing()
+    {
+        var state = new RunState
+        {
+            Relics = [new RelicInstance(RelicEffects.EternalFeather)],
+            PlayerHp = 10,
+            PlayerMaxHp = 200,
+            Deck = [.. Enumerable.Range(0, 20).Select(_ => new CardInstance(SI.Slice, false))],
+        };
+
+        RelicEffects.ApplyAfterRoomEntered(state, isRestSite: false, cameFromUnknown: true);
+
+        // Only Planisphere pays on an unknown; the Feather is a rest-site relic.
+        Assert.Equal(10, state.PlayerHp);
+    }
+}
+
+public class PlanisphereTests
+{
+    /// <summary>
+    /// Five HP on entering a room that came from a "?" — the relic reads the MAP POINT,
+    /// not the room, so it pays out even when the "?" turned out to be a fight.
+    /// </summary>
+    [Fact]
+    public void HealsOnAnUnknownMapPoint()
+    {
+        var state = new RunState
+        {
+            Relics = [new RelicInstance(RelicEffects.Planisphere)],
+            PlayerHp = 10,
+            PlayerMaxHp = 200,
+        };
+
+        RelicEffects.ApplyAfterRoomEntered(state, isRestSite: false, cameFromUnknown: true);
+
+        Assert.Equal(15, state.PlayerHp);
+    }
+
+    [Fact]
+    public void AKnownRoomPaysNothing()
+    {
+        var state = new RunState
+        {
+            Relics = [new RelicInstance(RelicEffects.Planisphere)],
+            PlayerHp = 10,
+            PlayerMaxHp = 200,
+        };
+
+        RelicEffects.ApplyAfterRoomEntered(state, isRestSite: true, cameFromUnknown: false);
+
+        Assert.Equal(10, state.PlayerHp);
+    }
+}
+
+public class PantographTests
+{
+    /// <summary>
+    /// 25 HP before a BOSS combat. `AfterRoomEntered` only sets a display status; the heal
+    /// is `BeforeCombatStart` gated on the room type.
+    /// </summary>
+    [Fact]
+    public void HealsTwentyFiveBeforeABoss()
+    {
+        var state = new RunState
+        {
+            Relics = [new RelicInstance(RelicEffects.Pantograph)],
+            PlayerHp = 10,
+            PlayerMaxHp = 200,
+        };
+
+        RelicEffects.ApplyBeforeBossCombat(state);
+
+        Assert.Equal(35, state.PlayerHp);
+    }
+
+    [Fact]
+    public void ItCannotOverhealPastTheMaximum()
+    {
+        var state = new RunState
+        {
+            Relics = [new RelicInstance(RelicEffects.Pantograph)],
+            PlayerHp = 70,
+            PlayerMaxHp = 80,
+        };
+
+        RelicEffects.ApplyBeforeBossCombat(state);
+
+        Assert.Equal(80, state.PlayerHp);
+    }
+}
+
+public class AmethystAubergineTests
+{
+    /// <summary>Fifteen gold after a combat room, and none after the final act's boss.</summary>
+    [Fact]
+    public void FifteenGoldAfterACombatRoom()
+    {
+        var state = new RunState { Relics = [new RelicInstance(RelicEffects.AmethystAubergine)] };
+
+        Assert.Equal(15, RelicEffects.ExtraCombatRewardGold(state, isFinalActBoss: false));
+        Assert.Equal(0, RelicEffects.ExtraCombatRewardGold(state, isFinalActBoss: true));
+    }
+
+    /// <summary>
+    /// It goes through `ModifyGoldGained`, so the other gold relics still apply to it —
+    /// Ectoplasm zeroes it and Bowler Hat raises it.
+    /// </summary>
+    [Fact]
+    public void TheOtherGoldRelicsStillApply()
+    {
+        var ecto = new RunState
+        {
+            Relics =
+            [
+                new RelicInstance(RelicEffects.AmethystAubergine),
+                new RelicInstance(RelicEffects.Ectoplasm),
+            ],
+        };
+        Assert.Equal(0, RelicEffects.ExtraCombatRewardGold(ecto, isFinalActBoss: false));
+
+        var hat = new RunState
+        {
+            Relics =
+            [
+                new RelicInstance(RelicEffects.AmethystAubergine),
+                new RelicInstance(RelicEffects.BowlerHat),
+            ],
+        };
+        Assert.Equal(18, RelicEffects.ExtraCombatRewardGold(hat, isFinalActBoss: false));
+    }
+}
+
+public class JuzuBraceletTests
+{
+    /// <summary>A "?" can never be a Monster room while it is held.</summary>
+    [Fact]
+    public void ItForbidsMonsterRoomsFromUnknowns()
+    {
+        var without = new RunState();
+        Assert.False(RelicEffects.ForbidsUnknownMonsterRooms(without));
+
+        var with = new RunState { Relics = [new RelicInstance(RelicEffects.JuzuBracelet)] };
+        Assert.True(RelicEffects.ForbidsUnknownMonsterRooms(with));
+    }
+
+    /// <summary>
+    /// The wiring — that `RollUnknownMapPointNodeType` consults the predicate — is NOT
+    /// covered here.
+    /// </summary>
+    /// <remarks>
+    /// An end-to-end walk was written and thrown away: driving the map through `Step`
+    /// looking for a "?" either never found one inside a bounded walk or did not
+    /// terminate, and a test that has to be babysat into passing is worse than an honest
+    /// gap. The roll is private and the odds are act-dependent, so covering it properly
+    /// needs a seeded map fixture that lands on a "?" — which is the map suite's shape,
+    /// not this file's.
+    ///
+    /// What IS covered: the predicate above, and the one line in
+    /// `RollUnknownMapPointNodeType` that removes `NodeNormal` from `allowedRoomTypes`
+    /// sits beside the shop blacklist that the map tests already exercise.
+    /// </remarks>
+    [Fact]
+    public void TheRollConsultsThePredicate()
+    {
+        // A guard rather than a behaviour test: if the removal is ever deleted, the
+        // predicate is left with no caller and this says so.
+        string engine = System.IO.File.ReadAllText(
+            System.IO.Path.Combine(
+                RepoRoot(),
+                "src",
+                "Sts2Emulator",
+                "Core",
+                "Run",
+                "RunEngine.cs"
+            )
+        );
+
+        Assert.Contains("ForbidsUnknownMonsterRooms(State)", engine);
+        Assert.Contains("allowedRoomTypes.Remove(RunConstants.NodeNormal)", engine);
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new System.IO.DirectoryInfo(System.AppContext.BaseDirectory);
+        while (dir is not null && !System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "HANDOFF.md")))
+        {
+            dir = dir.Parent;
+        }
+
+        Assert.NotNull(dir);
+        return dir!.FullName;
+    }
+}

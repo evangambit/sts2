@@ -255,6 +255,16 @@ public sealed class RunEngine
         State.CurrentNodeType = resolvedNodeType;
         State.LastResolvedRoomType = resolvedNodeType;
 
+        // `Planisphere.AfterRoomEntered` asks about `CurrentMapPoint.PointType`, not about
+        // the room -- so it pays out on whatever the "?" turned out to be, a fight
+        // included. Fired here, before the room is set up, because every branch below
+        // either starts a combat or changes phase and there is no single point after them.
+        Effects.RelicEffects.ApplyAfterRoomEntered(
+            State,
+            isRestSite: resolvedNodeType == RunConstants.NodeRest,
+            cameFromUnknown: true
+        );
+
         switch (resolvedNodeType)
         {
             case RunConstants.NodeNormal:
@@ -347,6 +357,14 @@ public sealed class RunEngine
         if (IsUnknownShopBlacklisted())
         {
             allowedRoomTypes.Remove(RunConstants.NodeShop);
+        }
+
+        // `JuzuBracelet.ModifyUnknownMapPointRoomTypes` drops Monster from the SET before
+        // the odds are rolled, so its probability mass redistributes across what is left
+        // rather than the roll being taken again.
+        if (Effects.RelicEffects.ForbidsUnknownMonsterRooms(State))
+        {
+            allowedRoomTypes.Remove(RunConstants.NodeNormal);
         }
 
         int roomType = allowedRoomTypes.Contains(RunConstants.NodeEvent)
@@ -992,6 +1010,13 @@ public sealed class RunEngine
                 case RunConstants.NodeElite:
                 case RunConstants.NodeBoss:
                     State.LastResolvedRoomType = nodeType;
+                    // `Pantograph.BeforeCombatStart` reads the ROOM type, so the heal is a
+                    // boss-room thing rather than a boss-encounter one.
+                    if (nodeType == RunConstants.NodeBoss)
+                    {
+                        Effects.RelicEffects.ApplyBeforeBossCombat(State);
+                    }
+
                     State.Phase = RunPhase.Combat;
                     int completedRooms =
                         State.NormalEncountersVisited + State.EliteEncountersVisited - 1;
@@ -1007,6 +1032,11 @@ public sealed class RunEngine
                     );
                 case RunConstants.NodeRest:
                     State.LastResolvedRoomType = RunConstants.NodeRest;
+                    Effects.RelicEffects.ApplyAfterRoomEntered(
+                        State,
+                        isRestSite: true,
+                        cameFromUnknown: false
+                    );
                     State.Phase = RunPhase.Rest;
                     break;
                 case RunConstants.NodeShop:

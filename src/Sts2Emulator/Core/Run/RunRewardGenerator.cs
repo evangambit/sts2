@@ -174,6 +174,15 @@ public static class RunRewardGenerator
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 6);
         }
 
+        // `AmethystAubergine.TryModifyRewards` adds a GoldReward after any combat room,
+        // except the final act's boss -- where the run ends and there is no reward screen
+        // to add it to. The gold goes through ModifyGoldGained, so Ectoplasm still zeroes
+        // it and Bowler Hat still raises it.
+        bool finalActBoss =
+            state.LastResolvedRoomType == RunConstants.NodeBoss
+            && state.CurrentActIndex >= state.Acts.Count - 1;
+        state.Gold += Effects.RelicEffects.ExtraCombatRewardGold(state, finalActBoss);
+
         if (HasRelic(state, RunConstants.RelicBlackBlood))
         {
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 12);

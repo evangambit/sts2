@@ -155,6 +155,26 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "AmethystAubergine": (
+        "3da23ab46ccb",
+        "TryModifyRewards adds GoldVar(15) after any combat room except the final act's boss",
+    ),
+    "EternalFeather": (
+        "47d8d2ea33c6",
+        "AfterRoomEntered(RestSiteRoom) heals HealVar(3) per CardsVar(5) cards, integer division",
+    ),
+    "JuzuBracelet": (
+        "cb0cf7bf505b",
+        "ModifyUnknownMapPointRoomTypes removes Monster from the SET before the odds roll",
+    ),
+    "Pantograph": (
+        "6f94d1df7f97",
+        "AfterRoomEntered only sets a display status; the HealVar(25) is BeforeCombatStart on a BOSS room",
+    ),
+    "Planisphere": (
+        "c87591f85362",
+        "AfterRoomEntered heals 5 when the MAP POINT was Unknown, whatever the room turned out to be",
+    ),
     "BookOfFiveRings": (
         "65acd90720bc",
         "CardsAddedSinceLastTrigger is CardsAdded % 5, so it heals 20 on every fifth card",
