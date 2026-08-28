@@ -3437,7 +3437,15 @@ public static class CardEffects
         if (state.Orbs.Count < state.OrbCapacity)
         {
             state.Orbs.Add(
-                new OrbState(type, type == OrbType.Dark ? DarkBaseEvokeValue(state) : 0)
+                new OrbState(
+                    type,
+                    // `DarkOrb._evokeVal = 6m` is a plain field initialiser with no
+                    // ModifyOrbValue on it -- Focus raises what a Dark orb ACCUMULATES,
+                    // through PassiveVal, and not what it starts with.
+                    EvokeValue: type == OrbType.Dark ? DarkBaseEvokeValue : 0,
+                    // `GlassOrb._passiveVal = 4m`, which decays as the orb triggers.
+                    PassiveValue: type == OrbType.Glass ? GlassBasePassiveValue : 0
+                )
             );
             if (type == OrbType.Lightning)
             {
@@ -3499,11 +3507,28 @@ public static class CardEffects
                 };
                 break;
             case OrbType.Plasma:
+                // `PassiveVal => 1m` with no ModifyOrbValue: Plasma is the one orb Focus
+                // does not touch, at either end.
                 state.Energy += 1;
                 break;
             case OrbType.Glass:
-                DrawCards(state, 1, rng);
+            {
+                // `GlassOrb.Passive` deals its value to EVERY hittable enemy and then
+                // decays itself by one, and skips the whole thing when the value has run
+                // down to nothing. The emulator drew a CARD instead -- an invented effect
+                // on an orb whose whole identity is a decaying area attack.
+                int value = GlassValue(state, orb);
+                if (value > 0)
+                {
+                    state.Orbs[index] = orb with
+                    {
+                        PassiveValue = Math.Max(0, orb.PassiveValue - 1),
+                    };
+                    DealUnpoweredDamageToAll(state, value);
+                }
+
                 break;
+            }
         }
     }
 
@@ -5718,7 +5743,12 @@ public static class CardEffects
         {
             case OrbType.Lightning:
             {
-                var target = FirstEnemy(state);
+                // `ApplyLightningDamage` with a null target rolls
+                // `Rng.CombatTargets.NextItem(hittable)` -- the evoke is aimed by the
+                // stream, not at whoever the player last pointed at. The passive already
+                // rolled; the evoke did not, so a Defect with three enemies in front of it
+                // put every evoke into the same one and never drew from the stream.
+                var target = RandomLivingEnemy(state, rng);
                 if (target == null)
                 {
                     return;
@@ -5750,10 +5780,27 @@ public static class CardEffects
                 state.Energy += 2;
                 break;
             case OrbType.Glass:
-                DrawCards(state, 2, new Random(0));
+            {
+                // `EvokeVal => PassiveVal * 2m`, to every hittable enemy -- so a Glass orb
+                // that has decayed to nothing evokes for nothing. Was a two-card draw off
+                // a `new Random(0)`, which is both the wrong effect and a fresh stream.
+                int value = GlassValue(state, orb) * 2;
+                if (value > 0)
+                {
+                    DealUnpoweredDamageToAll(state, value);
+                }
+
                 break;
+            }
         }
     }
+
+    /// <summary>
+    /// `GlassOrb.PassiveVal => ModifyOrbValue(_passiveVal)` — the decayed value with Focus
+    /// applied on top, so a worn-down Glass orb under Focus is still worth something.
+    /// </summary>
+    private static int GlassValue(CombatState state, OrbState orb) =>
+        Math.Max(0, orb.PassiveValue + BuffSystem.Get(state.PlayerBuffs, BuffId.Focus));
 
     private static int LightningPassiveValue(CombatState state) =>
         Math.Max(0, 3 + BuffSystem.Get(state.PlayerBuffs, BuffId.Focus));
@@ -5770,8 +5817,11 @@ public static class CardEffects
     private static int DarkPassiveValue(CombatState state) =>
         Math.Max(0, 6 + BuffSystem.Get(state.PlayerBuffs, BuffId.Focus));
 
-    private static int DarkBaseEvokeValue(CombatState state) =>
-        Math.Max(0, 6 + BuffSystem.Get(state.PlayerBuffs, BuffId.Focus));
+    /// <summary>`DarkOrb._evokeVal = 6m` — a literal, with no Focus on it.</summary>
+    private const int DarkBaseEvokeValue = 6;
+
+    /// <summary>`GlassOrb._passiveVal = 4m`, before Focus and before any decay.</summary>
+    private const int GlassBasePassiveValue = 4;
 
     private static void TriggerEnemyThorns(CombatState state, EnemyState target)
     {

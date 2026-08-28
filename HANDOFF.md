@@ -184,6 +184,12 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   by rarity — a simple card is not a card that was got right, it is a card nobody looked
   at. The three hardest (Nightmare, Echoing Slash, Blade of Ink) had been deferred as O24
   and are done. See E112-E175.
+- 🔨 **Defect: the ORBS are pinned, the 87 unpinned cards are not.** The orbs came first on
+  purpose — most of Defect's pool channels, evokes or counts them, and a card test written
+  against a wrong orb passes and cements the wrong answer. Three of the five were wrong
+  (E176-E178). **Read O26 before doing more Defect work**: orbs are absent from the
+  observation entirely, so a Defect agent cannot see the mechanic its character is built
+  on, and no amount of card correctness is worth anything until that is fixed.
 - ✅ **Every Ironclad card — all 92 — has tests**, written against `decompiled/` with the
   source cited per file, never against emulator output. `CardCoverageTests` is the guard:
   `scripts/generate_card_coverage.py` scrapes the `case` labels out of `CardEffects.Apply`
