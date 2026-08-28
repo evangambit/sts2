@@ -221,6 +221,18 @@ public sealed class CombatState
     /// </summary>
     public int EnergySpentThisTurn;
 
+    /// <summary>`PenNib`: whether the card now resolving is the tenth Attack, and doubled.</summary>
+    public bool PenNibArmed;
+
+    /// <summary>
+    /// `JossPaper` banks Ethereal exhausts and folds them in at `AfterSideTurnEnd` rather
+    /// than counting them as they happen — the relic says so explicitly.
+    /// </summary>
+    public int EtherealExhaustsThisTurn;
+
+    /// <summary>`Vambrace` doubles the FIRST card block of a combat; this latches it.</summary>
+    public bool VambraceSpent;
+
     /// <summary>
     /// A once-per-combat enchantment on the card being played has just fired, so the copy
     /// that lands in its result pile must carry the spent flag. CardEffects takes the card

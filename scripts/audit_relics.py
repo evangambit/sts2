@@ -154,7 +154,61 @@ def starter_relics() -> dict[str, str]:
 # nobody can now say which version of the source they were written against; seeding a
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
-READ: dict[str, tuple[str, str]] = {}
+READ: dict[str, tuple[str, str]] = {
+    "BookOfFiveRings": (
+        "65acd90720bc",
+        "CardsAddedSinceLastTrigger is CardsAdded % 5, so it heals 20 on every fifth card",
+    ),
+    "BowlerHat": (
+        "d8192144689c",
+        "ModifyGoldGained times a DynamicVar(GoldIncrease, 1.25m)",
+    ),
+    "Candelabra": (
+        "9f2b129bf03f",
+        "AfterSideTurnStart on TurnNumber == 2 exactly, not from turn two onwards",
+    ),
+    "JossPaper": (
+        "dacacf31828a",
+        "every FIVE cards exhausted draws one; ETHEREAL exhausts are banked to AfterSideTurnEnd",
+    ),
+    "LuckyFysh": (
+        "7da5cc2d6b6f",
+        "AfterCardChangedPiles into the DECK gains GoldVar(15) -- per card, not per reward",
+    ),
+    "MercuryHourglass": (
+        "37a2fa255576",
+        "AfterPlayerTurnStart, DamageVar(3m, Unpowered) to every hittable enemy",
+    ),
+    "MiniatureCannon": (
+        "2fdc7d0c0baa",
+        "ModifyDamageAdditive +3 on a powered attack from an UPGRADED card",
+    ),
+    "PenNib": (
+        "c352060f7e5d",
+        "every TENTH Attack is doubled; the counter rises in BeforeCardPlayed and wraps at ten",
+    ),
+    "PetrifiedToad": (
+        "44e106daea2f",
+        "BeforeCombatStartLate procures a PotionShapedRock, failing silently on a full belt",
+    ),
+    "PotionBelt": ("ceb063db9d09", "AfterObtained GainMaxPotionCount(2)"),
+    "ReptileTrinket": (
+        "b45edc129fd7",
+        "AfterPotionUsed applies ReptileTrinketPower, a TemporaryStrengthPower of 3",
+    ),
+    "RippleBasin": (
+        "1a90c07dfd95",
+        "BeforeSideTurnEnd, 4 unpowered block if NO Attack was played that turn",
+    ),
+    "StrikeDummy": (
+        "f026030df1d7",
+        "ModifyDamageAdditive +3 on a powered attack from a card tagged CardTag.Strike",
+    ),
+    "Vambrace": (
+        "661865f6a216",
+        "the FIRST card block of a combat is doubled; it latches only once an amount above zero lands",
+    ),
+}
 
 
 def main() -> None:

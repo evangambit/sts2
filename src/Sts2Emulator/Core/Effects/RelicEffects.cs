@@ -56,6 +56,27 @@ public static class RelicEffects
     public const int TuningFork = 274;
     public const int VelvetChoker = 281;
 
+    // The shared pool's commons and uncommons, added with the batch that modelled them.
+    public const int BookOfFiveRings = 27;
+    public const int BowlerHat = 31;
+    public const int Candelabra = 40;
+    public const int EternalFeather = 75;
+    public const int JossPaper = 122;
+    public const int LuckyFysh = 142;
+    public const int MercuryHourglass = 151;
+    public const int MiniatureCannon = 153;
+    public const int PenNib = 192;
+    public const int PetrifiedToad = 194;
+    public const int PotionBelt = 202;
+    public const int ReptileTrinket = 218;
+    public const int RippleBasin = 222;
+    public const int StrikeDummy = 253;
+    public const int Vambrace = 280;
+    public const int VenerableTeaSet = 282;
+
+    /// <summary>The token potion Petrified Toad procures before every combat.</summary>
+    private const int PotionShapedRock = 45;
+
     /// <summary>
     /// The relics whose ModifyMaxEnergy adds an EnergyVar(1). Every one of them is the same
     /// +1; what separates them is the price, which each pays through a different hook.
@@ -89,8 +110,24 @@ public static class RelicEffects
         def.Type == CardType.Power && HasRelic(state, SpikedGauntlets) ? 1 : 0;
 
     /// <summary>Ectoplasm's ModifyGoldGained returns 0m: the owner gains no gold, ever.</summary>
-    public static int ModifyGoldGained(IEnumerable<RelicInstance> relics, int amount) =>
-        relics.Any(relic => relic.DefId == Ectoplasm) ? 0 : amount;
+    public static int ModifyGoldGained(IEnumerable<RelicInstance> relics, int amount)
+    {
+        var held = relics as IReadOnlyCollection<RelicInstance> ?? relics.ToList();
+        if (held.Any(relic => relic.DefId == Ectoplasm))
+        {
+            return 0;
+        }
+
+        // `BowlerHat.ModifyGoldGained` multiplies by a `DynamicVar("GoldIncrease", 1.25m)`.
+        // A decimal multiply, so 15 gold becomes 18 and not 19 -- the truncation is the
+        // game's, not a rounding choice made here.
+        if (held.Any(relic => relic.DefId == BowlerHat))
+        {
+            return (int)(amount * 1.25m);
+        }
+
+        return amount;
+    }
 
     /// <summary>
     /// Relics whose combat counter means "spent for the rest of the run" rather than
@@ -166,6 +203,21 @@ public static class RelicEffects
             foreach (var enemy in state.Enemies.Where(enemy => enemy.Hp > 0))
             {
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 1);
+            }
+        }
+
+        // `PetrifiedToad.BeforeCombatStartLate` procures a Shaped Rock into the first free
+        // potion slot. `TryToProcure` fails silently when the belt is full, which is why
+        // this looks for a slot rather than making room.
+        if (HasRelic(state, PetrifiedToad))
+        {
+            for (int i = 0; i < state.PotionSlots.Length; i++)
+            {
+                if (state.PotionSlots[i] == 0)
+                {
+                    state.PotionSlots[i] = PotionShapedRock;
+                    break;
+                }
             }
         }
 
@@ -616,4 +668,195 @@ public static class RelicEffects
 
     private static bool HasRelic(CombatState state, int relicId) =>
         state.Relics.Any(relic => relic.DefId == relicId);
+
+    /// <summary>
+    /// `ModifyDamageAdditive` from relics that read the CARD. Both are powered-attack only
+    /// and both pay a flat 3.
+    /// </summary>
+    internal static int CardDamageBonus(CombatState state, CardDef def, bool upgraded)
+    {
+        if (def.Type != CardType.Attack)
+        {
+            return 0;
+        }
+
+        int bonus = 0;
+        // MiniatureCannon: `if (!cardSource.IsUpgraded) return 0m;`
+        if (upgraded && HasRelic(state, MiniatureCannon))
+        {
+            bonus += 3;
+        }
+
+        // StrikeDummy: `cardSource.Tags.Contains(CardTag.Strike)`. Tags are not extracted,
+        // so the NAME stands in -- and here it is exact in both directions: all 22 cards
+        // the source tags contain "Strike", and no untagged card does. `EndsWith` is the
+        // trap, because the basic strikes are StrikeSilent, StrikeDefect and friends.
+        if (HasRelic(state, StrikeDummy) && def.Name.Contains("Strike", StringComparison.Ordinal))
+        {
+            bonus += 3;
+        }
+
+        return bonus;
+    }
+
+    /// <summary>
+    /// `PenNib.ModifyDamageMultiplicative`: every TENTH Attack the owner plays is doubled.
+    /// The counter is incremented in `BeforeCardPlayed`, so the tenth card sees a counter
+    /// that has just wrapped to zero.
+    /// </summary>
+    internal static int CardDamageMultiplier(CombatState state, CardDef def)
+    {
+        if (def.Type != CardType.Attack)
+        {
+            return 1;
+        }
+
+        int index = state.Relics.FindIndex(relic => relic.DefId == PenNib);
+        return index >= 0 && state.Relics[index].Counter == 0 && state.PenNibArmed ? 2 : 1;
+    }
+
+    /// <summary>
+    /// `PenNib.BeforeCardPlayed` -- the count rises before the card resolves, and wraps at
+    /// ten. Called from the play path rather than from AfterCardPlayed, because the card
+    /// being played is the one that gets doubled.
+    /// </summary>
+    internal static void BeforeCardPlayedRelics(CombatState state, CardDef def)
+    {
+        if (def.Type != CardType.Attack)
+        {
+            state.PenNibArmed = false;
+            return;
+        }
+
+        int index = state.Relics.FindIndex(relic => relic.DefId == PenNib);
+        if (index < 0)
+        {
+            return;
+        }
+
+        int next = (state.Relics[index].Counter + 1) % 10;
+        state.Relics[index] = state.Relics[index] with { Counter = next };
+        state.PenNibArmed = next == 0;
+    }
+
+    /// <summary>
+    /// `MercuryHourglass.AfterPlayerTurnStart` and `Candelabra.AfterSideTurnStart`, both of
+    /// which fire at the start of the player's turn.
+    /// </summary>
+    internal static void ApplyStartOfPlayerTurnShared(CombatState state, int turnNumber, Random? rng)
+    {
+        if (HasRelic(state, MercuryHourglass))
+        {
+            CardEffects.DealUnpoweredDamageToAll(state, 3);
+        }
+
+        // Candelabra is turn TWO only -- `TurnNumber == 2`, not "from turn two".
+        if (turnNumber == 2 && HasRelic(state, Candelabra))
+        {
+            state.Energy += 2;
+        }
+
+        // `VenerableTeaSet.AfterEnergyReset` pays once, on the first energy reset of the
+        // combat after a rest site, and clears its own flag. The run arms it on entering
+        // the rest site; the existing VenerableTeaSetActive id is that armed marker.
+        if (turnNumber == 1 && HasRelic(state, VenerableTeaSetActive))
+        {
+            state.Energy += 2;
+            state.Relics.RemoveAll(relic => relic.DefId == VenerableTeaSetActive);
+        }
+
+        _ = rng;
+    }
+
+    /// <summary>
+    /// `RippleBasin.BeforeSideTurnEnd`: 4 unpowered block if the owner played NO Attack
+    /// this turn. The emulator counts attacks per turn already.
+    /// </summary>
+    /// <summary>`RippleBasin.BeforeSideTurnEnd` — before the hand is flushed.</summary>
+    internal static void ApplyBeforeEndOfPlayerTurnShared(CombatState state, Random? rng)
+    {
+        if (HasRelic(state, RippleBasin) && state.AttackCardsPlayedThisTurn == 0)
+        {
+            CardEffects.GainUnpoweredBlock(state, 4, rng);
+        }
+    }
+
+    /// <summary>
+    /// `JossPaper.AfterSideTurnEnd` folds the turn's ETHEREAL exhausts into the count in
+    /// one go — they are deliberately not counted as they happen.
+    /// </summary>
+    /// <remarks>
+    /// AFTER the hand flush, unlike Ripple Basin above. The distinction is load-bearing:
+    /// cards drawn before the flush are thrown straight back out, so a Joss Paper that
+    /// paid out early would appear to do nothing at all.
+    /// </remarks>
+    internal static void ApplyAfterEndOfPlayerTurnShared(CombatState state, Random? rng)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == JossPaper);
+        if (index >= 0 && state.EtherealExhaustsThisTurn > 0)
+        {
+            AddJossPaperExhausts(state, index, state.EtherealExhaustsThisTurn, rng);
+        }
+
+        state.EtherealExhaustsThisTurn = 0;
+    }
+
+    /// <summary>
+    /// `JossPaper.AfterCardExhausted`: every FIVE cards exhausted draws one. An exhaust
+    /// caused by Ethereal is banked for the end of the turn instead of counting now.
+    /// </summary>
+    internal static void ApplyAfterCardExhausted(
+        CombatState state,
+        bool causedByEthereal,
+        Random? rng
+    )
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == JossPaper);
+        if (index < 0)
+        {
+            return;
+        }
+
+        if (causedByEthereal)
+        {
+            state.EtherealExhaustsThisTurn++;
+            return;
+        }
+
+        AddJossPaperExhausts(state, index, 1, rng);
+    }
+
+    private static void AddJossPaperExhausts(CombatState state, int index, int count, Random? rng)
+    {
+        int total = state.Relics[index].Counter + count;
+        int draws = total / 5;
+        state.Relics[index] = state.Relics[index] with { Counter = total % 5 };
+        if (draws > 0 && rng is not null)
+        {
+            CardEffects.DrawCards(state, draws, rng);
+        }
+    }
+
+    /// <summary>
+    /// `Vambrace.ModifyBlockMultiplicative`: the FIRST card each combat that gains block
+    /// gains double. `BlockGainedThisCombat` latches once the gain actually lands.
+    /// </summary>
+    internal static bool DoublesCardBlock(CombatState state) =>
+        HasRelic(state, Vambrace) && !state.VambraceSpent;
+
+    /// <summary>
+    /// `ReptileTrinket.AfterPotionUsed`: 3 Strength, and it is a TemporaryStrengthPower --
+    /// handed back at the end of the turn, like Piercing Wail's loss in the other
+    /// direction.
+    /// </summary>
+    internal static void ApplyAfterPotionUsed(CombatState state)
+    {
+        if (HasRelic(state, ReptileTrinket))
+        {
+            // The player's restore is `Strength += -TemporaryStrength`, so a grant that
+            // should expire records the SAME sign it was given at, not the opposite.
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 3);
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryStrength, 3);
+        }
+    }
 }

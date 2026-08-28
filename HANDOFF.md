@@ -64,6 +64,7 @@ uv run python scripts/audit_ascension_literals.py # A9 values used at A8
 uv run python scripts/audit_card_keywords.py      # card keywords the table never got
 uv run python scripts/audit_cards.py              # which cards have been READ vs the source
 uv run python scripts/audit_relics.py             # which relics the emulator models at all
+uv run python scripts/audit_relics.py --reachable # ...narrowed to what an ordinary run meets
 
 # Regenerate game data / decompiled source for the current patch
 bash scripts/decompile.sh "<game dir>"        # → decompiled/ (gitignored), needs ilspycmd

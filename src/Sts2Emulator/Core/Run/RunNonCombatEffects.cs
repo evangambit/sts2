@@ -65,6 +65,29 @@ public static class RunNonCombatEffects
     public static void AddCardToDeck(RunState state, CardInstance card)
     {
         state.Deck.Add(UpgradedByEggs(state, card));
+
+        // `AfterCardChangedPiles` with the destination pile being the DECK. Two relics
+        // read it, and both are per-card rather than per-reward: taking three cards in one
+        // Neow blessing pays three times.
+        if (Effects.RelicEffects.Has(state.Relics, Effects.RelicEffects.LuckyFysh))
+        {
+            state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 15);
+        }
+
+        int book = state.Relics.FindIndex(relic =>
+            relic.DefId == Effects.RelicEffects.BookOfFiveRings
+        );
+        if (book >= 0)
+        {
+            // `CardsAddedSinceLastTrigger` is `CardsAdded % 5`, so the heal lands on every
+            // fifth card rather than once at five.
+            int added = state.Relics[book].Counter + 1;
+            state.Relics[book] = state.Relics[book] with { Counter = added % 5 };
+            if (added % 5 == 0)
+            {
+                state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 20);
+            }
+        }
     }
 
     public static CardInstance UpgradedByEggs(RunState state, CardInstance card)
@@ -122,6 +145,14 @@ public static class RunNonCombatEffects
         if (state.Relics.All(relic => relic.DefId != relicId))
         {
             state.Relics.Add(new RelicInstance(relicId, StartingRelicCounter(relicId)));
+
+            // `PotionBelt.AfterObtained` -- GainMaxPotionCount(2). Inside the not-already-
+            // held branch so a duplicate pickup cannot pay twice, which is the same reason
+            // the strike-from-the-grab-bag below sits here.
+            if (relicId == Effects.RelicEffects.PotionBelt)
+            {
+                state.MaxPotionSlots += 2;
+            }
         }
 
         // RelicCmd.Obtain strikes the relic from both grab bags unless it is stackable,

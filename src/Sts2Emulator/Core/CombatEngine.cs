@@ -171,6 +171,7 @@ public static class CombatEngine
         // Read here, with Burst and Serpent Form, for the same reason all three are:
         // the power records what it was worth when the play STARTED.
         CaptureBeforePlayPowers(state);
+        Effects.RelicEffects.BeforeCardPlayedRelics(state, def);
 
         ApplyEnchantmentOnPlay(state, card, rng);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
@@ -441,6 +442,7 @@ public static class CombatEngine
         AutoPlayStampedeAttacks(state, rng);
 
         Effects.RelicEffects.ApplyEndOfPlayerTurn(state, rng);
+        Effects.RelicEffects.ApplyBeforeEndOfPlayerTurnShared(state, rng);
 
         // `DoubleDamagePower.AfterSideTurnEnd` DECREMENTS -- so a stack bought by one
         // Shadow Step covers exactly the turn it arrived for.
@@ -568,6 +570,7 @@ public static class CombatEngine
         }
         state.Hand.Clear();
         state.Hand.AddRange(nextHand);
+        Effects.RelicEffects.ApplyAfterEndOfPlayerTurnShared(state, rng);
 
         if (retainHand == 1)
         {
@@ -825,6 +828,8 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, -biasedCognition);
         }
 
+        Effects.RelicEffects.ApplyStartOfPlayerTurnShared(state, state.Turn + 1, rng);
+
         int coolant = BuffSystem.Get(state.PlayerBuffs, BuffId.Coolant);
         if (coolant > 0)
         {
@@ -1074,6 +1079,9 @@ public static class CombatEngine
 
         Effects.PotionEffects.Apply(state.PotionSlots[slot], state, rng);
         state.PotionSlots[slot] = 0;
+        // `ReptileTrinket.AfterPotionUsed`, and it is AFTER: a potion that grants Strength
+        // of its own has already landed, so the two stack rather than one replacing it.
+        Effects.RelicEffects.ApplyAfterPotionUsed(state);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
@@ -2414,6 +2422,7 @@ public static class CombatEngine
         state.Hand.RemoveAt(handIndex);
         // BeforeCardPlayed fires for an auto-play too -- it is an ordinary CardModel.Play.
         CaptureBeforePlayPowers(state);
+        Effects.RelicEffects.BeforeCardPlayedRelics(state, def);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
         if (def.Type == CardType.Attack)
         {
@@ -2755,6 +2764,7 @@ public static class CombatEngine
 
         // Apply card effects.
         CaptureBeforePlayPowers(state);
+        Effects.RelicEffects.BeforeCardPlayedRelics(state, def);
         int callerTarget = state.TargetEnemyIndex;
         state.TargetEnemyIndex = targetIndex;
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
