@@ -118,6 +118,7 @@ def compact_state(state: dict[str, Any]) -> dict[str, Any]:
         "options": state.get("options"),
     }
 
+
 def simplify_named_list(items: list[Any]) -> list[dict[str, Any]]:
     simplified = []
     for item in items:
@@ -150,10 +151,6 @@ def simplify_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
         }
         for card in cards
     ]
-
-
-
-
 
 
 def wait_for_state_to_change(
@@ -201,10 +198,9 @@ def wait_for_state_to_change(
         # changed" comes true while the state is still a map — and the next action is
         # then a second choose_map_node, which the game rejects. A move between rooms is
         # only done when the phase itself has changed.
-        left_old_phase = (
-            not require_new_state_type
-            or state.get("state_type") != before.get("state_type")
-        )
+        left_old_phase = not require_new_state_type or state.get(
+            "state_type",
+        ) != before.get("state_type")
         if (
             left_old_phase
             and current != before
@@ -215,8 +211,6 @@ def wait_for_state_to_change(
         time.sleep(POLL_INTERVAL)
         state = start_real_game_run.get_state(base_url)
     return state
-
-
 
 
 def wait_for_actionable_state(
@@ -240,10 +234,18 @@ def is_actionable_state(state: dict[str, Any], *, min_combat_hand: int = 1) -> b
     if state_type in COMBAT_STATES:
         battle = state.get("battle") or {}
         hand = (state.get("player") or {}).get("hand") or []
+        # An empty enemy list inside a COMBAT state is never a settled state: a fight
+        # with nothing left to kill has already become a rewards screen. What it really
+        # means is that the game is mid-resolution -- a Phrog Parasite's death removes it
+        # and then awaits CreatureCmd.Add for each of its four Wrigglers, and a snapshot
+        # taken between the two records a fight against nobody. The emulator resolves
+        # both halves in one step and looked wrong for it.
+        enemies = battle.get("enemies")
         return (
             battle.get("turn") == "player"
             and battle.get("is_play_phase") is True
             and len(hand) >= min_combat_hand
+            and bool(enemies)
         )
     if state_type == "event":
         return bool((state.get("event") or {}).get("options"))
@@ -269,12 +271,20 @@ def is_actionable_state(state: dict[str, Any], *, min_combat_hand: int = 1) -> b
     return state_type in {"card_select", "map"}
 
 
-def choose_action(state: dict[str, Any], map_index: int) -> dict[str, Any] | None:
+def choose_action(
+    state: dict[str, Any],
+    map_index: int,
+    neow_option: int | None = None,
+    chosen_cards: set[int] | None = None,
+) -> dict[str, Any] | None:
     state_type = state.get("state_type")
+    if state_type != "card_select" and chosen_cards is not None:
+        # Left the screen, so the memory of what was ticked on it goes with it.
+        chosen_cards.clear()
     if state_type in COMBAT_STATES:
         return choose_combat_action(state)
     if state_type == "event":
-        return choose_event_action(state)
+        return choose_event_action(state, neow_option)
     if state_type == "rewards":
         return choose_reward_action(state)
     if state_type == "map":
@@ -286,7 +296,7 @@ def choose_action(state: dict[str, Any], map_index: int) -> dict[str, Any] | Non
     if state_type in {"rest", "rest_site"}:
         return choose_rest_action(state)
     if state_type == "card_select":
-        return choose_card_select_action(state)
+        return choose_card_select_action(state, chosen_cards)
     if state_type == "bundle_select":
         return choose_bundle_select_action(state)
     if state_type == "card_reward":
@@ -430,12 +440,25 @@ def first_living_enemy_id(state: dict[str, Any]) -> str | None:
     return None
 
 
-def choose_event_action(state: dict[str, Any]) -> dict[str, Any] | None:
+def choose_event_action(
+    state: dict[str, Any],
+    neow_option: int | None = None,
+) -> dict[str, Any] | None:
     options = (state.get("event") or {}).get("options") or []
     proceed = first_option_index(options, is_proceed=True)
     if proceed is not None:
         return {"action": "choose_event_option", "index": proceed}
     if (state.get("event") or {}).get("event_id") == "NEOW":
+        # A caller may name the blessing to take. The default policy picks the first
+        # option whose text avoids a list of blocked terms -- "choose", "transform",
+        # "upgrade" and so on -- which quietly makes every relic with a pickup CHOICE
+        # unreachable. Lead Paperweight and Hefty Tablet are both in that set, both were
+        # offered by traces already committed, and neither has ever been captured:
+        # the runs took the safe option beside them instead. Their stand-in draw counts
+        # in RunEngine.AdvanceRewardRngForNeowRelic cannot be checked against anything
+        # until one of them is.
+        if neow_option is not None:
+            return {"action": "choose_event_option", "index": neow_option}
         try:
             return {
                 "action": "choose_event_option",
@@ -602,10 +625,24 @@ def node_type_score(node_type: str, *, low_hp: bool) -> int:
     return 0
 
 
-def choose_card_select_action(state: dict[str, Any]) -> dict[str, Any]:
+def choose_card_select_action(
+    state: dict[str, Any],
+    already_chosen: set[int] | None = None,
+) -> dict[str, Any]:
+    """Answer a card-select screen, one toggle per call.
+
+    The screen reports no selection state at all -- its cards carry an index and nothing
+    to say whether one is already ticked -- so the caller has to remember what it has
+    toggled. Without that, a screen asking for more than ONE card picks the same card by
+    the same priority every time, toggling it on and off forever; and because a toggle
+    does change the snapshot, the settle-wait never times out and the capture hangs rather
+    than failing. Precarious Shears ("Choose 2 cards to Remove") is the first blessing that
+    asks for two, which is why no capture had ever met this.
+    """
     card_select = state.get("card_select") or {}
     if card_select.get("can_confirm"):
         return {"action": "confirm_selection"}
+    chosen = already_chosen if already_chosen is not None else set()
     cards = card_select.get("cards") or []
     prompt = str(card_select.get("prompt") or "").lower()
     priority = (
@@ -617,11 +654,13 @@ def choose_card_select_action(state: dict[str, Any]) -> dict[str, Any]:
         for card in cards:
             if not isinstance(card, dict):
                 continue
+            index = card.get("index")
+            if not isinstance(index, int) or index in chosen:
+                continue
             card_text = f"{card.get('id') or ''} {card.get('name') or ''}".lower()
             if wanted in card_text:
-                index = card.get("index")
-                if isinstance(index, int):
-                    return {"action": "select_card", "index": index}
+                chosen.add(index)
+                return {"action": "select_card", "index": index}
     return {"action": "confirm_selection"}
 
 
@@ -713,6 +752,70 @@ def first_named_option(options: list[Any], names: tuple[str, ...]) -> int | None
     return None
 
 
+def recover_stranded_run(
+    base_url: str,
+    payload: dict[str, Any],
+    before: dict[str, Any],
+    state: dict[str, Any],
+    delay: float,
+    *,
+    min_combat_hand: int,
+    attempts: int = MAX_ACTION_ATTEMPTS,
+) -> tuple[dict[str, Any], int]:
+    """Re-drive an action the game ACCEPTED and then did nothing with.
+
+    The retry loop above only catches an action the game refused. This is the other
+    failure, and it is the one that strands a capture: the post comes back ``ok`` and the
+    run goes nowhere. It happened on a shop -- ``proceed`` opened the map screen while the
+    merchant room was still the run's current room, so ``state_type`` read ``map`` and the
+    map really was drawn, with the right options on it. The travel vote registered in the
+    game's own log and then no room ever loaded. The state settles on ``unknown``: no
+    screen at all, and every later action refused, so the capture ends there holding a run
+    that is still alive.
+
+    It is a race rather than a rule -- the committed traces all travel out of their shops
+    without trouble -- which is exactly why it needs handling instead of avoiding. The
+    recovery is what unsticks it by hand: nudge the run with a ``proceed`` until it is
+    back on a screen it can act from, then post the same action again. Nothing is recorded
+    until the run has actually moved, so a recovered step looks like any other step; the
+    count goes on the snapshot's note so a capture that needed several says so.
+    """
+    recoveries = 0
+    # A finished run is not a stranded one. `game_over` is not an actionable state, so
+    # without this every capture ended by posting six pointless proceeds into a dead run
+    # and labelling its last step `recovered_6` -- which buries the note under noise
+    # exactly where it is meant to mean something.
+    while (
+        not is_actionable_state(state)
+        and not is_terminal_state(state)
+        and recoveries < attempts
+    ):
+        recoveries += 1
+        # Harmless when there is nothing to proceed from: the mod answers "No proceed
+        # button available or enabled" and the state is read again either way.
+        trace_real_game.post_action(base_url, {"action": "proceed"})
+        time.sleep(max(delay, 0.5))
+        state = start_real_game_run.get_state(base_url)
+        if not is_actionable_state(state):
+            continue
+
+        result = trace_real_game.post_action(base_url, payload)
+        if result.get("status") == "error":
+            # Back on a screen, but not one this action belongs to. Leave it to the
+            # caller's own handling rather than guessing a different action here.
+            return state, recoveries
+
+        state = wait_for_state_to_change(
+            base_url,
+            before,
+            delay,
+            min_combat_hand=min_combat_hand,
+            require_new_state_type=payload["action"] == "choose_map_node",
+        )
+
+    return state, recoveries
+
+
 def capture_run(
     base_url: str,
     seed: str,
@@ -723,6 +826,10 @@ def capture_run(
     delay: float,
     ascension: int = 0,
     scripted_actions: list[dict[str, Any]] | None = None,
+    neow_option: int | None = None,
+    buff_max_hp: int = 0,
+    upgrade_deck: bool = False,
+    enter_acts: int = 0,
 ) -> dict[str, Any]:
     state = start_real_game_run.start_seeded_run(
         base_url,
@@ -734,14 +841,36 @@ def capture_run(
     state = wait_for_actionable_state(base_url)
     trace: list[dict[str, Any]] = []
     skipped = 0
+    # Which card indices have been ticked on the card-select screen currently open. The
+    # screen does not report its own selection, so this is the only record of it.
+    chosen_cards: set[int] = set()
+    # Buffs are spent the first time the run stands on the MAP -- after Neow has been
+    # answered and left, so the blessing offer is the one the seed really gives, and
+    # before the first room, so every floor of the run is played with them. They are
+    # posted as ordinary actions and RECORDED as ordinary steps, which is what lets the
+    # replay apply the identical change to the emulator at the identical point.
+    pending_buffs: list[dict[str, Any]] = []
+    if buff_max_hp:
+        pending_buffs.append({"action": "debug_gain_max_hp", "amount": buff_max_hp})
+    if upgrade_deck:
+        pending_buffs.append({"action": "debug_upgrade_deck"})
+    # Jumping acts goes LAST, so the buffs land while the run is still in act 1 and the
+    # act it arrives in is played with them. Reaching act 2 by winning act 1 costs a
+    # heavily buffed run and several minutes, and can lose the boss fight; this is the
+    # same RunManager.EnterNextAct the boss reward calls, without the run.
+    for _ in range(enter_acts):
+        pending_buffs.append({"action": "debug_enter_next_act"})
     append_snapshot(trace, 0, None, None, state)
 
     for step in range(1, max_steps + 1):
-        payload = (
-            choose_action(state, map_index)
-            if scripted_actions is None
-            else next_scripted_action(scripted_actions, step)
-        )
+        if pending_buffs and state.get("state_type") == "map":
+            payload = pending_buffs.pop(0)
+        else:
+            payload = (
+                choose_action(state, map_index, neow_option, chosen_cards)
+                if scripted_actions is None
+                else next_scripted_action(scripted_actions, step)
+            )
         if payload is None:
             append_snapshot(trace, len(trace), None, None, state, note="no_auto_action")
             break
@@ -762,7 +891,9 @@ def capture_run(
             # was wrong, so a scripted run re-posts the same action rather than picking
             # a new one -- picking again would walk a different run.
             retry = (
-                choose_action(state, map_index) if scripted_actions is None else payload
+                choose_action(state, map_index, neow_option, chosen_cards)
+                if scripted_actions is None
+                else payload
             )
             if retry is None:
                 break
@@ -790,13 +921,28 @@ def capture_run(
             min_combat_hand=min_hand,
             require_new_state_type=payload["action"] == "choose_map_node",
         )
+
+        state, recoveries = recover_stranded_run(
+            base_url,
+            payload,
+            before,
+            state,
+            delay,
+            min_combat_hand=min_hand,
+        )
+
+        notes = []
+        if rejections:
+            notes.append(f"retried_{rejections}")
+        if recoveries:
+            notes.append(f"recovered_{recoveries}")
         append_snapshot(
             trace,
             len(trace),
             payload,
             result,
             state,
-            note=f"retried_{rejections}" if rejections else None,
+            note="+".join(notes) if notes else None,
         )
 
         if result.get("status") == "error":
@@ -844,7 +990,9 @@ def append_snapshot(
     )
 
 
-def next_scripted_action(actions: list[dict[str, Any]], step: int) -> dict[str, Any] | None:
+def next_scripted_action(
+    actions: list[dict[str, Any]], step: int,
+) -> dict[str, Any] | None:
     """Return the recorded action for this step, or None once the script runs out."""
     index = step - 1
     return actions[index] if index < len(actions) else None
@@ -859,7 +1007,9 @@ def recorded_actions(path: Path) -> list[dict[str, Any]]:
     """
     payload = json.loads(path.read_text(encoding="utf-8"))
     return [
-        step["action"] for step in payload.get("trace", []) if step.get("action") is not None
+        step["action"]
+        for step in payload.get("trace", [])
+        if step.get("action") is not None
     ]
 
 
@@ -882,6 +1032,29 @@ def main() -> None:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--abandon-existing", action="store_true")
     parser.add_argument(
+        "--buff-max-hp",
+        type=int,
+        default=0,
+        help=(
+            "Gain this much max HP (and heal it) once the run reaches the map. "
+            "For reaching the act 1 boss, which no unbuffed capture has survived."
+        ),
+    )
+    parser.add_argument(
+        "--upgrade-deck",
+        action="store_true",
+        help="Upgrade every upgradable card in the deck once the run reaches the map.",
+    )
+    parser.add_argument(
+        "--enter-acts",
+        type=int,
+        default=0,
+        help=(
+            "Skip straight past this many acts once the run reaches the map. "
+            "--enter-acts 1 starts the capture in act 2 without playing act 1."
+        ),
+    )
+    parser.add_argument(
         "--ascension",
         type=int,
         default=0,
@@ -889,6 +1062,18 @@ def main() -> None:
             "ascension to capture at (default 0). The run layer is mostly "
             "ascension-independent, and an auto-player at A8 may die on floor 3 and buy "
             "a shallow trace."
+        ),
+    )
+    parser.add_argument(
+        "--neow-option",
+        type=int,
+        default=None,
+        help=(
+            "take this Neow option index instead of letting the auto-player pick. The "
+            "default policy avoids any blessing whose text mentions a choice, which "
+            "makes the relics with a pickup CHOICE -- Lead Paperweight, Hefty Tablet, "
+            "Scroll Boxes -- impossible to capture. Screen a seed's three options with "
+            "the emulator first: they are seed-deterministic and it models them exactly."
         ),
     )
     parser.add_argument("--format", choices=["pretty", "compact"], default="pretty")
@@ -914,6 +1099,10 @@ def main() -> None:
         args.delay,
         args.ascension,
         scripted_actions=scripted,
+        neow_option=args.neow_option,
+        buff_max_hp=args.buff_max_hp,
+        upgrade_deck=args.upgrade_deck,
+        enter_acts=args.enter_acts,
     )
     text = json.dumps(trace, indent=None if args.format == "compact" else 2)
     if args.output is not None:

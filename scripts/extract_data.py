@@ -20,7 +20,13 @@ RELICS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Models.Relics"
 # ── patterns ──────────────────────────────────────────────────────────────────
 
 # Match card constructor arguments: cost, type, and rarity.
-CARD_CTOR = re.compile(r"base\((-?\d+),\s*CardType\.(\w+),\s*CardRarity\.(\w+)")
+CARD_CTOR = re.compile(
+    r"base\((-?\d+),\s*CardType\.(\w+),\s*CardRarity\.(\w+)"
+    # The fourth argument, when a card gives one. Only AnyEnemy means "target selection
+    # is performed" -- which is what decides whether a play carries a creature Target,
+    # and so whether the Kaiser Crab's Surrounded turns the player (E101).
+    r"(?:,\s*TargetType\.(\w+))?",
+)
 # DamageVar(6m, ...) or DamageVar(6, ...)
 DAMAGE_VAR = re.compile(r"new DamageVar\((\d+(?:\.\d+)?)m?,")
 # BlockVar(5m, ...)
@@ -39,7 +45,7 @@ HAS_ENERGY_COST_X = re.compile(r"HasEnergyCostX\s*=>\s*true")
 # run. Without the flag the reward pools are larger than the game's and offer cards that
 # cannot appear.
 MULTIPLAYER_ONLY = re.compile(
-    r"MultiplayerConstraint\s*=>\s*CardMultiplayerConstraint\.MultiplayerOnly"
+    r"MultiplayerConstraint\s*=>\s*CardMultiplayerConstraint\.MultiplayerOnly",
 )
 UPGRADE_DMG = re.compile(r"DynamicVars\.Damage\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
 UPGRADE_BLOCK = re.compile(r"DynamicVars\.Block\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
@@ -51,6 +57,10 @@ HP_PLAIN = re.compile(r"(?:Min|Max)InitialHp\s*=>\s*(\d+)\s*;")
 HP_ASCENSION = re.compile(
     r"(?:Min|Max)InitialHp\s*=>.+?GetValueIfAscension\([^,]+,\s*(\d+),\s*(\d+)\s*\)",
 )
+# `MinInitialHp => FirstFormHp;` -- a monster whose HP is named rather than stated.
+# Only the Test Subject does this (its three forms each have their own), and it read as
+# ZERO HP until the indirection was followed, which is worse than not extracting it.
+HP_INDIRECT = re.compile(r"(?:Min|Max)InitialHp\s*=>\s*([A-Za-z_]\w*)\s*;")
 
 # Monster move intents
 SINGLE_ATTACK = re.compile(r"new SingleAttackIntent\((\d+)\)")
@@ -87,8 +97,26 @@ def innate_canonical(text: str) -> bool:
 
 
 def innate_on_upgrade(text: str) -> bool:
+    return keyword_on_upgrade(text, "Innate", "Add")
+
+
+def keyword_on_upgrade(text: str, keyword: str, verb: str) -> bool:
+    """Whether OnUpgrade ADDS or REMOVES this keyword.
+
+    The direction is the whole point and the two are not interchangeable. Every
+    OnUpgrade that mentions Innate or Retain ADDS it -- the upgrade grants the keyword --
+    and every one that mentions Exhaust or Ethereal REMOVES it, which is usually the
+    entire reason to upgrade the card. A check that only asked "is the keyword mentioned
+    in OnUpgrade" would read those two groups as the same thing and get one of them
+    backwards.
+    """
     m = _ON_UPGRADE_BODY.search(text)
-    return bool(m and "CardKeyword.Innate" in m.group(1))
+    if not m:
+        return False
+    for line in m.group(1).splitlines():
+        if f"CardKeyword.{keyword}" in line and verb in line:
+            return True
+    return False
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -219,7 +247,7 @@ SPECIAL_CARD_IDS = {
 
 
 def slugify(name: str) -> str:
-    """The game's StringHelper.Slugify, which produces a model's ModelId.Entry.
+    r"""Reproduce the game's StringHelper.Slugify, which produces a ModelId.Entry.
 
     Worth having in the data rather than derived at runtime: the mid-combat reshuffle
     sorts the pile by ModelId before shuffling (ListExtensions.StableShuffle), and
@@ -259,6 +287,8 @@ def extract_cards() -> str:
         cost = int(ctor.group(1))
         card_type = ctor.group(2)  # Attack / Skill / Power / Status / Curse
         rarity = ctor.group(3)
+        # A card with no fourth argument takes CardModel's default, which is Self.
+        target_type = ctor.group(4) or "Self"
         # Negative-cost cards are statuses/curses; keep the ones the id map knows
         # (they are referenced by the engine) and skip the rest, as before.
         if cost < 0 and name not in _ID_MAP.get("cards", {}):
@@ -278,9 +308,14 @@ def extract_cards() -> str:
         upg_block = decimal_to_int(upg_blk_m.group(1)) if upg_blk_m else 0
 
         def_id = stable_id("cards", name)
+        # Retain and Sly were missing from this tuple, and both are read by the engine:
+        # `CardInstanceExtensions.IsRetained` decides what survives the end-of-turn hand
+        # discard, and Sly decides what auto-plays when an effect discards it. Eleven cards
+        # declare Retain and eight declare Sly, and not one of them was marked -- a field
+        # the extractor never emits reads exactly like a card that does not have it.
         flags = [
             f"{keyword}: true"
-            for keyword in ("Ethereal", "Exhaust", "Unplayable")
+            for keyword in ("Ethereal", "Exhaust", "Unplayable", "Retain", "Sly", "Eternal")
             if has_canonical_keyword(text, keyword)
         ]
         # Innate needs precise attribution, unlike the flags above: 9 cards declare
@@ -291,10 +326,30 @@ def extract_cards() -> str:
             flags.append("Innate: true")
         if innate_on_upgrade(text):
             flags.append("InnateWhenUpgraded: true")
+        # Retain is granted by an upgrade on twelve cards, exactly as Innate is on
+        # fifteen -- and like Innate it needs its own flag, because a card that only
+        # retains once upgraded must not retain before then.
+        if keyword_on_upgrade(text, "Retain", "Add"):
+            flags.append("RetainWhenUpgraded: true")
+        # Exhaust and Ethereal go the other way: nineteen cards drop Exhaust when
+        # upgraded and three drop Ethereal, and for most of those it is the whole
+        # benefit of the upgrade.
+        if keyword_on_upgrade(text, "Exhaust", "Remove"):
+            flags.append("ExhaustRemovedWhenUpgraded: true")
+        if keyword_on_upgrade(text, "Ethereal", "Remove"):
+            flags.append("EtherealRemovedWhenUpgraded: true")
         if HAS_ENERGY_COST_X.search(text):
             flags.append("HasEnergyCostX: true")
         if MULTIPLAYER_ONLY.search(text):
             flags.append("MultiplayerOnly: true")
+        # CardModel.CanBeGeneratedByModifiers. Eight curses refuse to be handed out by
+        # anything that rolls one -- Neow's Bones among them -- so the roll has to read it.
+        if "CanBeGeneratedByModifiers => false" in text:
+            flags.append("CanBeGeneratedByModifiers: false")
+        # CardModel.MaxUpgradeLevel. The base is 1; the cards that override it all
+        # override it to 0, which is what IsUpgradable reads to refuse an upgrade.
+        if "MaxUpgradeLevel => 0" in text:
+            flags.append("Upgradable: false")
         flags_cs = f", {', '.join(flags)}" if flags else ""
 
         entries.append(
@@ -303,7 +358,8 @@ def extract_cards() -> str:
             f"Cost: {cost}, BaseDamage: {base_dmg}, BaseBlock: {base_block}, "
             f"UpgradeDamage: {upg_dmg}, UpgradeBlock: {upg_block}, "
             f"UpgradeCost: {upg_cost}, "
-            f"Type: CardType.{card_type}, Rarity: CardRarity.{rarity}{flags_cs}),",
+            f"Type: CardType.{card_type}, Rarity: CardRarity.{rarity}, "
+            f"Target: CardTarget.{target_type}{flags_cs}),",
         )
     if not entries:
         entries = ["        // No cards extracted — check CARDS_DIR path."]
@@ -354,13 +410,19 @@ def extract_enemies() -> str:
             "OneHpMonster",
             "TenHpMonster",
             "BigDummy",
-            "FakeMerchantMonster",
-            "BattleFriendV1",
-            "BattleFriendV2",
-            "BattleFriendV3",
-            "TestSubject",
         ):
             continue
+
+        # HP — follow a named property to what it actually says, first: the regexes
+        # below match a literal or a GetValueIfAscension call, and neither is what
+        # `MinInitialHp => FirstFormHp` is.
+        for referent in dict.fromkeys(HP_INDIRECT.findall(text)):
+            named = re.search(
+                rf"\b{re.escape(referent)}\s*=>\s*(.+?);",
+                text,
+            )
+            if named is not None:
+                text += f"\n\tpublic override int MinInitialHp => {named.group(1)};\n"
 
         # HP — try AscensionHelper form first, then plain int
         ascension_hps = HP_ASCENSION.findall(text)
@@ -509,12 +571,18 @@ def extract_relics() -> str:
         fields = [
             f'Id: {stable_id("relics", name)}',
             f'Name: "{name}"',
+            f'Entry: "{slugify(name)}"',
             f"Rarity: RelicRarity.{rarity.group(1) if rarity else 'None'}",
         ]
         if "HasUponPickupEffect => true" in text:
             fields.append("HasUponPickupEffect: true")
         if "SpawnsPets => true" in text:
             fields.append("SpawnsPets: true")
+        # RelicModel.IsAllowedInShops. Five relics refuse to be sold, and the shop pulls
+        # are filtered on it -- Welcome to Wongos included, whose bargain bin and featured
+        # item both go through PullNextRelicFromFront with this filter.
+        if "IsAllowedInShops => false" in text:
+            fields.append("IsAllowedInShops: false")
         entries.append(f"        new RelicDef({', '.join(fields)}),")
 
     if not entries:
@@ -540,11 +608,24 @@ internal static class Relics
         Array.Find(_all, r => r.Name == name) is {{ Id: > 0 }} def
             ? def.Id
             : null;
+
+    /// <summary>Lookup that does not throw, for ids that may not name a relic at all.</summary>
+    public static bool TryGet(int id, out RelicDef def)
+    {{
+        def = Array.Find(_all, r => r.Id == id);
+        return def.Id > 0;
+    }}
 }}
 """
 
 
 # ── potion extraction ─────────────────────────────────────────────────────────
+
+
+def potion_rarity(text: str) -> str:
+    """Return the potion's declared rarity, or None when it does not declare one."""
+    match = re.search(r"PotionRarity Rarity => PotionRarity\.(\w+)", text)
+    return match.group(1) if match else "None"
 
 
 def extract_potions() -> str:
@@ -570,7 +651,12 @@ def extract_potions() -> str:
             continue
 
         entries.append(
-            f'        new PotionDef(Id: {stable_id("potions", name)}, Name: "{name}"),',
+            # Rarity decides which potions a roll may land on, and PotionFactory rolls
+            # a rarity before it picks -- so a potion whose rarity is unknown is a potion
+            # in the wrong bucket. A hand-written table used to supply this and defaulted
+            # anything it did not know to Common.
+            f'        new PotionDef(Id: {stable_id("potions", name)}, Name: "{name}", '
+            f"Rarity: PotionRarity.{potion_rarity(text)}),",
         )
 
     if not entries:
@@ -607,7 +693,18 @@ CARD_POOLS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Models.CardPools"
 
 # The pools a run can draw from. Deprecated/Mock are the game's own test scaffolding,
 # and Curse/Status/Token/Event/Quest are not character pools.
-PLAYABLE_POOLS = ("Ironclad", "Silent", "Defect", "Necrobinder", "Regent", "Colorless")
+# Curse and Status are not character pools, but a transform draws from the pool its
+# original card came from -- so transforming a curse needs the curse pool.
+PLAYABLE_POOLS = (
+    "Ironclad",
+    "Silent",
+    "Defect",
+    "Necrobinder",
+    "Regent",
+    "Colorless",
+    "Curse",
+    "Status",
+)
 
 
 def extract_card_pools(card_ids: dict[str, int]) -> str:
@@ -636,7 +733,7 @@ def extract_card_pools(card_ids: dict[str, int]) -> str:
             print(f"  Card pools: {pool} skipped {len(missing)} unextracted cards.")
         entries.append(
             f"    /// <summary>{pool}: {len(ids)} cards, in pool order.</summary>\n"
-            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];"
+            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];",
         )
         print(f"  Card pools: {pool} {len(ids)} cards.")
 
@@ -649,6 +746,132 @@ def extract_card_pools(card_ids: dict[str, int]) -> str:
 /// another character's pool — Kaleidoscope at Neow — has to read it from here.
 /// </summary>
 internal static class CardPools
+{{
+{joined}
+}}
+"""
+
+
+POTION_POOLS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Models.PotionPools"
+EPOCHS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Timeline.Epochs"
+
+# The pools a run's potions come from: the shared pool plus the pool of the character
+# being played. Event/Token/Mock/Deprecated are not draw pools.
+POTION_POOL_NAMES = ("Shared", "Ironclad", "Silent", "Defect", "Necrobinder", "Regent")
+
+
+def _potion_names_in(text: str) -> list[str]:
+    """Potion class names in declaration order, following an epoch indirection.
+
+    A character's pool does not list its potions: it returns <Character>4Epoch.Potions,
+    and the epoch builds the list. The shared pool declares its own array inline.
+    """
+    names = re.findall(r"ModelDb\.Potion<(\w+)>\(\)", text)
+    if names:
+        return names
+
+    epoch = re.search(r"(\w+Epoch)\.Potions", text)
+    if epoch is None:
+        return []
+    path = EPOCHS_DIR / f"{epoch.group(1)}.cs"
+    if not path.exists():
+        return []
+    return re.findall(
+        r"ModelDb\.Potion<(\w+)>\(\)",
+        path.read_text(encoding="utf-8", errors="replace"),
+    )
+
+
+def extract_potion_pools(potion_ids: dict[str, int]) -> str:
+    """Each character's potion pool plus the shared one, in declaration order.
+
+    PotionFactory.GetPotionOptions builds what a shop or a reward can offer as the
+    character's pool concatenated with the shared pool, and NextItem indexes into that
+    list -- so both the membership and the order are load-bearing. A hand-written stand-in
+    for this was 43 potions against the real 48, which is why the merchant stocked the
+    wrong ones.
+    """
+    entries: list[str] = []
+    for pool in POTION_POOL_NAMES:
+        path = POTION_POOLS_DIR / f"{pool}PotionPool.cs"
+        if not path.exists():
+            print(f"  Potion pools: {pool} not found, skipping.")
+            continue
+        names = _potion_names_in(path.read_text(encoding="utf-8", errors="replace"))
+        ids = [potion_ids[name] for name in names if name in potion_ids]
+        missing = [name for name in names if name not in potion_ids]
+        if missing:
+            print(f"  Potion pools: {pool} skipped {len(missing)} unextracted potions.")
+        entries.append(
+            f"    /// <summary>{pool}: {len(ids)} potions, in pool order.</summary>\n"
+            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];",
+        )
+        print(f"  Potion pools: {pool} {len(ids)} potions.")
+
+    joined = "\n\n".join(entries)
+    return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
+
+/// <summary>
+/// The potion pools, extracted from the game's PotionPoolModel declarations. What a shop
+/// or a reward may offer is the character's pool followed by the shared one — see
+/// PotionFactory.GetPotionOptions — and the order matters because NextItem indexes into
+/// the concatenation.
+/// </summary>
+internal static class PotionPools
+{{
+{joined}
+}}
+"""
+
+
+RELIC_POOLS_DIR = DECOMPILED / "MegaCrit.Sts2.Core.Models.RelicPools"
+
+# The pools a run's relic grab bag is built from: the shared pool plus the pool of the
+# character being played. Event/Fallback/Deprecated are not grab-bag pools.
+RELIC_POOL_NAMES = ("Shared", "Ironclad", "Silent", "Defect", "Necrobinder", "Regent")
+
+
+def extract_relic_pools(relic_ids: dict[str, int]) -> str:
+    """Each relic pool, in the order the pool declares it.
+
+    Order is load-bearing. RelicGrabBag.Populate concatenates the shared pool and the
+    character's, buckets the result by rarity and UnstableShuffles each bucket, so a
+    differently-ordered list shuffles into a different queue and every relic the run ever
+    hands out changes.
+    """
+    entries: list[str] = []
+    for pool in RELIC_POOL_NAMES:
+        path = RELIC_POOLS_DIR / f"{pool}RelicPool.cs"
+        if not path.exists():
+            print(f"  Relic pools: {pool} not found, skipping.")
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        body = re.search(r"GenerateAllRelics\(\)[\s\S]*?\{([\s\S]*?)\n\t\}", text)
+        if body is None:
+            print(f"  Relic pools: could not parse {pool}.")
+            continue
+        names = re.findall(r"ModelDb\.Relic<(\w+)>\(\)", body.group(1))
+        ids = [relic_ids[name] for name in names if name in relic_ids]
+        missing = [name for name in names if name not in relic_ids]
+        if missing:
+            print(f"  Relic pools: {pool} skipped {len(missing)} unextracted relics.")
+        entries.append(
+            f"    /// <summary>{pool}: {len(ids)} relics, in pool order.</summary>\n"
+            f"    public static ReadOnlySpan<int> {pool} =>\n        [{', '.join(map(str, ids))}];",
+        )
+        print(f"  Relic pools: {pool} {len(ids)} relics.")
+
+    joined = "\n\n".join(entries)
+    return f"""{cs_header()}namespace Sts2Emulator.GeneratedData;
+
+/// <summary>
+/// The relic pools, extracted from the game's RelicPoolModel declarations.
+///
+/// RelicGrabBag.Populate builds a run's relic queue from the shared pool plus the
+/// character's, so this is where the queue's contents AND their pre-shuffle order come
+/// from. A RelicDef carries a rarity but not a pool, and the grab bag needs both.
+/// </summary>
+internal static class RelicPools
 {{
 {joined}
 }}
@@ -678,14 +901,34 @@ def main() -> None:
         )
     }
 
+    potions_cs = extract_potions()
+    potion_ids = {
+        name: int(raw)
+        for raw, name in re.findall(
+            r'new PotionDef\(Id: (\d+), Name: "([^"]+)"',
+            potions_cs,
+        )
+    }
+
+    relics_cs = extract_relics()
+    relic_ids = {
+        name: int(raw)
+        for raw, name in re.findall(
+            r'new RelicDef\(Id: (\d+), Name: "([^"]+)"',
+            relics_cs,
+        )
+    }
+
     for filename, content in [
         ("Cards.g.cs", cards_cs),
         ("CardIds.g.cs", extract_card_ids(card_ids)),
         ("Enemies.g.cs", extract_enemies()),
         ("Powers.g.cs", extract_powers()),
-        ("Relics.g.cs", extract_relics()),
-        ("Potions.g.cs", extract_potions()),
+        ("Relics.g.cs", relics_cs),
+        ("Potions.g.cs", potions_cs),
         ("CardPools.g.cs", extract_card_pools(card_ids)),
+        ("PotionPools.g.cs", extract_potion_pools(potion_ids)),
+        ("RelicPools.g.cs", extract_relic_pools(relic_ids)),
     ]:
         out = GENERATED / filename
         out.write_text(content, encoding="utf-8")

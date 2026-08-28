@@ -1,0 +1,679 @@
+{
+  "rooms_entered": 50,
+  "state_type": "boss",
+  "battle": {
+    "round": 1,
+    "turn": "player",
+    "is_play_phase": true,
+    "enemies": [
+      {
+        "entity_id": "KIN_FOLLOWER_0",
+        "combat_id": 1,
+        "name": "Kin Follower",
+        "hp": 63,
+        "max_hp": 63,
+        "block": 0,
+        "status": [
+          {
+            "id": "MINION_POWER",
+            "name": "Minion",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Minions abandon combat without their leader.",
+            "keywords": []
+          }
+        ],
+        "intents": [
+          {
+            "type": "Buff",
+            "label": "",
+            "title": "Empower",
+            "description": "This enemy intends to use a Buff."
+          }
+        ]
+      },
+      {
+        "entity_id": "KIN_FOLLOWER_1",
+        "combat_id": 2,
+        "name": "Kin Follower",
+        "hp": 62,
+        "max_hp": 62,
+        "block": 0,
+        "status": [
+          {
+            "id": "MINION_POWER",
+            "name": "Minion",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Minions abandon combat without their leader.",
+            "keywords": []
+          }
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "5",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 5 damage."
+          }
+        ]
+      },
+      {
+        "entity_id": "KIN_PRIEST_0",
+        "combat_id": 3,
+        "name": "Kin Priest",
+        "hp": 199,
+        "max_hp": 199,
+        "block": 0,
+        "status": [],
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "8",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 8 damage."
+          },
+          {
+            "type": "Debuff",
+            "label": "",
+            "title": "Strategic",
+            "description": "This enemy intends to apply a Debuff to you."
+          }
+        ]
+      }
+    ]
+  },
+  "run": {
+    "act": 1,
+    "floor": 1,
+    "ascension": 8
+  },
+  "player": {
+    "character": "The Ironclad",
+    "hp": 64,
+    "max_hp": 80,
+    "block": 0,
+    "deck": [
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 0
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 1
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 2
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 3
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 4
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 5
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 6
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 7
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 8
+      },
+      {
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ],
+        "index": 9
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "name": "Ascender's Bane",
+        "type": "Curse",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. Ethereal. Eternal.",
+        "rarity": "Curse",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Eternal",
+            "description": "Cannot be removed or transformed from your Deck."
+          },
+          {
+            "name": "Unplayable",
+            "description": "Unplayable cards cannot be played."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ],
+        "index": 10
+      }
+    ],
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 0,
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 1,
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 2,
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "name": "Ascender's Bane",
+        "type": "Curse",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. Ethereal. Eternal.",
+        "rarity": "Curse",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Eternal",
+            "description": "Cannot be removed or transformed from your Deck."
+          },
+          {
+            "name": "Unplayable",
+            "description": "Unplayable cards cannot be played."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ],
+        "index": 3,
+        "target_type": "None",
+        "can_play": false,
+        "unplayable_reason": "HasUnplayableKeyword"
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 4,
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null
+      }
+    ],
+    "draw_pile_count": 6,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "name": "Bash",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable."
+      },
+      {
+        "name": "Defend",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block."
+      },
+      {
+        "name": "Defend",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block."
+      },
+      {
+        "name": "Strike",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage."
+      },
+      {
+        "name": "Strike",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage."
+      },
+      {
+        "name": "Strike",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage."
+      }
+    ],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "draw_pile_ordered": [
+      {
+        "id": "BASH",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      }
+    ],
+    "discard_pile_ordered": [],
+    "hand_ordered": [
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      }
+    ],
+    "gold": 99,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "keywords": []
+      }
+    ],
+    "potions": [],
+    "max_potion_slots": 2
+  },
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1"
+  },
+  "capture": {
+    "seed": "QS2GYXRKWN",
+    "encounter": "kin",
+    "live_encounter": "TheKinBoss",
+    "completed_combat_rooms": -1,
+    "total_floor": 1,
+    "ascension": 8,
+    "turns": 8,
+    "play": false,
+    "add_cards": []
+  },
+  "turn_trace": [
+    {
+      "turn": 2,
+      "action": 5,
+      "actions": [
+        5
+      ],
+      "player_hp": 51,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Kin Follower",
+          "hp": 63,
+          "intent": [
+            0,
+            7
+          ]
+        },
+        {
+          "name": "Kin Follower",
+          "hp": 62,
+          "intent": [
+            0,
+            4
+          ]
+        },
+        {
+          "name": "Kin Priest",
+          "hp": 199,
+          "intent": [
+            0,
+            8
+          ]
+        }
+      ],
+      "live_hand": [
+        "BASH",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 3,
+      "action": 5,
+      "actions": [
+        5
+      ],
+      "player_hp": 32,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Kin Follower",
+          "hp": 63,
+          "intent": [
+            0,
+            8
+          ]
+        },
+        {
+          "name": "Kin Follower",
+          "hp": 62,
+          "intent": [
+            2,
+            null
+          ]
+        },
+        {
+          "name": "Kin Priest",
+          "hp": 199,
+          "intent": [
+            0,
+            9
+          ]
+        }
+      ],
+      "live_hand": [
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 4,
+      "action": 5,
+      "actions": [
+        5
+      ],
+      "player_hp": 15,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Kin Follower",
+          "hp": 63,
+          "intent": [
+            2,
+            null
+          ]
+        },
+        {
+          "name": "Kin Follower",
+          "hp": 62,
+          "intent": [
+            0,
+            7
+          ]
+        },
+        {
+          "name": "Kin Priest",
+          "hp": 199,
+          "intent": [
+            2,
+            null
+          ]
+        }
+      ],
+      "live_hand": [
+        "BASH",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "DEFEND_IRONCLAD"
+      ]
+    },
+    {
+      "turn": 5,
+      "action": 5,
+      "actions": [
+        5
+      ],
+      "player_hp": 8,
+      "player_max_hp": 80,
+      "enemies": [
+        {
+          "name": "Kin Follower",
+          "hp": 63,
+          "intent": [
+            0,
+            9
+          ]
+        },
+        {
+          "name": "Kin Follower",
+          "hp": 62,
+          "intent": [
+            0,
+            8
+          ]
+        },
+        {
+          "name": "Kin Priest",
+          "hp": 199,
+          "intent": [
+            0,
+            10
+          ]
+        }
+      ],
+      "live_hand": [
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "DEFEND_IRONCLAD",
+        "STRIKE_IRONCLAD",
+        "STRIKE_IRONCLAD"
+      ]
+    }
+  ],
+  "coverage": {
+    "Kin Follower": {
+      "seen": 6,
+      "declared": 3
+    },
+    "Kin Priest": {
+      "seen": 4,
+      "declared": 4
+    }
+  }
+}

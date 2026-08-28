@@ -14,6 +14,7 @@ from .commands import execute_command
 from .env import ENCOUNTER_NAMES
 
 REWARD_SKIP_ACTION = constants.REWARD_SKIP_ACTION
+SHOP_REMOVE_ACTION = constants.SHOP_REMOVE_ACTION
 SHOP_SKIP_ACTION = constants.SHOP_SKIP_ACTION
 EVENT_SKIP_ACTION = constants.EVENT_SKIP_ACTION
 MAP_CHOICES = constants.MAP_CHOICES
@@ -31,6 +32,8 @@ PHASE_EVENT = constants.PHASE_EVENT
 PHASE_ANCIENT = constants.PHASE_ANCIENT
 PHASE_TRANSFORM_SELECT = constants.PHASE_TRANSFORM_SELECT
 PHASE_TREASURE = constants.PHASE_TREASURE
+PHASE_CRYSTAL_SPHERE = constants.PHASE_CRYSTAL_SPHERE
+PHASE_BUNDLE_SELECT = constants.PHASE_BUNDLE_SELECT
 
 NODE_NONE = constants.NODE_NONE
 NODE_NORMAL = constants.NODE_NORMAL
@@ -172,6 +175,35 @@ class Sts2RunEnv(gym.Env):
         mask_buf = native.run_action_mask(self._run_handle, native.RUN_MAX_ACTIONS)
         return np.ctypeslib.as_array(mask_buf).astype(bool)
 
+    def debug_gain_max_hp(self, amount: int) -> tuple[np.ndarray, dict]:
+        """Mirror the mod's debug_gain_max_hp: raise the maximum AND heal by it.
+
+        Only for replaying a BUFFED live capture. The auto-player has never finished act
+        1 -- the two deepest runs both died to the boss on floor 17 -- so the boss reward
+        and the act transition are covered by nothing. Buffing both sides identically
+        buys that coverage; the rules under test are unchanged, because the game is still
+        the reference for every step.
+        """
+        assert self._run_handle is not None, "Call reset() before debug_gain_max_hp()"
+        native.run_debug_gain_max_hp(self._run_handle, amount, self._run_obs_buf)
+        return self._obs(), self._info()
+
+    def debug_enter_next_act(self) -> tuple[np.ndarray, dict]:
+        """Enter the next act, as the mod's debug_enter_next_act does.
+
+        The point is testability: reaching act 2 honestly costs a buffed run that wins a
+        boss fight. This is the same transition, without the run.
+        """
+        assert self._run_handle is not None, "Call reset() before debug_enter_next_act()"
+        native.run_debug_enter_next_act(self._run_handle, self._run_obs_buf)
+        return self._obs(), self._info()
+
+    def debug_upgrade_deck(self) -> tuple[np.ndarray, dict]:
+        """Mirror the mod's debug_upgrade_deck. See debug_gain_max_hp."""
+        assert self._run_handle is not None, "Call reset() before debug_upgrade_deck()"
+        native.run_debug_upgrade_deck(self._run_handle, self._run_obs_buf)
+        return self._obs(), self._info()
+
     def close(self):
         if self._run_handle is not None:
             native.run_destroy(self._run_handle)
@@ -183,6 +215,72 @@ class Sts2RunEnv(gym.Env):
     def _obs(self) -> np.ndarray:
         return np.ctypeslib.as_array(self._run_obs_buf).copy()
 
+    @staticmethod
+    def _deck(obs: np.ndarray) -> tuple[dict, ...]:
+        """Return the deck as the observation carries it, card by card.
+
+        Slot ``i`` is deck index ``i``, which is also the action that selects that card at
+        a card-select screen -- so this is readable straight against an action mask.
+        """
+        layout = native.RUN_OBS_LAYOUT
+        base = native.OBS_SIZE + layout["deck_offset"]
+        width = layout["deck_slot_size"]
+        cards = []
+        for i in range(layout["max_deck"]):
+            at = base + i * width
+            card_id = int(obs[at])
+            if card_id == 0:
+                break
+            cards.append(
+                {
+                    "card_id": card_id,
+                    "upgraded": bool(obs[at + 1]),
+                    "enchantment": int(obs[at + 2]),
+                    "enchant_amount": int(obs[at + 3]),
+                },
+            )
+        return tuple(cards)
+
+    @staticmethod
+    def _shop(obs: np.ndarray) -> tuple[dict, ...]:
+        """Return the merchant's board, slot by slot and priced.
+
+        Slot ``i`` is shop action ``i``, so this reads straight against an action mask.
+        Slot 13 is the card-removal service, which has a price and no item.
+        """
+        layout = native.RUN_OBS_LAYOUT
+        base = native.OBS_SIZE + layout["shop_offset"]
+        width = layout["shop_slot_size"]
+        return tuple(
+            {
+                "action": i,
+                "item_id": int(obs[base + i * width]),
+                "cost": int(obs[base + i * width + 1]),
+            }
+            for i in range(layout["shop_slots"])
+        )
+
+    @staticmethod
+    def _relics(obs: np.ndarray) -> tuple[dict, ...]:
+        """Return the relics as the observation carries them, with their counters."""
+        layout = native.RUN_OBS_LAYOUT
+        base = native.OBS_SIZE + layout["relic_offset"]
+        width = layout["relic_slot_size"]
+        relics = []
+        for i in range(layout["max_relics"]):
+            at = base + i * width
+            relic_id = int(obs[at])
+            if relic_id == 0:
+                break
+            relics.append(
+                {
+                    "relic_id": relic_id,
+                    "counter": int(obs[at + 1]),
+                    "used_up": bool(obs[at + 2]),
+                },
+            )
+        return tuple(relics)
+
     def _info(self) -> dict:
         if self._run_handle is None:
             raise RuntimeError("Call reset() before _info().")
@@ -191,13 +289,21 @@ class Sts2RunEnv(gym.Env):
         obs = np.ctypeslib.as_array(self._run_obs_buf)
         run_offset = native.OBS_SIZE
         phase = int(info_buf[0])
-        act = "overgrowth" if int(info_buf[2]) == ACT_OVERGROWTH else "underdocks"
+        # A two-way guess here reported every act after the first as "underdocks",
+        # which would have quietly mislabelled act 2 in every trace it appears in.
+        act = constants.ACT_NAMES.get(int(info_buf[2]), "unknown")
         map_option_coords = native.run_state_list(self._run_handle, 7, MAP_CHOICES * 2)
+        layout = native.RUN_OBS_LAYOUT
+        node_types = run_offset + layout["map_node_type_offset"]
+        encounters = run_offset + layout["map_choice_offset"]
         return {
             "phase": phase,
             "floor": int(info_buf[1]),
             "act": act,
             "deck_size": int(info_buf[3]),
+            "deck": self._deck(obs),
+            "relic_slots": self._relics(obs),
+            "shop_slots": self._shop(obs),
             "gold": int(info_buf[4]),
             "player_hp": int(info_buf[5]),
             "player_max_hp": int(info_buf[6]),
@@ -215,21 +321,28 @@ class Sts2RunEnv(gym.Env):
             "relic_reward": int(info_buf[10]),
             "pending_rewards": native.run_state_list(self._run_handle, 6, 4),
             "neow_options": native.run_state_list(self._run_handle, 3, 3),
+            # The cards on an open choose-a-card grid, empty when the card-select phase is
+            # a selection over the deck instead. The two resolve differently -- a grid on
+            # the click, a deck selection on a confirm after it -- so a replay has to know
+            # which screen it is looking at.
+            "offer_cards": native.run_state_list(self._run_handle, 17, 16),
+            # Scroll Boxes' two bundles, flat: three cards each.
+            "bundle_offer": native.run_state_list(self._run_handle, 18, 6),
             "potion_reward_odds": 0.4,
             "event_id": int(info_buf[9]),
             "map_choices": (
                 tuple(
                     {
-                        "node_type": int(obs[run_offset + 12 + i]),
+                        "node_type": int(obs[node_types + i]),
                         "x": int(map_option_coords[i * 2]),
                         "y": int(map_option_coords[i * 2 + 1]),
                         "encounter": ENCOUNTER_NAMES.get(
-                            int(obs[run_offset + 16 + i]),
-                            f"unknown-{int(obs[run_offset + 16 + i])}",
+                            int(obs[encounters + i]),
+                            f"unknown-{int(obs[encounters + i])}",
                         ),
                     }
                     for i in range(MAP_CHOICES)
-                    if int(obs[run_offset + 12 + i]) != NODE_NONE
+                    if int(obs[node_types + i]) != NODE_NONE
                 )
                 if phase == PHASE_MAP
                 else ()

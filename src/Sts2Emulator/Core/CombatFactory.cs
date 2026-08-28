@@ -121,6 +121,12 @@ public static class CombatFactory
         WaterfallGiant,
         Architect,
         SkulkingColony,
+
+        // Hive's five-Exoskeleton encounter. The emulator's `Exoskeletons` above is the
+        // FOUR-monster roster, which is the game's ExoskeletonsWeak -- so the Normal
+        // variant had no id at all. Appended rather than inserted beside its sibling:
+        // these ordinals are the encounter ids, and the act pools name them as literals.
+        ExoskeletonsNormal,
     }
 
     private static readonly ActOneEncounter[] OvergrowthWeakEncounters =
@@ -328,6 +334,14 @@ public static class CombatFactory
         state.DiscardPile = [];
         state.ExhaustPile = [];
         state.ReturnToHandBeforeDraw = [];
+        state.CopiesToHandBeforeDraw = [];
+        state.EndTurnAwaitingSelection = false;
+        state.AfterimageBeforePlay = 0;
+        state.StormBeforePlay = 0;
+        state.SubroutineBeforePlay = 0;
+        state.StatusCardsDrawnThisTurn = 0;
+        state.ResolvingDefendCard = false;
+        state.PlayedCardCostForCombat = int.MinValue;
         state.PotionSlots = new int[3];
         for (int i = 0; i < Math.Min(state.PotionSlots.Length, potionIds.Length); i++)
         {
@@ -370,6 +384,15 @@ public static class CombatFactory
         );
         _currentNicheHpRng = null;
         _usedNicheHps = null;
+
+        // SurroundedPower goes on the PLAYER, so it cannot be applied while the roster is
+        // being built. Direction.Right is the enum's zero, which is where the player
+        // starts -- with their back to the Crusher.
+        if (state.Enemies.Any(e => BuffSystem.Get(e.Buffs, BuffId.BackAttackLeft) > 0))
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Surrounded, Run.RunConstants.FacingRight);
+        }
+
         EnemyAI.ChooseIntents(state.Enemies, state.Turn, rng, state.AiRng, state.AscensionLevel);
         EnemyAI.UpdateSecondaryIntents(state.Enemies);
 
@@ -387,12 +410,17 @@ public static class CombatFactory
 
         for (int i = 0; i < handDraw && state.DrawPile.Count > 0; i++)
         {
-            state.Hand.Add(state.DrawPile[0]);
+            // Through the same roll the ordinary draw path uses: the opening hand is a
+            // draw, so a Slither-enchanted card in it costs what the stream says rather
+            // than what it is printed at.
+            state.Hand.Add(CardEffects.RollSlitherCost(state, state.DrawPile[0], rng));
             state.RemoveFromDrawPileAt(0);
         }
 
         RelicEffects.ApplyCombatStart(state, rng);
         RelicEffects.ApplyStartOfPlayerTurn(state, rng);
+
+        QueueCombatStartAutoPlays(state);
         RelicEffects.ApplyAfterPlayerHpChanged(state);
     }
 
@@ -410,6 +438,48 @@ public static class CombatFactory
     /// <param name="drawPile">Draw pile, index 0 = top. Reordered in place.</param>
     /// <param name="handDraw">Base number of cards to draw.</param>
     /// <returns>The possibly-increased number of cards to draw.</returns>
+    /// <summary>
+    /// Queue the cards that play themselves before the player moves.
+    /// </summary>
+    /// <remarks>
+    /// <c>Imbued.AfterAutoPrePlayPhaseEntered</c> auto-plays its card on turn 1, and the
+    /// turn-1 reorder has just put it at the BOTTOM of the draw pile — so it plays from
+    /// there rather than from hand, which the game's AutoPlay is happy to do. Queued
+    /// rather than played, because this method builds a state and does not resolve card
+    /// effects; the first <c>CombatEngine.Step</c> drains it before the player's action.
+    /// </remarks>
+    public static void QueueCombatStartAutoPlays(CombatState state)
+    {
+        // The HAND as well as the draw pile. Imbued normally sits at the bottom of the
+        // pile and plays from there, but the reorder only moves it — it does not stop the
+        // opening draw reaching it. A deck of five or fewer draws its own bottom card, so
+        // the Imbued one lands in hand and the game plays it from there, leaving the turn
+        // to start on four. Scanning only the pile lost it entirely in that case: it never
+        // played at all and the player kept a card the game had spent.
+        QueueImbuedFrom(state, state.DrawPile, index => state.RemoveFromDrawPileAt(index));
+        QueueImbuedFrom(state, state.Hand, index => state.Hand.RemoveAt(index));
+    }
+
+    private static void QueueImbuedFrom(
+        CombatState state,
+        List<CardInstance> pile,
+        Action<int> removeAt
+    )
+    {
+        for (int i = pile.Count - 1; i >= 0; i--)
+        {
+            if (pile[i].Enchantment != Enchantment.Imbued)
+            {
+                continue;
+            }
+
+            // Taken OUT as it is queued: AutoPlayCore files the card into the discard or
+            // exhaust pile when it is done, so leaving it where it was would duplicate it.
+            state.AutoPlayQueue.Insert(0, pile[i]);
+            removeAt(i);
+        }
+    }
+
     public static int ApplyTurnOneDrawPileReorder(List<CardInstance> drawPile, int handDraw)
     {
         // The game moves each bottom-sorted card with Remove+Add, so afterwards they
@@ -486,7 +556,20 @@ public static class CombatFactory
 
             ActOneEncounter.SlimesWeak => CreateSlimeEncounter(rng, encounterRngSeed, ascension),
 
+            // ExoskeletonsWeak declares THREE; the normal version is the one with four.
+            // The weak roster had been written from the normal model, so act 2's opening
+            // fight arrived with an extra creature.
             ActOneEncounter.Exoskeletons =>
+            [
+                CreateExoskeleton(rng, new Intent(IntentType.Attack, 4)),
+                CreateExoskeleton(rng, new Intent(IntentType.Attack, 9)),
+                CreateExoskeleton(rng, new Intent(IntentType.Buff, 0)),
+            ],
+
+            // ExoskeletonsNormal had no case at all, and it IS in Hive's normal pool --
+            // so an act-2 run that drew it did not fight it wrongly, it threw
+            // ArgumentOutOfRangeException out of the roster switch.
+            ActOneEncounter.ExoskeletonsNormal =>
             [
                 CreateExoskeleton(rng, new Intent(IntentType.Attack, 4)),
                 CreateExoskeleton(rng, new Intent(IntentType.Attack, 9)),
@@ -543,18 +626,37 @@ public static class CombatFactory
                 CreateEnemy(KE.ShrinkerBeetle, rng, new Intent(IntentType.Debuff, 1)),
             ],
 
-            ActOneEncounter.Seapunk =>
-            [
-                CreateEnemy(
-                    KE.Seapunk,
-                    rng,
-                    // Seapunk.SeaKickDamage
-                    new Intent(
-                        IntentType.Attack,
-                        Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
-                    )
-                ),
-            ],
+            // SeapunkWeak is one Seapunk; SeapunkNormal is a Calcified Cultist AND a
+            // Seapunk. They are two encounters in the game and one entry here, the same
+            // way CorpseSlugs is -- so the variant has to come off the weak flag. Without
+            // it the fourth normal fight of an Underdocks run was a lone Seapunk where
+            // the live run had a cultist beside it, and the sequence check could not see
+            // it: verify_run_generation normalises the WEAK/NORMAL suffix away.
+            ActOneEncounter.Seapunk => completedCombatRoomsBeforeCurrent is >= 0 and < 3
+                ?
+                [
+                    CreateEnemy(
+                        KE.Seapunk,
+                        rng,
+                        // Seapunk.SeaKickDamage
+                        new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
+                        )
+                    ),
+                ]
+                :
+                [
+                    CreateEnemy(KE.CalcifiedCultist, rng, new Intent(IntentType.Buff, 0)),
+                    CreateEnemy(
+                        KE.Seapunk,
+                        rng,
+                        new Intent(
+                            IntentType.Attack,
+                            Ascension.Value(ascension, Ascension.DeadlyEnemies, 13, 11)
+                        )
+                    ),
+                ],
 
             ActOneEncounter.Toadpoles =>
             [
@@ -666,19 +768,23 @@ public static class CombatFactory
                 CreateEnemy(KE.LivingFog, rng, new Intent(IntentType.Debuff, 9)),
             ],
 
-            ActOneEncounter.BowlbugsWeak => CreateBowlbugsWeakEncounter(rng),
+            ActOneEncounter.BowlbugsWeak => CreateBowlbugsWeakEncounter(rng, encounterRngSeed),
 
-            ActOneEncounter.Bowlbugs => CreateBowlbugsEncounter(rng),
+            ActOneEncounter.Bowlbugs => CreateBowlbugsEncounter(rng, encounterRngSeed),
 
             ActOneEncounter.Tunneler =>
             [
                 CreateEnemy(KE.Tunneler, rng, new Intent(IntentType.Attack, 15)),
             ],
 
+            // TunnelerNormal sets `chomper.ScreamFirst = true`, which makes SCREECH the
+            // machine's INITIAL state rather than CLAMP -- so this chomper opens on the
+            // screech and its whole alternation runs opposite to a plain one. Without the
+            // offset it clamped first and stayed inverted for the rest of the fight.
             ActOneEncounter.TunnelerAndChomper =>
             [
-                CreateChomper(rng, new Intent(IntentType.Debuff, 3)),
-                CreateEnemy(KE.Tunneler, rng, new Intent(IntentType.Attack, 15)),
+                CreateChomper(rng, new Intent(IntentType.Debuff, 3), moveIndex: 1),
+                CreateEnemy(KE.Tunneler, rng, new Intent(IntentType.Attack, 13)),
             ],
 
             ActOneEncounter.ThievingHopper =>
@@ -686,10 +792,13 @@ public static class CombatFactory
                 CreateEnemy(KE.ThievingHopper, rng, new Intent(IntentType.Attack, 19)),
             ],
 
+            // The second Myte's INIT_MOVE branch is SUCK, which is phase 2 of the
+            // TOXIC -> BITE -> SUCK cycle -- so it starts two moves ahead, not on the
+            // same beat as the first.
             ActOneEncounter.Mytes =>
             [
                 CreateEnemy(KE.Myte, rng, new Intent(IntentType.Debuff, 2)),
-                CreateEnemy(KE.Myte, rng, new Intent(IntentType.Attack, 6)),
+                CreateEnemy(KE.Myte, rng, new Intent(IntentType.Attack, 6), moveIndex: 2),
             ],
 
             ActOneEncounter.SlumberingBeetle =>
@@ -721,7 +830,9 @@ public static class CombatFactory
 
             ActOneEncounter.Axebot =>
             [
-                CreateEnemy(KE.Axebot, rng, new Intent(IntentType.Attack, 14), moveIndex: 2),
+                // The machine opens on HAMMER_UPPERCUT: BOOT_UP is index 0 and only a
+                // respawn, which builds the bot with a stock override, starts there.
+                CreateEnemy(KE.Axebot, rng, new Intent(IntentType.Attack, 14), moveIndex: 1),
             ],
 
             ActOneEncounter.DevotedSculptor =>
@@ -731,13 +842,10 @@ public static class CombatFactory
 
             ActOneEncounter.Fabricator =>
             [
-                CreateEnemy(
-                    KE.Fabricator,
-                    rng,
-                    rng.Next(2) == 0
-                        ? new Intent(IntentType.Buff, 0)
-                        : new Intent(IntentType.Attack, 21)
-                ),
+                // A placeholder, like every opening intent here: ChooseIntents overwrites
+                // it as soon as the roster is built, and it is the branch in SelectIntent
+                // that actually rolls.
+                CreateEnemy(KE.Fabricator, rng, new Intent(IntentType.Buff, 0)),
             ],
 
             ActOneEncounter.FrogKnight => [CreateFrogKnight(rng)],
@@ -754,9 +862,9 @@ public static class CombatFactory
                 CreateEnemy(KE.OwlMagistrate, rng, new Intent(IntentType.Attack, 17)),
             ],
 
-            ActOneEncounter.ScrollsWeak => CreateScrollsEncounter(rng, 3),
+            ActOneEncounter.ScrollsWeak => CreateScrollsEncounter(rng, 3, encounterRngSeed),
 
-            ActOneEncounter.Scrolls => CreateScrollsEncounter(rng, 4),
+            ActOneEncounter.Scrolls => CreateScrollsEncounter(rng, 4, encounterRngSeed),
 
             ActOneEncounter.SlimedBerserker =>
             [
@@ -789,11 +897,9 @@ public static class CombatFactory
                 CreateEnemy(KE.Wriggler, rng, new Intent(IntentType.Buff, 1), moveIndex: 1),
             ],
 
-            ActOneEncounter.PunchOff =>
-            [
-                CreatePunchOffConstruct(rng, startsWithFastPunch: true),
-                CreatePunchOffConstruct(rng, startsWithFastPunch: false),
-            ],
+            // Two draws, in roster order, off the encounter's own stream: how much
+            // starting HP each construct has lost.
+            ActOneEncounter.PunchOff => CreatePunchOffEncounter(rng, encounterRngSeed),
 
             ActOneEncounter.FakeMerchant =>
             [
@@ -822,9 +928,12 @@ public static class CombatFactory
                 CreateEnemy(KE.BygoneEffigy, rng, new Intent(IntentType.Unknown, 0)),
             ],
 
+            // Opens on BEES. AfterAddedToRoom's PersonalHivePower at 1 -- which its
+            // PHEROMONE_SPIT reads to decide between growing the hive and taking
+            // Strength 2 -- is applied by CreateEnemy's rider block, not here.
             ActOneEncounter.Entomancer =>
             [
-                CreateEnemy(KE.Entomancer, rng, new Intent(IntentType.Attack, 24), moveIndex: 1),
+                CreateEnemy(KE.Entomancer, rng, new Intent(IntentType.Attack, 3), moveIndex: 1),
             ],
 
             ActOneEncounter.InfestedPrisms =>
@@ -852,11 +961,14 @@ public static class CombatFactory
                 CreateEnemy(KE.Byrdonis, rng, new Intent(IntentType.Attack, 19)),
             ],
 
-            ActOneEncounter.Decimillipede => CreateDecimillipede(rng),
+            ActOneEncounter.Decimillipede => CreateDecimillipede(rng, encounterRngSeed),
 
             ActOneEncounter.Knights =>
             [
-                CreateEnemy(KE.FlailKnight, rng, new Intent(IntentType.Attack, 17), moveIndex: 2),
+                // MoveIndex 0: the Flail Knight's machine STARTS on RAM_MOVE, which its
+                // own case now expresses. The 2 was an index into the fixed cycle the
+                // emulator used to run instead of the branch state.
+                CreateEnemy(KE.FlailKnight, rng, new Intent(IntentType.Attack, 15)),
                 CreateEnemy(KE.SpectralKnight, rng, new Intent(IntentType.Debuff, 2)),
                 CreateEnemy(KE.MagiKnight, rng, new Intent(IntentType.Attack, 7)),
             ],
@@ -872,11 +984,7 @@ public static class CombatFactory
                 CreateEnemy(KE.CeremonialBeast, rng, new Intent(IntentType.Buff, 160)),
             ],
 
-            ActOneEncounter.KaiserCrab =>
-            [
-                CreateEnemy(KE.Crusher, rng, new Intent(IntentType.Attack, 21)),
-                CreateEnemy(KE.Rocket, rng, new Intent(IntentType.Attack, 4)),
-            ],
+            ActOneEncounter.KaiserCrab => CreateKaiserCrab(rng),
 
             ActOneEncounter.KnowledgeDemon =>
             [
@@ -931,8 +1039,38 @@ public static class CombatFactory
         return pool[rng.Next(pool.Length)];
     }
 
+    /// <summary>
+    /// The act-1 elites, named rather than described as a range.
+    /// </summary>
+    /// <remarks>
+    /// This was <c>>= BygoneEffigy and &lt;= WaterfallGiant</c>, which was true when
+    /// WaterfallGiant was the last name in the enum and quietly stopped being true when
+    /// Architect and SkulkingColony were appended after it: a Skulking Colony elite did
+    /// not read as one, so Booming Conch never fired and a live capture opened that fight
+    /// with seven cards and four energy where the emulator had five and three. A range
+    /// over an enum is a promise about declaration ORDER that nothing enforces.
+    ///
+    /// <para>
+    /// It also swept up every boss, and the game does not: BoomingConch asks for
+    /// <c>CurrentRoom.RoomType == RoomType.Elite</c>, and a boss room is RoomType.Boss.
+    /// Act 2's elites are deliberately absent — the emulator models act 1, and listing
+    /// names it cannot reach would be guessing.
+    /// </para>
+    /// </remarks>
+    private static readonly ActOneEncounter[] EliteEncounters =
+    [
+        // Overgrowth, per Acts/Overgrowth.cs.
+        ActOneEncounter.BygoneEffigy,
+        ActOneEncounter.Byrdonis,
+        ActOneEncounter.PhrogParasite,
+        // Underdocks, per Acts/Underdocks.cs.
+        ActOneEncounter.PhantasmalGardeners,
+        ActOneEncounter.SkulkingColony,
+        ActOneEncounter.TerrorEel,
+    ];
+
     private static bool IsEliteEncounter(ActOneEncounter encounter) =>
-        encounter is >= ActOneEncounter.BygoneEffigy and <= ActOneEncounter.WaterfallGiant;
+        Array.IndexOf(EliteEncounters, encounter) >= 0;
 
     private static List<EnemyState> CreateSlimeEncounter(
         Random rng,
@@ -1006,20 +1144,58 @@ public static class CombatFactory
         ];
     }
 
-    private static List<EnemyState> CreateBowlbugsWeakEncounter(Random rng) =>
-        [
-            CreateEnemy(KE.BowlbugRock, rng, new Intent(IntentType.Attack, 16)),
-            CreateBowlbugWorker(rng.Next(2) == 0 ? KE.BowlbugEgg : KE.BowlbugNectar, rng),
-        ];
-
-    private static List<EnemyState> CreateBowlbugsEncounter(Random rng)
+    /// <summary>
+    /// BowlbugsWeak: a Rock, then ONE worker out of Egg and Nectar.
+    /// </summary>
+    /// <remarks>
+    /// The pick is <c>base.Rng.NextItem(Bugs)</c> — the ENCOUNTER's stream, not the
+    /// combat rng, which is the same class of defect <c>EncounterRng</c> was built for
+    /// and which act 2 has no capture to catch.
+    /// </remarks>
+    private static List<EnemyState> CreateBowlbugsWeakEncounter(Random rng, int? encounterRngSeed)
     {
-        int[] workers = [KE.BowlbugEgg, KE.BowlbugSilk, KE.BowlbugNectar];
+        int[] bugs = [KE.BowlbugEgg, KE.BowlbugNectar];
+        int worker = encounterRngSeed.HasValue
+            ? bugs[EncounterRng.Stream(encounterRngSeed.Value).NextInt(0, bugs.Length)]
+            : bugs[rng.Next(bugs.Length)];
         return
         [
             CreateEnemy(KE.BowlbugRock, rng, new Intent(IntentType.Attack, 16)),
-            .. workers.OrderBy(_ => rng.Next()).Take(2).Select(id => CreateBowlbugWorker(id, rng)),
+            CreateBowlbugWorker(worker, rng),
         ];
+    }
+
+    /// <summary>
+    /// BowlbugsNormal: a Rock, then TWO workers drawn without replacement.
+    /// </summary>
+    /// <remarks>
+    /// <c>GenerateMonsters</c> loops twice, and each pass re-derives the candidates as
+    /// "the workers not already taken" (`_workerValidCounts` caps each at one) and calls
+    /// <c>base.Rng.NextItem</c> on THAT list — so it is two draws over three then two,
+    /// not a shuffle of three. `OrderBy(_ => rng.Next())` spent a draw per worker off the
+    /// wrong stream and distributed them differently besides.
+    /// </remarks>
+    private static List<EnemyState> CreateBowlbugsEncounter(Random rng, int? encounterRngSeed)
+    {
+        var remaining = new List<int> { KE.BowlbugEgg, KE.BowlbugSilk, KE.BowlbugNectar };
+        var typeRng = encounterRngSeed.HasValue
+            ? EncounterRng.Stream(encounterRngSeed.Value)
+            : null;
+        var enemies = new List<EnemyState>
+        {
+            CreateEnemy(KE.BowlbugRock, rng, new Intent(IntentType.Attack, 16)),
+        };
+        for (int i = 0; i < 2; i++)
+        {
+            int index = typeRng is null
+                ? rng.Next(remaining.Count)
+                : typeRng.NextInt(0, remaining.Count);
+            int worker = remaining[index];
+            remaining.RemoveAt(index);
+            enemies.Add(CreateBowlbugWorker(worker, rng));
+        }
+
+        return enemies;
     }
 
     private static EnemyState CreateBowlbugWorker(int defId, Random rng) =>
@@ -1031,50 +1207,80 @@ public static class CombatFactory
             _ => throw new ArgumentOutOfRangeException(nameof(defId), defId, null),
         };
 
+    /// <summary>
+    /// Asleep behind Plating, and it wakes on a COUNTER rather than a turn count.
+    /// </summary>
+    /// <remarks>
+    /// <c>AfterAddedToRoom</c> applies PlatingPower at <c>PlatingAmount</c> — the TOUGH
+    /// pair (18, 15), so 18 at A8 — and SlumberPower at a flat 3.
+    /// </remarks>
     private static EnemyState CreateSlumberingBeetle(Random rng)
     {
         var enemy = CreateEnemy(KE.SlumberingBeetle, rng, new Intent(IntentType.Unknown, 0));
         enemy.Block = 18;
         BuffSystem.Apply(enemy.Buffs, BuffId.Plating, 18);
+        BuffSystem.Apply(enemy.Buffs, BuffId.Slumber, 3);
         return enemy;
     }
 
     private static EnemyState CreateFrogKnight(Random rng)
     {
-        var enemy = CreateEnemy(
-            KE.FrogKnight,
-            rng,
-            new Intent(IntentType.Attack, 14),
-            moveIndex: 2
-        );
-        enemy.Block = 19;
-        BuffSystem.Apply(enemy.Buffs, BuffId.Plating, 19);
+        // The machine opens on TONGUE_LASH and is walked by LastMove, not by MoveIndex,
+        // so the old `moveIndex: 2` no longer selects anything.
+        var enemy = CreateEnemy(KE.FrogKnight, rng, new Intent(IntentType.Attack, 14));
+        // PlatingAmount, which was on the ToughEnemies branch.
+        int plating = Ascension.Value(_currentAscension, Ascension.ToughEnemies, 19, 15);
+        enemy.Block = plating;
+        BuffSystem.Apply(enemy.Buffs, BuffId.Plating, plating);
         return enemy;
     }
 
+    /// <summary>
+    /// The Living Shield, which is what keeps the Turret Operator alive.
+    /// </summary>
+    /// <remarks>
+    /// <c>AfterAddedToRoom</c> applies RampartPower at 25 to the SHIELD, and Rampart's
+    /// <c>AfterSideTurnStart</c> grants that block to every TurretOperator at the start
+    /// of each PLAYER turn — both of which CreateEnemy's rider block and CombatEngine
+    /// already do. What was wrong was the turret ALSO handing itself 25 at creation and
+    /// another 25 on every reload, so killing the shield cost the player nothing.
+    /// </remarks>
     private static EnemyState CreateLivingShield(Random rng) =>
         CreateEnemy(KE.LivingShield, rng, new Intent(IntentType.Attack, 6));
 
-    private static EnemyState CreateTurretOperator(Random rng)
-    {
-        var enemy = CreateEnemy(KE.TurretOperator, rng, new Intent(IntentType.Attack, 20));
-        enemy.Block = 25;
-        return enemy;
-    }
+    private static EnemyState CreateTurretOperator(Random rng) =>
+        CreateEnemy(KE.TurretOperator, rng, new Intent(IntentType.Attack, 3));
 
-    private static List<EnemyState> CreateScrollsEncounter(Random rng, int count)
+    /// <summary>
+    /// Three or four Scrolls of Biting, whose opening moves are one roll and two offsets.
+    /// </summary>
+    /// <remarks>
+    /// <c>StarterMoveIdx = base.Rng.NextInt(3)</c> for the first, then <c>+1</c> and
+    /// <c>+2</c> mod 3 — so ONE draw decides every scroll's opening, and taking it off
+    /// the combat rng moves the whole fight. The fourth, which only the normal encounter
+    /// has, is pinned at 2 and takes no draw.
+    /// </remarks>
+    private static List<EnemyState> CreateScrollsEncounter(
+        Random rng,
+        int count,
+        int? encounterRngSeed
+    )
     {
-        int firstMove = rng.Next(3);
+        int firstMove = encounterRngSeed.HasValue
+            ? EncounterRng.Stream(encounterRngSeed.Value).NextInt(3)
+            : rng.Next(3);
         var enemies = new List<EnemyState>();
         for (int i = 0; i < count; i++)
         {
-            int moveIndex = count == 4 && i == 3 ? 2 : (firstMove + i) % 3;
-            var scroll = CreateEnemy(KE.ScrollOfBiting, rng, ScrollIntent(moveIndex), moveIndex);
-            if (i < 3)
-            {
-                BuffSystem.Apply(scroll.Buffs, BuffId.PaperCuts, 2);
-            }
-
+            // StarterMoveIdx, not a turn count -- the scroll's own case walks the chain
+            // from it. The fourth scroll, which only the normal encounter has, is pinned
+            // at 2 and takes no draw.
+            int starter = count == 4 && i == 3 ? 2 : (firstMove + i) % 3;
+            var scroll = CreateEnemy(KE.ScrollOfBiting, rng, ScrollIntent(starter));
+            scroll.StarterMove = starter;
+            // AfterAddedToRoom gives PaperCutsPower 2 to EVERY scroll. The `i < 3` here
+            // left the normal encounter's fourth one without it.
+            BuffSystem.Apply(scroll.Buffs, BuffId.PaperCuts, 2);
             enemies.Add(scroll);
         }
         return enemies;
@@ -1088,35 +1294,72 @@ public static class CombatFactory
             _ => new Intent(IntentType.Buff, 2),
         };
 
-    private static EnemyState CreatePunchOffConstruct(Random rng, bool startsWithFastPunch)
+    /// <summary>
+    /// The Punch Off event's two constructs, each already hurt by a rolled amount.
+    /// </summary>
+    /// <remarks>
+    /// <c>StartingHpReduction = base.Rng.NextInt(2, 10)</c> for each, in roster order —
+    /// two draws off the encounter's own stream, which is why they are taken here rather
+    /// than inside the per-construct builder.
+    /// </remarks>
+    private static List<EnemyState> CreatePunchOffEncounter(Random rng, int? encounterRngSeed)
+    {
+        var stream = encounterRngSeed.HasValue ? EncounterRng.Stream(encounterRngSeed.Value) : null;
+        return
+        [
+            CreatePunchOffConstruct(rng, stream, startsWithFastPunch: true),
+            CreatePunchOffConstruct(rng, stream, startsWithFastPunch: false),
+        ];
+    }
+
+    private static EnemyState CreatePunchOffConstruct(
+        Random rng,
+        Rng.GameRng? stream,
+        bool startsWithFastPunch
+    )
     {
         var enemy = CreatePunchConstruct(rng, startsWithFastPunch);
-        int hpReduction = rng.Next(2, 10);
+        int hpReduction = stream?.NextInt(2, 10) ?? rng.Next(2, 10);
         enemy.Hp = Math.Max(1, enemy.Hp - hpReduction);
         return enemy;
     }
 
     private static EnemyState CreateMysteriousKnight(Random rng)
     {
-        var enemy = CreateEnemy(
-            KE.FlailKnight,
-            rng,
-            new Intent(IntentType.Attack, 23),
-            moveIndex: 2
-        );
+        // RAM_MOVE is where the machine starts; see the Knights roster above.
+        var enemy = CreateEnemy(KE.FlailKnight, rng, new Intent(IntentType.Attack, 15));
         enemy.Block = 6;
         BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 6);
         BuffSystem.Apply(enemy.Buffs, BuffId.Plating, 6);
         return enemy;
     }
 
-    private static List<EnemyState> CreateDecimillipede(Random rng)
+    /// <summary>
+    /// Three segments, whose opening moves are one roll and two offsets.
+    /// </summary>
+    /// <remarks>
+    /// Same shape as the Scrolls: <c>base.Rng.NextInt(3)</c> for the front segment, then
+    /// <c>+1</c> and <c>+2</c> mod 3 for the middle and back.
+    /// </remarks>
+    private static List<EnemyState> CreateDecimillipede(Random rng, int? encounterRngSeed)
     {
-        int starter = rng.Next(3);
+        int starter = encounterRngSeed.HasValue
+            ? EncounterRng.Stream(encounterRngSeed.Value).NextInt(3)
+            : rng.Next(3);
         var enemies = new List<EnemyState>(3);
         for (int i = 0; i < 3; i++)
         {
-            int moveIndex = (starter + i) % 3;
+            // StarterMoveIdx numbers the moves 0/1/2 = WRITHE/BULK/CONSTRICT, but the
+            // machine walks WRITHE -> CONSTRICT -> BULK. MoveIndex carries the CYCLE
+            // POSITION so advancing it is advancing the cycle; this is the one place the
+            // two numberings have to be reconciled.
+            int starterMove = (starter + i) % 3;
+            int moveIndex = starterMove switch
+            {
+                0 => 0, // WRITHE, cycle position 0
+                1 => 2, // BULK, cycle position 2
+                _ => 1, // CONSTRICT, cycle position 1
+            };
             var enemy = CreateEnemy(
                 KE.DecimillipedeSegment,
                 rng,
@@ -1124,18 +1367,21 @@ public static class CombatFactory
                 moveIndex
             );
             MakeDecimillipedeHpEvenAndUnique(enemy, enemies);
+            // AfterAddedToRoom applies ReattachPower at 25 to every segment: a dead
+            // segment spends a turn as DEAD_MOVE and then heals back, and the fight is
+            // only won by emptying all three inside one window.
+            BuffSystem.Apply(enemy.Buffs, BuffId.Reattach, RunConstants.DecimillipedeReattachHeal);
             enemies.Add(enemy);
         }
         return enemies;
     }
 
-    private static Intent DecimillipedeIntent(int moveIndex) =>
-        (moveIndex % 3) switch
-        {
-            0 => new Intent(IntentType.Attack, 12),
-            1 => new Intent(IntentType.Attack, 7),
-            _ => new Intent(IntentType.Attack, 9),
-        };
+    /// <summary>
+    /// A placeholder: ChooseIntents overwrites every opening intent from
+    /// <c>EnemyAI.SelectIntent</c> the moment the roster is built. Kept only so a segment
+    /// is never constructed with an empty intent.
+    /// </summary>
+    private static Intent DecimillipedeIntent(int moveIndex) => new(IntentType.Attack, moveIndex);
 
     private static void MakeDecimillipedeHpEvenAndUnique(
         EnemyState enemy,
@@ -1158,6 +1404,32 @@ public static class CombatFactory
         }
         enemy.MaxHp = hp;
         enemy.Hp = hp;
+    }
+
+    /// <summary>
+    /// The two halves of the Kaiser Crab, and the pair of powers that tie them together.
+    /// </summary>
+    /// <remarks>
+    /// Neither was modelled, and between them they are most of the fight.
+    /// <c>SurroundedPower</c> goes on the PLAYER and makes an attack from whichever half
+    /// is at their back land at 1.5x; the player starts facing Right, so it is the
+    /// Crusher's, and it stops when the Rocket dies and the player turns. The emulator
+    /// had the 1.5x multiplied into the Crusher's announced damage, which is a number
+    /// that can never stop being wrong. <c>CrabRagePower</c> is the other half of it: the
+    /// survivor of the pair takes Strength 6 and 99 block, so halving the boss is not
+    /// free.
+    /// </remarks>
+    private static List<EnemyState> CreateKaiserCrab(Random rng)
+    {
+        var crusher = CreateEnemy(KE.Crusher, rng, new Intent(IntentType.Attack, 12));
+        BuffSystem.Apply(crusher.Buffs, BuffId.BackAttackLeft, 1);
+        BuffSystem.Apply(crusher.Buffs, BuffId.CrabRage, 1);
+
+        var rocket = CreateEnemy(KE.Rocket, rng, new Intent(IntentType.Attack, 3));
+        BuffSystem.Apply(rocket.Buffs, BuffId.BackAttackRight, 1);
+        BuffSystem.Apply(rocket.Buffs, BuffId.CrabRage, 1);
+
+        return [crusher, rocket];
     }
 
     private static EnemyState CreateMechaKnight(Random rng)
@@ -1195,7 +1467,12 @@ public static class CombatFactory
     {
         var enemy = CreateEnemy(KE.TestSubject, rng, new Intent(IntentType.Attack, 22));
         BuffSystem.Apply(enemy.Buffs, BuffId.Adaptable, 1);
-        BuffSystem.Apply(enemy.Buffs, BuffId.Enrage, 3);
+        // EnrageAmount, which was on the A9 branch.
+        BuffSystem.Apply(
+            enemy.Buffs,
+            BuffId.Enrage,
+            Ascension.Value(_currentAscension, Ascension.DeadlyEnemies, 3, 2)
+        );
         return enemy;
     }
 
@@ -1276,11 +1553,13 @@ public static class CombatFactory
         int firstMove = encounterRngSeed.HasValue
             ? EncounterRng.Stream(encounterRngSeed.Value).NextInt(0, 3)
             : rng.Next(3);
+        // TwoTailedRatsNormal places its three in Slots[2..4] of five, which is what
+        // decides where a summoned rat joins the roster.
         return
         [
-            CreateTwoTailedRat(rng, firstMove),
-            CreateTwoTailedRat(rng, (firstMove + 1) % 3),
-            CreateTwoTailedRat(rng, (firstMove + 2) % 3),
+            CreateTwoTailedRat(rng, firstMove, slot: 2),
+            CreateTwoTailedRat(rng, (firstMove + 1) % 3, slot: 3),
+            CreateTwoTailedRat(rng, (firstMove + 2) % 3, slot: 4),
         ];
     }
 
@@ -1376,9 +1655,10 @@ public static class CombatFactory
         return raiders;
     }
 
-    private static EnemyState CreateTwoTailedRat(Random rng, int moveIndex)
+    private static EnemyState CreateTwoTailedRat(Random rng, int moveIndex, int slot = -1)
     {
         var enemy = CreateEnemy(KE.TwoTailedRat, rng, RatIntent(moveIndex), moveIndex);
+        enemy.Slot = slot;
         BuffSystem.Apply(enemy.Buffs, BuffId.SummonCooldown, 2);
         return enemy;
     }
@@ -1449,7 +1729,14 @@ public static class CombatFactory
             moveIndex,
             fixedHp
         );
-        BuffSystem.Apply(enemy.Buffs, BuffId.Ravenous, 5);
+        // RavenousStr is GetValueIfAscension(DeadlyEnemies, 5, 4): the 5 is the A9
+        // branch, taken here as a bare literal. At A8 the slug gains 4 per dead ally,
+        // and a live capture announces "7x2" -- (3 + 4) twice -- where a 5 gives 8x2.
+        BuffSystem.Apply(
+            enemy.Buffs,
+            BuffId.Ravenous,
+            Ascension.Value(ascension, Ascension.DeadlyEnemies, 5, 4)
+        );
         return enemy;
     }
 
@@ -1579,6 +1866,20 @@ public static class CombatFactory
             BuffSystem.Apply(enemy.Buffs, BuffId.Galvanic, 6);
         }
 
+        if (enemy.DefId == KE.InfestedPrism)
+        {
+            // InfestedPrism.AfterAddedToRoom applies VitalSparkPower(VitalSparkAmount).
+            // It is the Skill-card twin of the Globe Head's Galvanic above: where Galvanic
+            // damages the player for playing a Power, Vital Spark taints them for playing
+            // a Skill, and a tainted player takes that much more from every powered attack
+            // for the rest of the round.
+            BuffSystem.Apply(
+                enemy.Buffs,
+                BuffId.VitalSpark,
+                Ascension.Value(_currentAscension, Ascension.DeadlyEnemies, 3, 2)
+            );
+        }
+
         if (enemy.DefId == KE.LivingShield)
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.Rampart, 25);
@@ -1587,6 +1888,16 @@ public static class CombatFactory
         if (enemy.DefId == KE.LouseProgenitor)
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.CurlUp, 18);
+        }
+
+        if (enemy.DefId == KE.PhantasmalGardener)
+        {
+            // PhantasmalGardener.AfterAddedToRoom applies SkittishPower at SkittishAmount.
+            BuffSystem.Apply(
+                enemy.Buffs,
+                BuffId.Skittish,
+                Ascension.Value(_currentAscension, Ascension.ToughEnemies, 7, 6)
+            );
         }
 
         if (enemy.DefId == KE.PhrogParasite)

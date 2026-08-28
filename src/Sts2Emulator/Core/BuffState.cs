@@ -80,7 +80,9 @@ public enum BuffId
     ToolsOfTheTrade, // player: draw then discard one at turn start
     ShivDamage, // player: bonus damage for Shiv-like cards
     Afterimage, // player: gain N block after playing a card
-    FranticEscapePlayedCount, // player: track plays to increase cost
+    FranticEscapePlayedCountUnused, // replaced by CardInstance.CostBump; id kept so the
+
+    // ordinals after it do not move -- they reach the observation.
     RetainHand, // player: keep remaining hand at end of player turn
     BlockNextTurn, // player: gain N unpowered block after next turn's block clear
     Nostalgia, // player: first N Attack/Skill cards each turn go on top of draw pile
@@ -92,6 +94,8 @@ public enum BuffId
     Ravenous, // enemy: gain Strength and skip next move when an ally dies
     Stunned, // enemy: skip the next intent
     Slippery, // enemy: each unblocked hit loses at most 1 HP, then decrements
+    Skittish, // enemy: the first card to land unblocked damage each turn gives it N block
+    SkittishSpent, // enemy: Skittish's HasGainedBlockThisTurn, cleared when the player's turn ends
     Surprise, // Gremlin Merc: spawn reinforcements on death
     SummonCooldown, // Two-Tailed Rat: turns until Call for Backup is available
     Shriek, // Terror Eel: HP threshold; an unblocked hit at or below it triggers Terror
@@ -109,7 +113,27 @@ public enum BuffId
     Rampart, // Living Shield: block Turret Operators at player turn start
     CurlUp, // Louse Progenitor: block once after taking powered card damage
     Infested, // Phrog Parasite: spawn Wrigglers when killed
-    PainfulStabs, // Test Subject phase 2 marker
+    PainfulStabs, // Test Subject: every hit that lands unblocked adds a Wound
+    Nemesis, // Test Subject phase 3: toggles Intangible at the end of every enemy turn
+    Soar, // Owl Magistrate: halves powered attack damage against it while it flies
+    VitalSpark, // Infested Prism: playing a Skill taints the player for the round
+    Tainted, // the player: powered attacks land for this much more, until the enemy turn ends
+    PossessSpeed, // The Forgotten: how much Dexterity it has stolen, returned when it dies
+    Accelerant, // the player: enemy Poison triggers this many EXTRA times each turn
+    CorrosiveWave, // the player: every card DRAWN poisons all enemies; lasts one turn
+    Outbreak, // the player: every third Poison applied damages all enemies for this much
+    OutbreakCounter, // how many of those three have been applied so far
+    Burst, // the player: the next N SKILLS are played twice
+    MasterPlanner, // the player: every Skill played becomes Sly for the rest of the combat
+    WraithForm, // the player: lose this much Dexterity at the start of every turn
+    Speedster, // the player: a card drawn MID-TURN damages all enemies for this much
+    Tracking, // the player: card attacks against a Weak target are multiplied by this
+    PhantomBlades, // the player: Shivs Retain, and the FIRST Shiv each turn hits for this much more
+    SerpentForm, // the player: every card played damages a random enemy for this much
+    TheHunt, // the player: a marker that The Hunt landed a kill; the reward is the effect
+    TemporaryDexterity, // the player: Dexterity that is handed back at the end of the turn
+    Blur, // the player: block survives this many more turn starts, then stops
+    FanOfKnives, // the player: every Shiv targets ALL enemies rather than one
     Tangled, // Vine Shambler card debuff, currently tracked as a player debuff
     Constrict, // Slithering Strangler pressure debuff, currently tracked
     Smoggy, // Living Fog card affliction debuff, currently tracked
@@ -131,6 +155,168 @@ public enum BuffId
     FreeAttackPower, // player: next N Attacks cost 0; decrements on each Attack played
     FreeSkillPower, // player: next N Skills cost 0; decrements on each Skill played
     Doom,
+
+    /// <summary>
+    /// An illusion that has been killed and is spending its next turn coming back.
+    /// <c>IllusionPower.AfterDeath</c> forces a REVIVE_MOVE with
+    /// <c>MustPerformOnceBeforeTransitioning</c>, so the turn is spent healing rather
+    /// than acting, and <c>ShouldAllowHitting</c> is false for its owner meanwhile.
+    /// </summary>
+    Reviving,
+
+    /// <summary>
+    /// The Slumbering Beetle's sleep, counted DOWN by two different things.
+    /// </summary>
+    /// <remarks>
+    /// <c>SlumberPower</c> decrements on every enemy-side turn end AND on every instance
+    /// of UNBLOCKED damage its owner takes; at zero the beetle is stunned awake into
+    /// ROLL_OUT. Modelled as three quiet turns alone, a beetle the player was hitting
+    /// woke on schedule here and early in the game — and hitting it is the obvious play,
+    /// since it sleeps behind Plating. Appended, like every id here: these ordinals
+    /// reach the observation.
+    /// </remarks>
+    Slumber,
+
+    /// <summary>
+    /// A Decimillipede segment's <c>ReattachPower</c>: how much it heals when it comes
+    /// back, and the marker that it comes back at all.
+    /// </summary>
+    /// <remarks>
+    /// A dead segment spends one turn as DEAD_MOVE and then REATTACHes for its Amount —
+    /// 25 — unless every OTHER segment is already dead, which is the only way the fight
+    /// is won. The emulator left a killed segment dead, so the elite could be taken apart
+    /// one piece at a time.
+    /// </remarks>
+    Reattach,
+
+    /// <summary>
+    /// The Kaiser Crab's <c>SurroundedPower</c>, on the PLAYER: which way they are facing.
+    /// </summary>
+    /// <remarks>
+    /// Magnitude 1 is facing Right and 2 is facing Left, matching the power's own
+    /// <c>Direction</c> enum, which starts at Right. An attack from the half at the
+    /// player's BACK lands at 1.5x — while both halves live that is the Crusher, and the
+    /// emulator had the multiplier baked into the Crusher's announced damage instead, so
+    /// it never stopped when it should.
+    /// </remarks>
+    Surrounded,
+
+    /// <summary>Marker: this creature attacks from the player's left. See [[Surrounded]].</summary>
+    BackAttackLeft,
+
+    /// <summary>Marker: this creature attacks from the player's right.</summary>
+    BackAttackRight,
+
+    /// <summary>
+    /// <c>CrabRagePower</c>: when its partner dies, this half takes Strength 6 and 99
+    /// block. Killing one side of the Kaiser Crab enrages the other, and none of that
+    /// was modelled — so the boss could be halved for free.
+    /// </summary>
+    CrabRage,
+
+    /// <summary>
+    /// <c>MindRotPower</c>: draw this many fewer cards. One of the Knowledge Demon's
+    /// curses.
+    /// </summary>
+    MindRot,
+
+    /// <summary>
+    /// <c>SlothPower</c>: play at most this many cards a turn. `ShouldPlay` returns false
+    /// once the count is reached, so the cards are not unplayable — the turn simply
+    /// stops accepting them.
+    /// </summary>
+    Sloth,
+
+    /// <summary>
+    /// <c>WasteAwayPower</c>: <c>ModifyMaxEnergy</c> subtracts this, so every turn starts
+    /// with less.
+    /// </summary>
+    WasteAway,
+
+    /// <summary>
+    /// <c>BurrowedPower</c>: the Tunneler is dug in behind its block.
+    /// </summary>
+    /// <remarks>
+    /// Three things ride on it, and the emulator had none of them. `ShouldClearBlock`
+    /// returns FALSE for its owner, so a burrowed Tunneler keeps its block across turns
+    /// instead of losing it at the start of each one. `AfterBlockBroken` stuns it into
+    /// DIZZY_MOVE and then back to BITE_MOVE, which is the only way out of the burrow —
+    /// otherwise it hits from below forever. And `AfterRemoved` takes the rest of the
+    /// block with it.
+    /// </remarks>
+    Burrowed,
+
+    /// <summary>
+    /// <c>WellLaidPlansPower</c>: how many cards its owner may CHOOSE to keep at the end
+    /// of each turn, for the rest of the combat.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="RetainHand" />, which keeps the WHOLE hand and counts
+    /// down — "keep everything for one turn" and "keep one card every turn forever" are
+    /// two different rules and cannot share an id, the same way Blur could not share
+    /// Barricade's (E154).
+    ///
+    /// Appended rather than filed next to RetainHand ON PURPOSE: the observation writes
+    /// `(int)buff.Id` straight into the vector, so inserting a value renumbers every buff
+    /// after it and silently changes the meaning of every committed fixture.
+    /// </remarks>
+    WellLaidPlans,
+
+    /// <summary>
+    /// <c>LightningRodPower</c>: channels a Lightning orb at each turn's energy reset and
+    /// DECREMENTS, so an amount of 2 buys two turns of orbs rather than two orbs at once.
+    /// </summary>
+    /// <remarks>
+    /// The power's own comment explains the timing and it is not incidental: it fires at
+    /// AfterEnergyReset rather than BeforeSideTurnStart "so the player will still get
+    /// benefits from orbs that might be evoked to make room for the new Lightning Orb" —
+    /// a Plasma evoked to make room would otherwise have its energy wiped by the reset,
+    /// and a Frost's block cleared.
+    /// </remarks>
+    LightningRod,
+
+    /// <summary>
+    /// <c>ShadowStepPower</c>: converts itself into <see cref="DoubleDamage" /> at the
+    /// start of its owner's next turn and then removes itself. Shadow Step's real payload,
+    /// held for a turn.
+    /// </summary>
+    ShadowStep,
+
+    /// <summary>
+    /// <c>DoubleDamagePower.ModifyDamageMultiplicative</c>: a flat <c>2m</c> on a powered
+    /// CARD attack by its owner — the amount is a stack count, not a multiplier, so two
+    /// stacks are still double and last two turns. Decrements at the end of the owner's
+    /// side turn.
+    /// </summary>
+    DoubleDamage,
+
+    /// <summary>
+    /// <c>ShadowmeldPower.ModifyBlockMultiplicative</c>: block its owner gains is
+    /// multiplied by <c>2^Amount</c>, and the power is removed at the end of their side
+    /// turn — so it doubles a single turn's block, however that block was gained.
+    /// </summary>
+    Shadowmeld,
+
+    /// <summary>
+    /// <c>FreePowerPower.TryModifyEnergyCostInCombatLate</c>: the next N POWER cards cost
+    /// nothing. Synthesis grants it. Sibling of <see cref="FreeAttackPower" /> and
+    /// <see cref="FreeSkillPower" />, and distinct from both — the emulator was granting
+    /// FreeAttackPower for it, which is a different card type entirely.
+    /// </summary>
+    FreePowerPower,
+
+    /// <summary>
+    /// <c>IterationPower.AfterCardDrawn</c>: the FIRST Status card drawn in a turn draws
+    /// this many cards. A status-shaped draw engine, not a flat next-turn draw.
+    /// </summary>
+    Iteration,
+
+    /// <summary>
+    /// <c>BiasedCognitionPower.AfterSideTurnStart</c>: takes this much Focus back at the
+    /// start of every turn, for the rest of the combat. The drain is the card's cost, and
+    /// the emulator granted the Focus without it.
+    /// </summary>
+    BiasedCognition,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

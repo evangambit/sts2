@@ -232,12 +232,12 @@
     },
     "player": {
       "character": "The Ironclad",
-      "hp": 64,
+      "hp": 56,
       "max_hp": 80,
       "block": 0,
       "energy": null,
       "max_energy": null,
-      "gold": 99,
+      "gold": 175,
       "deck": [
         {
           "index": 0,
@@ -388,19 +388,10 @@
       "options": [
         {
           "index": 0,
-          "title": "Trudge On",
-          "description": "Gain 76 Gold. Lose 8 HP.",
+          "title": "Proceed",
+          "description": "",
           "is_locked": false,
-          "is_proceed": false,
-          "was_chosen": true,
-          "keywords": []
-        },
-        {
-          "index": 1,
-          "title": "Rest",
-          "description": "Heal 24 HP. Fight some enemies.",
-          "is_locked": false,
-          "is_proceed": false,
+          "is_proceed": true,
           "was_chosen": false,
           "keywords": []
         }

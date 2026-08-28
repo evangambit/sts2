@@ -8,7 +8,9 @@ from typing import Any
 
 import numpy as np
 
+from . import native
 from .run_constants import (
+    BUNDLE_CONFIRM_ACTION,
     EVENT_SKIP_ACTION,
     MAP_CHOICES,
     PHASE_ANCIENT,
@@ -57,20 +59,54 @@ def execute_command(
     ):
         if int(info["phase"]) == PHASE_COMBAT:
             return reward, terminated, truncated, obs, info
-        while int(info["phase"]) != PHASE_MAP:
+        # Bounded, because a proceed that does not change the phase would otherwise
+        # spin here forever at full tilt: the emulator gets stepped, reports the same
+        # phase, and gets stepped again. That turned one ordinary divergence -- an
+        # emulator sitting on a screen the reference had already left -- into a replay
+        # that never returned and looked for all the world like a hang in the engine.
+        # Sixteen is far more proceeds than any screen stack needs; giving up here lets
+        # the caller report the mismatch it actually has.
+        for _ in range(16):
+            if int(info["phase"]) == PHASE_MAP:
+                break
             proceed = proceed_action(int(info["phase"]))
             if proceed is None:
                 break
+            before_phase = int(info["phase"])
             obs, reward, terminated, truncated, info = env.step(proceed)
             if terminated or truncated:
                 return reward, terminated, truncated, obs, info
+            if int(info["phase"]) == before_phase:
+                break
         translated_action = translate_command(command, obs, info, env, reference_step)
         if translated_action is None:
             return reward, terminated, truncated, obs, info
         action = translated_action
 
+    # A confirm that answers a MULTI-card selection is several emulator actions: the
+    # translate above returned the first (the highest index), and the rest follow here in
+    # descending order so no removal shifts one that has not been applied yet.
+    if (
+        command is not None
+        and command.get("action") == "confirm_selection"
+        and int(info["phase"]) == PHASE_TRANSFORM_SELECT
+    ):
+        held = peek_deferred_selection(env)
+        if held is not None and len(held) > 1:
+            for card_action in sorted(held, reverse=True):
+                obs, reward, terminated, truncated, info = env.step(card_action)
+                if terminated or truncated:
+                    break
+            clear_deferred_selection(env)
+            return reward, terminated, truncated, obs, info
+
+    # Resolved HERE, once, so no path can skip it. translate_target answers in ordinals
+    # among living enemies; the emulator indexes a list that still holds its dead.
     target = (
-        translate_target(command, target_map, reference_step)
+        resolve_living_ordinal(
+            translate_target(command, target_map, reference_step),
+            obs,
+        )
         if int(info["phase"]) == PHASE_COMBAT
         else -1
     )
@@ -98,6 +134,12 @@ def translate_command(
     if action_name == "ChooseRestSiteOption":
         action_name = "choose_rest_site_option"
     phase = int(info["phase"])
+    # Scroll Boxes' bundle screen is answered in two actions, and the live capture spends
+    # one on each: `select_bundle` highlights, `confirm_bundle_selection` takes it.
+    if action_name == "select_bundle":
+        return int(command.get("index", 0))
+    if action_name == "confirm_bundle_selection":
+        return BUNDLE_CONFIRM_ACTION
     if phase != PHASE_TRANSFORM_SELECT:
         # The card-select screen is behind us, so nothing it held back is still live.
         clear_deferred_selection(env)
@@ -258,6 +300,15 @@ def translate_command(
             )
         return None
     if action_name == "select_card" and phase == PHASE_TRANSFORM_SELECT:
+        # An OFFER grid resolves on the click: the game says "Choosing card: X" and leaves
+        # the screen there and then, with no confirm after it. A selection over the DECK
+        # toggles instead and waits for one. Both wear the card-select phase, so the screen
+        # has to be told apart by asking the run which it has open -- and until Lead
+        # Paperweight and Hefty Tablet were captured, no trace had ever replayed a grid, so
+        # every card-select was assumed to be the toggling kind.
+        if info.get("offer_cards"):
+            return int(command.get("index", 0))
+
         # The game's card-select screen lists only the cards the effect can
         # legally target, so its index counts eligible cards. The emulator's
         # action is the deck index itself, masked to the same eligible set, so
@@ -282,7 +333,13 @@ def translate_command(
     if action_name == "confirm_selection":
         if phase == PHASE_TRANSFORM_SELECT:
             deferred = peek_deferred_selection(env)
-            return REWARD_SKIP_ACTION if deferred is None else deferred
+            if deferred is None:
+                return REWARD_SKIP_ACTION
+            # Highest index first. The emulator answers a selection one card at a time and
+            # a removal takes the card out of the deck as it goes, so applying the lower
+            # index first shifts every index above it and the second answer names a
+            # different card. execute_command steps the rest.
+            return max(deferred)
         return None
 
     raise UnsupportedCommandError(
@@ -291,21 +348,76 @@ def translate_command(
 
 
 def _normalize_enemy_name(name: str) -> str:
+    """Slugify a display name the way the game's entity ids are spelled.
+
+    Every run of non-alphanumeric characters folds to one underscore -- a hyphen as
+    much as a space. Folding only whitespace made "Two-Tailed Rat" come out
+    ``TWO-TAILED_RAT`` where the game says ``TWO_TAILED_RAT``, so the lookup missed and
+    the caller fell back to the entity id's numeric suffix: exactly the renumbering
+    that build_target_map exists to stop trusting.
+    """
     name = re.sub(r"[()]", "", name)
     name = name.strip().upper()
-    return re.sub(r"\s+", "_", name)
+    return re.sub(r"[^A-Z0-9]+", "_", name).strip("_")
 
 
 def build_target_map(enemies: list[dict[str, Any]]) -> dict[str, int]:
-    """Build {target_id: absolute_enemy_index} from a combat's initial enemy list."""
+    """Build {target_id: ordinal among LIVING enemies} from a reference enemy list.
+
+    The game's ``entity_id`` suffix is a position, not a stable id: it RENUMBERS as
+    enemies die. Four gardeners are ``_0.._3``, and once the first dies the survivors
+    become ``_0.._2`` -- so ``PHANTASMAL_GARDENER_2`` names a different creature before
+    and after. Built once from a combat's opening list, this map silently pointed at the
+    wrong enemy for the rest of the fight.
+
+    The value is therefore an ordinal among living enemies, which the caller resolves
+    against the emulator's own list. The emulator KEEPS its dead in place, so the two
+    index spaces stop agreeing the moment anything dies.
+    """
     type_counters: dict[str, int] = {}
     result: dict[str, int] = {}
-    for index, enemy in enumerate(enemies):
+    ordinal = 0
+    for enemy in enemies:
+        if enemy.get("hp") is not None and int(enemy["hp"]) <= 0:
+            continue
         normalized = _normalize_enemy_name(enemy.get("name", ""))
         count = type_counters.get(normalized, 0)
-        result[f"{normalized}_{count}"] = index
+        result[f"{normalized}_{count}"] = ordinal
         type_counters[normalized] = count + 1
+        # The capture's own entity_id, when it carries one. It is the id the action
+        # names, so it needs no transcription from the display name at all -- and a
+        # transcription that comes out even one character different does not fail, it
+        # silently falls through to the suffix.
+        entity_id = enemy.get("entity_id")
+        if isinstance(entity_id, str) and entity_id:
+            result[entity_id] = ordinal
+        ordinal += 1
     return result
+
+
+def living_enemy_indices(obs: np.ndarray) -> list[int]:
+    """Collect the emulator's absolute indices of the enemies still alive.
+
+    Slot 0 of an enemy's observation block is its current HP, so this is the emulator's
+    own answer to ``Creature.IsAlive`` (``CurrentHp > 0``). The emulator KEEPS its dead
+    in the enemy list where the game removes them, which is the whole reason an ordinal
+    among living has to be resolved rather than used as an index.
+    """
+    return [
+        index
+        for index in range(native.MAX_ENEMIES)
+        if int(obs[native.OBS_ENEMY_OFFSET + index * native.OBS_ENEMY_SLOT_SIZE]) > 0
+    ]
+
+
+def resolve_living_ordinal(ordinal: int, obs: np.ndarray) -> int:
+    """Turn an ordinal among LIVING enemies into the emulator's absolute index."""
+    if ordinal < 0:
+        return -1
+    living = living_enemy_indices(obs)
+    if ordinal >= len(living):
+        return -1
+    return living[ordinal]
 
 
 def translate_target(
@@ -313,11 +425,23 @@ def translate_target(
     target_map: dict[str, int] | None = None,
     reference_step: dict[str, Any] | None = None,
 ) -> int:
-    """Resolve an STS2MCP target string to absolute enemy index, or -1."""
+    """Resolve an STS2MCP target to an ordinal among LIVING enemies, or -1.
+
+    **Every** path here returns an ordinal, never an index. That is not a restatement of
+    the obvious -- it is the fix for E79. Only the ``target_map`` path used to be
+    resolved against the emulator's list; the two fallbacks below returned the game's own
+    numbering and it was handed straight to ``env.step`` as an absolute index. The game
+    removes its dead and the emulator does not, so the two agree exactly until something
+    dies and then silently name different creatures. A Fogmog's eye makes that permanent
+    rather than occasional: it dies and revives all fight, so the emulator holds a corpse
+    at index 0 for most of it, and an attack aimed at the Fogmog landed on the eye.
+    """
     if command is None:
         return -1
     target = command.get("target")
     if isinstance(target, int):
+        # The capture lists only living enemies (the mod filters on IsAlive), so a
+        # position in that list is an ordinal already.
         enemies = (
             ((reference_step or {}).get("raw_state") or {})
             .get("battle", {})
@@ -331,6 +455,8 @@ def translate_target(
         return -1
     if target_map is not None and target in target_map:
         return target_map[target]
+    # The entity id's suffix, which is the game's position among living creatures -- it
+    # RENUMBERS as they die, which is why build_target_map exists. Still an ordinal.
     parts = target.rsplit("_", 1)
     if len(parts) == 2 and parts[1].isdigit():
         return int(parts[1])
@@ -449,10 +575,22 @@ def resolve_runreplays_index_if_card_matches(
         and 0 <= requested < len(pre_hand)
         and normalize_trace_card_name(pre_hand[requested])
         == normalize_trace_card_name(card_name)
-        and int(obs[8 + requested * 2]) == card_id
+        and hand_card_id(obs, requested) == card_id
     ):
         return requested
     return None
+
+
+def hand_card_id(obs: np.ndarray, hand_index: int) -> int:
+    """Return the card id in a hand slot.
+
+    The stride is the emulator's, not a literal: this was ``obs[8 + i * 2]`` at four call
+    sites, and when a card slot grew from two fields to four every one of them silently
+    resolved the wrong hand index. That does not read as an observation bug -- it made a
+    replay play different cards, and the run diverged 150 steps later with the player
+    alive at 4 hp where the capture had them dead.
+    """
+    return int(obs[native.OBS_HAND_OFFSET + hand_index * native.OBS_CARD_SLOT_SIZE])
 
 
 def hand_index_matches_replay_card(
@@ -468,7 +606,7 @@ def hand_index_matches_replay_card(
     if card_id is None:
         raise UnsupportedCommandError(f"unknown trace card id {replay_id!r}")
 
-    return 0 <= index < 10 and int(obs[8 + index * 2]) == card_id
+    return 0 <= index < native.OBS_MAX_HAND and hand_card_id(obs, index) == card_id
 
 
 def resolve_runreplays_card_index_or_none(
@@ -483,8 +621,8 @@ def resolve_runreplays_card_index_or_none(
     if card_id is None:
         raise UnsupportedCommandError(f"unknown trace card id {replay_id!r}")
 
-    for hand_index in range(10):
-        if int(obs[8 + hand_index * 2]) == card_id:
+    for hand_index in range(native.OBS_MAX_HAND):
+        if hand_card_id(obs, hand_index) == card_id:
             return hand_index
     return None
 
@@ -582,8 +720,8 @@ def proceed_action(phase: int) -> int | None:
 
 def hand_count(obs: np.ndarray) -> int:
     count = 0
-    for hand_index in range(10):
-        if int(obs[8 + hand_index * 2]) != 0:
+    for hand_index in range(native.OBS_MAX_HAND):
+        if hand_card_id(obs, hand_index) != 0:
             count += 1
     return count
 
@@ -598,11 +736,24 @@ _DEFERRED_SELECTION_ATTR = "_sts2_deferred_card_selection"
 
 
 def set_deferred_selection(env: Any, action: int) -> None:
-    setattr(env, _DEFERRED_SELECTION_ATTR, int(action))
+    """Toggle one card into or out of the held-back selection.
+
+    A screen may want more than one card -- Precarious Shears asks for two -- and the game
+    toggles them one at a time before a single confirm. Holding only the LAST one, which
+    is what this used to do, quietly answered a two-card screen with one card. Clicking
+    the same card twice still unticks it, which is why this toggles rather than appends.
+    """
+    held = list(getattr(env, _DEFERRED_SELECTION_ATTR, None) or [])
+    value = int(action)
+    if value in held:
+        held.remove(value)
+    else:
+        held.append(value)
+    setattr(env, _DEFERRED_SELECTION_ATTR, held)
 
 
-def peek_deferred_selection(env: Any | None) -> int | None:
-    """Return the held-back action, without consuming it.
+def peek_deferred_selection(env: Any | None) -> list[int] | None:
+    """Return the held-back actions, without consuming them.
 
     Callers translate the same command more than once -- the replay asks whether a
     command is supported before executing it -- so reading this must not change it.
@@ -610,12 +761,12 @@ def peek_deferred_selection(env: Any | None) -> int | None:
     """
     if env is None:
         return None
-    return getattr(env, _DEFERRED_SELECTION_ATTR, None)
+    return getattr(env, _DEFERRED_SELECTION_ATTR, None) or None
 
 
 def clear_deferred_selection(env: Any | None) -> None:
-    if env is not None and getattr(env, _DEFERRED_SELECTION_ATTR, None) is not None:
-        setattr(env, _DEFERRED_SELECTION_ATTR, None)
+    if env is not None and getattr(env, _DEFERRED_SELECTION_ATTR, None):
+        setattr(env, _DEFERRED_SELECTION_ATTR, [])
 
 
 # Backwards-compatible aliases while trace tooling migrates to command terminology.

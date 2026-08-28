@@ -45,6 +45,7 @@ internal sealed class Fight
         state.CardSelectionRng = new CountingRandom(0);
         state.CardGenerationRng = new CountingRandom(0);
         state.PotionGenerationRng = new CountingRandom(0);
+        state.OrbGenerationRng = new CountingRandom(0);
         return new Fight(state);
     }
 
@@ -86,6 +87,7 @@ internal sealed class Fight
         state.CardSelectionRng = new CountingRandom(seed);
         state.CardGenerationRng = new CountingRandom(seed);
         state.PotionGenerationRng = new CountingRandom(seed);
+        state.OrbGenerationRng = new CountingRandom(seed);
         return new Fight(state);
     }
 
@@ -120,6 +122,31 @@ internal sealed class Fight
     /// which swallows a debuff whole — a test about applying one has to pick an encounter
     /// that can actually receive it (3 is three enemies, none protected).
     /// </summary>
+    /// <summary>
+    /// A fight built with an explicit ENCOUNTER stream seed, for the encounters that roll
+    /// their own composition. Varying it and watching the roster is the only check that
+    /// tells a builder reading the encounter stream from one quietly reading the combat
+    /// rng, which is what E90 turned on.
+    /// </summary>
+    public static Fight EncounterWithStream(int encounterId, int encounterRngSeed)
+    {
+        var state = new CombatState { NicheHpRng = new CountingRandom(0) };
+        CombatFactory.Reset(
+            state,
+            new Random(0),
+            TestDeck.StarterDeckIds,
+            encounterId,
+            completedCombatRoomsBeforeCurrent: -1,
+            encounterRngSeed: encounterRngSeed
+        );
+        state.TargetRng = new CountingRandom(0);
+        state.CardSelectionRng = new CountingRandom(0);
+        state.CardGenerationRng = new CountingRandom(0);
+        state.PotionGenerationRng = new CountingRandom(0);
+        state.OrbGenerationRng = new CountingRandom(0);
+        return new Fight(state);
+    }
+
     public static Fight Encounter(int encounterId, params int[] relicIds)
     {
         var state = new CombatState { NicheHpRng = new CountingRandom(0) };
@@ -128,6 +155,7 @@ internal sealed class Fight
         state.CardSelectionRng = new CountingRandom(0);
         state.CardGenerationRng = new CountingRandom(0);
         state.PotionGenerationRng = new CountingRandom(0);
+        state.OrbGenerationRng = new CountingRandom(0);
         return new Fight(state);
     }
 

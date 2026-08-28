@@ -36,12 +36,19 @@ What the agent is handed each step. This surface is currently clean: combat
 exposes `DrawPile.Count`, `DiscardPile.Count` and `ExhaustPile.Count` — sizes,
 never order.
 
-The risk is in closing the known gap. The run layer's observation carries
-`Deck.Count` but not the deck's contents, which makes card rewards, shops, rest
-upgrades and transforms unlearnable. Closing that must mean **composition, not
-order**: the multiset of cards in a pile, plus the parts of the order the player
-legitimately knows (below). Dumping `DrawPile` as an ordered list would close one
-gap by opening a worse one.
+The run layer used to carry `Deck.Count` and nothing else, which made card
+rewards, shops, rest upgrades and transforms unlearnable — the agent chose
+between three cards without being told what the other twenty in its deck were.
+It now carries the deck card by card and the relics relic by relic. What it does
+**not** carry is any pile's order: the deck list is composition, and the piles
+stay counts.
+
+The deck block is in `State.Deck` order, deliberately, because a card-select
+screen's action `i` indexes the same list — sorting it into a canonical multiset
+would read more tidily and leave the agent unable to say which card it meant.
+Nothing leaks by keeping that order: a deck is inspectable in full in-game. The
+draw pile is the opposite case, and dumping it as an ordered list would close
+one gap by opening a worse one.
 
 ### Search
 
@@ -73,6 +80,13 @@ The player knows:
 
 Everything else about the future — the next shuffle, reward rolls, shop stock,
 encounter composition — is unknown, and stays unknown.
+
+The Crystal Sphere is the same rule on a grid. Its board is fifteen items buried
+under 11×11 of fog, and the game names an item — footprint and all — the moment
+any one of its cells clears. So an item with a cell showing is known, an item
+with none showing is not, and a resampled clone moves exactly the second kind
+(`CrystalSphereGame.ResampleUnseenItems`). Without that, a search could read
+where the relic is and divine straight onto it.
 
 ### Known-order tracking
 
@@ -118,15 +132,66 @@ vector.
 `CardInstance` splits in two, and the split matters for how much each consumer
 needs to carry:
 
-- **Persistent identity** — `DefId`, `Upgraded`, and the enchantments `Sharp`,
-  `Nimble`, `Swift`. This is what a deck-level representation needs; it is what a
-  card-reward or shop decision is about.
+- **Persistent identity** — `DefId`, `Upgraded`, and the card's one
+  `Enchantment` with the `EnchantAmount` it was applied at. This is what a
+  deck-level representation needs; it is what a card-reward or shop decision is
+  about, and it is what the run observation's deck block carries.
 - **Combat-local mutation** — `BonusDamage` (Rampage grows per copy),
   `CostForCombat`, `FreeThisTurn`, `Retain`. Only the in-combat representation
-  needs these.
+  needs these, and the deck block leaves them out.
 
 Enchantment magnitudes are not always 2: Self-Help Book grants 2, other sources
-vary, so they are small integers rather than flags.
+vary, so they are small integers rather than flags. The combat observation's
+hand slots still carry only `DefId` and `Upgraded`, so an enchanted card in hand
+is indistinguishable from a plain one mid-fight — a known gap, and a smaller one
+than the deck was.
+
+Relics carry their `Counter` and whether the run has spent them: a Silver
+Crucible with three charges is a different relic from one with none, and a
+used-up relic stays in the list doing nothing.
+
+### The shop
+
+The merchant's board is a block of its own, one slot per thing on sale, indexed
+by the action that buys it: seven cards, three relics, three potions, then the
+card-removal service at 13. Each slot carries what is on it and what it costs.
+
+Before this, three of the seven cards were in the observation and none of the
+prices — so an agent could buy shop slot 5 without ever being shown what was on
+it, and could not tell a 50-gold card from a 300-gold one on any slot, which is
+the whole decision a shop is. A sale needs no flag of its own: the game halves
+the slot's price rather than marking it, so the discount is already in the
+number.
+
+### Sizes and truncation
+
+The deck block is 64 slots and the relic block 32, both well past what a full
+four-act run reaches; the shop block is exactly the merchant's 14 actions. A run that overran either would have its later entries
+unseen — but `Deck.Count` and `Relics.Count` still report the real sizes, so the
+truncation is visible rather than silent. `Sts2Run_ObsLayout` reports where the
+blocks sit so a consumer does not hard-code offsets that move when a block
+grows.
+
+### Action width
+
+The run's action mask is 256 wide. It was 32, which was enough while the widest
+screen was a shop and silently wrong past that: the mask setter drops anything
+that does not fit, so a deck grown past 32 cards had its later cards
+unselectable at a card-select screen without a word. The Crystal Sphere forced
+the issue — its board is 121 cells and each may be divined with either tool, so
+242 actions — and a mask that cannot express a screen is a worse bug than a wide
+one.
+
+The sphere's tool is folded into the action (0..120 big, 121..241 small) rather
+than set by an action of its own. Switching tools costs the game nothing, and a
+free action is a cycle an agent can ride forever.
+
+**The sphere's board is deliberately not in the observation.** The phase is
+modelled and the mask is correct, so an agent can play it and will divine
+blind — which is a decision, not an oversight: divining well is worth little
+over a crude heuristic, and the decision that actually matters, which card to
+take from what the fog gave up, happens afterwards on the reward screen where
+the agent can see. Backlogged rather than built.
 
 ### Action identity
 
@@ -145,3 +210,157 @@ None of the above weakens the differential harness, by construction:
 - Resampling is opt-in and off by default, so nothing in the test path touches it.
 - Known-order tracking is bookkeeping beside the pile, not a change to it; the
   order the game produces is untouched.
+
+
+---
+
+## What the interface actually measures (`scripts/agent_probe.py`)
+
+The sections above are design. This is what the interface *does* when something walks
+it, and the numbers are here so later emulator work has a target rather than a feeling.
+Re-run after any change to the observation, the action encoding or the step path:
+
+    uv run python scripts/agent_probe.py
+
+Findings worth carrying, from the first run:
+
+**The simulator is not the bottleneck people assume, and it is also not as fast as a
+single microbenchmark suggests.** Timing `run_step` with a fixed action mostly measures
+REJECTED actions — the mask says no, it returns in ~2us, and you conclude the simulator
+runs at 500k/s. Timing a loop that resets folds whole-run generation into the average
+instead. The honest figure is a per-phase mixture: **~72us/step overall, about 14,000
+steps/s on one env**, with combat around 54us median and act entry carrying a long tail
+because it generates a map. PLAN.md's AlphaZero target is 1e5–1e6 transitions/s/core, so
+the step path is **roughly an order of magnitude short** and that is where the work is.
+
+**Clone is the cheap half of search**, ~59,000/s including hidden-state resampling — so
+a tree search's ceiling is set by the step, not by forking. The handle pool caps
+CONCURRENT runs at 256, which is fine for clone-simulate-destroy and not fine for a
+design that holds a handle per tree node.
+
+**Card ids reach the network as raw integers.** Nothing in the observation says slot N is
+categorical, so a network reading it as a magnitude learns that card 473 is *more* than
+card 472. That is an embedding on the agent side, but it is the observation's shape that
+forces the issue, and it is worth stating here rather than rediscovering it in a training
+run.
+
+**About a fifth of the observation is ever non-zero** under random play. Some of that is
+genuinely dead width and some is screens a random policy never reaches — those are worth
+telling apart before a network is sized around 630 inputs.
+
+**A dozen action indices are legal in more than one phase.** The mask keeps that safe, but
+it means one output neuron means different things on different screens, so the phase has
+to be prominent in the observation for the network to disambiguate.
+
+
+## What the search path measures (`scripts/mcts_probe.py`)
+
+A throwaway determinized MCTS — shallow tree, floor-count value, nothing trained —
+walked hard enough to answer what the design above could not. Re-run after any change to
+the clone API or the step path:
+
+    uv run python scripts/mcts_probe.py
+
+**The clone contract holds.** All three invariants a tree search depends on pass:
+stepping a clone leaves the parent untouched; two un-resampled clones given the same
+actions end in the same state; and 24 determinizations produce 20 distinct futures, so
+`resample_hidden` genuinely re-seeds rather than quietly copying. That is worth having
+checked, because a clone that silently shared state with its parent would look like a
+search bug for a long time.
+
+**The handle pool takes 255 concurrent clones.** Clone-simulate-destroy never approaches
+it. A design that holds a handle per tree node is two orders of magnitude past it, so the
+tree has to be Python-side and the world replayed into a clone per simulation — which is
+what this probe does.
+
+**A simulation costs ~714us, not one step.** It is clone + descend + roll out, about 16
+steps deep, so **~1,400 simulations/s** and ~22,000 steps/s inside the search. The step
+path is the ceiling: clone is ~17us of that and the remaining ~700us is simulation. This
+is the concrete reason to work on step cost rather than on forking.
+
+**The path works end to end, and it scales with search.** Against random play on the same
+seeds, MCTS reaches deeper floors:
+
+| simulations per move | random | search | lift |
+| --- | --- | --- | --- |
+| 40 | 3.5 mean | 5.2 mean | +1.7 floors |
+| 120 | 3.4 mean | 8.0 mean | +4.6 floors |
+
+That is not a claim about the agent — the value function is "how far did the rollout
+get". It is a claim about the plumbing: the clone, the mask, the value and the backup are
+all connected, and more search buys more floors, which is what a working search does.
+Cost at 120 sims/move is about 6s of wall clock per run.
+
+
+## Where a step's time actually goes (`StepCostProbe`)
+
+    dotnet test src/Sts2Emulator.Tests --filter StepCostProbe -c Release
+    cat /tmp/sts2-step-cost.txt
+
+The probe is skipped by default and lives in the test assembly rather than in `scripts/`
+because the number that matters is `GC.GetAllocatedBytesForCurrentThread`, which only C#
+can see. **A step that allocates kilobytes is paying a GC bill no algorithmic tidying
+will refund**, and that is the shape of the problem here.
+
+| scenario | time | alloc |
+| --- | ---: | ---: |
+| `WriteObservation` | 1.3 us | 0 KB |
+| end turn, baseline | 79.5 us | 14.6 KB |
+| end turn, **combat already over** | **2.7 us** | **1.0 KB** |
+| end turn, one enemy instead of two | 75.7 us | 13.1 KB |
+| end turn, draw pile stocked (no reshuffle) | 75.5 us | 14.6 KB |
+
+Reading down the table rules out three suspects and leaves one:
+
+- **Not the observation.** 1.3us against a ~72us step; 1.3% of it.
+- **Not the enemy phase.** One enemy costs *more* than two. Whatever this is does not
+  scale with the number of creatures acting.
+- **Not the reshuffle.** Stocking the draw pile saves ~4us and allocates identically.
+- **It is the START OF THE NEXT PLAYER TURN.** "Combat already over" is the only row that
+  falls off a cliff — 2.7us and 1.0KB — and the only thing it skips is the next turn's
+  setup. That path costs roughly **77us and 13.6KB per step**.
+
+Two further pieces of scale, from `scripts/agent_probe.py`: combat is about **61% of a
+run's total step time**, and within a combat, ending the turn costs about **12x playing a
+card** (125us vs 10us). So the next-player-turn path is the single hottest thing in the
+emulator, and it is a path that allocates.
+
+Worth recording how this was found, because two plausible readings were wrong first. The
+enemy phase looked like the answer until enemy count was varied; the reshuffle looked
+like the answer until allocation was compared. **The measurement that settled it was
+turning the next turn off**, not looking harder at what was on.
+
+
+### What the allocation fix bought, and what it did not
+
+Two allocations found by the table above, both in the enemy phase:
+
+**`BuffSystem.Get` allocated on every call.** It read
+`buffs.FindIndex(b => b.Id == id)`, and that lambda CAPTURES `id` — so a display class
+and a delegate on every one of its 242 call sites, several of them per point of damage.
+A hand-written loop over what is always a handful of entries costs less than the closure
+did.
+
+**`ShuffleDiscardIntoDraw` sorted by string through LINQ.** The pile is canonicalised by
+card `Entry` before being permuted, so the same cards in a different pile order shuffle
+alike — but `OrderBy(...).ThenBy(...).ToList()` builds a buffer, a key array and a
+comparer chain each reshuffle, keyed on strings. It now sorts in place against a
+precomputed int rank, with the original position in the low bits of the key so the sort
+stays STABLE — two cards can match on Entry and Upgraded while differing in an
+enchantment the key does not see, and an unstable sort would shuffle them differently.
+
+| | before | after |
+| --- | ---: | ---: |
+| `ExecuteIntent`, attacking enemy | 3,080 B | **352 B** |
+| `ExecuteIntent`, buff or unknown intent | ~570 B | **0 B** |
+| end turn, whole step | 14.6 KB | **4.1 KB** |
+
+**Wall-clock throughput did not measurably move** — 12,500 steps/s against 13,900 before,
+which is inside the run-to-run spread. So the garbage was not what the time was going on
+at this scale, and the honest reading is that this buys headroom for sustained parallel
+training rather than a faster step today. A combat step is still ~56us median while
+allocating 4KB, which means the remaining cost is compute and **has not been located yet**.
+That is the next thread, and the table at the top of this section is how to pull it.
+
+The 32 committed run traces are what makes this kind of change safe: any drift in shuffle
+order or buff resolution breaks them loudly, and they stayed clean throughout.

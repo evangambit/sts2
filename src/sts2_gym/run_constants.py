@@ -5,9 +5,13 @@ from __future__ import annotations
 from . import native
 
 REWARD_SKIP_ACTION = 3
+SHOP_REMOVE_ACTION = 13
 SHOP_SKIP_ACTION = 14
 EVENT_SKIP_ACTION = 3
-MAP_CHOICES = 4
+# Read from the emulator rather than restated: the map's choice arrays widened to a
+# whole row when Winged Boots' free travel was modelled, and a copy of the old 4 here
+# would have silently hidden the three options past it.
+MAP_CHOICES = native.RUN_OBS_LAYOUT["map_choices"]
 RUN_OBS_SIZE = native.RUN_OBS_SIZE
 RUN_MAX_EPISODE_STEPS = 1000
 
@@ -22,6 +26,13 @@ PHASE_EVENT = 7
 PHASE_ANCIENT = 8
 PHASE_TRANSFORM_SELECT = 9
 PHASE_TREASURE = 10
+PHASE_CRYSTAL_SPHERE = 11
+PHASE_BUNDLE_SELECT = 12
+
+# Commits the highlighted bundle on Scroll Boxes' choose-a-bundle screen. The game answers
+# that screen in two steps -- `select_bundle` then `confirm_bundle_selection` -- and the
+# emulator spends an action on each the same way.
+BUNDLE_CONFIRM_ACTION = 2
 
 NODE_NONE = 0
 NODE_NORMAL = 1
@@ -34,3 +45,14 @@ NODE_EVENT = 7
 
 ACT_OVERGROWTH = 1
 ACT_UNDERDOCKS = 2
+ACT_HIVE = 3
+ACT_GLORY = 4
+
+# The emulator's act ids are REGIONS, not ordinals: a run's first act is Overgrowth or
+# Underdocks depending on the seed, and Hive and Glory follow in that order.
+ACT_NAMES = {
+    ACT_OVERGROWTH: "overgrowth",
+    ACT_UNDERDOCKS: "underdocks",
+    ACT_HIVE: "hive",
+    ACT_GLORY: "glory",
+}

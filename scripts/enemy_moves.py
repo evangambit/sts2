@@ -196,6 +196,10 @@ def moves_for_live_name(live_name: str) -> list[Move] | None:
     two do not always collapse the same way ("Leaf Slime (S)" -> LeafSlimeS), so try the
     obvious squash and fall back to matching case-insensitively on letters only.
     """
+    # A handful of display names are not the class name at all. Stated once here rather
+    # than guessed at: the Fake Merchant deliberately shows as "The Merchant???" so the
+    # player cannot tell it from the real one until it attacks.
+    live_name = DISPLAY_NAME_ALIASES.get(live_name, live_name)
     squashed = re.sub(r"[^A-Za-z0-9]", "", live_name)
     path = MONSTERS / f"{squashed}.cs"
     if path.exists():
@@ -204,7 +208,28 @@ def moves_for_live_name(live_name: str) -> list[Move] | None:
     for candidate in MONSTERS.glob("*.cs"):
         if candidate.stem.lower() == wanted:
             return moves_for(candidate.stem)
+
+    # Some display names drop a word the class keeps: every Ruby Raider shows as
+    # "Crossbow Raider" against CrossbowRubyRaider. Match on the first and last word
+    # instead, which pins both ends of the name and cannot collapse two raiders onto
+    # each other.
+    words = [w for w in re.split(r"[^A-Za-z0-9]+", live_name) if w]
+    if len(words) >= 2:
+        head, tail = words[0].lower(), words[-1].lower()
+        matches = [
+            candidate.stem
+            for candidate in MONSTERS.glob("*.cs")
+            if candidate.stem.lower().startswith(head)
+            and candidate.stem.lower().endswith(tail)
+        ]
+        if len(matches) == 1:
+            return moves_for(matches[0])
     return None
+
+
+DISPLAY_NAME_ALIASES = {
+    "The Merchant???": "FakeMerchantMonster",
+}
 
 
 def all_enemies() -> list[str]:

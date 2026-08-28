@@ -424,7 +424,9 @@ def _card_slug_to_id() -> dict[str, int]:
     text = (ROOT / "src" / "Sts2Emulator" / "Generated" / "Cards.g.cs").read_text()
     return {
         match.group(2): int(match.group(1))
-        for match in re.finditer(r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text)
+        for match in re.finditer(
+            r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text
+        )
     }
 
 
@@ -459,8 +461,20 @@ class FightChecks(_TestCaseIfChecking):
             completed_combat_rooms=capture["completed_combat_rooms"],
             total_floor=capture["total_floor"],
             ascension=capture["ascension"],
+            # No step limit. `MAX_EPISODE_STEPS` is an RL training concern -- it stops a
+            # policy looping forever -- and it has no business truncating a REPLAY of a
+            # fight that really happened. A twelve-turn capture that plays cards is
+            # already about fifty actions, so the default silently cut long fixtures off
+            # partway and the emulator read as a move behind at the far end.
+            max_episode_steps=1_000_000,
         )
         obs, _info = cls.env.reset()
+
+        # Max HP the capture granted, applied first: a boss that kills a starter deck
+        # before its move table runs out cannot be captured to full coverage without it,
+        # and the trace below is of the buffed fight.
+        if capture.get("buff_max_hp"):
+            cls.env.unwrapped.debug_gain_max_hp(int(capture["buff_max_hp"]))
 
         # Cards the capture stacked on top of the hand, put back in the same slots. A
         # capture that reaches a Phrog Parasite's Wrigglers only does so because it could
@@ -482,6 +496,15 @@ class FightChecks(_TestCaseIfChecking):
                 obs, _reward, terminated, truncated, _info = cls.env.step(action)
                 if terminated or truncated:
                     break
+
+            # A monster can stop its own turn to ask the player something -- the
+            # Knowledge Demon's CURSE_OF_KNOWLEDGE does -- and the emulator will not
+            # advance until it is answered. The capture answered the FIRST candidate on
+            # both sides, so the replay has to make the same choice or it replays a
+            # different fight; that is what `combat_sweep.answer_combat_screen` records.
+            while not (terminated or truncated) and cls.env.unwrapped.pending_selection_kind():
+                obs, _reward, terminated, truncated, _info = cls.env.step(0)
+
             cls.emu_turns.append(
                 validate_real_game_trace.emulator_trace.summarize_observation(obs),
             )

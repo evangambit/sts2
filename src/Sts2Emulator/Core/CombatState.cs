@@ -19,12 +19,106 @@ public sealed class CombatState
     public int MaxEnergy;
     public int PlayerGold;
 
+    /// <summary>
+    /// Gold a Heist gave back on its owner's death, waiting for the reward screen.
+    /// </summary>
+    /// <remarks>
+    /// <c>HeistPower.BeforeDeath</c> calls <c>combatRoom.AddExtraReward(new GoldReward(
+    /// Amount, wasGoldStolenBack: true))</c> — the player has to CLAIM it, and a capture
+    /// shows it as its own row reading "80 Gold (stolen back)" beside the fight's ordinary
+    /// gold. Handing it straight back mid-combat skipped that row.
+    /// </remarks>
+    public int StolenBackGold;
+
+    /// <summary>A Fat Gremlin left the fight under its own steam rather than dying.</summary>
+    /// <remarks>
+    /// The emulator ends its escape by setting <c>Hp = 0</c>, which makes it
+    /// indistinguishable from a kill — and the two owe the player opposite things.
+    /// <c>GremlinMercNormal.CalculateGoldProportion</c> pays the fight in full when
+    /// nothing escaped and nothing at all when a gremlin escaped carrying stolen gold.
+    /// </remarks>
+    public bool FatGremlinEscaped;
+
+    /// <summary>
+    /// <c>GremlinMercNormal.GoldWasStolen</c>: the merc died having taken something.
+    /// <c>SurprisePower.AfterDeath</c> only marks it when the total is above zero.
+    /// </summary>
+    public bool MercGoldWasStolen;
+
     // Cards
     public List<CardInstance> Hand = [];
     public List<CardInstance> DrawPile = [];
     public List<CardInstance> DiscardPile = [];
     public List<CardInstance> ExhaustPile = [];
     public List<CardInstance> ReturnToHandBeforeDraw = [];
+
+    /// <summary>
+    /// Clones queued by <c>NightmarePower</c>, delivered to hand at the start of the next
+    /// turn BEFORE the draw and then dropped — the power removes itself once it fires, so
+    /// this is a one-shot queue and not a standing effect.
+    /// </summary>
+    public List<CardInstance> CopiesToHandBeforeDraw = [];
+
+    /// <summary>
+    /// Set while a `RetainForNextTurn` screen stands between the player ending their turn
+    /// and the turn actually ending — the end turn is owed and runs as soon as the screen
+    /// is answered.
+    /// </summary>
+    public bool EndTurnAwaitingSelection;
+
+    /// <summary>
+    /// `AfterimagePower.BeforeCardPlayed` records the power's amount for the card about to
+    /// be played, and `AfterCardPlayed` spends THAT rather than whatever the amount has
+    /// become. Read before the card resolves for the reason its own Data comment gives:
+    /// so an Afterimage does not pay out on its own play.
+    /// </summary>
+    public int AfterimageBeforePlay;
+
+    /// <summary>
+    /// The same reading, for the two powers that pay out AFTER a Power card resolves.
+    /// `StormPower` and `SubroutinePower` both keep a
+    /// `Dictionary&lt;CardModel, int&gt; amountsForPlayedCards` filled in
+    /// `BeforeCardPlayed`, with the same comment on it that `AfterimagePower` has: it
+    /// stops the power triggering on its own play, and stops a second copy paying out
+    /// twice on the turn it arrives.
+    /// </summary>
+    public int StormBeforePlay;
+
+    /// <inheritdoc cref="StormBeforePlay" />
+    public int SubroutineBeforePlay;
+
+    /// <summary>
+    /// Status cards drawn this turn, for `IterationPower` — which fires only on the FIRST
+    /// one, and so needs the count rather than a flag per draw.
+    /// </summary>
+    public int StatusCardsDrawnThisTurn;
+
+    /// <summary>
+    /// `Rng.CombatOrbGeneration`: the stream Chaos rolls its orb type on. Kept apart from
+    /// the card-generation and target streams for the same reason those are kept apart
+    /// from each other — sharing one desynchronises everything downstream.
+    /// </summary>
+    public CountingRandom? OrbGenerationRng;
+
+    /// <summary>
+    /// Whether the card currently resolving is tagged <c>CardTag.Defend</c>, which is what
+    /// `FastenPower.ModifyBlockAdditive` asks about the block's `cardSource`. Set for the
+    /// duration of the card so any block it gains carries the tag, rather than every arm
+    /// that blocks having to remember to say so.
+    /// </summary>
+    public bool ResolvingDefendCard;
+
+    /// <summary>
+    /// `EnergyCost.SetThisCombat(n)` on the card being played — Momentum Strike zeroes its
+    /// own cost for the rest of the combat. `int.MinValue` means the card said nothing.
+    /// </summary>
+    /// <remarks>
+    /// Handed back through the state for the same reason `PlayedCardCostBump` is:
+    /// `CardEffects.Apply` takes the card BY VALUE, so an arm that assigns to its own
+    /// parameter changes nothing at all. Momentum Strike did exactly that and had been
+    /// free-after-one-play only in the local variable.
+    /// </remarks>
+    public int PlayedCardCostForCombat = int.MinValue;
     public List<CardInstance> AutoPlayQueue = [];
 
     // Defect-style orb queue.
@@ -40,6 +134,11 @@ public sealed class CombatState
 
     // Potions: slot index → potion def ID, 0 = empty
     public int[] PotionSlots = new int[3];
+
+    /// <summary>Every card the fight is holding, wherever it sits.</summary>
+    public IEnumerable<CardInstance> AllCards() =>
+        Hand.Concat(DrawPile).Concat(DiscardPile).Concat(ExhaustPile);
+
     public int MaxPotionSlots = 3;
 
     // Relics
@@ -112,15 +211,110 @@ public sealed class CombatState
     // the CardInstance by value and cannot hand a mutation back any other way.
     public int PlayedCardBonusDamage;
 
+    /// <summary>The same channel for block. Genetic Algorithm is the only card using it.</summary>
+    public int PlayedCardBonusBlock;
+
+    /// <summary>
+    /// Energy SPENT this turn, which Helix Drill counts its hits from — the sum of the
+    /// turn's `EnergySpentEntry` amounts. Not the energy REMAINING, which is what the
+    /// emulator was reading and is very nearly its opposite.
+    /// </summary>
+    public int EnergySpentThisTurn;
+
+    /// <summary>`PenNib`: whether the card now resolving is the tenth Attack, and doubled.</summary>
+    public bool PenNibArmed;
+
+    /// <summary>
+    /// `JossPaper` banks Ethereal exhausts and folds them in at `AfterSideTurnEnd` rather
+    /// than counting them as they happen — the relic says so explicitly.
+    /// </summary>
+    public int EtherealExhaustsThisTurn;
+
+    /// <summary>`Vambrace` doubles the FIRST card block of a combat; this latches it.</summary>
+    public bool VambraceSpent;
+
+    /// <summary>
+    /// A once-per-combat enchantment on the card being played has just fired, so the copy
+    /// that lands in its result pile must carry the spent flag. CardEffects takes the card
+    /// by value and cannot hand a mutation back, which is the same reason
+    /// PlayedCardBonusDamage exists.
+    /// </summary>
+    public bool PlayedCardEnchantSpent;
+
+    /// <summary>
+    /// The card just played carries an enchantment that GROWS on play — Goopy's.
+    /// </summary>
+    /// <remarks>
+    /// Handed back through the state for the same reason <see cref="PlayedCardEnchantSpent"/>
+    /// is: CardEffects takes the card by value, so the played copy has to be rebuilt by
+    /// the caller that files it away.
+    /// </remarks>
+    public bool PlayedCardEnchantGrew;
+
+    /// <summary>
+    /// How much the card being resolved raised its OWN cost for the rest of the combat.
+    /// </summary>
+    /// <remarks>
+    /// The same shape as <see cref="PlayedCardEnchantGrew"/> and for the same reason: the
+    /// effect runs while the card is out of every pile, so what it did to itself has to
+    /// be carried until the card is written back. Frantic Escape's
+    /// `EnergyCost.AddThisCombat(1)` is the only user so far.
+    /// </remarks>
+    public int PlayedCardCostBump;
+
+    /// <summary>
+    /// The run's <c>combat_energy_costs</c> stream, which Slither re-rolls its cost from
+    /// every time it is drawn. Null falls back to the combat rng, as the other streams do.
+    /// </summary>
+    public CountingRandom? EnergyCostRng;
+
     // Turn tracking
     public int Turn;
     public bool PlayerTurn = true;
     public bool SkillPlayedWhileSmoggy;
+
+    /// <summary>Cards of any kind played this turn, which SlothPower caps.</summary>
+    public int CardsPlayedThisTurn;
+
     public int AttackCardsPlayedThisTurn;
     public int AttackOrSkillCardsPlayedThisTurn;
     public int CardPlaysThisTurn;
     public int CardsPlayedThisCombat;
     public int DrawnCardsSinceAutomationProc;
+
+    /// <summary>
+    /// Every card drawn this combat. Murder's damage is one per entry —
+    /// `CalculatedDamageVar.WithMultiplier(count of CardDrawnEntry for this player)`,
+    /// read off the combat HISTORY, so it counts the whole fight and not the turn.
+    /// </summary>
+    public int CardsDrawnThisCombat;
+
+    /// <summary>
+    /// Shivs whose play has FINISHED this turn. Phantom Blades' bonus lands on the
+    /// first Shiv of the turn only — the power counts `CardPlayFinishedEntry` rows
+    /// tagged Shiv and pays nothing once any exist.
+    /// </summary>
+    public int ShivsPlayedThisTurn;
+
+    /// <summary>
+    /// Extra card-reward rows this combat has earned. The Hunt adds one for every
+    /// enemy its attack KILLS — `combatRoom.AddExtraReward(new CardReward(..., 3, ...))`.
+    /// Carried here rather than pushed straight at the run, exactly as a Heist's
+    /// `StolenBackGold` is, because a combat cannot reach the reward generator.
+    /// </summary>
+    public int ExtraCardRewards;
+
+    /// <summary>
+    /// The enemy an auto-play was given EXPLICITLY, or -1 when it has to pick its own.
+    /// </summary>
+    /// <remarks>
+    /// `CardCmd.AutoPlay` takes a target parameter. Almost everything that auto-plays
+    /// passes null and the card rolls `Rng.CombatTargets` for itself — but Knife Trap
+    /// hands each Shiv it replays the target the TRAP was aimed at, so those plays must
+    /// not roll at all. Rolling for them would hit the wrong creature and move the
+    /// stream for everything after it.
+    /// </remarks>
+    public int AutoPlayTargetIndex = -1;
     public int CardsPlayedSincePanacheProc;
     public int BlockGainsThisTurn;
     public int PlayerHpLostThisTurn;

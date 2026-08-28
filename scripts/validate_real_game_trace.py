@@ -54,7 +54,11 @@ LIVE_ENCOUNTER_BY_EMULATOR = {
     "chompers": "ChompersNormal",
     "nibbit": "NibbitsWeak",
     "slimes": "SlimesWeak",
-    "exoskeletons": "ExoskeletonsNormal",
+    # Id 4 is ExoskeletonsWeak (THREE) and 87 is ExoskeletonsNormal (four). This said
+    # Normal for id 4, so a sweep of it would have started a four-monster fight live
+    # against the emulator's three -- latent, because nothing had ever swept it.
+    "exoskeletons-weak": "ExoskeletonsWeak",
+    "exoskeletons-normal": "ExoskeletonsNormal",
     "inklets": "InkletsNormal",
     "two-tailed-rats": "TwoTailedRatsNormal",
     "gremlin-merc": "GremlinMercNormal",
@@ -137,6 +141,11 @@ LIVE_ENCOUNTER_BY_EMULATOR = {
     "kin": "TheKinBoss",
     "vantom": "VantomBoss",
     "waterfall-giant": "WaterfallGiantBoss",
+    # Hive. debug_start_encounter looks an encounter up by CLASS NAME, so it reaches
+    # act 2 exactly as it reaches act 1 -- these were simply never listed.
+    "kaiser-crab": "KaiserCrabBoss",
+    "knowledge-demon": "KnowledgeDemonBoss",
+    "insatiable": "TheInsatiableBoss",
     "architect": "TheArchitectEventEncounter",
 }
 
@@ -285,21 +294,12 @@ def live_enemy_intent(enemy: dict[str, Any]) -> tuple[int, int | None] | None:
     intents = enemy.get("intents") or []
     if not intents:
         return None
-    if (
-        enemy.get("name") == "Sludge Spinner"
-        and any(intent.get("type") == "Attack" for intent in intents)
-        and any(intent.get("type") == "Debuff" for intent in intents)
-    ):
-        attack = next(intent for intent in intents if intent.get("type") == "Attack")
-        return 3, live_intent_magnitude(attack)
-    if (
-        enemy.get("name") == "Living Fog"
-        and any(intent.get("type") == "Attack" for intent in intents)
-        and any(intent.get("type") == "CardDebuff" for intent in intents)
-    ):
-        attack = next(intent for intent in intents if intent.get("type") == "Attack")
-        return 3, live_intent_magnitude(attack)
-
+    # The Sludge Spinner and the Living Fog used to be special-cased here: when their
+    # readout carried both an Attack and a debuff, this returned Debuff with the
+    # ATTACK's magnitude. That was not read off the game -- the captures plainly show
+    # "Attack 8" first and the debuff second -- it was bent to agree with what the
+    # emulator did, which is the one thing a live fixture must never do. Both are
+    # attacks that also apply something, and the emulator now says so.
     intent = intents[0]
     intent_type = intent.get("type")
     intent_by_type = {

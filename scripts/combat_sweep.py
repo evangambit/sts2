@@ -224,6 +224,57 @@ def end_turn_action(live_state: dict[str, Any]) -> int:
     return len(hand)
 
 
+def answer_combat_screen(base_url: str) -> None:
+    """Answer a card-selection screen an ENEMY raised, LIVE only.
+
+    Some monsters stop the fight to ask the player something. The Knowledge Demon's
+    CURSE_OF_KNOWLEDGE is the first: two curses, and whichever is chosen applies its
+    power. A sweep that treats the screen as "combat ended" cannot capture that fight at
+    all, which is why the demon had no fixture while the other two Hive bosses did.
+
+    Always the FIRST candidate. The choice has to be deterministic and identical on both
+    sides or the two fights diverge by construction; which one it is does not matter to
+    the comparison, only that both make it.
+
+    **The emulator is answered elsewhere, and the order is the whole point.** The live
+    game ends its turn when `end_turn` is posted; the emulator ends its when `env.step`
+    is called, which is AFTER this wait returns. Answering the emulator here reaches it
+    while it is still in the player's turn with no screen open -- where `step(0)` means
+    "play card 0", so it quietly loses a card per screen and the demon's own selection is
+    then left unanswered, putting it a move behind for the rest of the fight.
+    """
+    trace_real_game.post_action(base_url, {"action": "select_card", "index": 0})
+
+    # Wait for the live screen to close, so the caller's next poll does not answer twice.
+    deadline = time.monotonic() + 10.0
+    while time.monotonic() < deadline:
+        if start_real_game_run.get_state(base_url).get("state_type") != "card_select":
+            return
+        time.sleep(0.25)
+
+
+def buff_both_players(base_url: str, env: Any, amount: int) -> list[str]:
+    """Raise max HP and heal by it on BOTH sides, before turn one.
+
+    A boss capture is worth what it survives. The Kaiser Crab kills a starter deck on
+    turn four -- two moves short of walking either half's table -- and a capture that
+    never reaches a move cannot put that move under test, so `coverage` fails and the
+    fixture is not committable. Buffing is not cheating here: the comparison is of what
+    each side DOES, and both sides get the same player.
+    """
+    notes: list[str] = []
+    result = trace_real_game.post_action(
+        base_url,
+        {"action": "debug_gain_max_hp", "amount": amount},
+    )
+    if result.get("status") != "ok":
+        notes.append(f"live refused the max-hp buff: {result}")
+        return notes
+
+    env.unwrapped.debug_gain_max_hp(amount)
+    return notes
+
+
 def add_cards_to_both_hands(base_url: str, env: Any, cards: list[str]) -> list[str]:
     """Put the same cards on top of both hands, live and emulated.
 
@@ -240,10 +291,15 @@ def add_cards_to_both_hands(base_url: str, env: Any, cards: list[str]) -> list[s
     # The game holds at most ten cards; asking for more silently drops the overflow and
     # the two sides stop agreeing about the hand.
     room = MAX_HAND_SIZE - len(
-        ((start_real_game_run.get_state(base_url).get("player") or {}).get("hand") or [])
+        (
+            (start_real_game_run.get_state(base_url).get("player") or {}).get("hand")
+            or []
+        )
     )
     if len(cards) > room:
-        notes.append(f"only {room} of {len(cards)} cards fit in the hand; the rest were skipped")
+        notes.append(
+            f"only {room} of {len(cards)} cards fit in the hand; the rest were skipped"
+        )
         cards = cards[:room]
 
     for card in cards:
@@ -252,12 +308,19 @@ def add_cards_to_both_hands(base_url: str, env: Any, cards: list[str]) -> list[s
         upgraded = flag.lower() in {"u", "upgraded", "+"}
         card_id = slugs.get(entry)
         if card_id is None:
-            notes.append(f"unknown card {entry}; the harness knows it by its model entry")
+            notes.append(
+                f"unknown card {entry}; the harness knows it by its model entry"
+            )
             continue
 
         result = trace_real_game.post_action(
             base_url,
-            {"action": "debug_add_card", "card": entry, "upgraded": upgraded, "pile": "hand"},
+            {
+                "action": "debug_add_card",
+                "card": entry,
+                "upgraded": upgraded,
+                "pile": "hand",
+            },
         )
         if result.get("status") != "ok":
             notes.append(f"live refused {entry}: {result}")
@@ -266,7 +329,9 @@ def add_cards_to_both_hands(base_url: str, env: Any, cards: list[str]) -> list[s
     return notes
 
 
-def wait_for_hand_to_reach(base_url: str, size: int, timeout: float = 20.0) -> dict[str, Any]:
+def wait_for_hand_to_reach(
+    base_url: str, size: int, timeout: float = 20.0
+) -> dict[str, Any]:
     """Wait for the live hand to grow to `size` — debug_add_card is fire-and-forget."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -311,7 +376,9 @@ def action_is_legal_for_emulator(env: Any, action: int) -> bool:
     return bool(action < len(mask) and mask[action])
 
 
-def wait_for_card_to_leave_hand(base_url: str, hand_size_before: int, timeout: float = 20.0):
+def wait_for_card_to_leave_hand(
+    base_url: str, hand_size_before: int, timeout: float = 20.0
+):
     """Wait until the live game has actually PLAYED the card that was just posted.
 
     Posting an action and reading the state straight back reads it before the game has
@@ -335,7 +402,9 @@ def wait_for_card_to_leave_hand(base_url: str, hand_size_before: int, timeout: f
 def apply_action(base_url: str, env: Any, live_state: dict[str, Any], action: int):
     """Send one integer action to both sides, and hand back the new live state."""
     hand_size = len((live_state.get("player") or {}).get("hand") or [])
-    trace_real_game.post_action(base_url, trace_real_game.action_payload_from_index(live_state, action))
+    trace_real_game.post_action(
+        base_url, trace_real_game.action_payload_from_index(live_state, action)
+    )
     _obs, _reward, terminated, truncated, _info = env.step(action)
     return wait_for_card_to_leave_hand(base_url, hand_size), terminated, truncated
 
@@ -378,7 +447,13 @@ def intents_agree(live: tuple[Any, Any], emu: tuple[Any, Any]) -> bool:
 @functools.cache
 def card_slug_to_id() -> dict[str, int]:
     """The game's ModelId.Entry for each card, mapped to our numeric id."""
-    text = (Path(__file__).parent.parent / "src" / "Sts2Emulator" / "Generated" / "Cards.g.cs").read_text()
+    text = (
+        Path(__file__).parent.parent
+        / "src"
+        / "Sts2Emulator"
+        / "Generated"
+        / "Cards.g.cs"
+    ).read_text()
     return {
         m.group(2): int(m.group(1))
         for m in re.finditer(r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text)
@@ -393,7 +468,9 @@ def hands_agree(live_player: dict[str, Any], emu_player: dict[str, Any]) -> bool
     starts from the slugified card name and not from any id of ours.
     """
     slugs = card_slug_to_id()
-    live = [slugs.get(c.get("id"), c.get("id")) for c in (live_player.get("hand") or [])]
+    live = [
+        slugs.get(c.get("id"), c.get("id")) for c in (live_player.get("hand") or [])
+    ]
     emu = [c.get("id") for c in (emu_player.get("hand") or [])]
     return live == emu
 
@@ -424,6 +501,14 @@ def wait_for_next_round(base_url: str, previous_round: int, timeout: float = 30.
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         state = start_real_game_run.get_state(base_url)
+        # A monster can stop its own turn to ask the player something, and the game will
+        # not reach a play phase until it is answered. There is no single moment to check
+        # for it -- the screen goes up partway through the enemy turn, after end_turn is
+        # posted and long before the round advances -- so the watching has to happen in
+        # the same poll that waits for the round.
+        if state.get("state_type") == "card_select":
+            answer_combat_screen(base_url)
+            continue
         if state.get("state_type") not in COMBAT_STATE_TYPES:
             return state
         battle = state.get("battle") or {}
@@ -439,6 +524,7 @@ def drive_turns(
     turns: int,
     play: bool = False,
     add_cards: list[str] | None = None,
+    buff_max_hp: int = 0,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """End turn on both sides in lockstep, comparing what the enemies announce.
 
@@ -453,6 +539,8 @@ def drive_turns(
     """
     rows: list[dict[str, Any]] = []
     notes: list[str] = []
+    if buff_max_hp:
+        notes += buff_both_players(base_url, env, buff_max_hp)
     if add_cards:
         opening = start_real_game_run.get_state(base_url)
         before = len(((opening.get("player") or {}).get("hand") or []))
@@ -507,13 +595,27 @@ def drive_turns(
         round_before = live_round(live_state)
         trace_real_game.post_action(base_url, {"action": "end_turn"})
         try:
-            start_real_game_run.wait_for_combat_ready(base_url, timeout=30.0)
+            # The ROUND wait first: it is the one that answers any screen the enemy turn
+            # raised, and `wait_for_combat_ready` asks for a combat state with a full
+            # hand -- which a curse screen is neither, so it would time out first.
             wait_for_next_round(base_url, round_before)
+            start_real_game_run.wait_for_combat_ready(base_url, timeout=30.0)
         except RuntimeError:
             notes.append(f"live combat did not return to play phase after turn {turn}")
             break
 
         _obs, _reward, terminated, truncated, _info = env.step(action)
+        # The emulator raises its own screen during ITS enemy turn, which is the step
+        # just taken -- so its answer belongs here, after it, and matches the live one.
+        # ASKED, not counted: a live poll can see one screen twice, and an extra step
+        # with nothing open means "play card 0" -- which cost the emulator a card and
+        # then left its own selection unanswered, putting the demon a move behind.
+        while env.unwrapped.pending_selection_kind():
+            env.step(0)
+            # RECORDED, so the offline replay steps exactly what the capture stepped
+            # rather than re-deriving when a screen was open. Re-deriving is what left
+            # the demon a move behind at the far end of its fight.
+            actions.append(0)
         live_summary = trace_real_game.summarize_state(
             start_real_game_run.get_state(base_url),
         )
@@ -565,9 +667,7 @@ def drive_turns(
                 "live_hand": [
                     card.get("id") for card in (live_player.get("hand") or [])
                 ],
-                "emu_hand": [
-                    card.get("id") for card in (emu_player.get("hand") or [])
-                ],
+                "emu_hand": [card.get("id") for card in (emu_player.get("hand") or [])],
             },
         )
         if terminated or truncated:
@@ -617,6 +717,7 @@ def capture_one(
     turns: int = 0,
     play: bool = False,
     add_cards: list[str] | None = None,
+    buff_max_hp: int = 0,
 ) -> dict[str, Any]:
     live_encounter = validate.LIVE_ENCOUNTER_BY_EMULATOR.get(encounter)
     if live_encounter is None:
@@ -648,7 +749,9 @@ def capture_one(
         obs, _info = env.reset()
         emu_summary = validate.emulator_trace.summarize_observation(obs)
         turn_rows, turn_notes = (
-            drive_turns(base_url, env, turns, play, add_cards) if turns else ([], [])
+            drive_turns(base_url, env, turns, play, add_cards, buff_max_hp)
+            if turns
+            else ([], [])
         )
     finally:
         env.close()
@@ -757,6 +860,16 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--buff-max-hp",
+        type=int,
+        default=0,
+        help=(
+            "raise the player's max HP (and heal by it) on BOTH sides before turn one. "
+            "A boss that kills a starter deck before its move table runs out leaves a "
+            "capture that cannot satisfy the coverage check"
+        ),
+    )
+    parser.add_argument(
         "--add-card",
         action="append",
         default=[],
@@ -807,6 +920,7 @@ def main() -> None:
                 turns=args.turns,
                 play=args.play,
                 add_cards=args.add_card,
+                buff_max_hp=args.buff_max_hp,
             )
         except Exception as exc:  # noqa: BLE001 - one bad job must not end the sweep
             print(f"  CAPTURE FAILED: {exc}", flush=True)
@@ -855,6 +969,10 @@ def main() -> None:
                     # the offline replay can put the same ones in the same slots; without
                     # them the fight it replays is a different fight.
                     "add_cards": list(args.add_card),
+                    # Max HP the capture granted before turn one, for the same reason:
+                    # a buffed player fights longer, and replaying the trace against an
+                    # unbuffed one replays a fight that ends early.
+                    "buff_max_hp": args.buff_max_hp,
                 },
                 # The turn-by-turn live readout, when turns were driven: enough to
                 # replay the fight offline and check every intent an enemy showed, not

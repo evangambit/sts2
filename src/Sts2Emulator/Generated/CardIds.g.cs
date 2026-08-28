@@ -281,4 +281,7 @@ public static class ST
     public const int Wound = 10011;
     public const int Wither = 10012;
     public const int SpoilsMap = 10020;
+    public const int MindRot = 10033;
+    public const int Sloth = 10038;
+    public const int WasteAway = 10041;
 }

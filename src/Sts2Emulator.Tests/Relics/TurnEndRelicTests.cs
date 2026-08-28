@@ -85,7 +85,10 @@ public class TurnEndRelicTests
     [Fact]
     public void StoneCalendarHitsEveryEnemyAtTheEndOfTheSeventhTurn()
     {
-        var fight = Fight.Hand().Enemy(hp: 100).Enemy(hp: 100);
+        // HP enough to survive seven turns of two dummies swinging for 18 apiece. The
+        // combat ENDS when the player dies, so a fight that has to reach turn seven has
+        // to be survivable to get there -- this used to run on past a dead player.
+        var fight = Fight.Hand().PlayerHp(999, 999).Enemy(hp: 100).Enemy(hp: 100);
         fight.State.Relics.Add(new RelicInstance(RelicEffects.StoneCalendar));
 
         for (int turn = 0; turn < 6; turn++)

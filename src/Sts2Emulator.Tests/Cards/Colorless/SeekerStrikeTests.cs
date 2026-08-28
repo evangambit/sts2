@@ -9,9 +9,10 @@ namespace Sts2Emulator.Tests;
 // DamageVar(9m), then CardsVar(3) draw-pile cards are offered and the chosen one goes to
 // hand; OnUpgrade raises the damage by 3.
 //
-// The choice is real: the card raises a selection over the Attacks in the draw pile. The
-// game samples three shuffled cards to offer; the emulator offers every Attack, which is
-// the remaining difference.
+// The choice is real, and it is over a SAMPLE: the game shuffles the draw pile and offers
+// the first CardsVar(3), whatever their type. Offering every Attack instead was both the
+// wrong set and the wrong size -- a pile of four attacks offered four, and a pile of
+// three skills offered nothing.
 public class SeekerStrikeTests
 {
     [Fact]
@@ -39,25 +40,47 @@ public class SeekerStrikeTests
     }
 
     [Fact]
-    public void OffersTheAttacksAndTakesTheChosenOne()
+    public void OffersThreeDrawPileCardsAndTakesTheChosenOne()
     {
         var fight = Fight
             .Hand(Card(CL.SeekerStrike))
             .Energy(1)
-            .Draw(Card(IC.DefendIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .Draw(
+                Card(IC.DefendIronclad),
+                Card(IC.Bash),
+                Card(IC.StrikeIronclad),
+                Card(IC.StrikeIronclad)
+            )
             .Enemy(hp: 60);
         fight.Play();
 
-        // The Defend is not on offer; candidate 1 is the Strike behind the Bash.
-        Assert.Equal(2, fight.Pending?.Candidates.Count);
+        Assert.Equal(3, fight.Pending?.Candidates.Count);
         fight.Choose(1);
 
-        Assert.Equal([IC.StrikeIronclad], Fight.Ids(fight.State.Hand));
-        Assert.Equal([IC.DefendIronclad, IC.Bash], Fight.Ids(fight.State.DrawPile));
+        Assert.Equal([IC.Bash], Fight.Ids(fight.State.Hand));
+        Assert.DoesNotContain(IC.Bash, Fight.Ids(fight.State.DrawPile));
+    }
+
+    /// <summary>
+    /// Type does not narrow the offer: a draw pile of Skills still puts three in front of
+    /// the player.
+    /// </summary>
+    [Fact]
+    public void OffersSkillsToo()
+    {
+        var fight = Fight
+            .Hand(Card(CL.SeekerStrike))
+            .Energy(1)
+            .Draw(Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad))
+            .Enemy(hp: 60);
+
+        fight.Play();
+
+        Assert.Equal(3, fight.Pending?.Candidates.Count);
     }
 
     [Fact]
-    public void AsksNothingWhenTheDrawPileHasNoAttack()
+    public void OffersWhatItCanFromAShortPile()
     {
         var fight = Fight
             .Hand(Card(CL.SeekerStrike))
@@ -67,8 +90,16 @@ public class SeekerStrikeTests
 
         fight.Play();
 
+        Assert.Equal(1, fight.Pending?.Candidates.Count);
+    }
+
+    [Fact]
+    public void AsksNothingWithAnEmptyDrawPile()
+    {
+        var fight = Fight.Hand(Card(CL.SeekerStrike)).Energy(1).Draw().Enemy(hp: 60);
+
+        fight.Play();
+
         Assert.Null(fight.Pending);
-        Assert.Empty(fight.State.Hand);
-        Assert.Equal([IC.DefendIronclad], Fight.Ids(fight.State.DrawPile));
     }
 }

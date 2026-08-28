@@ -24,8 +24,17 @@ PHASE_COMBAT = run_env.PHASE_COMBAT
 PHASE_MAP = run_env.PHASE_MAP
 PHASE_RELIC_REWARD = run_env.PHASE_RELIC_REWARD
 
-HAND_ID_INDICES = range(8, 28, 2)
-ENEMY_INTENT_INDICES = (47, 87, 127)
+# Read from the emulator rather than restated: these were the literals 8, 28, 2 and
+# (47, 87, 127), which silently pointed at the wrong fields the moment a card slot grew.
+HAND_ID_INDICES = range(
+    native.OBS_HAND_OFFSET,
+    native.OBS_HAND_OFFSET + native.OBS_MAX_HAND * native.OBS_CARD_SLOT_SIZE,
+    native.OBS_CARD_SLOT_SIZE,
+)
+ENEMY_INTENT_INDICES = tuple(
+    native.OBS_ENEMY_OFFSET + i * native.OBS_ENEMY_SLOT_SIZE + 3
+    for i in range(native.MAX_ENEMIES)
+)
 ASCENDERS_BANE_OBS_ID = 10001
 
 
@@ -41,8 +50,20 @@ class Sts2GymTests(unittest.TestCase):
 
             self.assertEqual(native.run_reset(handle, "0", obs), 0)
             self.assertEqual(native.run_phase(handle), PHASE_ANCIENT)
-            self.assertEqual(native.RUN_OBS_SIZE, native.OBS_SIZE + 35)
-            self.assertEqual(native.RUN_MAX_ACTIONS, 32)
+            # 35 scalars, then the deck and the relics card by card and relic by relic.
+            layout = native.RUN_OBS_LAYOUT
+            self.assertEqual(
+                native.RUN_OBS_SIZE,
+                native.OBS_SIZE
+                + layout["scalars"]
+                + layout["max_deck"] * layout["deck_slot_size"]
+                + layout["max_relics"] * layout["relic_slot_size"]
+                + layout["shop_slots"] * layout["shop_slot_size"],
+            )
+            self.assertEqual(layout["deck_offset"], layout["scalars"])
+            # Wide enough for the Crystal Sphere's board -- 121 cells, either tool --
+            # which is what pushed this past the 32 a shop needed.
+            self.assertEqual(native.RUN_MAX_ACTIONS, 256)
             self.assertEqual(native.RUN_INFO_SIZE, 11)
 
             run_offset = native.OBS_SIZE
@@ -431,17 +452,24 @@ class Sts2GymTests(unittest.TestCase):
         # Seed 3, not 0: this test is about the replay coalescing live reward
         # substeps, and seed 0 now opens on Kaleidoscope, whose TWO card rewards would
         # change the phase sequence for a reason unrelated to coalescing. Seed 3 offers
-        # Lost Coffer, which grants exactly one.
+        # Lost Coffer, which puts its card reward and its potion on ONE rewards screen --
+        # RewardsCmd.OfferCustom, the same shape the reference trace above records.
         result = replay_full_run_trace.replay_trace(payload, emulator_seed=3)
 
         self.assertIsNone(result.unsupported_action)
+        # One output per reference step, so this is the emulator's own sequence over the
+        # five the reference drives. It used to end "map, monster" and now ends "event,
+        # map": Neow stays on screen for one more Proceed once its rewards are answered,
+        # whether they were claimed or DECLINED, and the skip path used to return straight
+        # to the map from underneath that check (catalogue E53). The run is one step
+        # further back at every point after the rewards screen, which is the fix.
         self.assertEqual(
             [
                 "event",
-                "card_reward",
-                "card_reward",
+                "rewards",
+                "rewards",
+                "event",
                 "map",
-                "monster",
             ],
             [step["summary"]["state_type"] for step in result.payload["trace"]],
         )
@@ -507,6 +535,112 @@ class CommittedRunTraceTests(unittest.TestCase):
         )
 
         self.assertEqual(divergences, [])
+
+
+class RunDeckObservationTests(unittest.TestCase):
+    """The deck and relic block of the run observation, read back through the env.
+
+    The observation is the only thing the agent sees, so every non-combat decision -- card
+    reward, shop, rest upgrade, transform -- turns on this block being there and being
+    readable against the action mask.
+    """
+
+    def test_info_reports_the_deck_the_run_is_actually_holding(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            _, info = env.reset()
+            self.assertEqual(len(info["deck"]), info["deck_size"])
+            self.assertTrue(all(card["card_id"] > 0 for card in info["deck"]))
+        finally:
+            env.close()
+
+    def test_the_deck_block_sits_where_the_layout_says(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            obs, info = env.reset()
+            layout = native.RUN_OBS_LAYOUT
+            base = native.OBS_SIZE + layout["deck_offset"]
+            for i, card in enumerate(info["deck"]):
+                at = base + i * layout["deck_slot_size"]
+                self.assertEqual(int(obs[at]), card["card_id"])
+            # The slot after the deck is empty, so a reader can stop at the first zero.
+            self.assertEqual(
+                int(obs[base + len(info["deck"]) * layout["deck_slot_size"]]),
+                0,
+            )
+        finally:
+            env.close()
+
+    def test_the_relic_block_carries_what_the_run_is_wearing(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            _, info = env.reset()
+            self.assertEqual(
+                [relic["relic_id"] for relic in info["relic_slots"]],
+                [relic for relic in info["relics"] if relic != 0],
+            )
+        finally:
+            env.close()
+
+    def test_the_deck_block_follows_the_deck_as_it_grows(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            env.reset()
+            before = env._info()["deck"]
+            # Play until a card reward is answered, which is the first thing that can move
+            # the deck; stop either way rather than looping the whole run.
+            for _ in range(400):
+                legal = np.flatnonzero(env.action_masks())
+                if legal.size == 0:
+                    break
+                _, _, terminated, truncated, info = env.step(int(legal[0]))
+                if len(info["deck"]) != len(before) or terminated or truncated:
+                    break
+
+            info = env._info()
+            self.assertEqual(len(info["deck"]), info["deck_size"])
+        finally:
+            env.close()
+
+
+class RunShopObservationTests(unittest.TestCase):
+    """The shop block: every slot a merchant sells, priced, in action order.
+
+    What the block *means* is checked on the C# side, where a shop can be opened outright;
+    a greedy walk from reset dies in the first fight long before it reaches a merchant.
+    What is checked here is the decoder -- that ``info["shop_slots"]`` reads exactly the
+    numbers the observation holds at the offsets the native layout reports, which is where
+    a hard-coded offset would drift.
+    """
+
+    def test_the_decoder_reads_the_block_the_layout_points_at(self):
+        env = sts2_gym.Sts2RunEnv(seed="ABCDEF")
+        try:
+            obs, info = env.reset()
+            layout = native.RUN_OBS_LAYOUT
+            base = native.OBS_SIZE + layout["shop_offset"]
+            width = layout["shop_slot_size"]
+            slots = info["shop_slots"]
+
+            self.assertEqual(len(slots), layout["shop_slots"])
+            self.assertEqual(
+                [slot["action"] for slot in slots],
+                list(range(len(slots))),
+            )
+            for i, slot in enumerate(slots):
+                self.assertEqual(slot["item_id"], int(obs[base + i * width]))
+                self.assertEqual(slot["cost"], int(obs[base + i * width + 1]))
+        finally:
+            env.close()
+
+    def test_the_shop_block_is_the_last_thing_in_the_observation(self):
+        layout = native.RUN_OBS_LAYOUT
+        end = (
+            native.OBS_SIZE
+            + layout["shop_offset"]
+            + layout["shop_slots"] * layout["shop_slot_size"]
+        )
+        self.assertEqual(end, native.RUN_OBS_SIZE)
 
 
 class RunEnvCloneTests(unittest.TestCase):

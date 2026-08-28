@@ -396,8 +396,11 @@ public class RunEngineTests
             RunConstants.NodeElite,
             RunConstants.NodeRest,
             RunConstants.NodeShop,
+            RunConstants.NodeEvent,
+            RunConstants.NodeRelic,
+            RunConstants.NodeBoss,
         ];
-        engine.State.MapChoices = [201, 202, 203, 204];
+        engine.State.MapChoices = [201, 202, 203, 204, 205, 206, 207];
         engine.State.ShopCards = [301, 302, 303, 304, 305, 306, 307];
         engine.State.RelicReward = 401;
         engine.State.EventId = RunConstants.EventBrainLeech;
@@ -428,27 +431,64 @@ public class RunEngineTests
                 RunConstants.NodeElite,
                 RunConstants.NodeRest,
                 RunConstants.NodeShop,
+                RunConstants.NodeEvent,
+                RunConstants.NodeRelic,
+                RunConstants.NodeBoss,
                 201,
                 202,
                 203,
                 204,
-                301,
-                302,
-                303,
+                205,
+                206,
+                207,
                 401,
                 RunConstants.EventBrainLeech,
                 501,
                 502,
                 503,
-                601,
-                602,
-                603,
-                701,
-                702,
-                703,
-                175,
             },
-            obs[offset..(offset + RunConstants.RunExtraObsSize)]
+            obs[offset..(offset + RunConstants.RunScalarObsSize)]
+        );
+
+        // The deck and the relics follow the scalars, in the order the run holds them.
+        int deck = offset + RunConstants.DeckObsOffset;
+        Assert.Equal(
+            new[] { 1, 0, 2, 0, 3, 1 },
+            new[]
+            {
+                obs[deck],
+                obs[deck + 1],
+                obs[deck + RunConstants.DeckSlotSize],
+                obs[deck + RunConstants.DeckSlotSize + 1],
+                obs[deck + 2 * RunConstants.DeckSlotSize],
+                obs[deck + 2 * RunConstants.DeckSlotSize + 1],
+            }
+        );
+
+        int relics = offset + RunConstants.RelicObsOffset;
+        Assert.Equal(
+            new[] { 10, 20, 0 },
+            new[]
+            {
+                obs[relics],
+                obs[relics + RunConstants.RelicSlotSize],
+                obs[relics + 2 * RunConstants.RelicSlotSize],
+            }
+        );
+
+        // The shop's slots are indexed by the action that buys them: seven cards, three
+        // relics, three potions, then the removal service, each with its price.
+        int shop = offset + RunConstants.ShopObsOffset;
+        Assert.Equal(
+            new[] { 301, 302, 303, 304, 305, 306, 307, 601, 602, 603, 701, 702, 703, 0 },
+            Enumerable
+                .Range(0, RunConstants.ShopSlots)
+                .Select(i => obs[shop + i * RunConstants.ShopSlotSize])
+                .ToArray()
+        );
+        Assert.Equal(
+            175,
+            obs[shop + RunConstants.ShopRemoveAction * RunConstants.ShopSlotSize + 1]
         );
     }
 
@@ -605,7 +645,7 @@ public class RunEngineTests
         Assert.Equal(54, obs[offset + 5]);
         Assert.Equal(80, obs[offset + 6]);
         Assert.Equal(108, obs[offset + 4]);
-        Assert.Equal(1, obs[offset + 25]);
+        Assert.Equal(1, obs[offset + RunConstants.PotionObsOffset]);
         Assert.Equal(54, info[5]);
         Assert.Equal(80, info[6]);
         Assert.Equal(108, info[4]);
@@ -629,6 +669,9 @@ public class RunEngineTests
             RunConstants.NodeNormal,
             RunConstants.NodeNone,
             RunConstants.NodeEvent,
+            RunConstants.NodeNone,
+            RunConstants.NodeNone,
+            RunConstants.NodeNone,
             RunConstants.NodeNone,
         ];
         engine.WriteActionMask(mask);
@@ -947,6 +990,12 @@ public class RunEngineTests
         engine.State.Phase = RunPhase.RelicReward;
         engine.State.CurrentNodeType = RunConstants.NodeRelic;
         engine.State.RelicReward = RunConstants.RelicMeatOnTheBone;
+        // A relic node is floors past Neow, so Neow is not still waiting on a Proceed.
+        // The step above took a blessing and left the flag set; leaving it set here builds
+        // a state no run reaches, and the screen would correctly go back to the ancient
+        // rather than to the map (which is what Small Capsule's skippable relic offer
+        // needs it to do).
+        engine.State.NeowAwaitingProceed = false;
 
         int status = engine.Step(0, -1, out _, out bool terminal, out _);
 
@@ -1149,7 +1198,20 @@ public class RunEngineTests
         Assert.Equal(25, engine.State.PlayerHp);
         Assert.All(engine.State.RewardCards, cardId => Assert.NotEqual(0, cardId));
         Assert.True(engine.State.RewardCardPending);
-        Assert.Equal(rewardsCallsBefore, engine.State.PlayerRng.Rewards.CallCount);
+
+        // The reward is ROLLED from the colourless pool, so it costs draws off the
+        // rewards stream -- CardFactory.CreateForReward rolls a rarity and then a card
+        // for each of the three. This used to assert that nothing was drawn, which was
+        // true only because three card ids were hard-written here and the same three came
+        // out of every seed.
+        Assert.True(
+            engine.State.PlayerRng.Rewards.CallCount > rewardsCallsBefore,
+            "a rolled card reward has to cost draws"
+        );
+        Assert.All(
+            engine.State.RewardCards,
+            cardId => Assert.Contains(cardId, GeneratedData.CardPools.Colorless.ToArray())
+        );
     }
 
     [Fact]
@@ -1168,16 +1230,20 @@ public class RunEngineTests
         Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
         Assert.Contains(engine.State.Relics, relic => relic.DefId == RunConstants.RelicNewLeaf);
 
-        status = engine.Step(0, -1, out _, out terminal, out _);
-        Assert.Equal(0, status);
-        Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
-
+        // The selection is answered directly. It used to take one step more than this --
+        // the older TransformSelectedDeckIndex path spent a step arriving at a screen it
+        // had already opened -- and a live capture (`N11HWGCNUN`) is back at the ancient
+        // with the card transformed on the step this one selects (catalogue E50).
         status = engine.Step(selectedDeckIndex, -1, out _, out terminal, out _);
 
         Assert.Equal(0, status);
         Assert.False(terminal);
-        Assert.Equal(RunPhase.Map, engine.State.Phase);
         Assert.NotEqual(originalCard, engine.State.Deck[selectedDeckIndex].DefId);
+
+        // And a selection Neow opened returns to Neow, which stays up for one Proceed.
+        Assert.Equal(RunPhase.Ancient, engine.State.Phase);
+        engine.Step(0, -1, out _, out terminal, out _);
+        Assert.Equal(RunPhase.Map, engine.State.Phase);
     }
 
     [Fact]
@@ -1191,11 +1257,43 @@ public class RunEngineTests
 
         Assert.Equal(0, status);
         Assert.False(terminal);
-        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
+        // AfterObtained is a RewardsCmd.OfferCustom of two rewards, so both sit on a
+        // SCREEN to be claimed -- it does not hand the card reward straight over.
+        Assert.Equal(RunPhase.RelicReward, engine.State.Phase);
         Assert.Contains(engine.State.Relics, relic => relic.DefId == RunConstants.RelicLostCoffer);
-        Assert.All(engine.State.RewardCards, cardId => Assert.NotEqual(0, cardId));
+        Assert.True(engine.State.RewardCardPending);
+        Assert.NotEqual(0, engine.State.RewardPotion);
+        // The potion is not in a slot until it is claimed.
+        Assert.All(engine.State.PotionSlots, potionId => Assert.Equal(0, potionId));
+        // PotionReward.Populate only draws a potion; the odds belong to RewardsSet, which
+        // is the combat path that ROLLS whether to offer one. A guaranteed potion leaves
+        // them alone.
+        Assert.Equal(0.4, engine.State.PotionRewardOdds, precision: 6);
+    }
+
+    /// <summary>
+    /// Claiming both rewards off the coffer's screen: the potion goes to a slot, the card
+    /// reward opens, and picking a card lands back on Neow's finished page rather than on
+    /// an empty rewards screen.
+    /// </summary>
+    [Fact]
+    public void AncientLostCoffer_ClaimsBothRewardsThenReturnsToNeow()
+    {
+        var engine = new RunEngine();
+        engine.Reset("0");
+        engine.State.NeowOptions = [RunConstants.RelicLostCoffer, 0, 0];
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        // The potion first, then the card reward.
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
         Assert.Contains(engine.State.PotionSlots, potionId => potionId != 0);
-        Assert.Equal(0.3, engine.State.PotionRewardOdds, precision: 6);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+        Assert.Equal(RunPhase.CardReward, engine.State.Phase);
+        Assert.All(engine.State.RewardCards, cardId => Assert.NotEqual(0, cardId));
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+        Assert.Equal(RunPhase.Ancient, engine.State.Phase);
     }
 
     [Fact]
@@ -1224,11 +1322,31 @@ public class RunEngineTests
         Assert.Equal(0, status);
         Assert.Equal(RunPhase.TransformSelect, cage.State.Phase);
 
+        // Confirming the pickup opens the removal screen and takes nothing yet: the cage
+        // removes TWO cards and the PLAYER picks both. It used to take them itself, by a
+        // preference order the emulator invented, which is the whole of the relic.
+        status = cage.Step(0, -1, out _, out terminal, out _);
+        Assert.Equal(0, status);
+        Assert.Equal(RunPhase.TransformSelect, cage.State.Phase);
+        Assert.Equal(deckSize, cage.State.Deck.Count);
+
+        // The screen stays up for the second pick.
+        status = cage.Step(0, -1, out _, out terminal, out _);
+        Assert.Equal(0, status);
+        Assert.Equal(RunPhase.TransformSelect, cage.State.Phase);
+        Assert.Equal(deckSize - 1, cage.State.Deck.Count);
+
+        status = cage.Step(0, -1, out _, out terminal, out _);
+        Assert.Equal(0, status);
+        Assert.False(terminal);
+        Assert.Equal(deckSize - 2, cage.State.Deck.Count);
+
+        // Taken from Neow, so it goes back to Neow -- which stays up for one Proceed.
+        Assert.Equal(RunPhase.Ancient, cage.State.Phase);
         status = cage.Step(0, -1, out _, out terminal, out _);
         Assert.Equal(0, status);
         Assert.False(terminal);
         Assert.Equal(RunPhase.Map, cage.State.Phase);
-        Assert.Equal(deckSize - 2, cage.State.Deck.Count);
     }
 
     private static void AssertMask(int[] mask, params int[] enabledActions)

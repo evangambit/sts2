@@ -58,7 +58,10 @@ public class LivingFogTests
 
         Assert.Equal(
             [
-                (IntentType.Debuff, 8),
+                // ADVANCED_GAS_MOVE declares SingleAttackIntent first and
+                // CardDebuffIntent second, and a live capture reads it as an Attack --
+                // it is an attack that also applies Smoggy, not a debuff carrying damage.
+                (IntentType.Attack, 8),
                 (IntentType.Attack, 5),
                 (IntentType.Attack, 8),
                 (IntentType.Attack, 5),
@@ -81,7 +84,7 @@ public class LivingFogTests
         }
 
         Assert.Equal(
-            [(IntentType.Debuff, 9), (IntentType.Attack, 6), (IntentType.Attack, 9)],
+            [(IntentType.Attack, 9), (IntentType.Attack, 6), (IntentType.Attack, 9)],
             announced
         );
     }

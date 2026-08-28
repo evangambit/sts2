@@ -11,8 +11,8 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 18
-_REQUIRED_RUN_NATIVE_API_VERSION = 11
+_REQUIRED_NATIVE_API_VERSION = 22
+_REQUIRED_RUN_NATIVE_API_VERSION = 16
 
 
 def _repo_root() -> Path:
@@ -129,6 +129,45 @@ _lib.Sts2_ObsSize.argtypes = []
 _lib.Sts2_MaxEnemies.restype = ctypes.c_int
 _lib.Sts2_MaxEnemies.argtypes = []
 
+_lib.Sts2_ObsCardSlotSize.restype = ctypes.c_int
+_lib.Sts2_ObsCardSlotSize.argtypes = []
+
+_lib.Sts2_ObsHandOffset.restype = ctypes.c_int
+_lib.Sts2_ObsHandOffset.argtypes = []
+
+_lib.Sts2_ObsMaxHand.restype = ctypes.c_int
+_lib.Sts2_ObsMaxHand.argtypes = []
+
+_lib.Sts2_ObsPlayerBuffOffset.restype = ctypes.c_int
+_lib.Sts2_ObsPlayerBuffOffset.argtypes = []
+
+_lib.Sts2_ObsMaxPlayerBuffs.restype = ctypes.c_int
+_lib.Sts2_ObsMaxPlayerBuffs.argtypes = []
+
+_lib.Sts2_ObsMaxEnemyBuffs.restype = ctypes.c_int
+_lib.Sts2_ObsMaxEnemyBuffs.argtypes = []
+
+_lib.Sts2_ObsEnemyOffset.restype = ctypes.c_int
+_lib.Sts2_ObsEnemyOffset.argtypes = []
+
+_lib.Sts2_ObsEnemySlotSize.restype = ctypes.c_int
+_lib.Sts2_ObsEnemySlotSize.argtypes = []
+
+_lib.Sts2_ObsSecondaryIntentOffset.restype = ctypes.c_int
+_lib.Sts2_ObsSecondaryIntentOffset.argtypes = []
+
+_lib.Sts2_ObsOrbCapacityOffset.restype = ctypes.c_int
+_lib.Sts2_ObsOrbCapacityOffset.argtypes = []
+
+_lib.Sts2_ObsOrbOffset.restype = ctypes.c_int
+_lib.Sts2_ObsOrbOffset.argtypes = []
+
+_lib.Sts2_ObsMaxOrbs.restype = ctypes.c_int
+_lib.Sts2_ObsMaxOrbs.argtypes = []
+
+_lib.Sts2_ObsOrbSlotSize.restype = ctypes.c_int
+_lib.Sts2_ObsOrbSlotSize.argtypes = []
+
 _lib.Sts2_Create.restype = ctypes.c_int
 _lib.Sts2_Create.argtypes = [ctypes.c_int]
 
@@ -163,6 +202,16 @@ _lib.Sts2_ResetEncounterAtFloor.argtypes = [
 _lib.Sts2_DebugAddCardToHand.restype = None
 _lib.Sts2_DebugAddCardToHand.argtypes = [
     ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
+
+_lib.Sts2_PendingSelectionKind.restype = ctypes.c_int
+_lib.Sts2_PendingSelectionKind.argtypes = [ctypes.c_int]
+
+_lib.Sts2_DebugGainMaxHp.restype = None
+_lib.Sts2_DebugGainMaxHp.argtypes = [
     ctypes.c_int,
     ctypes.c_int,
     ctypes.POINTER(ctypes.c_int),
@@ -208,6 +257,32 @@ _lib.Sts2_ResetWithDeckEncounterAndRelics.argtypes = [
     ctypes.c_int,
     ctypes.POINTER(ctypes.c_int),
 ]
+
+_lib.Sts2_ResetArena.restype = None
+_lib.Sts2_ResetArena.argtypes = [
+    ctypes.c_int,  # handle
+    ctypes.POINTER(ctypes.c_int),  # deck ids
+    ctypes.c_int,  # deck len
+    ctypes.POINTER(ctypes.c_int),  # enchantment ids, parallel to the deck
+    ctypes.c_int,  # enchantment len
+    ctypes.POINTER(ctypes.c_int),  # enchantment amounts, parallel to the deck
+    ctypes.c_int,  # enchantment amount len
+    ctypes.c_int,  # encounter id (-1 = roll it)
+    ctypes.POINTER(ctypes.c_int),  # relic ids
+    ctypes.c_int,  # relic len
+    ctypes.POINTER(ctypes.c_int),  # potion ids
+    ctypes.c_int,  # potion len
+    ctypes.c_int,  # player hp
+    ctypes.c_int,  # player max hp
+    ctypes.c_int,  # player gold
+    ctypes.c_int,  # ascension
+    ctypes.c_int,  # total floor
+    ctypes.c_int,  # completed combat rooms
+    ctypes.POINTER(ctypes.c_int),  # obs
+]
+
+_lib.Sts2_CanEnchant.restype = ctypes.c_int
+_lib.Sts2_CanEnchant.argtypes = [ctypes.c_int, ctypes.c_int]
 
 _lib.Sts2_Step.restype = ctypes.c_int
 _lib.Sts2_Step.argtypes = [
@@ -261,6 +336,9 @@ _lib.Sts2Run_MaxActions.argtypes = []
 
 _lib.Sts2Run_InfoSize.restype = ctypes.c_int
 _lib.Sts2Run_InfoSize.argtypes = []
+
+_lib.Sts2Run_ObsLayout.restype = ctypes.c_int
+_lib.Sts2Run_ObsLayout.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
 
 _lib.Sts2Run_Create.restype = ctypes.c_int
 _lib.Sts2Run_Create.argtypes = []
@@ -330,6 +408,27 @@ _lib.Sts2Run_GetStateList.argtypes = [
     ctypes.c_int,
 ]
 
+_lib.Sts2Run_DebugSetHp.restype = ctypes.c_int
+_lib.Sts2Run_DebugSetHp.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
+
+_lib.Sts2Run_DebugGainMaxHp.restype = ctypes.c_int
+_lib.Sts2Run_DebugGainMaxHp.argtypes = [
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+]
+
+_lib.Sts2Run_DebugEnterNextAct.restype = ctypes.c_int
+_lib.Sts2Run_DebugEnterNextAct.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_int)]
+
+_lib.Sts2Run_DebugUpgradeDeck.restype = ctypes.c_int
+_lib.Sts2Run_DebugUpgradeDeck.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_int)]
+
 _lib.Sts2Run_GetPhase.restype = ctypes.c_int
 _lib.Sts2Run_GetPhase.argtypes = [ctypes.c_int]
 
@@ -352,9 +451,73 @@ _lib.Sts2Run_Destroy.argtypes = [ctypes.c_int]
 
 OBS_SIZE: int = _lib.Sts2_ObsSize()
 MAX_ENEMIES: int = _lib.Sts2_MaxEnemies()
+
+# The combat observation's layout, read from the emulator rather than restated here.
+# These used to be magic numbers in scripts/trace.py, which went silently wrong the
+# moment a card slot grew from two fields to four: it decoded zero enemies and 77 live
+# fixture tests failed at once, none of them about the observation.
+OBS_CARD_SLOT_SIZE: int = _lib.Sts2_ObsCardSlotSize()
+OBS_HAND_OFFSET: int = _lib.Sts2_ObsHandOffset()
+OBS_MAX_HAND: int = _lib.Sts2_ObsMaxHand()
+OBS_PLAYER_BUFF_OFFSET: int = _lib.Sts2_ObsPlayerBuffOffset()
+OBS_MAX_PLAYER_BUFFS: int = _lib.Sts2_ObsMaxPlayerBuffs()
+OBS_MAX_ENEMY_BUFFS: int = _lib.Sts2_ObsMaxEnemyBuffs()
+OBS_ENEMY_OFFSET: int = _lib.Sts2_ObsEnemyOffset()
+OBS_ENEMY_SLOT_SIZE: int = _lib.Sts2_ObsEnemySlotSize()
+OBS_SECONDARY_INTENT_OFFSET: int = _lib.Sts2_ObsSecondaryIntentOffset()
+
+# Defect's orb ring. Each slot is (type + 1, passive value, evoke value), with 0 in the
+# first field for an empty slot -- Lightning is type 0, so a raw type could not be told
+# from an empty one. The two values are what the orb is WORTH right now, Focus already in
+# them, because a Dark orb's evoke is whatever it has banked and a Glass orb's is whatever
+# it has left; neither is derivable from the type.
+OBS_ORB_CAPACITY_OFFSET: int = _lib.Sts2_ObsOrbCapacityOffset()
+OBS_ORB_OFFSET: int = _lib.Sts2_ObsOrbOffset()
+OBS_MAX_ORBS: int = _lib.Sts2_ObsMaxOrbs()
+OBS_ORB_SLOT_SIZE: int = _lib.Sts2_ObsOrbSlotSize()
 RUN_OBS_SIZE: int = _lib.Sts2Run_ObsSize()
 RUN_MAX_ACTIONS: int = _lib.Sts2Run_MaxActions()
 RUN_INFO_SIZE: int = _lib.Sts2Run_InfoSize()
+
+
+def _run_obs_layout() -> dict[str, int]:
+    """Where the run observation's deck and relic blocks sit, read from the native side.
+
+    Hard-coding these on this side is how the run observation and its readers drifted
+    apart before: the offsets move whenever a block grows, and a stale number reads the
+    wrong column rather than failing.
+
+    Raises:
+        RuntimeError: if the native library reports a layout this build cannot read.
+
+    """
+    size = 13
+    buf = (ctypes.c_int * size)()
+    written = int(_lib.Sts2Run_ObsLayout(buf, size))
+    if written != size:
+        raise RuntimeError(
+            f"Sts2Run_ObsLayout wrote {written} numbers, expected {size}. "
+            "Rebuild the native library.",
+        )
+    keys = (
+        "scalars",
+        "deck_offset",
+        "max_deck",
+        "deck_slot_size",
+        "relic_offset",
+        "max_relics",
+        "relic_slot_size",
+        "shop_offset",
+        "shop_slots",
+        "shop_slot_size",
+        "map_choices",
+        "map_node_type_offset",
+        "map_choice_offset",
+    )
+    return dict(zip(keys, (int(value) for value in buf), strict=True))
+
+
+RUN_OBS_LAYOUT: dict[str, int] = _run_obs_layout()
 
 
 def create(seed: int) -> int:
@@ -423,6 +586,16 @@ def debug_add_card_to_hand(
     _lib.Sts2_DebugAddCardToHand(handle, card_id, 1 if upgraded else 0, obs_buf)
 
 
+def pending_selection_kind(handle: int) -> int:
+    """Report the kind of card selection the combat is waiting on, or 0 for none."""
+    return int(_lib.Sts2_PendingSelectionKind(handle))
+
+
+def debug_gain_max_hp(handle: int, amount: int, obs_buf: ctypes.Array) -> None:
+    """Raise max HP and heal by it, mirroring the mod's debug_gain_max_hp."""
+    _lib.Sts2_DebugGainMaxHp(handle, amount, obs_buf)
+
+
 def reset_encounter_with_extra_cards(
     handle: int,
     extra_card_ids: list[int],
@@ -447,6 +620,82 @@ def reset_encounter_with_extra_cards(
         completed_combat_rooms,
         total_floor,
         ascension,
+        obs_buf,
+    )
+
+
+def can_enchant(card_id: int, enchantment: int) -> bool:
+    """Whether the enchantment may legally be applied to the card.
+
+    ``reset_arena`` applies whatever it is handed without filtering, so this is the only
+    thing standing between a sampler and an illegal position. Asked of the engine rather
+    than restated here: the rule changes whenever an enchantment is added.
+    """
+    return bool(_lib.Sts2_CanEnchant(card_id, enchantment))
+
+
+def reset_arena(
+    handle: int,
+    deck_ids: list[int],
+    obs_buf: ctypes.Array,
+    enchantments: list[tuple[int, int]] | None = None,
+    encounter_id: int = -1,
+    relic_ids: list[int] | None = None,
+    potion_ids: list[int] | None = None,
+    player_hp: int = 64,
+    player_max_hp: int = 80,
+    player_gold: int = 0,
+    ascension: int = 8,
+    total_floor: int = 0,
+    completed_combat_rooms: int = -1,
+) -> None:
+    """Start a combat from an arbitrary run position.
+
+    Every other reset here starts from the fixed starter deck at full HP with no
+    relics, which is one point in the space a deck-conditioned value function has to
+    evaluate over. This one takes the whole position: deck, relics, potions, HP and
+    ascension against a chosen encounter.
+
+    A NEGATIVE card id means upgraded, matching CombatFactory's own
+    ``new CardInstance(Math.Abs(id), id < 0)``.
+
+    ``enchantments`` is a list of (enchantment_id, amount) running parallel to
+    ``deck_ids``; pass None for a deck with none. Act 1 grants them by two routes, so
+    this is not act-2 decoration: Self-Help Book, Stone of All Time and Symbiote are in
+    both act-1 event pools (Sapphire Seed and Wood Carvings in Underdocks' as well), and
+    six Shop-rarity relics grant one apiece.
+
+    encounter_id of -1 rolls the seeded first-combat encounter instead of forcing one.
+    """
+    deck_buf = (ctypes.c_int * len(deck_ids))(*deck_ids)
+    ench = list(enchantments or [])
+    ench_ids = [e for e, _ in ench]
+    ench_amts = [a for _, a in ench]
+    ench_id_buf = (ctypes.c_int * max(1, len(ench_ids)))(*ench_ids)
+    ench_amt_buf = (ctypes.c_int * max(1, len(ench_amts)))(*ench_amts)
+    relics = list(relic_ids or [])
+    relic_buf = (ctypes.c_int * max(1, len(relics)))(*relics)
+    potions = list(potion_ids or [])
+    potion_buf = (ctypes.c_int * max(1, len(potions)))(*potions)
+    _lib.Sts2_ResetArena(
+        handle,
+        deck_buf,
+        len(deck_ids),
+        ench_id_buf,
+        len(ench_ids),
+        ench_amt_buf,
+        len(ench_amts),
+        encounter_id,
+        relic_buf,
+        len(relics),
+        potion_buf,
+        len(potions),
+        player_hp,
+        player_max_hp,
+        player_gold,
+        ascension,
+        total_floor,
+        completed_combat_rooms,
         obs_buf,
     )
 
@@ -706,6 +955,61 @@ def run_get_shuffle_rng_call_count(handle: int) -> int:
 
 def run_get_niche_rng_call_count(handle: int) -> int:
     return int(_lib.Sts2Run_GetNicheRngCallCount(handle))
+
+
+def run_debug_set_hp(
+    handle: int, hp: int, max_hp: int, obs_buf: ctypes.Array,
+) -> None:
+    """Soak-only: hand a run extra HP so it can reach the act's boss.
+
+    Raises:
+        RuntimeError: if the handle is not a live run.
+
+    """
+    if _lib.Sts2Run_DebugSetHp(handle, hp, max_hp, obs_buf) != 0:
+        raise RuntimeError("Sts2Run_DebugSetHp failed")
+
+
+def run_debug_gain_max_hp(handle: int, amount: int, obs_buf: ctypes.Array) -> None:
+    """Mirror the mod's debug_gain_max_hp: raise the maximum AND heal by the amount.
+
+    This is the one to use when replaying a BUFFED capture. run_debug_set_hp sets
+    absolutes and does not heal, so a replay built on it diverges on HP one step after
+    the buff.
+
+    Raises:
+        RuntimeError: if the handle is not a live run.
+
+    """
+    if _lib.Sts2Run_DebugGainMaxHp(handle, amount, obs_buf) != 0:
+        raise RuntimeError("Sts2Run_DebugGainMaxHp failed")
+
+
+def run_debug_enter_next_act(handle: int, obs_buf: ctypes.Array) -> bool:
+    """Enter the next act, as the mod's debug_enter_next_act does.
+
+    Returns False when the run is already in its last act. This runs the same transition
+    the boss reward does — what it skips is having to win act 1 to get there.
+
+    Raises:
+        RuntimeError: if the handle is not a live run.
+
+    """
+    result = int(_lib.Sts2Run_DebugEnterNextAct(handle, obs_buf))
+    if result < 0:
+        raise RuntimeError("Sts2Run_DebugEnterNextAct failed")
+    return result == 1
+
+
+def run_debug_upgrade_deck(handle: int, obs_buf: ctypes.Array) -> None:
+    """Soak-only: upgrade every upgradable card in the deck.
+
+    Raises:
+        RuntimeError: if the handle is not a live run.
+
+    """
+    if _lib.Sts2Run_DebugUpgradeDeck(handle, obs_buf) != 0:
+        raise RuntimeError("Sts2Run_DebugUpgradeDeck failed")
 
 
 def run_destroy(handle: int) -> None:

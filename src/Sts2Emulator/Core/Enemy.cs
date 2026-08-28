@@ -97,6 +97,103 @@ public sealed class EnemyState
     /// (StarterMoveIndex == -1) and one that began the fight does not.
     /// </summary>
     public bool StartsOnBranch;
+
+    /// <summary>
+    /// The machine has just been forced through a state whose FollowUpState is a
+    /// RandomBranchState, so the NEXT selection is a roll rather than the next step of a
+    /// cycle. A reattached Decimillipede segment is the case: DEAD_MOVE -> REATTACH_MOVE
+    /// -> RAND, so a segment that comes back does not resume where it fell.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="StartsOnBranch"/>, which is about the machine's INITIAL
+    /// state and is answered once at creation. Conflating the two would make a summoned
+    /// creature and a revived one the same thing, and they are not.
+    /// </remarks>
+    public bool RollsNextMove;
+
+    /// <summary>
+    /// <c>NemesisPower</c>'s private flip bool: false, then true, then false, once per
+    /// enemy side turn. True means the power applied Intangible on this flip.
+    /// </summary>
+    /// <remarks>
+    /// Kept as its own state rather than read back off the Intangible stack, which is the
+    /// obvious shortcut and is wrong: Intangible decrements itself at the same moment, so
+    /// by the time Nemesis looks the stack is already gone and "is it on?" answers no
+    /// every round. The power alternates because the BOOL alternates.
+    /// </remarks>
+    public bool NemesisIntangibleOn;
+
+    /// <summary>
+    /// The game's <c>StarterMoveIdx</c>: which move this creature's machine opens on.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="MoveIndex"/> because the two mean different things and
+    /// conflating them has bitten twice. The starter is an index into the monster's own
+    /// numbering of its moves, which need not match the order the machine walks them —
+    /// the Decimillipede's is 0/1/2 = WRITHE/BULK/CONSTRICT against a cycle of
+    /// WRITHE -> CONSTRICT -> BULK (E95), and the Scroll of Biting's is CHOMP/CHEW/
+    /// MORE_TEETH against a chain of CHOMP -> MORE_TEETH -> CHEW.
+    /// </remarks>
+    public int StarterMove;
     public int StolenGold;
     public int HeistGold;
+
+    /// <summary>This creature left the fight rather than dying; see CombatState.FatGremlinEscaped.</summary>
+    public bool Escaped;
+
+    /// <summary>
+    /// A Bowlbug Rock whose headbutt was fully blocked, and which owes a turn for it.
+    /// </summary>
+    /// <remarks>
+    /// <c>ImbalancedPower.AfterDamageGiven</c> fires on `result.WasFullyBlocked` and sets
+    /// the Rock's `IsOffBalance`; the same HEADBUTT_MOVE then stuns it, so the next turn
+    /// is DIZZY_MOVE, which clears the flag. Only the Bowlbug Rock carries the power —
+    /// on anything else it would stun outright — so this is a field rather than a buff.
+    ///
+    /// Without it the Rock alternated headbutt and dizzy unconditionally, which is half
+    /// its damage against a player who never fully blocks, and announces a stun that is
+    /// not coming.
+    /// </remarks>
+    public bool OffBalance;
+
+    /// <summary>
+    /// Which arm of a <c>RandomBranchState</c> this creature last took, and how many
+    /// turns running it has taken it.
+    /// </summary>
+    /// <remarks>
+    /// <c>RandomBranchState</c> zeroes a branch's weight once the recent state log shows
+    /// it too many times: <c>CannotRepeat</c> is a cap of one, <c>CanRepeatXTimes(n)</c>
+    /// a cap of n. The obvious implementation — compare the new intent with
+    /// <c>CurrentIntent</c> — is WRONG for anything that buffs itself: the Obscura's WAIL
+    /// grants it Strength, so what it announces climbs and a base-damage branch never
+    /// equals the stored intent again. The branch's identity has to be remembered, not
+    /// inferred from what it announced.
+    /// </remarks>
+    public int LastBranch = -1;
+
+    /// <summary>Turns running on <see cref="LastBranch"/>.</summary>
+    public int RepeatStreak;
+
+    /// <summary>
+    /// Moves left before a branch on a COOLDOWN can be taken again.
+    /// </summary>
+    /// <remarks>
+    /// <c>RandomBranchState</c> gives a branch weight zero while it appears in the last
+    /// <c>cooldown</c> logged MOVES — a different rule from the repeat cap, and one that
+    /// outlasts it. The Fake Merchant's ENRAGE is the only branch that uses it, at three.
+    /// </remarks>
+    public int BranchCooldown;
+
+    /// <summary>
+    /// Which of the encounter's <c>Slots</c> this creature stands in, or -1 when the
+    /// encounter does not place by slot.
+    /// </summary>
+    /// <remarks>
+    /// The game's summons ask the ENCOUNTER for a slot rather than the roster for a
+    /// position: a Two-Tailed Rat's <c>CallForBackup</c> takes
+    /// <c>Slots.LastOrDefault(s => no living creature holds s)</c>. Which end of the
+    /// roster that lands on depends on which rats are still alive, so "the newcomer goes
+    /// to the front" is only the answer while the three starters are untouched.
+    /// </remarks>
+    public int Slot = -1;
 }

@@ -2,7 +2,6 @@ namespace Sts2Emulator.Core;
 
 public static class CombatObservation
 {
-    public const int ObsSize = 179;
     public const int MaxHand = 10;
     public const int MaxEnemies = 6;
     public const int MaxPlayerBuffs = 10;
@@ -10,6 +9,77 @@ public static class CombatObservation
 
     /// <summary>Candidates an open card selection can expose; a hand or pile is capped anyway.</summary>
     public const int MaxSelectionCandidates = 10;
+
+    /// <summary>Hp, max hp, block, energy, max energy, and the three pile sizes.</summary>
+    public const int ScalarCount = 8;
+
+    /// <summary>
+    /// Per card: def id, upgraded, enchantment, and the amount it was applied at. The last
+    /// two used to be missing, so a Sharp Strike and a plain one were the same two numbers
+    /// -- and the enchantment is worth 2 damage on every attack, which is the difference
+    /// between a card being worth playing and not.
+    /// </summary>
+    public const int CardSlotSize = 4;
+
+    public const int HandOffset = ScalarCount;
+    public const int PotionSlotSize = 2;
+    public const int PotionOffset = HandOffset + MaxHand * CardSlotSize;
+    public const int BuffSlotSize = 2;
+    public const int PlayerBuffOffset = PotionOffset + 3 * PotionSlotSize;
+
+    /// <summary>Hp, max hp, block, intent type, announced magnitude, then the buffs.</summary>
+    public const int EnemySlotSize = 5 + MaxEnemyBuffs * BuffSlotSize;
+
+    /// <summary>Where an enemy slot carries what it means to do this turn.</summary>
+    public const int EnemyIntentField = 3;
+
+    public const int EnemyOffset = PlayerBuffOffset + MaxPlayerBuffs * BuffSlotSize;
+    public const int SecondaryIntentSlotSize = 2;
+    public const int SecondaryIntentOffset = EnemyOffset + MaxEnemies * EnemySlotSize;
+    public const int GoldOffset = SecondaryIntentOffset + MaxEnemies * SecondaryIntentSlotSize;
+    public const int SelectionKindOffset = GoldOffset + 1;
+    public const int SelectionCountOffset = SelectionKindOffset + 1;
+    public const int SelectionOffset = SelectionCountOffset + 1;
+    /// <summary>
+    /// The orb ring. <c>Recursion</c> and its kin cap capacity at 10, so ten slots hold
+    /// any legal ring.
+    /// </summary>
+    public const int MaxOrbs = 10;
+
+    /// <summary>
+    /// Per orb: type + 1 (so an empty slot reads 0, since Lightning is 0), then what the
+    /// orb's passive and evoke are WORTH right now.
+    /// </summary>
+    /// <remarks>
+    /// The two values are carried rather than left to be derived because they are not
+    /// derivable from the type alone: a Dark orb's evoke is whatever it has banked, and a
+    /// Glass orb's is whatever it has left to spend. Neither appears anywhere else in the
+    /// observation, and both are the whole reason to hold the orb rather than evoke it.
+    /// </remarks>
+    public const int OrbSlotSize = 3;
+
+    /// <summary>
+    /// How many orbs the player can hold. Channelling into a full ring evokes the oldest
+    /// orb, so an agent that cannot see the capacity cannot tell channelling from
+    /// channelling-and-spending.
+    /// </summary>
+    public const int OrbCapacityOffset = SelectionOffset + MaxSelectionCandidates * CardSlotSize;
+
+    public const int OrbOffset = OrbCapacityOffset + 1;
+
+    // Appended after the selection block, not filed with the player's own scalars: every
+    // offset above is a committed layout that fixtures and any trained policy are written
+    // against, and inserting a field renumbers all of them. Same discipline as BuffId.
+    public const int ObsSize = OrbOffset + MaxOrbs * OrbSlotSize;
+
+    /// <summary>Writes one card into a slot: what it is, and what has been done to it.</summary>
+    private static void WriteCard(Span<int> obs, int at, CardInstance card)
+    {
+        obs[at] = card.DefId;
+        obs[at + 1] = card.Upgraded ? 1 : 0;
+        obs[at + 2] = (int)card.Enchantment;
+        obs[at + 3] = card.EnchantAmount;
+    }
 
     /// <summary>
     /// What the game shows on an attack intent. AttackIntent.GetSingleDamage runs the
@@ -38,35 +108,30 @@ public static class CombatObservation
         obs[6] = s.DiscardPile.Count;
         obs[7] = s.ExhaustPile.Count;
 
-        int offset = 8;
-        for (int i = 0; i < MaxHand; i++)
+        for (int i = 0; i < MaxHand && i < s.Hand.Count; i++)
         {
-            if (i < s.Hand.Count)
-            {
-                obs[offset + i * 2] = s.Hand[i].DefId;
-                obs[offset + i * 2 + 1] = s.Hand[i].Upgraded ? 1 : 0;
-            }
+            WriteCard(obs, HandOffset + i * CardSlotSize, s.Hand[i]);
         }
 
-        offset = 8 + MaxHand * 2;
+        int offset = PotionOffset;
         for (int i = 0; i < 3; i++)
         {
-            obs[offset + i * 2] = s.PotionSlots[i];
-            obs[offset + i * 2 + 1] = s.PotionSlots[i] != 0 ? 1 : 0;
+            obs[offset + i * PotionSlotSize] = s.PotionSlots[i];
+            obs[offset + i * PotionSlotSize + 1] = s.PotionSlots[i] != 0 ? 1 : 0;
         }
 
-        offset = 8 + MaxHand * 2 + 6;
+        offset = PlayerBuffOffset;
         for (int i = 0; i < MaxPlayerBuffs; i++)
         {
             if (i < s.PlayerBuffs.Count)
             {
-                obs[offset + i * 2] = (int)s.PlayerBuffs[i].Id;
-                obs[offset + i * 2 + 1] = s.PlayerBuffs[i].Magnitude;
+                obs[offset + i * BuffSlotSize] = (int)s.PlayerBuffs[i].Id;
+                obs[offset + i * BuffSlotSize + 1] = s.PlayerBuffs[i].Magnitude;
             }
         }
 
-        offset = 8 + MaxHand * 2 + 6 + MaxPlayerBuffs * 2;
-        int enemySlotSize = 5 + MaxEnemyBuffs * 2;
+        offset = EnemyOffset;
+        int enemySlotSize = EnemySlotSize;
         for (int enemyIndex = 0; enemyIndex < MaxEnemies; enemyIndex++)
         {
             int baseIndex = offset + enemyIndex * enemySlotSize;
@@ -91,7 +156,7 @@ public static class CombatObservation
             }
         }
 
-        offset = 8 + MaxHand * 2 + 6 + MaxPlayerBuffs * 2 + MaxEnemies * enemySlotSize;
+        offset = SecondaryIntentOffset;
         for (int enemyIndex = 0; enemyIndex < MaxEnemies; enemyIndex++)
         {
             if (
@@ -99,22 +164,26 @@ public static class CombatObservation
                 && s.Enemies[enemyIndex].SecondaryIntent is { } secondary
             )
             {
-                obs[offset + enemyIndex * 2] = (int)secondary.Type + 1;
-                obs[offset + enemyIndex * 2 + 1] = secondary.Magnitude;
+                obs[offset + enemyIndex * SecondaryIntentSlotSize] = (int)secondary.Type + 1;
+                obs[offset + enemyIndex * SecondaryIntentSlotSize + 1] = secondary.Magnitude;
             }
         }
 
-        obs[156] = s.PlayerGold;
+        obs[GoldOffset] = s.PlayerGold;
 
         // An open card selection replaces the action space, so a policy is blind without
         // knowing both that one is open and what it is choosing between.
         if (s.PendingSelection is { } selection)
         {
-            obs[157] = (int)selection.Kind;
-            obs[158] = selection.Candidates.Count;
+            obs[SelectionKindOffset] = (int)selection.Kind;
+            obs[SelectionCountOffset] = selection.Candidates.Count;
 
             // A generated choice has no pile behind it; its options are on the selection.
-            if (selection.Kind == CardSelectionKind.GeneratedCardToHand)
+            if (
+                selection.Kind
+                is CardSelectionKind.GeneratedCardToHand
+                    or CardSelectionKind.CurseOfKnowledge
+            )
             {
                 for (
                     int i = 0;
@@ -122,7 +191,7 @@ public static class CombatObservation
                     i++
                 )
                 {
-                    obs[159 + i * 2] = selection.GeneratedCandidates[i];
+                    obs[SelectionOffset + i * CardSlotSize] = selection.GeneratedCandidates[i];
                 }
             }
             else
@@ -130,6 +199,7 @@ public static class CombatObservation
                 var pile = selection.Kind switch
                 {
                     CardSelectionKind.DiscardToDrawPileTop => s.DiscardPile,
+                    CardSelectionKind.DiscardToHand => s.DiscardPile,
                     CardSelectionKind.DrawPileToHand => s.DrawPile,
                     _ => s.Hand,
                 };
@@ -138,11 +208,26 @@ public static class CombatObservation
                     int index = selection.Candidates[i];
                     if (index < pile.Count)
                     {
-                        obs[159 + i * 2] = pile[index].DefId;
-                        obs[159 + i * 2 + 1] = pile[index].Upgraded ? 1 : 0;
+                        WriteCard(obs, SelectionOffset + i * CardSlotSize, pile[index]);
                     }
                 }
             }
+        }
+
+        // Defect's whole character is the ring, and none of it was here: not the orbs, not
+        // their order, not Dark's banked total or Glass's remaining charge. An agent
+        // cannot learn when to evoke something it cannot see (O26).
+        obs[OrbCapacityOffset] = s.OrbCapacity;
+        for (int i = 0; i < MaxOrbs && i < s.Orbs.Count; i++)
+        {
+            var orb = s.Orbs[i];
+            var (passive, evoke) = Effects.CardEffects.OrbDisplayValues(s, orb);
+            int at = OrbOffset + i * OrbSlotSize;
+            // Type + 1: Lightning is 0, so a raw type cannot be told from an empty slot.
+            // The secondary-intent block uses the same offset for the same reason.
+            obs[at] = (int)orb.Type + 1;
+            obs[at + 1] = passive;
+            obs[at + 2] = evoke;
         }
     }
 }

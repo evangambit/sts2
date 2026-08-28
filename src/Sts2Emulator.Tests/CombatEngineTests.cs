@@ -334,17 +334,22 @@ public class CombatEngineTests
     [Fact]
     public void Weakness_FromSludgeSpinner_LastsThroughNextPlayerTurn()
     {
-        // SludgeSpinner Move 0 is Oil Spray (9 dmg + 1 Weak).
+        // SludgeSpinner move 0 is OIL_SPRAY: an ATTACK that also applies 1 Weak.
+        // OIL_SPRAY_MOVE declares SingleAttackIntent first and DebuffIntent second, and
+        // a live capture reads Attack '8' then Debuff -- it used to be modelled as a
+        // debuff carrying damage. The spinner picks its move at random, so which move
+        // this is lives in LastMove, not in MoveIndex.
         var state = CombatFactory.NewCombat(seed: 0);
         state.Enemies =
         [
             CombatFactory.CreateEnemy(
                 KE.SludgeSpinner,
                 new Random(0),
-                new Intent(IntentType.Debuff, 9),
+                new Intent(IntentType.Attack, 9),
                 0
             ),
         ];
+        state.Enemies[0].LastMove = 0;
         state.Hand = [new CardInstance(IC.StrikeIronclad, false)];
         state.DrawPile = [];
         state.DiscardPile = [];
@@ -504,8 +509,11 @@ public class CombatEngineTests
                 Assert.Equal(2, BuffSystem.Get(enemy.Buffs, BuffId.Artifact));
             }
         );
+        // CLAMP is MultiAttackIntent(ClampDamage, 2), and ClampDamage is 8 at A8 -- the
+        // 18 this used to expect was the A9 damage with the two hits folded into it.
         Assert.Equal(IntentType.Attack, state.Enemies[0].CurrentIntent.Type);
-        Assert.Equal(18, state.Enemies[0].CurrentIntent.Magnitude);
+        Assert.Equal(8, state.Enemies[0].CurrentIntent.Magnitude);
+        Assert.Equal(2, state.Enemies[0].CurrentIntent.Hits);
         Assert.Equal(IntentType.Debuff, state.Enemies[1].CurrentIntent.Type);
         Assert.Equal(3, state.Enemies[1].CurrentIntent.Magnitude);
     }
@@ -629,7 +637,11 @@ public class CombatEngineTests
         EnemyAI.ChooseIntents(state.Enemies, state.Turn, new Random(0));
 
         Assert.Equal(IntentType.Attack, state.Enemies[1].CurrentIntent.Type);
-        Assert.Equal(6, state.Enemies[1].CurrentIntent.Magnitude);
+        // WHIP_SLAP is MultiAttackIntent(3, 2), not a single 6. Folded into one hit the
+        // two are the same number only while the slug has no Strength -- and Ravenous,
+        // which this very test just handed it, is how it gets some.
+        Assert.Equal(3, state.Enemies[1].CurrentIntent.Magnitude);
+        Assert.Equal(2, state.Enemies[1].CurrentIntent.Hits);
     }
 
     [Fact]
@@ -720,6 +732,35 @@ public class CombatEngineTests
         Assert.Equal(20, merc.StolenGold);
     }
 
+    /// <summary>
+    /// <c>ThieveryPower.Steal</c> opens with <c>Target != null &amp;&amp; !Target.IsDead</c>,
+    /// and a Merc's move attacks BEFORE it steals — so the blow that kills the player takes
+    /// no gold with it. A live run (`J09SPL8Y3V`) ends holding 121; the emulator robbed the
+    /// corpse for a last 20 and ended on 101.
+    /// </summary>
+    [Fact]
+    public void GremlinMerc_DoesNotStealFromAPlayerItsAttackKilled()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.PlayerGold = 99;
+        state.PlayerBlock = 0;
+        state.PlayerHp = 10;
+        var merc = new EnemyState
+        {
+            DefId = 37,
+            Hp = 53,
+            MaxHp = 53,
+            CurrentIntent = new Intent(IntentType.Attack, 16),
+            Buffs = [],
+        };
+
+        EnemyAI.ExecuteIntent(merc, state, new Random(0));
+
+        Assert.True(state.PlayerHp <= 0);
+        Assert.Equal(99, state.PlayerGold);
+        Assert.Equal(0, merc.StolenGold);
+    }
+
     [Fact]
     public void GremlinMerc_TransfersStolenGoldToFatGremlinHeist()
     {
@@ -774,29 +815,41 @@ public class CombatEngineTests
 
         CombatEngine.Step(state, 0, new Random(0));
 
-        Assert.Equal(99, state.PlayerGold);
+        // HeistPower.BeforeDeath adds an extra REWARD rather than paying out: the gold is
+        // banked for the screen that follows the fight, where a capture shows it as its
+        // own row reading "80 Gold (stolen back)". This used to assert 99 in hand.
+        Assert.Equal(59, state.PlayerGold);
+        Assert.Equal(40, state.StolenBackGold);
         Assert.Equal(0, state.Enemies[0].HeistGold);
+    }
+
+    /// <summary>A pack of rats in the slots the encounter places them in, Slots[2..4].</summary>
+    private static CombatState RatPack(params (int Slot, int Hp)[] rats)
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        state.Enemies =
+        [
+            .. rats.Select(rat => new EnemyState
+            {
+                DefId = 101,
+                Hp = rat.Hp,
+                MaxHp = 20,
+                Slot = rat.Slot,
+                CurrentIntent = new Intent(IntentType.Buff, 0),
+                Buffs = [],
+            }),
+        ];
+        return state;
     }
 
     [Fact]
     public void TwoTailedRat_CallForBackupSummonsRatAndTracksLimit()
     {
-        var state = CombatFactory.NewCombat(seed: 0);
-        state.Enemies =
-        [
-            new EnemyState
-            {
-                DefId = 101,
-                Hp = 20,
-                MaxHp = 20,
-                CurrentIntent = new Intent(IntentType.Buff, 0),
-                Buffs = [],
-            },
-        ];
+        var state = RatPack((2, 20), (3, 20), (4, 20));
 
         EnemyAI.ExecuteIntent(state.Enemies[0], state, new Random(0));
 
-        Assert.Equal(2, state.Enemies.Count(e => e.DefId == 101));
+        Assert.Equal(4, state.Enemies.Count(e => e.DefId == 101));
         Assert.All(
             state.Enemies.Where(e => e.DefId == 101),
             rat => Assert.Equal(1, BuffSystem.Get(rat.Buffs, BuffId.BackupCount))
@@ -810,31 +863,39 @@ public class CombatEngineTests
             state.Enemies.Where(e => e.DefId == 101),
             rat => Assert.Equal(0, BuffSystem.Get(rat.Buffs, BuffId.Stunned))
         );
-        // The newcomer goes to the FRONT: the rats hold Slots[2..4] and CallForBackup
-        // takes the last free slot, so a summon always lands ahead of them.
-        Assert.NotSame(state.Enemies[^1], state.Enemies[0]);
+        // With the three starters standing, the last free slot is "second" -- so the
+        // newcomer leads the pack.
+        Assert.Equal(1, state.Enemies[0].Slot);
         Assert.Equal(IntentType.Unknown, state.Enemies[0].CurrentIntent.Type);
+    }
+
+    /// <summary>
+    /// CallForBackup takes <c>Slots.LastOrDefault</c>, so where the newcomer stands
+    /// depends on which rats are still alive rather than being the front every time.
+    /// A dead rat's slot is free again: with "fifth" empty the summon joins the BACK,
+    /// and a target index that named the survivor before the summon still names it after.
+    /// </summary>
+    [Fact]
+    public void TwoTailedRat_BackupTakesTheLastSlotLeftEmpty()
+    {
+        var state = RatPack((2, 0), (3, 20), (4, 0));
+
+        EnemyAI.ExecuteIntent(state.Enemies[1], state, new Random(0));
+
+        Assert.Equal(4, state.Enemies.Count(e => e.DefId == 101));
+        var summoned = state.Enemies[^1];
+        Assert.Equal(4, summoned.Slot);
+        Assert.Equal(20, state.Enemies[1].Hp);
     }
 
     [Fact]
     public void TwoTailedRat_CallForBackupRespectsTotalSlotLimit()
     {
-        var state = CombatFactory.NewCombat(seed: 0);
-        state.Enemies = Enumerable
-            .Range(0, 6)
-            .Select(i => new EnemyState
-            {
-                DefId = 101,
-                Hp = i == 0 ? 20 : 0,
-                MaxHp = 20,
-                CurrentIntent = new Intent(IntentType.Buff, 0),
-                Buffs = [],
-            })
-            .ToList();
+        var state = RatPack((0, 20), (1, 20), (2, 20), (3, 20), (4, 20));
 
         EnemyAI.ExecuteIntent(state.Enemies[0], state, new Random(0));
 
-        Assert.Equal(6, state.Enemies.Count(e => e.DefId == 101));
+        Assert.Equal(5, state.Enemies.Count(e => e.DefId == 101));
     }
 
     [Fact]
@@ -890,6 +951,11 @@ public class CombatEngineTests
             },
         ];
 
+        // The bots' intents come from ChooseIntents rather than the hand-built ones
+        // above: STAB_MOVE announces as an ATTACK carrying a Frail, and a test that writes
+        // `Debuff 12` by hand asserts the emulator's old reading of the move back to it.
+        EnemyAI.ChooseIntents(state.Enemies, 0, new Random(0), ascension: 8);
+
         EnemyAI.ExecuteIntent(state.Enemies[1], state, new Random(0));
         EnemyAI.ExecuteIntent(state.Enemies[2], state, new Random(0));
         EnemyAI.ExecuteIntent(state.Enemies[3], state, new Random(0));
@@ -902,7 +968,8 @@ public class CombatEngineTests
                 + state.DrawPile.Count(c => c.DefId == ST.Dazed)
         );
         Assert.Equal(1, BuffSystem.Get(state.PlayerBuffs, BuffId.Frail));
-        Assert.Equal(37, state.PlayerHp);
+        // StabDamage 11 and ZapDamage 14 at A8; both were on the A9 branch.
+        Assert.Equal(64 - 11 - 14, state.PlayerHp);
         Assert.Equal(2, BuffSystem.Get(state.Enemies[4].Buffs, BuffId.Strength));
     }
 
@@ -921,16 +988,24 @@ public class CombatEngineTests
         };
 
         EnemyAI.ExecuteIntent(egg, state, new Random(0));
-        EnemyAI.ChooseIntents([egg], 0, new Random(0));
+        EnemyAI.ChooseIntents([egg], 0, new Random(0), ascension: 8);
         EnemyAI.ExecuteIntent(egg, state, new Random(0));
 
         Assert.Equal(0, BuffSystem.Get(egg.Buffs, BuffId.Hatch));
         Assert.Equal(1, BuffSystem.Get(egg.Buffs, BuffId.Minion));
         Assert.InRange(egg.MaxHp, 20, 23);
         Assert.Equal(IntentType.Attack, egg.CurrentIntent.Type);
-        Assert.Equal(59, state.PlayerHp);
+        // NibbleDamage is 4 at A8; the 5 this used to assert is the A9 branch.
+        Assert.Equal(64 - 4, state.PlayerHp);
     }
 
+    /// <summary>
+    /// BARRAGE_MOVE declares its MultiAttackIntent before its BuffIntent, so it announces
+    /// as an Attack of BarrageDamage twice over -- not, as this test used to assert by
+    /// handing the enemy the intent itself, as a Buff of the two hits folded together.
+    /// The intent comes from <c>ChooseIntents</c> here for that reason: a hand-built one
+    /// cannot tell you the readout is wrong.
+    /// </summary>
     [Fact]
     public void AdversaryVariants_UseBarrageAttackAndStrengthMove()
     {
@@ -941,10 +1016,14 @@ public class CombatEngineTests
             DefId = KE.TheAdversaryMkThree,
             Hp = 300,
             MaxHp = 300,
-            CurrentIntent = new Intent(IntentType.Buff, 20),
             Buffs = [new BuffState(BuffId.Artifact, 2)],
             MoveIndex = 2,
         };
+
+        EnemyAI.ChooseIntents([mkThree], 0, new Random(0));
+
+        Assert.Equal(new Intent(IntentType.Attack, 10, Hits: 2), mkThree.CurrentIntent);
+        Assert.Equal(new Intent(IntentType.Buff, 4), mkThree.SecondaryIntent);
 
         EnemyAI.ExecuteIntent(mkThree, state, new Random(0));
 
@@ -1033,8 +1112,19 @@ public class CombatEngineTests
         state.Energy = 3;
         var first = CombatEngine.Step(state, 0, new Random(0));
 
+        // RESPAWN_MOVE has MustPerformOnceBeforeTransitioning, so the kill buys a whole
+        // turn: the subject sits at 0 HP, cannot be hit, and announces the Heal-and-Buff
+        // it will spend the turn on. It used to be healed the instant it fell.
         Assert.False(first.Terminal);
+        Assert.Equal(0, state.Enemies[0].Hp);
+        Assert.Equal(IntentType.Buff, state.Enemies[0].CurrentIntent.Type);
+        Assert.Equal(0, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.PainfulStabs));
+
+        state.PlayerHp = 999;
+        CombatEngine.Step(state, state.Hand.Count, new Random(0)); // the respawn turn
+
         Assert.Equal(212, state.Enemies[0].Hp);
+        Assert.Equal(212, state.Enemies[0].MaxHp);
         Assert.Equal(1, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.PainfulStabs));
 
         state.Enemies[0].Hp = 1;
@@ -1043,10 +1133,17 @@ public class CombatEngineTests
         var second = CombatEngine.Step(state, 0, new Random(0));
 
         Assert.False(second.Terminal);
+        Assert.Equal(0, state.Enemies[0].Hp);
+
+        state.PlayerHp = 999;
+        CombatEngine.Step(state, state.Hand.Count, new Random(0)); // the second respawn
+
         Assert.Equal(313, state.Enemies[0].Hp);
         Assert.Equal(0, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.Adaptable));
         Assert.Equal(0, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.PainfulStabs));
-        Assert.Equal(1, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.Intangible));
+        // NemesisPower, which toggles Intangible at the end of each enemy turn -- so the
+        // third form arrives with it already on, and drops it the turn after.
+        Assert.Equal(1, BuffSystem.Get(state.Enemies[0].Buffs, BuffId.Nemesis));
     }
 
     [Fact]
@@ -1109,7 +1206,12 @@ public class CombatEngineTests
             Hp = 90,
             MaxHp = 90,
             MoveIndex = 1,
-            CurrentIntent = new Intent(IntentType.Attack, 12),
+            // The intent SelectIntent builds for PECK: per-hit damage and a hit count,
+            // not a pre-multiplied total. It used to be able to say anything, because a
+            // hand-written Byrdonis branch dealt the hits from its own literals and
+            // ignored the intent -- that branch was the generic multi-hit path written
+            // out twice, and it is gone.
+            CurrentIntent = new Intent(IntentType.Attack, 3, Hits: 3),
             Buffs = [new BuffState(BuffId.Strength, 1)],
         };
         state.Enemies = [byrdonis];
@@ -1175,7 +1277,8 @@ public class CombatEngineTests
             Hp = 67,
             MaxHp = 67,
             MoveIndex = 1,
-            CurrentIntent = new Intent(IntentType.Attack, 20),
+            // LashDamage x 4, as SelectIntent declares it: 4 per hit at A8.
+            CurrentIntent = new Intent(IntentType.Attack, 4, Hits: 4),
             Buffs = [],
         };
         state.Enemies = [phrog];
@@ -1291,8 +1394,19 @@ public class CombatEngineTests
         }
     }
 
+    /// <summary>
+    /// PlatingPower decrements on <c>AfterSideTurnStart</c> and grants its block on
+    /// <c>BeforeSideTurnEndEarly</c>, and it skips the decrement for enemies on round one.
+    /// So the first turn ends on the full amount and the decay starts on the second.
+    /// </summary>
+    /// <remarks>
+    /// This used to assert gain-then-decrement on the very first turn, which is a point of
+    /// block ahead of the game for the rest of the fight. A live Sewer Clam holds 9 block
+    /// at Plating 9 and then 8 at Plating 8 (`SAM9XS24LM`). CombatState.Turn counts from
+    /// zero, so the first enemy phase is Turn 0.
+    /// </remarks>
     [Fact]
-    public void SewerClam_PlatingAddsBlockAndDecays()
+    public void SewerClam_PlatingHoldsItsFullAmountOnRoundOneThenDecays()
     {
         var state = CombatFactory.NewCombat(seed: 0);
         var enemy = new EnemyState
@@ -1307,7 +1421,40 @@ public class CombatEngineTests
         EnemyAI.ExecuteIntent(enemy, state, new Random(0));
 
         Assert.Equal(9, enemy.Block);
+        Assert.Equal(9, BuffSystem.Get(enemy.Buffs, BuffId.Plating));
+
+        enemy.Block = 0;
+        state.Turn++;
+        EnemyAI.ExecuteIntent(enemy, state, new Random(0));
+
+        Assert.Equal(8, enemy.Block);
         Assert.Equal(8, BuffSystem.Get(enemy.Buffs, BuffId.Plating));
+    }
+
+    /// <summary>
+    /// PRESSURIZE_MOVE is <c>PowerCmd.Apply&lt;StrengthPower&gt;(4)</c> and nothing else.
+    /// The block the clam's buff turn used to also gain was invented, and it gave the clam
+    /// twice the block the game shows on the turn it pressurises.
+    /// </summary>
+    [Fact]
+    public void SewerClam_PressurizeGivesStrengthAndNoExtraBlock()
+    {
+        var state = CombatFactory.NewCombat(seed: 0);
+        var enemy = new EnemyState
+        {
+            DefId = 70,
+            Hp = 45,
+            MaxHp = 45,
+            CurrentIntent = new Intent(IntentType.Buff, 0),
+            Buffs = [new BuffState(BuffId.Plating, 9)],
+        };
+        state.Turn = 1;
+
+        EnemyAI.ExecuteIntent(enemy, state, new Random(0));
+
+        Assert.Equal(4, BuffSystem.Get(enemy.Buffs, BuffId.Strength));
+        // Plating's own 8, once -- not twice.
+        Assert.Equal(8, enemy.Block);
     }
 
     [Fact]

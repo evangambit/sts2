@@ -13,26 +13,53 @@ from sts2_gym import Sts2CombatEnv, native
 
 
 def summarize_observation(obs: np.ndarray) -> dict:
+    card = native.OBS_CARD_SLOT_SIZE
     hand = [
-        {"index": i, "id": int(obs[8 + i * 2]), "upgraded": bool(obs[8 + i * 2 + 1])}
-        for i in range(10)
-        if int(obs[8 + i * 2]) != 0
+        {
+            "index": i,
+            "id": int(obs[native.OBS_HAND_OFFSET + i * card]),
+            "upgraded": bool(obs[native.OBS_HAND_OFFSET + i * card + 1]),
+            "enchantment": int(obs[native.OBS_HAND_OFFSET + i * card + 2]),
+            "enchant_amount": int(obs[native.OBS_HAND_OFFSET + i * card + 3]),
+        }
+        for i in range(native.OBS_MAX_HAND)
+        if int(obs[native.OBS_HAND_OFFSET + i * card]) != 0
     ]
     player_buffs = [
-        {"id": int(obs[34 + i * 2]), "amount": int(obs[34 + i * 2 + 1])}
-        for i in range(10)
-        if int(obs[34 + i * 2]) != 0
+        {
+            "id": int(obs[native.OBS_PLAYER_BUFF_OFFSET + i * 2]),
+            "amount": int(obs[native.OBS_PLAYER_BUFF_OFFSET + i * 2 + 1]),
+        }
+        for i in range(native.OBS_MAX_PLAYER_BUFFS)
+        if int(obs[native.OBS_PLAYER_BUFF_OFFSET + i * 2]) != 0
     ]
+    # Defect's ring, in order. Each slot is (type + 1, passive, evoke) with 0 for empty,
+    # and the two values already carry Focus -- a Dark orb's evoke is what it has banked
+    # and a Glass orb's is what it has left, neither of which is derivable from the type.
+    orbs = []
+    for orb_index in range(native.OBS_MAX_ORBS):
+        base = native.OBS_ORB_OFFSET + orb_index * native.OBS_ORB_SLOT_SIZE
+        kind = int(obs[base])
+        if kind == 0:
+            continue
+        orbs.append(
+            {
+                "index": orb_index,
+                "type": kind - 1,
+                "passive": int(obs[base + 1]),
+                "evoke": int(obs[base + 2]),
+            },
+        )
     enemies = []
     for enemy_index in range(native.MAX_ENEMIES):
-        base = 54 + enemy_index * 15
+        base = native.OBS_ENEMY_OFFSET + enemy_index * native.OBS_ENEMY_SLOT_SIZE
         hp = int(obs[base])
         max_hp = int(obs[base + 1])
         if hp == 0 and max_hp == 0:
             continue
         buffs = [
             {"id": int(obs[base + 5 + i * 2]), "amount": int(obs[base + 6 + i * 2])}
-            for i in range(5)
+            for i in range(native.OBS_MAX_ENEMY_BUFFS)
             if int(obs[base + 5 + i * 2]) != 0
         ]
         enemies.append(
@@ -43,8 +70,12 @@ def summarize_observation(obs: np.ndarray) -> dict:
                 "block": int(obs[base + 2]),
                 "intent_type": int(obs[base + 3]),
                 "intent_magnitude": int(obs[base + 4]),
-                "secondary_intent_type": int(obs[144 + enemy_index * 2]),
-                "secondary_intent_magnitude": int(obs[145 + enemy_index * 2]),
+                "secondary_intent_type": int(
+                    obs[native.OBS_SECONDARY_INTENT_OFFSET + enemy_index * 2]
+                ),
+                "secondary_intent_magnitude": int(
+                    obs[native.OBS_SECONDARY_INTENT_OFFSET + enemy_index * 2 + 1]
+                ),
                 "status": buffs,
             },
         )
@@ -60,6 +91,8 @@ def summarize_observation(obs: np.ndarray) -> dict:
             "exhaust_pile_count": int(obs[7]),
             "hand": hand,
             "status": player_buffs,
+            "orb_capacity": int(obs[native.OBS_ORB_CAPACITY_OFFSET]),
+            "orbs": orbs,
         },
         "enemies": enemies,
     }

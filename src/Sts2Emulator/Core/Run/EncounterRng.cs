@@ -27,26 +27,53 @@ public static class EncounterRng
     /// The game's <c>Id.Entry</c> for encounters whose generation consumes their own Rng.
     /// Anything absent here does not roll its composition and needs no seed.
     /// </summary>
+    /// <remarks>
+    /// Read from the generated table rather than transcribed, because this half of the
+    /// plumbing fails SILENTLY: a builder can be handed its seed and still quietly fall
+    /// back to the combat rng, since the seed only exists if the encounter is listed.
+    /// That is exactly what happened to the Bowlbugs — plumbed and inert (E90) — and it
+    /// is why four more that never had an entry could sit here unnoticed.
+    ///
+    /// The model names, not the emulator's, because two models can share one emulator id
+    /// and still have different entries: Corpse Slugs weak and normal are one
+    /// <c>ActOneEncounter</c> value and two <c>Id.Entry</c> strings.
+    /// </remarks>
     public static string? EntryId(int encounterId, bool weakVariant) =>
+        GeneratedData.EncounterTags.EntryForModel(ModelName(encounterId, weakVariant) ?? "");
+
+    /// <summary>
+    /// The encounter model whose <c>GenerateMonsters</c> an emulator encounter id runs.
+    /// </summary>
+    private static string? ModelName(int encounterId, bool weakVariant) =>
         encounterId switch
         {
-            RunConstants.SlimesWeakEncounterId => "SLIMES_WEAK",
-            RunConstants.SlimesNormalEncounterId => "SLIMES_NORMAL",
+            RunConstants.SlimesWeakEncounterId => "SlimesWeak",
+            RunConstants.SlimesNormalEncounterId => "SlimesNormal",
             // Both of these roll their composition too: Flyconid picks a medium slime to
             // stand with, and Slithering Strangler picks a whole secondary enemy type.
             // Rolling either on the combat rng gets the roster right by luck only.
-            RunConstants.FlyconidNormalEncounterId => "FLYCONID_NORMAL",
+            RunConstants.FlyconidNormalEncounterId => "FlyconidNormal",
             // The rats roll which move the FIRST of them opens on; the other two take the
             // next two in order, so one draw decides all three openings.
-            RunConstants.TwoTailedRatsEncounterId => "TWO_TAILED_RATS_NORMAL",
+            RunConstants.TwoTailedRatsEncounterId => "TwoTailedRatsNormal",
             // Three raiders drawn from five, each capped at one, so the roster is three
             // draws on the encounter's stream over a shrinking list.
-            RunConstants.RubyRaidersEncounterId => "RUBY_RAIDERS_NORMAL",
-            RunConstants.SlitheringStranglerEncounterId => "SLITHERING_STRANGLER_NORMAL",
+            RunConstants.RubyRaidersEncounterId => "RubyRaidersNormal",
+            RunConstants.SlitheringStranglerEncounterId => "SlitheringStranglerNormal",
             // Both slug variants share one emulator enum id but not one entry id.
             RunConstants.CorpseSlugsEncounterId => weakVariant
-                ? "CORPSE_SLUGS_WEAK"
-                : "CORPSE_SLUGS_NORMAL",
+                ? "CorpseSlugsWeak"
+                : "CorpseSlugsNormal",
+            // A Rock and one worker; a Rock and two, drawn without replacement.
+            RunConstants.BowlbugsWeakEncounterId => "BowlbugsWeak",
+            RunConstants.BowlbugsNormalEncounterId => "BowlbugsNormal",
+            // These three roll ONE value that offsets the whole roster's opening moves,
+            // so a single draw off the wrong stream moves every creature in the fight.
+            RunConstants.DecimillipedeEncounterId => "DecimillipedeElite",
+            RunConstants.ScrollsWeakEncounterId => "ScrollsOfBitingWeak",
+            RunConstants.ScrollsNormalEncounterId => "ScrollsOfBitingNormal",
+            // Two draws, one per construct: how much starting HP each has lost.
+            RunConstants.PunchOffEncounterId => "PunchOffEventEncounter",
             _ => null,
         };
 

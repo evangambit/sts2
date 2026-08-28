@@ -5,11 +5,43 @@ namespace Sts2Emulator.Core.Run;
 public static class RunMapGenerator
 {
     /// <summary>
-    /// UpFront draws RunManager.GenerateRooms makes before the first act's rooms
-    /// are generated: the shared-ancient shuffle plus one subset-size draw per act
-    /// after the first. Pinned to the mature profile the captures are taken on.
+    /// <c>UnlockState.SharedAncients</c> — ancients belonging to no act, dealt out to the
+    /// acts after the first. The game's own comment: "we only have 1 right now. That's
+    /// Darv."
     /// </summary>
-    private const int SharedAncientPrefixDraws = 232;
+    /// <remarks>
+    /// A one-item list is why the prefix ahead of the acts measured as exactly two draws:
+    /// <c>UnstableShuffle</c> over one element costs nothing, leaving the two subset-size
+    /// draws. That made "the shared pool is empty" look right, and it is not — a live
+    /// capture (`3PFLW9XC5D`) opens act 2 on DARV, which is in no act's own list.
+    /// </remarks>
+    private static readonly string[] SharedAncientPool = [RunConstants.AncientDarv];
+
+    /// <summary>
+    /// RunManager.InitializeNewRun: the shared bag from SharedRelicPool as-is, then the
+    /// player's from the shared pool plus the character's, filtered to the four reward
+    /// rarities. Both shuffle off UpFront, shared first -- the order and the split are
+    /// what put the rest of the run's draws where they are.
+    /// </summary>
+    private static void PopulateRelicGrabBags(RunState state, GameRng upFront)
+    {
+        state.SharedRelicBag = new RelicGrabBag(refreshAllowed: true);
+        state.SharedRelicBag.Populate(
+            GeneratedData.RelicPools.Shared.ToArray(),
+            upFront,
+            filterRarities: false
+        );
+
+        state.RelicBag = new RelicGrabBag();
+        state.RelicBag.Populate(
+            [
+                .. GeneratedData.RelicPools.Shared.ToArray(),
+                .. GeneratedData.RelicPools.Ironclad.ToArray(),
+            ],
+            upFront,
+            filterRarities: true
+        );
+    }
 
     public static void SelectActAndGenerateRooms(RunState state)
     {
@@ -24,8 +56,12 @@ public static class RunMapGenerator
         // which is what the differential captures are taken on. A profile without
         // Underdocks unlocked would always get Overgrowth.
         var actRng = new GameRng(state.Rng.Seed, "act_selection");
-        bool underdocks = actRng.NextInt(0, 2) == 1;
-        state.Act = underdocks ? RunConstants.ActUnderdocks : RunConstants.ActOvergrowth;
+        int[] acts =
+        [
+            .. RunConstants.ActCandidatesByIndex.Select(candidates =>
+                candidates[actRng.NextInt(candidates.Length)]
+            ),
+        ];
         // RunManager.GenerateRooms drives one UpFront stream in a fixed order:
         // it shuffles the shared ancients, draws one subset size per act after the
         // first, and only then calls ActModel.GenerateRooms for each act. That
@@ -39,47 +75,79 @@ public static class RunMapGenerator
         // 232 + 30 = 262 for Overgrowth's 31 events, 232 + 27 = 259 for
         // Underdocks' 28.
         var upFront = state.Rng.UpFront;
-        for (int i = 0; i < SharedAncientPrefixDraws; i++)
+        PopulateRelicGrabBags(state, upFront);
+
+        // RunManager.GenerateRooms shuffles the shared ancients and then deals each act
+        // AFTER the first a slice off the front: `count = NextInt(list.Count + 1)`, take
+        // that many, and remove them from what is left for the next act. With one shared
+        // ancient that is two draws, which is what this used to spend as a constant --
+        // but the VALUES matter, because taking it or not decides whether an act can open
+        // on Darv at all.
+        var remainingShared = SharedAncientPool.ToList();
+        var sharedSubsets = new List<string[]>();
+        for (int i = 1; i < RunConstants.ActCandidatesByIndex.Length; i++)
         {
-            upFront.NextDouble();
+            int take = upFront.NextInt(remainingShared.Count + 1);
+            sharedSubsets.Add([.. remainingShared.Take(take)]);
+            remainingShared = [.. remainingShared.Skip(take)];
         }
 
-        state.EventSequence = GenerateEventSequence(underdocks, upFront);
-        state.EventSequenceIndex = 0;
+        // RunManager.GenerateRooms walks EVERY act, in index order, off this one stream.
+        // The emulator generated only the first and stopped, which left its UpFront two
+        // acts' worth of draws behind the game's for the rest of the run -- invisible so
+        // far because nothing a committed trace does reads UpFront after generation, and
+        // wrong the moment anything did.
+        state.Acts.Clear();
+        state.CurrentActIndex = 0;
+        for (int index = 0; index < acts.Length; index++)
+        {
+            // The game's loop is `Acts.Skip(1)`, so act 1 is dealt no shared ancients.
+            string[] subset = index == 0 ? [] : sharedSubsets[index - 1];
+            state.Acts.Add(GenerateRoomsForAct(acts[index], upFront, subset));
+        }
 
-        int[] weakPool = (
-            underdocks
-                ? RunConstants.UnderdocksWeakEncounters
-                : RunConstants.OvergrowthWeakEncounters
-        ).ToArray();
-        int[] normalPool = (
-            underdocks
-                ? RunConstants.UnderdocksNormalEncounters
-                : RunConstants.OvergrowthNormalEncounters
-        ).ToArray();
-        int[] elitePool = (
-            underdocks
-                ? RunConstants.UnderdocksEliteEncounters
-                : RunConstants.OvergrowthEliteEncounters
-        ).ToArray();
-        int[] bossPool = (
-            underdocks
-                ? RunConstants.UnderdocksBossEncounters
-                : RunConstants.OvergrowthBossEncounters
-        ).ToArray();
+        state.EventSequenceIndex = 0;
+    }
+
+    /// <summary>
+    /// <c>ActModel.GenerateRooms</c>, which is the same six steps for every act: shuffle
+    /// the event pool, fill the weak encounters, fill the regular ones up to the act's
+    /// room count, fill fifteen elites, take a boss, take an ancient.
+    /// </summary>
+    /// <remarks>
+    /// The ANCIENT draw at the end is new. The emulator stopped at the boss, so every act
+    /// it generated left the stream one draw short of where the game leaves it. Which
+    /// ancient it picks is not modelled yet -- act 1's is Neow and the later acts' are
+    /// rolled from the act's own three plus whatever shared ones it was dealt -- but the
+    /// DRAW has to happen either way, and that is what keeps everything after it aligned.
+    /// </remarks>
+    private static ActRooms GenerateRoomsForAct(int act, GameRng upFront, string[] sharedSubset)
+    {
+        var (weakCount, roomCount) = RunConstants.ActRoomCounts(act);
+        int[] weakPool = WeakPoolFor(act);
+        int[] normalPool = NormalPoolFor(act);
+        int[] elitePool = ElitePoolFor(act);
+        int[] bossPool = BossPoolFor(act);
+
+        int[] events = GenerateEventSequence(act, upFront);
 
         var normalSequence = new List<int>();
         var weakBag = weakPool.ToList();
         int? last = null;
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < weakCount; i++)
         {
+            if (weakBag.Count == 0)
+            {
+                weakBag = weakPool.ToList();
+            }
+
             int enc = GrabWithoutRepeatingTags(weakBag, last, upFront);
             normalSequence.Add(enc);
             last = enc;
         }
 
         var normalBag = new List<int>();
-        for (int i = 0; i < 12; i++)
+        for (int i = weakCount; i < roomCount; i++)
         {
             if (normalBag.Count == 0)
             {
@@ -90,15 +158,14 @@ public static class RunMapGenerator
             normalSequence.Add(enc);
             last = enc;
         }
-        state.NormalEncounterSequence = normalSequence.ToArray();
 
         var eliteSequence = new List<int>();
         var eliteBag = new List<int>();
         // Elites go through the same AddWithoutRepeatingTags path as normals, and
-        // track their own "last" — the game passes _rooms.eliteEncounters, so the
+        // track their own "last" -- the game passes _rooms.eliteEncounters, so the
         // no-repeat rule looks at the previous *elite*, not the previous normal.
         int? lastElite = null;
-        for (int i = 0; i < 15; i++)
+        for (int k = 0; k < RunConstants.EliteSequenceLength; k++)
         {
             if (eliteBag.Count == 0)
             {
@@ -109,9 +176,84 @@ public static class RunMapGenerator
             eliteSequence.Add(enc);
             lastElite = enc;
         }
-        state.EliteEncounterSequence = eliteSequence.ToArray();
-        state.BossEncounterId = bossPool[(int)(upFront.NextDouble() * bossPool.Length)];
+
+        int boss = bossPool[(int)(upFront.NextDouble() * bossPool.Length)];
+
+        // `_rooms.Ancient = rng.NextItem(GetUnlockedAncients().Concat(sharedSubset))`.
+        // The subset is empty on this profile -- SharedAncients is empty, so the two
+        // subset-size draws are NextInt(1) and both come back zero -- which leaves the
+        // act's own list. This draw used to be a bare NextDouble standing in for "spend a
+        // value"; it is the real pick now, so the run knows WHICH ancient each act opens
+        // on. Both act-1 regions declare Neow alone, so act 1 is a one-item pick that
+        // still costs its draw.
+        string[] ancients = [.. RunConstants.AncientsFor(act), .. sharedSubset];
+        // NextItem spelled out: it is `items[(int)(NextDouble() * count)]`, and having the
+        // raw roll is what lets a mismatch be solved rather than guessed at.
+        double ancientRoll = upFront.NextDouble();
+        string ancient = ancients[(int)(ancientRoll * ancients.Length)];
+
+        return new ActRooms(
+            act,
+            events,
+            normalSequence.ToArray(),
+            eliteSequence.ToArray(),
+            boss,
+            ancient
+        );
     }
+
+    // Glory reads the GENERATED pool; act 1 and Hive still read the constants they were
+    // verified with. The generator reproduces those sixteen pools exactly -- which is
+    // the whole argument that Glory's four are right -- and a test says so, so the two
+    // sources cannot drift apart in silence. Act 3 was reusing Hive's encounters
+    // outright until now.
+    private static int[] WeakPoolFor(int act) =>
+        act switch
+        {
+            RunConstants.ActUnderdocks => RunConstants.UnderdocksWeakEncounters.ToArray(),
+            RunConstants.ActHive => RunConstants.HiveWeakEncounters.ToArray(),
+            RunConstants.ActGlory => GeneratedData.EncounterTags.Pool(
+                RunConstants.ActGlory,
+                "Weak"
+            ),
+            _ => RunConstants.OvergrowthWeakEncounters.ToArray(),
+        };
+
+    private static int[] NormalPoolFor(int act) =>
+        act switch
+        {
+            RunConstants.ActUnderdocks => RunConstants.UnderdocksNormalEncounters.ToArray(),
+            RunConstants.ActHive => RunConstants.HiveNormalEncounters.ToArray(),
+            RunConstants.ActGlory => GeneratedData.EncounterTags.Pool(
+                RunConstants.ActGlory,
+                "Normal"
+            ),
+            _ => RunConstants.OvergrowthNormalEncounters.ToArray(),
+        };
+
+    private static int[] ElitePoolFor(int act) =>
+        act switch
+        {
+            RunConstants.ActUnderdocks => RunConstants.UnderdocksEliteEncounters.ToArray(),
+            RunConstants.ActHive => RunConstants.HiveEliteEncounters.ToArray(),
+            RunConstants.ActGlory => GeneratedData.EncounterTags.Pool(
+                RunConstants.ActGlory,
+                "Elite"
+            ),
+            _ => RunConstants.OvergrowthEliteEncounters.ToArray(),
+        };
+
+    private static int[] BossPoolFor(int act) =>
+        act switch
+        {
+            RunConstants.ActUnderdocks => RunConstants.UnderdocksBossEncounters.ToArray(),
+            RunConstants.ActHive => RunConstants.HiveBossEncounters.ToArray(),
+            RunConstants.ActGlory => GeneratedData.EncounterTags.Pool(
+                RunConstants.ActGlory,
+                "Boss"
+            ),
+            _ => RunConstants.OvergrowthBossEncounters.ToArray(),
+        };
 
     /// <summary>
     /// The events a run can draw, in the order ActModel.GenerateRooms builds them:
@@ -125,8 +267,61 @@ public static class RunMapGenerator
     /// all run, which is what the deleted TryEnterRetainedInstant5Event hardcode was
     /// papering over.
     /// </summary>
-    private static int[] GenerateEventSequence(bool underdocks, GameRng rng)
+    /// <summary>
+    /// <c>ModelDb.AllSharedEvents</c>: the block every act appends to its own list before
+    /// the one shuffle. Eighteen of them, and the ORDER matters as much as the membership
+    /// — <c>UnstableShuffle</c> is order-dependent, so the same events in a different
+    /// sequence shuffle to a different run.
+    /// </summary>
+    private static readonly int[] SharedEventPool =
+    [
+        RunConstants.EventBrainLeech,
+        RunConstants.EventCrystalSphere,
+        RunConstants.EventDollRoom,
+        RunConstants.EventFakeMerchant,
+        RunConstants.EventPotionCourier,
+        RunConstants.EventRanwidTheElder,
+        RunConstants.EventRelicTrader,
+        RunConstants.EventRoomFullOfCheese,
+        RunConstants.EventSelfHelpBook,
+        RunConstants.EventSlipperyBridge,
+        RunConstants.EventStoneOfAllTime,
+        RunConstants.EventSymbiote,
+        RunConstants.EventTeaMaster,
+        RunConstants.EventTheFutureOfPotions,
+        RunConstants.EventTheLegendsWereTrue,
+        RunConstants.EventThisOrThat,
+        RunConstants.EventWarHistorianRepy,
+        RunConstants.EventWelcomeToWongos,
+    ];
+
+    private static int[] GenerateEventSequence(int act, GameRng rng)
     {
+        if (act == RunConstants.ActHive || act == RunConstants.ActGlory)
+        {
+            // Hive.AllEvents in its own declaration order, then the same shared block
+            // every act gets. Glory has its own list, which is not extracted yet -- it
+            // reuses Hive's so the DRAW COUNT is at least an act's worth rather than
+            // nothing, and act 3 is not reachable to be wrong about yet.
+            int[] hivePool =
+            [
+                RunConstants.EventAmalgamator,
+                RunConstants.EventBugslayer,
+                RunConstants.EventColorfulPhilosophers,
+                RunConstants.EventColossalFlower,
+                RunConstants.EventFieldOfManSizedHoles,
+                RunConstants.EventInfestedAutomaton,
+                RunConstants.EventLostWisp,
+                RunConstants.EventSpiritGrafter,
+                RunConstants.EventTheLanternKey,
+                RunConstants.EventZenWeaver,
+                .. SharedEventPool,
+            ];
+            rng.Shuffle(hivePool);
+            return hivePool.Where(eventId => eventId != 0).ToArray();
+        }
+
+        bool underdocks = act == RunConstants.ActUnderdocks;
         int[] eventPool = underdocks
             ?
             [
@@ -198,6 +393,37 @@ public static class RunMapGenerator
         return eventPool.Where(eventId => eventId != 0).ToArray();
     }
 
+    /// <summary>
+    /// <c>RunManager.SetActInternal</c>: move to the next act and lay out its map.
+    /// </summary>
+    /// <remarks>
+    /// Four things, and the two easy to miss are the ones that are not there. The FLOOR
+    /// does not reset — a live capture crosses into act 2 still on floor 17 and counts on
+    /// from there — and the deck, relics and gold carry over untouched. What does reset is
+    /// the unknown-map-point odds (<c>Odds.UnknownMapPoint.ResetToBase()</c>), which climb
+    /// as a run walks question marks and start each act fresh. The rooms themselves are
+    /// not generated here: every act's were rolled at run start, so this only points
+    /// <c>CurrentActIndex</c> at them.
+    /// </remarks>
+    public static bool AdvanceToNextAct(RunState state)
+    {
+        if (state.CurrentActIndex >= state.Acts.Count - 1)
+        {
+            return false;
+        }
+
+        state.CurrentActIndex++;
+        state.EventSequenceIndex = 0;
+        state.AwaitingActStartNode = true;
+        state.UnknownMapPointsVisited = 0;
+        state.UnknownMapPointMonsterOdds = 0.1;
+        state.UnknownMapPointEliteOdds = -1.0;
+        state.UnknownMapPointTreasureOdds = 0.02;
+        state.UnknownMapPointShopOdds = 0.03;
+        GenerateActMap(state);
+        return true;
+    }
+
     public static void GenerateActMap(RunState state)
     {
         state.MapNodes = [];
@@ -210,9 +436,8 @@ public static class RunMapGenerator
         // The game keys this stream on the act *index* — `act_{CurrentActIndex + 1}_map`
         // — not on which act was rolled. This used to pass `state.Act - 1`, conflating
         // the two: an Underdocks act 1 would have read "act_2_map" instead of
-        // "act_1_map" and desynced the entire map. The emulator only models act 1, so
-        // the index is always 0.
-        var mapRng = state.Rng.ActMapRng(0);
+        // "act_1_map" and desynced the entire map.
+        var mapRng = state.Rng.ActMapRng(state.CurrentActIndex);
         int restCount = mapRng.NextGaussianInt(7, 1, 6, 7);
         int unknownCount = mapRng.NextGaussianInt(12, 1, 10, 14);
 
@@ -268,6 +493,16 @@ public static class RunMapGenerator
         SpreadAdjacentMapPoints(state);
         StraightenPaths(state);
         AssignEncounterIds(state);
+
+        // StandardActMap stamps the starting point LAST — `BossMapPoint.PointType =
+        // Boss; StartingMapPoint.PointType = Ancient;` come after every other assignment,
+        // so they win. Setting it at the top of this method instead let the type
+        // assignment pass overwrite it, and the node came out Unassigned.
+        //
+        // Act 1's ancient is Neow, which the run begins standing on rather than travels
+        // to, so the emulator got away without the type entirely. Every act after opens
+        // on the map with this node as the only thing to walk to.
+        GetOrCreate(state, RunConstants.MapStartCol, 0).NodeType = RunConstants.NodeAncient;
         RefreshMapOptions(state);
     }
 
@@ -888,6 +1123,43 @@ public static class RunMapGenerator
         node.NodeType = nodeType;
     }
 
+    /// <summary>
+    /// <c>Hook.ShouldAllowFreeTravel</c>: true while anything the run carries answers yes.
+    /// Winged Boots is the only one a solo run can hold -- the other implementor is the
+    /// Flight modifier -- and it answers yes until its third charge is spent.
+    /// </summary>
+    public static bool AllowsFreeTravel(RunState state) =>
+        state.Relics.Any(relic =>
+            relic.DefId == RunConstants.RelicWingedBoots
+            && relic.Counter < RunConstants.WingedBootsTravels
+        );
+
+    /// <summary>
+    /// <c>MapTravel.GetTravelablePointsFrom</c>: the current node's children, or the whole
+    /// of the next row while free travel is allowed.
+    /// </summary>
+    /// <remarks>
+    /// The boss is deliberately not covered by the free-travel branch. It is not in the
+    /// game's <c>Grid</c>, so <c>GetPointsInRow</c> never returns it and free travel from
+    /// the last grid row would offer nothing at all; <c>NMapScreen</c> makes the boss
+    /// travelable outright from there instead, which is what the children are.
+    /// </remarks>
+    private static IEnumerable<(int Col, int Row)> TravelableCoords(
+        RunState state,
+        RunMapNode current
+    )
+    {
+        if (current.Row >= RunConstants.MapFinalRestRow || !AllowsFreeTravel(state))
+        {
+            return current.Children;
+        }
+
+        int row = current.Row + 1;
+        return state
+            .MapNodes.Values.Where(node => node.Row == row)
+            .Select(node => (node.Col, node.Row));
+    }
+
     public static void RefreshMapOptions(RunState state)
     {
         Array.Clear(state.MapNodeTypes);
@@ -898,11 +1170,15 @@ public static class RunMapGenerator
             return;
         }
 
-        var options = current
-            .Children.OrderBy(coord => coord.Row)
-            .ThenBy(coord => coord.Col)
-            .Take(RunConstants.MapChoices)
-            .ToArray();
+        // A new act shows its map before the run has stepped onto it, so the only thing
+        // to travel to is the starting point -- the act's ancient.
+        var options = state.AwaitingActStartNode
+            ? [(RunConstants.MapStartCol, 0)]
+            : TravelableCoords(state, current)
+                .OrderBy(coord => coord.Row)
+                .ThenBy(coord => coord.Col)
+                .Take(RunConstants.MapChoices)
+                .ToArray();
         for (int i = 0; i < options.Length; i++)
         {
             var node = state.MapNodes[options[i]];
@@ -948,6 +1224,17 @@ public static class RunMapGenerator
 
         nodeType = state.MapNodeTypes[action];
         encounterId = state.MapChoices[action];
+        if (state.AwaitingActStartNode)
+        {
+            // Stepping onto the act's first point, which is not connected to anything
+            // behind it -- there is nothing behind it.
+            state.AwaitingActStartNode = false;
+        }
+        else
+        {
+            SpendFreeTravelIfUnconnected(state, coord.Value);
+        }
+
         state.CurrentMapCoord = coord.Value;
         state.CurrentNodeType = nodeType;
         state.Floor++;
@@ -964,6 +1251,34 @@ public static class RunMapGenerator
         Array.Clear(state.MapChoices);
         Array.Clear(state.MapOptionCoords);
         return true;
+    }
+
+    /// <summary>
+    /// <c>WingedBoots.AfterRoomEntered</c>: a charge is spent only when the node just
+    /// entered was NOT a child of the one left behind. Walking an edge the map already
+    /// draws is free however many charges are left, which is why the relic can be held
+    /// for a whole act without moving its counter.
+    /// </summary>
+    private static void SpendFreeTravelIfUnconnected(RunState state, (int Col, int Row) coord)
+    {
+        if (
+            !state.MapNodes.TryGetValue(state.CurrentMapCoord, out var from)
+            || from.Children.Contains(coord)
+        )
+        {
+            return;
+        }
+
+        int index = state.Relics.FindIndex(relic => relic.DefId == RunConstants.RelicWingedBoots);
+        if (index < 0 || state.Relics[index].Counter >= RunConstants.WingedBootsTravels)
+        {
+            return;
+        }
+
+        state.Relics[index] = state.Relics[index] with
+        {
+            Counter = state.Relics[index].Counter + 1,
+        };
     }
 
     private static void GeneratePath(RunState state, GameRng rng, RunMapNode start)
@@ -1223,23 +1538,17 @@ public static class RunMapGenerator
         }
     }
 
+    /// <summary>
+    /// An encounter's tags, which <c>AddWithoutRepeatingTags</c> avoids repeating.
+    /// </summary>
+    /// <remarks>
+    /// Read from the generated table rather than transcribed. The hand-written switch
+    /// this replaces had lost four entries — KnightsElite, both halves of ScrollsOfBiting
+    /// and TunnelerNormal, which also carries a second tag its weak version does not —
+    /// and a missing tag is worse than a wrong one: <c>GrabIndex</c> rejection-samples,
+    /// so it changes how many draws a grab COSTS. Three of the four are Glory's, which is
+    /// act 3 waiting to be handed exactly what E66 did to act 2.
+    /// </remarks>
     private static HashSet<string> Tags(int encounterId) =>
-        encounterId switch
-        {
-            2 => ["Nibbit"], // NibbitsWeak
-            3 => ["Slimes"], // SlimesWeak
-            8 => ["Crawler"], // FuzzyWurmCrawlerWeak
-            9 => ["Slugs"], // CorpseSlugs
-            11 => ["Shrinker"], // ShrinkerBeetleWeak
-            12 => ["Seapunk"],
-            // 15 is NibbitsNormal, which declares NO Tags in the game — only
-            // NibbitsWeak is tagged Nibbit. Tagging it here wrongly blocked the game's
-            // legitimate NibbitsWeak -> NibbitsNormal run, shifting the whole
-            // remaining sequence by one.
-            16 => ["Slimes"], // SlimesNormal
-            17 => ["Mushroom", "Slimes"],
-            18 => ["Mushroom"],
-            21 => ["Shrinker", "Crawler"],
-            _ => [],
-        };
+        [.. GeneratedData.EncounterTags.For(encounterId)];
 }

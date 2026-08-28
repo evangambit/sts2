@@ -15,11 +15,19 @@ public enum RelicRarity
 public readonly record struct RelicDef(
     int Id,
     string Name,
+    // The game's ModelId.Entry -- the slugified class name. Anything that StableShuffles
+    // relics sorts by ModelId first, and ModelId orders by Category then Entry as ordinal
+    // strings, so the pre-shuffle order has to come from this rather than from our own
+    // numeric ids. The relic trader's stock is the shuffle that needs it.
+    string Entry = "",
     RelicRarity Rarity = RelicRarity.None,
     // RelicModel.HasUponPickupEffect: the relic did something on pickup that handing it
     // over could not undo.
     bool HasUponPickupEffect = false,
-    bool SpawnsPets = false
+    bool SpawnsPets = false,
+    // RelicModel.IsAllowedInShops: five relics are never sold, and every shop pull is
+    // filtered on it.
+    bool IsAllowedInShops = true
 )
 {
     /// <summary>

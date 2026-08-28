@@ -13,4 +13,14 @@ public enum RunPhase
     Ancient = 8,
     TransformSelect = 9,
     Treasure = 10,
+
+    /// <summary>The Crystal Sphere's grid of fog, which is a screen of its own.</summary>
+    CrystalSphere = 11,
+
+    /// <summary>
+    /// <c>CardSelectCmd.FromChooseABundleScreen</c>: Scroll Boxes' two bundles of three
+    /// cards, one of which the player takes whole. It is answered in TWO actions the way
+    /// the game's screen is — select a bundle, then confirm it.
+    /// </summary>
+    BundleSelect = 12,
 }

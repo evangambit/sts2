@@ -2,7 +2,9 @@
 
 Orientation for a future agent. **PLAN.md** has the full design + chronological
 history and the _why_ behind every decision; **docs/replay-verification.md** has the
-full-run verification design. This file is the _current state + how-to + gotchas +
+full-run verification design; **docs/divergence-catalog.md** lists every
+emulator/game divergence found so far, with the metric that exposed it, the cause,
+and the seed to reproduce it on. This file is the _current state + how-to + gotchas +
 next steps_. Read this first, then PLAN.md for depth.
 
 ## What this is
@@ -47,14 +49,22 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (currently 800 pass)
+# C# unit tests (2248 pass; ~2m on a quiet machine, and see the note below)
 dotnet test src/Sts2Emulator.Tests/
 
 # Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (140 pass) — drives the live dylib via ctypes
+# Python gym tests (411 pass, 6 skipped) — drives the live dylib via ctypes
 uv run python -m unittest discover -s tests/python
+
+# Audits (all three are worklists; each has a docstring saying what it cannot see)
+uv run python scripts/audit_enemy_moves.py        # monster behaviour vs the source
+uv run python scripts/audit_ascension_literals.py # A9 values used at A8
+uv run python scripts/audit_card_keywords.py      # card keywords the table never got
+uv run python scripts/audit_cards.py              # which cards have been READ vs the source
+uv run python scripts/audit_relics.py             # which relics the emulator models at all
+uv run python scripts/audit_relics.py --reachable # ...narrowed to what an ordinary run meets
 
 # Regenerate game data / decompiled source for the current patch
 bash scripts/decompile.sh "<game dir>"        # → decompiled/ (gitignored), needs ilspycmd
@@ -62,6 +72,29 @@ python scripts/extract_data.py                # → src/Sts2Emulator/Generated/*
 python scripts/diff_patch.py                  # summarize data drift vs baseline
 bash scripts/patch_update.sh "<game dir>"     # runs the whole chain + build + test
 ```
+
+**On the C# suite's runtime, before you go looking for a regression.** It runs
+SERIALLY: `AssemblyInfo.cs` has carried
+`[assembly: CollectionBehavior(DisableTestParallelization = true)]` since the initial
+commit, and that is load-bearing rather than left over. `CombatFactory` holds three
+mutable statics (`_currentNicheHpRng`, `_usedNicheHps`, `_currentAscension`) and
+`CardEffects` two more (`_shuffleCards`, `_shuffleKeys`, the reused scratch buffers the
+allocation work added) — parallel collections would race on all five. Enabling
+parallelism means removing that state first.
+
+So the wall clock is one core's worth and tracks whatever else the machine is doing. It
+went from ~2m to ~6m inside one session; the cause was another job on the box, proven two
+ways rather than guessed: the UNCHANGED commit from the session's start also went to
+4m15s in the same window, and an interleaved A/B of that commit against HEAD on an
+untouched suite came out 34/29/27s against 30/30/28s. If the suite feels slow, check
+`uptime` before checking the diff — and expect the answer to be a neighbour rather than a
+mystery: the RL work lives in `~/Projects/STSS/emulator-rl`, a training run there will sit
+on a core or more for hours, and a serial suite feels every bit of it.
+
+Where the time actually goes, on any machine: **1906 of the tests average 186ms**, because
+so many of them generate a whole run. The card and combat suites added later are ~2ms
+each. A serial suite of full run generations is the cost, not any one slow test — the
+twenty slowest are 64s of 356s.
 
 `<game dir>` = `~/Library/Application Support/Steam/steamapps/common/Slay the Spire 2`
 (the scripts auto-detect it on macOS). The decompile/extract scripts were adapted for
@@ -147,11 +180,44 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   than the game would.
 - **Enemy HP now rolled faithfully** (was hardcoded `fixedHp`; now uses the game's
   Niche stream + unique-HP set — commit `123fecf`).
+- ✅ **Every Silent card — all 89, the whole `SilentCardPool` plus the Shiv — has tests.**
+  The last 40 were swept in four batches by rarity, and **the hit rate did not fall as the
+  cards got simpler**: 4 of 15 commons wrong, 6 of 12 uncommons, 4 of 9 rares, 1 of 4
+  basics. A third to a half at every tier. That is the argument against triaging card work
+  by rarity — a simple card is not a card that was got right, it is a card nobody looked
+  at. The three hardest (Nightmare, Echoing Slash, Blade of Ink) had been deferred as O24
+  and are done. See E112-E175.
+- ✅ **Every Defect card — all 88 — has tests**, and the ORBS underneath them are pinned
+  and observable. Read the note below for how it went.
+  The orbs came first on purpose — most of the pool channels, evokes or counts them, and a
+  card test written against a wrong orb passes and cements the wrong answer. Three of the
+  five orbs were wrong (E176-E178) and the ring was missing from the observation
+  altogether (E179). Then the cards, by rarity: **6 of 24 basics-and-commons wrong, 10 of
+  36 uncommons, 5 of 27 rares-and-ancients** (E180-E201). **The observation grew**:
+  `OBS_SIZE` 219 → 250, `RUN_OBS_SIZE` 630 → 661, `NATIVE_API_VERSION` 22. Anything
+  holding a trained policy needs a rebuild and a retrain.
+- ✅ **Every Silent card — all 89, the whole `SilentCardPool` plus the Shiv — has tests.**
+  The last 40 were swept in four batches by rarity, and **the hit rate did not fall as the
+  cards got simpler**: 4 of 15 commons wrong, 6 of 12 uncommons, 4 of 9 rares, 1 of 4
+  basics. A third to a half at every tier. That is the argument against triaging card work
+  by rarity — a simple card is not a card that was got right, it is a card nobody looked
+  at. The three hardest (Nightmare, Echoing Slash, Blade of Ink) had been deferred as O24
+  and are done. See E112-E175.
+- 🔨 **Defect: the ORBS are pinned and observable; the 87 unpinned cards are not.** The
+  orbs came first on purpose — most of Defect's pool channels, evokes or counts them, and
+  a card test written against a wrong orb passes and cements the wrong answer. Three of
+  the five were wrong (E176-E178), and the ring was missing from the observation
+  altogether (E179, was O26). **The observation grew**: `OBS_SIZE` 219 → 250,
+  `RUN_OBS_SIZE` 630 → 661, and `NATIVE_API_VERSION` is 22. Anything holding a trained
+  policy or a cached obs width — the `emulator-rl` worktree above all — needs a rebuild
+  and a retrain, and will fail loudly rather than quietly if it does not get one.
+  **The 4 basics, 20 commons and 36 uncommons are pinned too** (E180-E195; six wrong in
+  the first batch, ten in the second). 27 cards left: 25 rares and 2 ancients.
 - ✅ **Every Ironclad card — all 92 — has tests**, written against `decompiled/` with the
   source cited per file, never against emulator output. `CardCoverageTests` is the guard:
   `scripts/generate_card_coverage.py` scrapes the `case` labels out of `CardEffects.Apply`
   into `ImplementedCards.g.cs`, and implementing a card now fails the build until it is
-  tested or explicitly deferred in `Pending` (**389 left**).
+  tested or explicitly deferred in `Pending` (**223 left**).
   Caveat worth knowing: the guard only sees cards with their own `case`. Strike, Defend
   and Giant Rock run on the generic damage-and-block path and were invisible to it — they
   have tests now, but an empty `Pending` still means "every card with effect code", not
@@ -225,7 +291,7 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   native API v11). Version numbers quoted through this file are the version a feature
   _landed at_, not the current one — the current pair is whatever
   `NativeExports.NATIVE_API_VERSION` and `RunNativeExports.RUN_NATIVE_API_VERSION` say,
-  with `src/sts2_gym/native.py` pinned to match (v17 and v10 at the time of writing).
+  with `src/sts2_gym/native.py` pinned to match (v19 and v16 at the time of writing).
   A mismatch fails loudly on load rather than misreading the observation.
 - **Ascension:** the emulator models high ascension (`ToughEnemies` values). Live runs
   at A8 give player 64/80 HP and CorpseSlug 27–29, matching the emulator.
@@ -322,6 +388,11 @@ debug_start_encounter` cycling triggers an error popup (`report_bug`, needs rest
   self-contained mod action to add (see docs/replay-verification.md), NOT a RunReplays dep.
 
 ## The run layer is now honestly unverified
+
+**Read this with "All nine committed run traces now replay clean" further down.** The
+history below is why the run layer had no honest measurement; that section is the
+measurement it now has. Everything here still stands as the account of how it got there.
+
 
 Act-1 combat is verified end to end. The run layer around it was not — it was *fitted*.
 Removed in one pass: **1,530 lines** across `RunEngine`, `RunMapGenerator`,
@@ -532,7 +603,638 @@ Two things the capture turned up on the way:
   treasure screen. Not an emulator issue; the tracer's proceed handling for that screen
   needs the same treatment the map move just got.
 
+### The run traces, and what taking more of them costs
+
+The two entries that stood in the catalogue's **Open** table are closed, and the whole
+`tests/fixtures/run_trace/` set replays with no divergence on any compared field —
+including a tenth trace taken afterwards, on purpose, to break the tie (see below). Both
+were the run LAYER rather than a card or a monster, which is the part this file used to
+call honestly unverified — so this is the first evidence for it that is not a fitted one.
+
+Six defects and one harness gap came out of the two, and the ones worth carrying forward:
+
+- **Winged Boots' free travel** (`KFMKQQA7MS`). `MapTravel.GetTravelablePointsFrom` hands
+  back the WHOLE next row while any relic answers `ShouldAllowFreeTravel`, not the current
+  node's children. The blocker recorded against it was real and is gone:
+  `RunConstants.MapChoices` is `MapWidth` now, the run observation's scalar block is
+  derived from the blocks inside it rather than written down, `Sts2Run_ObsLayout` reports
+  the map offsets so Python reads them instead of restating them, and the run API is
+  **v15**. A charge is spent only on a move the map draws no edge for, and it lives on the
+  relic's own counter — `RunState.WingedBootsTimesUsed` was read by nothing and is gone.
+- **A combat the enemy phase ended kept playing** (`WK1DEGZD8P`, and the one to remember).
+  `CombatManager.ExecuteEnemyTurn` checks the win condition after every enemy; the
+  emulator checked once, at the very end of `EndTurn`, so a fight whose last enemy died —
+  or, here, fled with its Heist gold — still ran a whole player turn that never happens.
+  That turn drew a hand, which reshuffled a 13-card pile, which moved `Rng.Shuffle`. It is
+  a RUN-level stream, so every later fight was dealt from a position twelve draws ahead of
+  the game's. **The fight that paid was three floors after the fight that spent.**
+- **Suck fired per hit** rather than once per `AttackCommand`, so a Fossil Stalker's
+  two-hit Lash fed the first hit's Strength into the second. Every multi-hit enemy attack
+  now runs through one `EnemyAI.DealAttack(enemy, state, damage, hits)`.
+- **Fossil Stalker's TACKLE never applied its Frail** — an attack-plus-debuff resolved in
+  the debuff branch its Attack intent cannot reach. Fifth time for that shape; see the
+  catalogue's Grasping Vines note.
+- **A summoned Two-Tailed Rat always joined the front.** `CallForBackup` takes
+  `Slots.LastOrDefault(free)`, which is the front only while all three starters are alive;
+  once one has died it can be the back. `EnemyState.Slot` carries the encounter slot now.
+- **The target map spelled a hyphenated enemy differently from the game** — the harness
+  gap, and the expensive one. `TWO-TAILED_RAT` vs `TWO_TAILED_RAT` made the lookup miss,
+  and a miss does not fail: `translate_target` falls back to the entity id's numeric
+  suffix, which is exactly the renumbering H2 was written to stop trusting.
+
+Two more came out of reading the code those touched rather than out of a capture, and
+both were one line: **an early `break` for multi-hit attacks** skipped everything below
+it in the attack branch. That cost Punch Construct's FAST_PUNCH its Frail, and it cost
+**Flame Barrier its retaliation against every multi-hit attack** — and, because the
+retaliation sat past eighteen other `break`s too, against every monster with a special
+case of its own. `FlameBarrierPower.AfterDamageReceived` is a hook on the damage, so it
+now lives in the per-hit helper next to Thorns, where it fires per hit, fires through
+block, and is skipped only by the blow that kills. The 24 riders behind that break were
+audited rather than assumed: FAST_PUNCH was the only dead one.
+
+**How to measure a live stream position**, since it is what made the second one findable
+and it needs no game running: a combat's opening pile is `hand_ordered + draw_pile_ordered`
+and its input is the deck in run order, so the position the game was at is the one `k` for
+which `shuffle(deck, stream[k:])` reproduces the capture. Search `k` over the stream, read
+the emulator's own side off `Sts2Run_GetShuffleRngCallCount`, and compare per combat.
+
+**What a clean set means and does not.** It means the next run-layer defect needs a NEW
+capture, not another look at these — which was then tested directly, and held.
+
+### The tenth capture, and what taking one costs
+
+`1UL0BRX8WC` was taken for one reason: the nine held only nine of Neow's relics between
+them. It drew a tenth, **Phial Holster**, and diverged on the first combat reward of the
+run — 15 gold live against 9. Four defects came out of that one run (catalogue E29-E32),
+and only the first had anything to do with the relic; the rest sat on paths no earlier
+capture had walked:
+
+- **Phial Holster's potions rolled off the Rewards stream** instead of
+  `Rng.CombatPotionGeneration`, and its `+1` potion slot was unmodelled. The base is 2 at
+  A8, not the 3 the decompiled constant says — every capture agrees, which is how it was
+  settled.
+- **A four-draw fudge** in `AdvanceRewardRngForNeowRelic`, put there to paper over that
+  wrong stream, was all that remained once it was fixed. Its two surviving rows (Hefty
+  Tablet, Lead Paperweight) are a debt and are now documented as one.
+- **The opening hand skipped Slither's cost roll** — `CombatFactory` deals it with a bare
+  `Hand.Add`, so an enchanted card kept its printed cost for turn one.
+- **`combat_energy_costs` was neither fast-forwarded into a combat nor written back out**,
+  the only named stream missing both, so it restarted at zero every fight.
+
+Three harness fixes had to land before any of that was reachable, and they are the part
+worth knowing before the next capture session:
+
+- **An accepted action is not a done action.** The tracer retried refused actions and
+  nothing else. A `proceed` out of a shop returned `ok`, the map opened with the right
+  options, the travel vote registered in the game's log — and no room ever loaded, leaving
+  a live run the harness could not drive. `recover_stranded_run` re-drives until the run
+  actually moves. The first good capture needed six attempts at exactly that step.
+- **The abandon crash wedges the game.** `DeleteCurrentRun` throws on the missing
+  `current_run.save.backup`, the popup handler dies half way, and the main menu comes back
+  with no enabled buttons — forever. Every capture after it fails with "Timed out waiting
+  for menu screen 'main'", which points at the clock rather than the cause. The fix was
+  already written down as a manual step, which is how it stayed a gotcha;
+  `ensure_run_save_backup()` does it automatically now.
+- **Headless is the mode to capture in.** Boot to drivable is ~14s and the first capture
+  after switching ran to a natural game over with no intervention.
+
+### Then six more, chosen rather than rolled
+
+The tenth capture's lesson was that variety is where the defects are, so the next batch
+picked its seeds instead of rolling them. **Neow's three options are seed-deterministic
+and the emulator models the stream**, so which blessings a seed CAN offer is knowable with
+no game running — `scripts/screen_neow_seeds.py` does it, and it was checked against all
+ten existing traces first (10/10 exact, which is also an independent confirmation of the
+`NeowRng` fix). Six seeds were chosen to reach thirteen uncaptured relics.
+
+**All six diverged.** One batch, six new Act-1 runs (110-190 steps, every one a natural
+game over), and every single one found something. Three defects closed out of the first:
+
+- **A Fogmog's Eye With Teeth cannot be killed** (E33). `IllusionPower` is three rules the
+  emulator had none of — it is never removed from combat, its next turn is a forced revive
+  to full, and it keeps its powers through death, so it does it again forever. What made
+  it expensive is target resolution: with the eye dead here and alive there, every blow
+  the live run spent on the illusion landed on the Fogmog instead, and the fight ended
+  thirty-five steps early.
+- **No notion of a secondary enemy** (E34). `Creature.IsPrimaryEnemy` says it plainly —
+  "a secondary enemy will automatically die unless there's also a living primary enemy" —
+  and `MinionPower` or `IllusionPower` is what makes one. Counting the whole roster is
+  wrong in both directions: an eye that revives forever made a fight unwinnable, and a Gas
+  Bomb outliving its Living Fog held a finished one open.
+- **A guard standing in for the missing mechanic** (E35), the same shape as E30's fudge:
+  ILLUSION re-summoned whenever no eye was alive, which deleted one mid-revive. The move
+  is the machine's initial state with nothing leading back to it — once per combat, never
+  again.
+
+Two more closed out of a second capture, and they are a pair worth reading together
+(E36-E37): a **Sewer Clam gained its Plating block twice** — PRESSURIZE is `StrengthPower(4)`
+and nothing else, the block was invented — and underneath that, **Plating decayed a turn
+early and in the wrong order**. `PlatingPower` decrements on `AfterSideTurnStart` and
+grants block on `BeforeSideTurnEndEarly`, so a turn ends on the ALREADY decremented amount,
+and enemies skip the decrement entirely on round one. Note the counter while fixing
+anything like it: `CombatState.Turn` counts from ZERO, so the first enemy phase is Turn 0
+— reading it as 1 trades one off-by-one for another, which the first attempt did.
+
+Four more fell out of the remaining captures, and the pattern in them is worth as much as
+the fixes:
+
+- **The Chosen Cheese did nothing** (E38). `AfterCombatEnd` is `GainMaxHp(1)` and gaining a
+  maximum heals with it, so a fight won at 2 HP ends at 3. The emulator could already be
+  given the relic and simply ignored it — one point per combat, compounding.
+- **A Flyconid's FRAIL_SPORES applied no Frail** (E39). Attack intent first, debuff second,
+  so it resolves in the attack branch; the rider sat in the debuff branch where an Attack
+  intent never arrives. **Third time for this shape** after E25 and E28 — and the
+  emulator's own comment on the intent already said "announced as an attack".
+- **Doors of Light and Dark upgraded off the wrong stream and the wrong sort key** (E40).
+  `StableShuffle(base.Rng)` is the event's own stream, not Niche (E14 again), and
+  StableShuffle sorts by ModelId — the slug, compared ordinally — not by the emulator's
+  numeric ids. Either alone puts a different card under the same draw.
+- **A range over an enum stopped being true** (E41). `IsEliteEncounter` was
+  `>= BygoneEffigy and <= WaterfallGiant`, correct until `Architect` and `SkulkingColony`
+  were appended after WaterfallGiant — so a Skulking Colony elite did not read as one and
+  Booming Conch never fired. The same range swept in every boss, which the game excludes.
+  The six act-1 elites are named explicitly now.
+
+**Neow's Bones closed the set** (E42), and was four defects wearing one name: the wrong
+stream, a draw that can repeat itself where the game's shuffle-and-take cannot, no reward
+screen at all, and a candidate list of only the positives rather than all 26 valid Neow
+relics *in `AllPossibleOptions` declaration order* — which is load-bearing, since the
+shuffle is over that exact sequence. Building the screen turned up two more: a relic
+claimed from a reward screen is obtained through `RelicCmd.Obtain` and **runs its pickup
+effect**, and the claim that empties the screen returns to Neow by itself.
+
+**All eighteen traces then replayed clean**, and E30's two stand-in draw counts are gone
+with them — see below. Six more captures have landed since; see "Three more blessings,
+three more defects".
+
+### The debt E30 left, settled by two captures nobody had taken
+
+`AdvanceRewardRngForNeowRelic` kept burning 6 Rewards draws for Lead Paperweight and 3 for
+Hefty Tablet, standing in for card offers the emulator did not model. Neither relic had
+ever been captured, because **the auto-player's Neow policy skips any blessing whose text
+mentions a choice** — both were offered to traces already committed and both times the run
+took the safe option beside it. `--neow-option N` takes the one you name, and a seed can be
+captured more than once that way: the two new fixtures share their seeds with the plain
+captures and diverge from the first decision on.
+
+What they bought (E43): each relic offers cards on a `FromChooseACardScreen` grid, and the
+emulator granted ONE card off `Rng.UpFront`. Lead Paperweight offers two Colourless at
+`CardCreationSource.Other`/RegularEncounter odds — rarity, card, upgrade, so three draws
+each, **six**, exactly its old fudge. Hefty Tablet offers three from the owner's pool
+filtered to Rare at Uniform odds with `NoUpgradeRoll` — one draw each, **three**, exactly
+its old fudge. That the counts already matched is why nothing downstream moved when the
+fudges came out: they were right about the arithmetic and wrong about everything else. Its
+Injury also arrives WITH the card the grid hands over, not before it.
+
+And one harness gap that had been invisible for the same reason (H11): **a card-select
+phase is two different screens**. An offer grid resolves on the click; a selection over the
+deck toggles and waits for a confirm. The replay only modelled the second, because no
+committed trace had ever replayed a grid — Brain Leech and Room Full of Cheese roll them
+and no capture had reached either. It asks the run which screen is open now (state list 17,
+run API **v16**) rather than reading the mod's message text.
+
+**One operational note worth having:** `dotnet csharpier format src/` touches the C#
+sources, which makes `out/Sts2Emulator.dylib` older than them — and `native.py`'s freshness
+guard then refuses every call, so the whole Python side and all eighteen replays fail at
+once. That is the guard working, not a regression. Rebuild after formatting, or format
+before building.
+
+### The suite went from ~10 minutes to 1m40
+
+Worth knowing before the next session, because it was most of the wall-clock cost of the
+last one. `EventMaskAgreesWithStepTests` sweeps every event across every situation and
+option, and its helper called `RunEngine.Reset` for each probe — **~2,000 full run
+generations at 149ms apiece**, 304 seconds of a 420-second sample, three quarters of the
+whole suite, all to rebuild the same run and then overwrite two fields. It clones one
+pristine run now: `RunEngine.Clone` is ~0.07ms, three orders of magnitude cheaper, and it
+is the same fork the tree search already depends on. That class went from blowing a
+300-second timeout to **171 tests in 1 second**.
+
+The lesson generalises past this one class: `Reset` is expensive (map generation plus the
+grab bags' 230 shuffle draws), so any test that wants "a fresh run" many times over should
+clone one rather than generate each. The full trace sweep is now the slow half of a
+verification pass at ~8 minutes, not the suite.
+
+**One thing the screener exposed that matters for every future capture: offered is not
+taken.** The auto-player's Neow policy skips any option whose text mentions a choice, so
+the blessings with a pickup CHOICE can never be captured — `DPUJR117FL` was offered Lead
+Paperweight and `KFMKQQA7MS` Hefty Tablet, and both took the safe option beside it. Those
+two are exactly the relics whose stand-in Rewards draw counts (E30) have nothing to check
+them against, and the batch confirmed the pattern by refusing them again. **`--neow-option
+N` takes the one you name**; `25TS4F5T37 --neow-option 1` and `XTLVVPKFBF --neow-option 2`
+are the two captures that would settle E30.
+
+**What is still uncovered.** All twenty-four traces die on floors 5-17, so no committed trace
+covers an act 2 — reaching one needs either a better auto-player or the run layer taking
+an ascension (`RunEngine.Reset` hardcodes 64/80, which is why the A0 trace was deleted).
+The relic table in `tests/fixtures/run_trace/README.md` says which blessings are covered;
+anything not on it is a cheap capture away.
+
+### Three more blessings, three more defects
+
+Cursed Pearl, Silver Crucible and Leafy Poultice, screened for and captured with
+`--neow-option`. Leafy Poultice was clean on first contact; the other two were not, and
+neither defect had anything to do with the blessing that carried it there.
+
+**E47 — `IsUpgradable` was a list of fourteen ids where the game declares thirty-seven.**
+`CardModel.IsUpgradable` is `CurrentUpgradeLevel < MaxUpgradeLevel`, and the cards that
+override `MaxUpgradeLevel` to zero are every curse and status. `RunConstants` held a
+hand-written subset. That is invisible while an upgrade is CHOSEN, and decisive the moment
+one is RANDOM: Doors of Light and Dark shuffles the upgradable cards and takes two, so
+Cursed Pearl's Greed sitting in the candidate list made it fourteen names instead of
+thirteen — a different shuffle, a different pick, and two Strikes became a Strike and a
+Defend. `MaxUpgradeLevel => 0` is extracted into `Cards.g.cs` now (`extract_data.py`
+emits `Upgradable: false`, 37 cards) and the hand list is deleted.
+
+**E48 — one `||` short-circuited a draw the game always makes.** `CardFactory.RollForUpgrade`
+draws its float on its first line, BEFORE it asks whether the card is upgradable, and
+`CreateForReward` calls it for every reward card unless `NoUpgradeRoll` is set. The
+emulator wrote the answer as `silverCrucibleUpgrade || RollCardUpgrade(...) || eggs`, so a
+run holding Silver Crucible — whose upgrade is `TryModifyCardRewardOptionsLate`, applied
+after the rolls and changing nothing about them — spent two rewards-stream values per card
+where the game spends three. Every card the stream produced after the first was somebody
+else's. **Any boolean built from an override and a roll needs the roll in a local first**;
+`CheckPotionRoll` one file away already carries a comment saying exactly this about White
+Beast Statue.
+
+**E46 — the last open row (O9) was a missing clause, not drift.** `ThieveryPower.Steal`
+guards on `!Target.IsDead`, and a Gremlin Merc's move attacks and THEN steals, so the blow
+that kills the player takes no gold. The emulator robbed the corpse for a final 20. It
+presented as twenty gold in the run's very last snapshot with a hundred clean steps in
+front of it, which reads like accumulated drift and was a single missing condition.
+
+**Read the whole divergence list, sorted by step.** E47 and E48 both surfaced first as
+`player.deck` — dozens of steps before the HP and block differences the batch summary
+printed. `replay_full_run_trace.py` reports a first divergence PER FIELD and does not
+order them, so `grep 'first divergence' | head -2` shows the symptom rather than the
+cause. Both times the deck row named the real event.
+
+### Four more blessings, and the screen is the effect
+
+Pomander, Small Capsule, New Leaf and Stone Humidifier. **All four diverged**, three of
+them at step 1, and the shape was the same one E43/E44 found: the game asks the player
+something and the emulator answers for them.
+
+- **Pomander** (E49) is `FromDeckForUpgrade` at CardsVar(1); it called `UpgradeFirstCard`,
+  which takes the deck's first upgradable card — a Strike, in any starting deck.
+- **New Leaf** (E50) was the last blessing still riding the pre-`BeginDeckSelection`
+  `TransformSelectedDeckIndex` path, which answers its screen a step later than the game.
+- **Small Capsule** (E51) granted its relic where `RewardsCmd.OfferCustom` offers it, which
+  also ran the relic's own pickup effect a step early.
+- **Stone Humidifier** (E52) had a constant and no implementation: `AfterRestSiteHeal` is
+  `MaxHpVar(5)`, and it ignores the hook's `isMimicked` flag, so the event that heals you
+  like a rest pays it too.
+
+**Treat a screen as part of the effect.** Six blessings have now been this same defect. Any
+relic or event whose text contains a choice — upgrade a card, remove a card, gain a relic —
+is worth opening with the suspicion that the emulator is deciding it. The wrong answer is
+only half the cost; the other half is that a screen is an ACTION, so skipping it leaves the
+run permanently one decision ahead and everything downstream reads as a state-machine
+divergence rather than the missing prompt it is.
+
+**E53 is the one worth reading twice.** Pomander's trace went clean at step 1 and then
+diverged at 113, on an event with nothing to do with the blessing: Whispering Hollow offers
+two potions, the run declined the second, and the emulator went to the map where the game
+went back to the event's result page. Every event that hands out rewards awaits
+`RewardsCmd.OfferCustom` and calls `SetEventFinished` on the next line, so it always owes a
+Proceed. Neow already had that return — but its rewards are `WithSkippingDisallowed`, so
+the SKIP branch, which returned to the map from underneath both checks, was reachable only
+from an event and only when a player declined something. Both exits go through one
+`LeaveRewardScreen` now.
+
+**E54 came from reading, not from a capture**, chasing E44's note that four sites still
+called `RemoveLowestPriorityCard`. The removal turned out to be the least of it: on both
+Field of Man-Sized Holes and Spirit Grafter, BOTH options belonged to some other event.
+Field of Man-Sized Holes removes **two** chosen cards and adds a Normality; Spirit Grafter
+heals 25 and adds a Metamorphosis, or upgrades a chosen card and then charges 10
+unblockable. None of the emulator's numbers appear anywhere in either event's source.
+The last two sites — the shop's removal service and Empty Cage — were closed by E74, and
+the missing piece they were blocked on is now built: `SelectionReturn` records where a
+deck selection was opened FROM, generalising the return the way E53 generalised the
+rewards screen's. `RemoveLowestPriorityCard` is deleted, along with `UpgradeFirstCard` and
+`TransformFirstCard`; **the emulator no longer picks a card for the player anywhere.**
+
+E54's lesson repeated at the last three sites (E76–E78) and is the reason to keep it in
+mind rather than treat it as closed: chasing the five remaining `UpgradeFirstCard` /
+`TransformFirstCard` calls meant reading Zen Weaver, Reflections and Tinker Time, and all
+three turned out to be placeholders end to end — including one offering three options on a
+page the model gives ONE. **Read the decompiled model before trusting an event's options.**
+
+### Hive's encounter tags, and why a missing tag is worse than a wrong order
+
+Seven act-2 captures now agree with the emulator on which ancient act 2 opens on. Five did
+before Hive's encounter TAGS were extracted, and the two that did not are what pointed at
+them.
+
+**`GrabBag.GrabIndex` rejection-samples.** It redraws until the tag predicate is satisfied
+(and returns -1 without drawing at all when nothing can satisfy it, which is when
+`AddWithoutRepeatingTags` makes its second, unfiltered grab). So an encounter the game tags
+and the emulator does not changes **how many draws a grab costs** — and every draw after
+it, the boss and the ancient and the whole of the next act's generation, lands somewhere
+else. The ancient was reading the right list at the wrong stream position, which is exactly
+why no list size or ordering could be made to explain it.
+
+Hive's tags: Bowlbugs weak and normal are both `Workers`, as is the Slumbering Beetle;
+Exoskeletons weak and normal share `Exoskeletons`; Chompers, the Tunneler and the Thieving
+Hopper have one each.
+
+**The tag table is GENERATED now** (`scripts/generate_encounter_tags.py` →
+`Generated/EncounterTags.g.cs`), and generating it is what showed the hand-written one had
+already drifted by four entries: `KnightsElite`, both halves of `ScrollsOfBiting`, and
+`TunnelerNormal` — which carries `Burrower, Chomper` where the weak version carries only
+`Burrower`. Three of the four are Glory's, so act 3 was set up to be handed exactly this
+(E81). A tagged model the generator cannot map to an `ActOneEncounter` is an **error**, not
+a skip: silently dropping one is the failure the file exists to prevent, and the aliases
+for the handful whose class name differs from the enum name are stated once, at the top.
+
+**The debugging that found it is worth copying.** Printing the raw `NextDouble` behind each
+ancient pick, alongside the list size, turned a guessing game into arithmetic: with the
+roll in hand you can ask "what list would have to exist for the game's answer to be right?"
+and get a contradiction rather than a hunch. Two hypotheses died that way in a minute each
+— a one-item `UnstableShuffle` costing a draw (fixes one seed, breaks two) and the shared
+subset being ordered before the act's own list (breaks the DARV seed).
+
+### The ancients, and what is approximated in them
+
+Every act opens on an ancient. Act 1's is Neow, which has its own generator (a curse plus
+a shuffled positive list). **Hive's three — Orobas, Pael, Tezcatara — all share one
+shape**: three blessings, one drawn from each of three pools, off the ancient's own Rng
+(`Seed + hash(NAME)`, the same formula as `NeowRng`) in pool order. They differ only in
+their pools and in which entries are conditional on the run.
+
+- **Orobas** spends TWO draws before its pools — a character other than the player's to
+  brand a Sea Glass with, then `NextFloat() < 1/3` deciding whether pool 1 gains a
+  Prismatic Gem or that Sea Glass. The character's identity does not matter to the
+  emulator; the DRAW does, and skipping it would shift all three picks.
+- **Pael**'s second pool is a weighting trick: the conditional entries are added, then
+  `list.AddRange(list)` DOUBLES everything, and only then is Growth appended — so Growth is
+  half as likely as anything else in the pool.
+- **Tezcatara** adds Nutritious Soup to pool 1 while the deck holds a Basic Strike.
+
+**Three approximations, all documented at their call sites, all currently unreachable:**
+
+1. `CanTakeAnEnchantment` stands in for `Goopy.CanEnchant`, counting anything that is not
+   a Curse or a Status. Used only as a count against a threshold of THREE. (The Goopy
+   enchantment itself IS modelled now — E70/E71 — but its `CanEnchant` rule leans on a
+   Basic-name stand-in for want of extracted card tags, which is the same gap as 2.)
+2. `IsRemovableCard` stands in for `CardModel.IsRemovable`, which is still not extracted;
+   it knows about Ascender's Bane and not about Eternal cards. Threshold of FIVE.
+3. `HasEventPet` is not modelled, so Pael's Legion is always in pool 3.
+
+The first two are counts against thresholds that a STARTING deck already clears with ten
+removable cards, so no reachable run disagrees — but they are approximations and will bite
+whenever a deck gets small or strange. The third is a straight omission waiting on pets.
+
+**`CardModel.IsRemovable` and card tags are the shared root of 1 and 2**, and neither is
+extracted. They are cheap next to what they unblock: the tags also decide which cards each
+enchantment will take, so today those rules are matched on Basic card NAMES.
+
+Which ancient an act gets **is** wired (E65), including the shared-ancient subset that
+changes the list the pick indexes into. Seven seeds are pinned against live act-2 captures
+in `ActGenerationTests`.
+
+**A test-speed trap worth not falling into twice.** These tests sweep hundreds of seeds,
+and the first version called `RunEngine.Reset` for each — ~150ms apiece, which made one
+class take 1m20. Cloning a single pristine run and replacing `State.Rng` with a fresh
+`RunRngSet` is ~0.07ms and gets the same coverage in 0.66s. Clear `EventRngStream` and
+`EventRngName` when you do: the event stream is cached on the state and a clone will
+otherwise answer with the stream built for the seed it was cloned from.
+
+### Reaching act 2 without playing act 1
+
+**The testing problem, before the fix.** Every act-2 data point cost a heavily buffed run
+that had to WIN act 1 — six minutes, and the boss fight can lose. That is not a loop you
+can iterate on, and act 2 has never been compared against the game at all, so there will
+be a lot to iterate on.
+
+**`debug_enter_next_act`.** The mod calls `RunManager.EnterNextAct()`, which is exactly
+what proceeding from the boss reward calls — so this is the real transition, not a
+shortcut around it. What it skips is having to win the act. The emulator mirrors it with
+`Sts2Run_DebugEnterNextAct`, and **both routes go through the one
+`RunEngine.EnterNextAct`**, so the shortcut cannot drift from the thing it stands in for.
+
+```bash
+# an act 2 capture, no act 1 required
+uv run python scripts/trace_real_game_run.py SEED --ascension 8 --abandon-existing \
+    --buff-max-hp 200 --upgrade-deck --enter-acts 1 --max-steps 200 \
+    --format compact --output act2.json
+```
+
+`--enter-acts N` is spent AFTER the buffs, so the run arrives in act 2 already buffed. The
+capture records it as an ordinary step and the replay applies the same jump to the
+emulator, the same way the buffs work.
+
+**The transition itself** (`RunMapGenerator.AdvanceToNextAct`, from `SetActInternal`):
+move `CurrentActIndex`, clear the visited coords, **reset the unknown-map-point odds** —
+they climb as a run walks question marks and start each act fresh — and generate the map
+off `act_{index + 1}_map`. Two things are deliberately NOT there: the floor does not reset
+(a live capture crosses into act 2 still on floor 17), and the rooms are not generated,
+because every act's were rolled at run start. `AdvanceAfterRelicReward` now ends the RUN
+only in the last act.
+
+**First thing act 2 found, in seconds:** its map opens with a single **Ancient** node —
+the capture travels to it and is offered Pael's Horn, one of Hive's three ancients — where
+the emulator's act-2 map row 0 holds monsters. Act 1's Neow is a PHASE at run start, not a
+map node, so this is a different shape and is the next thing to model. `ActModel.GenerateRooms`
+ends with `Ancient = rng.NextItem(GetUnlockedAncients().Concat(sharedAncientSubset))`; the
+emulator spends that draw but throws the result away.
+
+### Act 2, phase A: every act's rooms are generated now
+
+**What the game does.** `ActModel.GetRandomList` takes one act per INDEX off the
+`act_selection` stream — index 0 is Overgrowth or Underdocks, index 1 is always **Hive**,
+index 2 always **Glory**. Only act 1 has anything to choose between; the other two spend a
+draw each anyway. Then `RunManager.GenerateRooms` shuffles the shared ancients, draws a
+subset size for each act after the first, and calls `ActModel.GenerateRooms` for EVERY act
+in order. Each act's generation is six steps: shuffle the event pool, fill the weak
+encounters, fill the regular ones up to the act's room count, fill fifteen elites, take a
+boss, **take an ancient**.
+
+**Two things the emulator had wrong, both latent.** It generated only act 1, so its
+UpFront sat two acts' worth of draws behind the game's for the rest of the run; and it
+never made the per-act ancient draw at all, so even act 1 left the stream one short. Safe
+to change because **no committed trace reads UpFront after generation** — Scroll Boxes,
+Hefty Tablet and Lead Paperweight all moved to `PlayerRng.Rewards` (E43, E57), and Lantern
+Key and Prismatic Gem have never come up in a capture. Check that again before assuming it
+still holds.
+
+**Act-specific numbers that used to be constants:** weak-encounter count is 3 for both act-1
+regions and **2** for Hive and Glory; base rooms 15, **14**, **13**. Elites are a flat 15
+everywhere. `RunConstants.ActRoomCounts` holds them.
+
+**Hive's pools** are `Hive.GenerateAllEncounters()` filtered by kind in DECLARATION order,
+same rule as the act-1 regions. Every one already had an emulator id except
+`ExoskeletonsNormal` — the emulator's `Exoskeletons` is the four-monster roster, which is
+the game's WEAK variant — so that one is appended at the END of `ActOneEncounter` (id 87).
+Append, never insert: those ordinals ARE the encounter ids and the pools name them as
+literals. Several others carry the emulator's older shorter names (`Chompers` is
+ChompersNormal, `Obscura` is TheObscuraNormal, `Tunneler` is TunnelerWeak) and a few of
+those ROSTERS still disagree with the game's — the emulator's Tunneler holds one where
+TunnelerWeak holds two. That is a fight-time problem, not a generation one: a pool needs
+identity and order, nothing else.
+
+**The acts live in one list, shaped like the game's.** `RunState.Acts` holds every act in
+index order and `CurrentActIndex` says which one the run is in — the game's own two fields.
+The four per-act sequences (`EventSequence`, `NormalEncounterSequence`,
+`EliteEncounterSequence`, `BossEncounterId`) and `Act` itself are **views** on
+`Acts[CurrentActIndex]`, not copies, so the transition swaps all of them by moving the
+index and nothing can drift out of step. The first cut of this had act 1 in loose fields
+and "the acts after it" in a separate list, which quietly assumed there are exactly three
+acts and that the first is special; both assumptions are going to break.
+
+**Adding an act, or an alternate act.** `RunConstants.ActCandidatesByIndex` is the table —
+`[[Overgrowth, Underdocks], [Hive], [Glory]]` — and selection is one `NextItem` per row off
+`act_selection`, including where a row has a single candidate, which still spends a draw.
+The devs have said act 2 and act 3 will get alternates the way act 1 has two: **that is a
+new entry in an existing row**. A fourth act is **a new row**. Neither needs the generator
+touched. What a new act DOES need is its own data: an event pool and an `ActRoomCounts`
+entry (weak-encounter count and base room count — 3/15 for the act-1 regions, 2/14 for
+Hive, 2/13 for Glory). **Its four encounter pools are no longer hand work** — the same
+generator emits all sixteen from each act's own `GenerateAllEncounters()`, filtered by
+`RoomType` plus the `IsWeak` override, in declaration order (which is what the grab bags
+are dealt in, and is NOT the act's `BossDiscoveryOrder`).
+
+That generator is also how **Glory stopped borrowing Hive's encounters** (E82): all four
+of its pools were a placeholder returning Hive's, so every act-3 room, elite and boss was
+an act-2 one. What makes Glory's four trustworthy with no capture behind them is that the
+same generator reproduces act 1's and Hive's twelve EXACTLY, and every one of those has
+been checked against the live game; `EncounterTagsAndPoolsTests` pins that comparison so
+the two sources cannot drift apart quietly. Act 1 and Hive still READ their verified
+constants — there is no reason to move a pool a capture has already agreed with.
+
+**Phase B is the transition itself** (advance the act, install its rooms, generate its
+map, continue the floor counter, land on the Ancient node act 2 opens with); phase C is
+whatever act 2 then finds, with ~140 captured act-2 steps as the test.
+
+Verified by the five `verify_run_generation` fixtures (which compare against live saves)
+and the 32 traces, all unmoved.
+
+### Buffed captures, for the half of act 1 nothing has ever seen
+
+**No capture had ever finished act 1.** Twenty-nine of thirty end in `game_over`; the two
+deepest (`DPUJR117FL`, `WK1DEGZD8P`) both reached the act 1 boss on floor 17 and died to
+it. So the boss reward, the act transition, and everything past them were covered by
+nothing at all. Only two captures in thirty were ever clean on first contact, and both
+were short runs that died on floors 6-7 — depth is where the defects are.
+
+The fix is to buff BOTH sides identically and let the scripted player get further:
+
+```bash
+uv run python scripts/trace_real_game_run.py SEED --ascension 8 --abandon-existing \
+    --buff-max-hp 50 --upgrade-deck --max-steps 400 --format compact --output out.json
+```
+
+- **Mod** (`McpMod.Debug.cs`, needs a rebuild + reinstall + game restart):
+  `debug_gain_max_hp {amount}` and `debug_upgrade_deck`. Unlike the rest of that file they
+  are run-scoped, not combat-scoped — `debug_add_card` bails with "No combat state", which
+  is why they had to be new endpoints rather than a reuse.
+- **Emulator**: `Sts2Run_DebugGainMaxHp` mirrors `CreatureCmd.GainMaxHp` through the same
+  `RunNonCombatEffects.GainMaxHp` every relic uses. Do NOT reach for `DebugSetHp` here: the
+  game's command raises the maximum AND heals by the same amount, so a replay built on
+  absolutes diverges on HP one step later.
+- **When**: the buffs are spent the first time the run stands on the MAP — after Neow has
+  been answered and left, so the blessing offer is the one the seed really gives, and
+  before the first room, so every floor is played with them.
+- **How it replays**: the capture records them as ordinary steps, and
+  `replay_full_run_trace.py` recognises the two action names and applies the same change to
+  the emulator out of band (`DEBUG_BUFF_ACTIONS` / `apply_debug_buff`) rather than
+  translating them into a move.
+
+**Neither buff rolls anything** — `GainMaxHp` is `SetMaxHp` plus `Heal`, `CardCmd.Upgrade`
+touches no stream — which is the whole reason this is safe. A buffed capture is still
+honest differential evidence: the game is the reference for every step either way, and the
+rules under test are unchanged. That is a different situation from the note on
+`Sts2Run_DebugSetHp` about boosted SOAKS, which have no reference at all.
+
+**A bug this shook out, worth knowing before adding any other mutating export:** all three
+debug hooks changed state without refreshing the observation buffer. The deck is read out
+of that buffer while HP comes from the live info struct, so a buffed replay showed max HP
+moving and the upgrades silently not happening. It is invisible in a soak, which steps
+immediately afterwards and rewrites the buffer anyway. Every mutating export must call
+`run.WriteObservation` before returning; all three do now, and they take an `obsBuf`
+argument accordingly.
+
+**First result.** `BUFFTEST01` with `--buff-max-hp 50 --upgrade-deck` reached the floor-17
+boss and died with the Ceremonial Beast on 16 HP — 206 steps against a typical 100-120.
+The replay mirrors the buff exactly and then finds a **new divergence at step 87**, on a
+path no unbuffed capture has ever walked. 50 HP is not quite enough to win; go higher.
+
+### The last two blessings, and the first screen built from scratch
+
+Neow's Talisman and Scroll Boxes. That closes the seam: **all twenty-five blessings the
+screener knows about are now captured and replay clean**, so the next capture has to be
+chosen on some other axis — an act 2, an unwalked event, a fight nobody has lost yet.
+
+**The Talisman run found nothing to do with the Talisman.** Its fight against the Gremlin
+Merc paid no gold at all, because `GoldRewardForCurrentNode` returned a flat 0 for that
+encounter (E55). `GremlinMercNormal.CalculateGoldProportion` pays in FULL when nothing
+escaped, half when a Fat Gremlin escaped having stolen nothing, and nothing when one
+escaped with the loot — and this capture kills the gremlin and is paid 9 in full.
+
+**My first fix was worse than the bug, and the way it went wrong is the useful part.** I
+searched for an escape flag, found none, concluded "nothing escapes in the emulator", and
+deleted the case — which broke `WK1DEGZD8P`, `J09SPL8Y3V` and `NXV45HW43K` all at once,
+three traces that had been clean for days. The escape IS modelled: the Fat Gremlin's move
+sets its own `Hp = 0`, which is how the emulator takes anything out of a fight. So a
+gremlin that fled and one that was killed were the same state, and they owe the player
+opposite things. `EnemyState.Escaped` plus `CombatState.FatGremlinEscaped` and
+`MercGoldWasStolen` now distinguish them. **Absence of a flag is not absence of the
+behaviour** — and a special case with three green traces behind it is evidence about
+something, even when its stated reason is wrong.
+
+**Zero is not the same as nothing**: the missing gold was the visible half, and the missing
+DRAW was the expensive one, putting every rewards-stream value after that fight off by one
+and changing the card reward four steps later. A zero proportion genuinely skips the draw —
+`RewardsSet` guards the row behind `if (GoldProportion > 0f)` — which is exactly why the
+flat 0 survived so long. That is a third route to the same lesson as E48's short-circuit
+and the White Beast Statue comment in `CheckPotionRoll`: when a special case answers "none
+of this", check whether the general path would still have spent randomness saying it.
+
+**E56** was in the same fight: `HeistPower.BeforeDeath` calls `AddExtraReward(new
+GoldReward(Amount, wasGoldStolenBack: true))`, so the stolen gold is a row the player
+claims — the capture shows "80 Gold (stolen back)" beside the fight's ordinary 9. The
+emulator added it to the run's gold mid-combat, and only OUTSIDE the merc's own encounter,
+which is the one fight the power exists for.
+
+**E57 — Scroll Boxes needed a screen that did not exist.** `GenerateRandomBundles` draws
+six cards off `PlayerRng.Rewards` (two Commons and an Uncommon per bundle, all six distinct
+because the used set spans both) and `FromChooseABundleScreen` offers two bundles, of which
+the player takes one whole. This is the first screen modelled from scratch rather than
+reused, and it touches every layer, so it is the template for the next one:
+
+- `RunPhase.BundleSelect = 12`, plus `RunState.BundleOffer` (six ids, flat) and
+  `SelectedBundle`.
+- Answered in TWO actions the way the game's is — a capture spends one on `select_bundle`
+  and one on `confirm_bundle_selection` — so `RunConstants.BundleConfirmAction` and a mask
+  that only offers confirm once something is highlighted.
+- State list **18** in `RunNativeExports`, surfaced as `info["bundle_offer"]`, because an
+  agent choosing between bundles needs all six cards.
+- `PHASE_BUNDLE_SELECT` in `run_constants.py`, the two action names in `commands.py`, and
+  the `bundle_select` entry in the replay's `PHASE_STATE_TYPES`.
+- The Neow return every other blessing already had.
+
+The generation reproduced the capture's two bundles exactly on first contact, which is the
+part that would have been expensive to get wrong — worth writing the generator and probing
+it against the capture BEFORE building any of the screen around it.
+
+**H13: a divergence can be the harness declining to look.** The Stone Humidifier trace's
+only divergence was a Gas Bomb announcing `("DeathBlow", "8")`, which `_attack_intent` read
+as not attacking at all because it matched on the literal string `"Attack"`.
+`DeathBlowIntent` derives from `SingleAttackIntent` and carries real damage in the same
+label format. It is compared like any other attack now — which makes the check stricter,
+not looser.
+
 ## Next work (prioritized, with pointers)
+
+⚠️ **Enchantments are an act-1 mechanic and the emulator has 13 of 22, with 4 of the 14
+relics that grant one** — see **[docs/enchantment-coverage.md](docs/enchantment-coverage.md)**
+for the gap, the semantics of each missing one, and the port order. The implemented
+granters are all `Ancient` rarity, which makes the mechanic read as act-2 content; it is
+not. Five `Shop`-rarity relics grant enchantments (a sixth pays off having one) and three
+shops appear per act, and
+Self-Help Book, Stone of All Time and Symbiote sit in **both** act-1 event pools. Highest
+priority there is the five Shop granters, because an act-1 deck distribution that cannot
+produce an enchantment is silently wrong for anything modelling a deck.
 
 **Combat start and run generation are both bit-exact** (see "what's proven"). The open
 front is now _per-card correctness_, and it is far larger than the guard used to report.
@@ -545,7 +1247,7 @@ when the real number is 552.
 | ----------- | ----: | ----------: | -----: |
 | Ironclad    |    87 |          85 |     86 |
 | Colourless  |    64 |          64 |     64 |
-| Silent      |    88 |          88 |     10 |
+| Silent      |    88 |          88 |     46 |
 | Defect      |    88 |          87 |      0 |
 | Necrobinder |    88 |          88 |      0 |
 | Regent      |    88 |          88 |      0 |
@@ -566,28 +1268,319 @@ left** — Rampage's per-copy growth, Battle Trance's NoDrawPower and Howl From 
 replay out of the exhaust pile are modelled, and Primal Force's IsTransformable filter
 turned out to exclude nothing in combat.
 
-- ⚠️ **Combats now have their own test suite, and the first three encounters found three
+- ⚠️ **Combats have their own test suite, and every batch put through it has found
   defects.** `Combats\<Encounter>Tests.cs` plus `CombatCoverageTests` mirrors the card
-  setup: 87 encounters modelled, **3 tested, 84 pending**. All 42 act-1 encounters (both
-  act-1 variants) have rosters and intents; what was missing is anything checking them.
+  setup: 88 encounters modelled, **all 88 tested, `Pending` is EMPTY** — and the pending list is a
+  burn-down, not a config knob. All 42 act-1 encounters (both act-1 variants) have rosters
+  and intents; what was missing is anything checking them.
   Walking five turns of Haunted Ship found that its move machine was transcribed as
   `MoveIndex % 3`, so the opening HAUNT came round every third turn when the game enters it
   once and then alternates SWIPE and STOMP forever; that its Swipe and Stomp both used the
   A9 damage branch at A8 (13/12, not 14/15); and that STOMP landed as one hit instead of
   three. Enemy HP was ascension-blind as well — the extractor kept only the A8+ branch, so
-  `EnemyDef.HpBand` and both branches are extracted now. **Expect more of this**: 84
-  encounters have never been walked past their opening state in C#, and the Python
-  live-fixture suite only replays the six that have committed captures.
-  Eleven encounters in, the count is **twenty defects**, and the largest group is one
-  class: `CombatFactory`'s opening intents were converted to `Ascension.Value` years ago,
+  `EnemyDef.HpBand` and both branches are extracted now. **Expect more of this**: the 46
+  still pending have never been walked past their opening state in C#, they are all
+  later-act content, and the Python live-fixture suite only replays the six that have
+  committed captures. Nothing in act 1 is on that list any more.
+
+  **A pending list built from the enum cannot see what the pools deal that the enum has
+  not got.** Sweeping Hive's weak encounters found two that could not be BUILT — one with
+  no case in the roster switch at all, one whose monster the extractor excluded — and
+  neither was on any pending list, because both are things the code does not have rather
+  than things it has not checked (E85). `EveryPoolEncounterBuildsTests` walks the pools
+  instead of the enum, and is the cheapest guard in the suite.
+
+  **Plumbing an encounter's own RNG has two halves, and one of them is silent.** The
+  builder takes an `encounterRngSeed`, but that seed is only ever non-null if the
+  encounter is listed in `EncounterRng`'s entry table — so wiring the builder and
+  forgetting the table leaves code that reads as fixed and behaves exactly as before
+  (E90). The table is generated now, and the guard varies the seed and watches the roster
+  rather than asking whether the builder mentions it. All fourteen rolling encounters are
+  plumbed; the audit that said otherwise was a grep that only matched single-line calls.
+
+  **A folded multi-hit is not just a wrong number.** Every per-instance hook in the game
+  under-triggers against it: Self-Forming Clay arms once per instance and its power is a
+  Counter, so the real two-hit Chomper clamp pays SIX block where the folded one paid
+  three (E91), and the Slumbering Beetle loses a point of sleep per instance (E94). Three
+  relic tests had been written around the folded figure. When a fold is corrected, expect
+  the per-instance hooks around it to move too — and check them rather than patching the
+  assertions.
+
+  **"Do not repeat the last move" cannot be implemented by comparing intents.** A
+  creature that buffs itself announces a climbing number, so a base-damage branch never
+  equals the stored `CurrentIntent` again and the exclusion silently stops firing — the
+  Obscura's WAIL grants it Strength and it wailed forever (E92). Remember the BRANCH's
+  identity (`EnemyState.LastBranch`), not what it announced.
+
+  **Two test-harness traps this batch, both of which look like engine bugs.** A summon is
+  inserted in FRONT of its summoner, so `Enemies[0]` stops being the creature you meant
+  the moment it acts — hold the reference, not the index. And an enemy that outlives the
+  PLAYER stops being asked for an intent, so a move cycle read past the player's death is
+  just the last announcement standing still; keep both sides alive when walking a cycle.
+
+  **A monster can carry TWO numberings, and they need not agree.** The Decimillipede's
+  `StarterMoveIdx` numbers its moves 0/1/2 = WRITHE/BULK/CONSTRICT while the
+  FollowUpStates walk WRITHE -> CONSTRICT -> BULK, so advancing the starter numbering as
+  though it were the cycle silently transposed two moves (E95). Reconcile the two in ONE
+  place — the emulator seeds `MoveIndex` with the cycle position — or every rider keyed
+  to a phase inherits the error.
+
+  **A rider in the wrong branch is dead code, and dead code hides more than one bug.**
+  The Infested Prism's block sat in `ApplyBuffIntent` and all four of its moves are
+  attacks, so it never ran: the prism gained no block at all, and the wrong flat amount
+  inside it went unnoticed for as long as the branch did (E97). When a rider does nothing
+  observable, check which branch it is in before checking its number.
+
+  **A boss's numbers can be a mechanic in disguise.** The Crusher announced 21 where its
+  ThrashDamage is 14, because `SurroundedPower`'s 1.5x had been multiplied in — and that
+  multiplier STOPS when its partner dies and the player turns to face the survivor (E99).
+  A constant that happens to match at turn one is the easiest kind of wrong to keep. When
+  an announced number does not appear anywhere in the monster's own source, look for a
+  power on the player before assuming a transcription slip.
+
+  **A bare `MoveIndex switch` with no wrap is a boss that repeats one move forever.** Both
+  Hive bosses had one (E100). Grep for `enemy.MoveIndex switch` without a `%` — the
+  discard arm is doing the work of the whole late fight.
+
+  **One act-2 boss capture corrected two things reading the source had not.** Hive's
+  three bosses had suites written entirely from decompiled C#; the first live capture
+  (E101-E103) found that the Kaiser Crab's 1.5x changes hands whenever the player
+  TARGETS a half, that the Insatiable's sandpit counter belongs on the monster and not
+  the player, and that Frantic Escape's cost bump is per-card. **A suite written from the
+  source agrees with your reading of the source** — it cannot tell you the reading was
+  partial. `scripts/combat_sweep.py --encounters <name>` reaches any act, because
+  `debug_start_encounter` looks an encounter up by class name; the act-2 and act-3
+  entries just had to be added to `LIVE_ENCOUNTER_BY_EMULATOR`.
+
+  **All three Hive bosses now have live captures**, and every one of them corrected
+  something the source alone had not (E101-E105). The last needed a feature first: the
+  Knowledge Demon blocks on a card screen, so it could not be captured until the choice
+  was modelled — and the choice turned out to be a defect in its own right, the emulator
+  having picked for the player at a fixed amount.
+
+  **Retyping an intent moves which branch its rider is in, in BOTH directions.** The
+  Infested Prism's block sat in `ApplyBuffIntent` and never ran because all its moves are
+  attacks (E97); correcting PONDER from Buff to Attack then broke the demon's rider the
+  same way (E105). After changing an intent's type, check the apply side — the compiler
+  will not.
+
+  **A differential capture must ANSWER the emulator's screen, never count the live one.**
+  A live poll can see one screen twice, and an extra `step(0)` with nothing open means
+  "play card 0" — the emulator quietly loses a card and its own selection is left
+  unanswered. `env.pending_selection_kind()` exists for this. The order matters too: the
+  live game acts when `end_turn` is posted and the emulator when `env.step` is called, so
+  the emulator is answered AFTER its own step, and the answers are recorded in the
+  fixture's actions rather than re-derived offline.
+
+  **A fixture replay is not an RL episode.** `Sts2CombatEnv`'s `MAX_EPISODE_STEPS` exists
+  to stop a training policy looping; applied to a replay it truncates long captures, and
+  a fourteen-turn boss fight that plays cards is already past it (H17). `FightChecks`
+  passes a limit high enough not to bind. The tell is an emulator that looks a move behind
+  only at the far end of a long fixture — check the action count before the move machine.
+
+  **The event fights were unreachable, not untested.** `ModelDb.AllEncounters` unions the
+  act POOLS, so an encounter only an event starts is absent from it and the mod's
+  `debug_start_encounter` could not find one (H18). Fixed in the mod by falling back to
+  the registry by `ModelId`. Four captured immediately; two diverged.
+
+  **Which act an event fight belongs to is not obvious, and guessing it is how the last
+  sweep got mislabelled.** An event encounter is in no act's ENCOUNTER pool, so the only
+  way to place it is to find the EVENT that starts it and which act's event pool holds
+  that: `DenseVegetation` is Overgrowth's and `PunchOff` is Underdocks', but the
+  Mysterious Knight's `TheLanternKey` is HIVE's, `BattlewornDummy` is GLORY's,
+  `FakeMerchant` is in `AllSharedEvents` and belongs to no act, and `TheArchitect` is in
+  no event pool at all — `RunManager` enters it directly at an act boundary. Act 1's two
+  event fights both turned out CORRECT; the two defects were the shared merchant and an
+  act-2 knight. `FakeMerchantMonster`
+  and the three `BattleFriendV*` were also on `extract_data.py`'s exclusion list next to
+  `BigDummy`, so the emulator threw on building them — the same shape as `TestSubject`.
+  **Check that list before assuming a monster is unimplemented.**
+
+  **A workaround for one bug becomes a bug when the bug is fixed.** The attack path
+  subtracted the Flail Knight's Strength from its damage, because its intent table carried
+  damage with the Strength folded in. Correcting the table left the subtraction, so it
+  announced 21 and hit for 15 (E107). When you correct a table, grep for the DefId in the
+  execution path — a compensation elsewhere is invisible from the table itself.
+
+  **`scripts/audit_ascension_literals.py` has a sibling worth writing.** A one-off sweep
+  comparing every `MultiAttackIntent(damage, repeat)` in the decompiled monsters against
+  whether the emulator's case mentions `Hits:` found eighteen candidates in seconds — most
+  of them act 3, which is where that defect class will keep living. The same shape would
+  work for `DefendIntent` amounts and for bare `MoveIndex switch` with no `%`.
+
+  **I have now put a rider in the wrong `Apply*Intent` three times.** The Infested Prism's
+  block sat in the buff handler while all its moves are attacks (E97); correcting PONDER's
+  type broke the demon's rider the same way (E105); and the Tunneler's burrow went into
+  `ApplyDebuffIntent` when BURROW is a Buff (E108). The symptom is always the same — the
+  rider silently does nothing — and the compiler cannot help. **After adding a rider, check
+  it fired**, not just that it built.
+
+  **Watch for `FollowUpState` pointing at itself.** Three of the four Hive weak encounters
+  were transcribed as `MoveIndex % n`, which is the wrong shape for a machine that SETTLES
+  rather than loops (E86) — a Tunneler that walks back to its opening bite every fourth
+  turn, a Hopper that comes back after escaping. And a `ConditionalBranchState` is not an
+  alternation: the Bowlbug Rock's dizzy turn is owed only when its own attack was fully
+  blocked, so modelling it as every-other-turn halved its damage (E87).
+  Nineteen encounters in, the count is **thirty-one defects** — a rate that has not fallen
+  as the easy ones were taken — and the largest group is one class:
+  `CombatFactory`'s opening intents were converted to `Ascension.Value` years ago,
   but **`EnemyAI`'s per-turn intents never were** — eleven act-1 enemies were dealing their
   A9 damage at A8 (Inklet, Flyconid, Cubex Construct, Snapping Jaxfruit, Slithering
   Strangler, Fogmog, Living Fog, Gremlin Merc, Sneaky Gremlin, Two-Tailed Rat, Punch
-  Construct), on top of both Cultists. A sweep of every monster's `GetValueIfAscension`
-  pairs against `EnemyAI` flags **134 more suspect literals**, most of them act 2. Worth
-  knowing while reading `CombatFactory`: `ChooseIntents` overwrites every enemy's intent
-  immediately after the roster is built, so the opening-intent literals there are
-  placeholders — `moveIndex` is what actually selects the opening move.
+  Construct), on top of both Cultists. Worth knowing while reading `CombatFactory`:
+  `ChooseIntents` overwrites every enemy's intent immediately after the roster is built,
+  so the opening-intent literals there are placeholders — `moveIndex` is what actually
+  selects the opening move, and `EnemyAI.SelectIntent` is what an agent actually reads.
+
+  **That sweep is now a script**, `scripts/audit_ascension_literals.py`, which cross-checks
+  every monster's `GetValueIfAscension(DeadlyEnemies, high, low)` pairs against the bare
+  literals in its `EnemyAI` case block. **It reported 80 and now reports ZERO** (E83, E86,
+  E91, E95-E100, E112-E116, E118-E120, E126). Three of the last twelve were the AUDIT
+  rather than the emulator: it read only `case KE.X:` arms, and every rider added since the
+  Hive batches lives in an `if (enemy.DefId == KE.X && ...)` block or a switch expression
+  instead (H20). It reads all four shapes now.
+  **The burn-down is finished.** `CombatCoverageTests.Pending` is empty: every encounter
+  `CombatFactory` can build has either a hand-written suite or a committed live capture.
+  Read that narrowly. **A suite written from the decompiled source agrees with your reading
+  of the source** — it cannot tell you the reading was partial, which is what E101-E105 cost
+  when three Hive bosses written that way each turned out wrong on first live contact. What
+  the empty list means is that nothing is unexamined, not that everything is confirmed.
+  Live captures remain the only ground truth, and `scripts/combat_sweep.py --encounters
+  <name>` reaches any act.
+
+  **`audit_enemy_moves.py` reports ZERO flags.** From 36 down to none over four batches:
+  every `MultiAttackIntent` the emulator folded now carries its hit count, every intent
+  announces the type its move declares first, and every machine the checks could not read
+  has been read by hand. **Thirteen monsters are in a `VERIFIED` table rather than fixed**
+  — their `MoveIndex %` really is faithful, because the emulator seeds the index per
+  creature or rolls through `PickBranch`, neither of which a regex over the case block can
+  see. Each entry carries the **digest of the machine it was read against**, so if MegaCrit
+  changes one the fingerprint stops matching and the audit says so loudly instead of
+  staying quiet on a reading of the old source. `--digests` prints the current fingerprints
+  and `--all` reports the verified ones anyway.
+
+  The old headline, for reference: the worklist was at 15 flags with the whole `[hits]`
+  class CLOSED — every `MultiAttackIntent` the emulator had folded into one number now
+  carries its hit count. Fourteen monsters over two batches, at **six defects apiece on
+  average**, and only one per monster was the fold the audit flagged. What is left is 17
+  `[shape]` flags and 2 `[types]`, and Glory is down to 10 pending encounters.
+
+  **The second batch was the three bosses, and each was worse than its flag.** The Queen
+  **never attacked at all** — her ConditionalBranchState on the amalgam's death was taken
+  unconditionally, so three of her six moves were unreachable and the fight had no damage
+  in it after turn two (E118). The Soul Nexus called a 19-damage attack a debuff and walked
+  a fixed cycle where the game rolls (E119). The Test Subject's respawn **cost it no turn**:
+  the game's RESPAWN_MOVE is `MustPerformOnceBeforeTransitioning`, so a kill buys the player
+  a whole free turn against a creature at 0 HP that cannot be hit, and the emulator healed
+  it on the spot instead (E120).
+
+  **O21 is closed (E125).** `IntangiblePower` caps everything that takes HP off its owner
+  at 1, it was applied in ELEVEN places — six of them player cards, including Wraith Form
+  and Shadow Step — and it was read in NONE. Both hooks are modelled now, at every one of
+  the nine HP-subtracting sites, and the cap reaches the intent READOUT as well as the
+  blow: `AttackIntent.GetSingleDamage` runs the move through the same `Hook.ModifyDamage`
+  call, so an intangible player is told the enemy will hit them for 1.
+
+  The prediction that this would move expected values across several committed suites was
+  **wrong, and the way it was wrong is the finding**: all 2,074 tests stayed green. Nothing
+  in the suite had ever asserted anything about Intangible, which is exactly how a buff
+  gets applied in eleven places and read in none for as long as this one did. A green suite
+  is evidence about what the suite covers before it is evidence about the code.
+
+  **The third batch went at the `[shape]` flags and found the AUDIT was the defect**
+  (H19). Of the four it ranked highest — "the game ROLLS and the emulator never touches
+  rng" — three were wrong: two monsters roll through `PickBranch(eligible, rng)`, which the
+  check's `rng\.` regex could not see, and the Phrog Parasite's RandomBranchState is
+  DECLARED and unreachable, so the emulator's fixed alternation is right. Worse, the check
+  matched `MoveIndex %` inside COMMENTS, so a fix that documented what it replaced
+  re-flagged itself; the Mawler was reported for three batches running on the strength of
+  the comment saying it no longer walks a cycle. All three are fixed and the checks strip
+  comments now.
+
+  **And one of the emulator's own comments was lying.** `PickBranch`'s docstring said the
+  game's weighted walk "is not the same draw as `Next(n)` — same stream, different number".
+  It is the same: `Rng.NextFloat(max)` is `(float)(NextDouble() * max)`, `MegaRandom.Next(max)`
+  is `(int)(NextDouble() * max)`, both one draw, agreeing on every roll that is not an
+  exact integer (checked over 400,000). Six correct call sites were nearly rewritten on
+  the strength of that sentence. **A comment claiming code is wrong is a hypothesis, not
+  evidence** — and this file is full of comments that were written when they were true.
+
+  What those batches DID find, once the audit stopped lying: a reattached Decimillipede
+  segment rolls rather than resuming its cycle (E121); the Frog Knight's cycle had
+  STRIKE_DOWN_EVIL and FOR_THE_QUEEN transposed with BEETLE_CHARGE — its biggest move —
+  unreachable (E122); the Myte's SUCK never grew it, because only the Fossil Stalker was
+  ever given `BuffId.Suck` and the Myte's is a plain per-move Strength (E123); and the
+  Mecha Knight charged every fourth turn while its WINDUP did **nothing at all**, having
+  been typed Buff into a branch with no case for it (E124).
+
+  **Reading a false flag is still worth doing.** The Myte's was a false positive — its
+  `[shape]` flag was about the opening, which is correctly seeded — and the monster
+  underneath it had a Strength that was never applied. Four of the thirteen verified
+  monsters turned up something on the way to being cleared.
+
+  Nine lessons the three batches earned, on top of the ones already listed above:
+
+  - **A fold is a marker, not the defect.** Every one of the eleven had its hit count
+    wrong AND at least one other thing: an A9 literal at A8, a rider in a branch its
+    intents cannot reach, a machine walked as a cycle that is not one. Read the whole
+    monster when the audit names it; the flag is where to look, not what to fix.
+  - **An audit that asks "does the emulator ever SAY this type" is per-monster, not
+    per-move.** The Slimed Berserker's LEECHING_HUG announces a Debuff and was typed Buff,
+    and the `[types]` check stayed silent because the berserker says Debuff somewhere else.
+    Three of the eleven were like that. The check earns its keep on the ones it does flag;
+    it cannot be read as clearing the rest.
+  - **`MoveIndex % n` hides a machine that does not wrap even when every state is a plain
+    MoveState**, so the `[shape]` check — which looks for branch states — cannot see it.
+    The Axebot's BOOT_UP is reachable only as a respawned bot's INITIAL state and the Torch
+    Head's two opening tackles happen once; both were being dealt again every cycle. When
+    the last state's `FollowUpState` is not the first, the modulus is wrong.
+  - **A buff the emulator applies and never reads is worse than one it does not model.**
+    `BuffId.Ebb` was applied to the player by the Aeonglass and read nowhere — a debuff
+    carried and never paid, transcribed from a version of the source this build does not
+    have. Soar and Withering Presence are recorded as O19 and O20 rather than approximated
+    the same way. **Grep for a BuffId that is applied and never read**; that is how O21
+    turned up.
+  - **A monster whose intent is assigned outside `EnemyAI` is invisible to the audit**,
+    which scrapes the case blocks. The Test Subject's RESPAWN_MOVE announces a Buff and is
+    still flagged as one the emulator "never says", because `CombatEngine` sets that intent
+    where the machine forces the move. Two of the remaining flags are this shape, not a
+    defect.
+  - **An audit is code, and code that reads code needs its own reading.** Three separate
+    over-reports in one checker, each of which would have cost a batch: a regex that could
+    not see the helper the codebase actually uses, a branch counted without asking whether
+    anything reaches it, and a pattern matched inside comments. Before working a worklist,
+    spend ten minutes checking two or three of its entries against the source by hand.
+  - **A declared branch is not a reachable one.** The Phrog Parasite builds a
+    RandomBranchState, adds both arms, puts it in the state list — and nothing ever points
+    at it, because its two moves follow up to each other. Reading `GenerateMoveStateMachine`
+    means tracing the FollowUpStates, not counting the states.
+  - **A monster that cannot die yet cannot be counted dead.** The Test Subject's respawn
+    turn needed `NoPrimaryEnemyLeft` to keep the fight open, and the exemption has to be
+    keyed on the power the GAME keys it on — `AdaptablePower.ShouldStopCombatFromEnding` is
+    the only override in the set. A blanket "anything reviving" would have made the
+    Decimillipede unkillable, since emptying all three segments in one window is how that
+    elite is won.
+
+  Two cautions the batch earned, both worth carrying into the next one:
+
+  - **It is a worklist, not a verdict.** It flags a bare occurrence of the high value
+    anywhere in the case block, so it cannot tell a damage number from a hit count.
+    Exoskeleton's flagged `4` was the A9 REPEAT count sitting where the damage should be —
+    a different bug than the one it was flagged for, and only reading the move state
+    machine showed that.
+  - **Not every literal beside a Deadly pair is wrong.** Louse Progenitor's Curl is
+    `GetValueIfAscension(ToughEnemies, 18, 14)`, and Tough IS live at A8 — so 18 is right
+    where the three Deadly values around it were not. A sweep that "fixed" every number in
+    that block would have broken it. There is a test saying so on purpose.
+
+  Three of the eight Hive monsters were wrong a SECOND way, and all three repeat shapes
+  this suite has already seen (E84): Exoskeleton's SKITTER and Hunter-Killer's PUNCTURE
+  are `MultiAttackIntent`s folded into one number (E10 — which matches only while the
+  creature has no Strength, since the game adds Strength to each hit), and the Ovicopter's
+  TENDERIZER declares its attack BEFORE its debuff, so the readout calls it an attack
+  (E12). **Retyping an intent moves which branch applies it**: the Ovicopter's Vulnerable
+  lived in the debuff handler and had to move into the attack branch with the damage, or
+  it would have been dropped in silence. Check the apply side whenever you change a type.
   The earlier count of **eight defects**: Haunted Ship's cycle, its two
   ascension branches and its single-hit Stomp; Vine Shambler's single-hit Swipe and a
   Tangled that was cleared at the start of the player turn instead of the end, so the
@@ -596,6 +1589,39 @@ turned out to exclude nothing in combat.
   announced an attack's raw move damage**, where `AttackIntent.GetSingleDamage` runs it
   through `Hook.ModifyDamage` first — so a Ritual-stacking cultist told a policy it was
   hitting for nine on the turn it hit for fifteen.
+
+- ⚠️ **Mad Science is built correctly and played wrongly** (O17). Tinker Time is faithful
+  now — three pages, `TakeRandom(2, Rng)` on each of the last two, and the chosen type and
+  rider recorded on the `CardInstance` — but the CARD is not. `MadScience.OnPlay` branches
+  on its type (attack 12 / block 8 / a power) and then applies one of nine riders; the
+  emulator has only the card-table entry, so it plays as the Attack row whatever the player
+  built. Two riders need powers that do not exist (`CuriousPower`, `ImprovementPower`) and
+  Chaos plays a mocked random card, so this is a card-implementation job rather than a
+  missed line. It is the one piece of E76–E78 left over.
+
+- ✅ **The emulator no longer decides which card a screen takes.** Seven call sites were
+  choosing for the player — `RemoveLowestPriorityCard` walked an invented preference order
+  that LED with Ascender's Bane, a card the real removal screen will not offer. All three
+  helpers are deleted rather than merely unused. Two structural things came out of it and
+  are worth knowing before adding a screen:
+  - A deck selection now records **where it was opened from** (`SelectionReturn`), because
+    the completion path used to land on `RunPhase.Event` unconditionally — right for the
+    events that open most of them, wrong for a shop or a relic pickup. Same shape E53 fixed
+    for the rewards screen.
+  - **Reading each event's model to find the real choice found that all three were
+    placeholders** (E76–E78): Zen Weaver sells removals rather than healing, Reflections
+    asks the player nothing at all, and Tinker Time was offering three options on a page
+    that declares one. **Check the decompiled model before trusting an event's options** —
+    that is now twice this has paid (E54 was the first).
+
+- ⚠️ **A capture pairs an action with the state it PRODUCED, not the state it was chosen
+  in.** H15 is the cost of forgetting that: the killing blow of a fight is recorded against
+  the rewards screen it opened, so anything gated on "is this step a combat state?" is
+  empty for exactly the last action of every fight. Use the PREVIOUS step's data. The twin
+  lesson (H16) is that a resolver only helps on the paths that call it — `translate_target`
+  had three and only one was resolved, which agreed with the other two right up until
+  something died. Both are why O11 sat open for so long as an "emulator" bug that was
+  nothing of the kind.
 
 - ✅ **Multiplayer-only cards can no longer be offered.** `CardFactory.FilterForPlayerCount`
   drops every `MultiplayerOnly` card from a pool before anything is rolled from it, and
@@ -1303,7 +2329,7 @@ is a sweep-and-fix loop, not a research problem.
 - Emulator: `Sts2_GetPile` -> `env.get_pile(...)`; run-generation lists 11-14 on
   `Sts2Run_GetStateList` (normal/elite/event sequences, `[act, boss, map_nodes]`, the
   map as (col,row,type) triples, and — new — its **edges** as (col,row,childCol,childRow)
-  quadruples). Native API **v16**, run API **v9**.
+  quadruples). Native API **v19**, run API **v15**.
 - Live: our STS2MCP fork emits `draw_pile_ordered` / `discard_pile_ordered` /
   `hand_ordered` under `result["player"]`. The stock `draw_pile` is **sorted for
   display**, which is why ordered comparison was impossible before.
@@ -1355,6 +2381,63 @@ python scripts/patch_refresh.py           # report: what changed, what broke, wh
 python scripts/patch_refresh.py --apply   # also decompile + extract + diff
 ```
 
+**The audits are the part the test suite cannot do**, and they run on every invocation,
+changed build or not. A test written from the decompiled source asserts what the source
+said WHEN IT WAS WRITTEN — so if the devs change a monster's damage, its move order or
+the intents a move declares, the emulator keeps the old value, the test keeps asserting
+the old value, and the whole suite stays green. Two thousand C# tests notice nothing.
+Only a fresh capture or a source comparison does, and the audits are the half that needs
+no game running:
+
+- `audit_ascension_literals.py` — bare A9 literals where A8's branch applies. Covers the
+  147 of `EnemyAI`'s 318 `new Intent(...)` constructions that read an `Ascension.Value`
+  pair.
+- `audit_enemy_moves.py` — three checks against the current monster classes. `hits`: a
+  `MultiAttackIntent(damage, repeat)` with no `Hits:` in the emulator, which is a wrong
+  number AND a silent under-trigger of every per-instance hook. `types`: a `MoveState`
+  declares a LIST and the readout follows the FIRST, so announcing a later one's type
+  misreports the turn. `shape`: a machine whose branches, self-loops or slot-keyed
+  opening `MoveIndex % n` arithmetic cannot express — ranked, because a RandomBranchState
+  the emulator answers without ever touching `rng` is a finding, while a conditional
+  branch is often modelled correctly by seeding MoveIndex.
+
+- `audit_cards.py` — which cards have been **read** against the current source, as a
+  digest plus a note per card. `CardCoverageTests.Pending` answers "does this card have a
+  test", and this session proved how weak that is: **every divergence in E158-E185 was
+  found in a card that had already passed it.** A test written from a wrong reading passes
+  forever, and one written from a RIGHT reading of an old source passes forever too — the
+  emulator and the test drift together while the game moves under both. So the audit
+  records the version that was read, and re-flags when the card changes underneath it.
+  The number worth watching is `tested but unread`: cards that LOOK covered, which is
+  exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
+
+- `audit_relics.py` — which relics the emulator **models**, and which have been read.
+  **127/296**, and 19 read. The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
+  `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
+  looked like "room entered" turned out to be four different hooks. The
+  only one of the four that answers "is this implemented at all", because relics have no
+  `CardCoverageTests.Pending` equivalent and nothing else could: **107 of 296**. The
+  distinction it draws that a name search cannot is between a relic the reward code can
+  HAND OUT and a relic that DOES something — `RelicGrabBag` deals all 296, and the other
+  189 land inert. It matches on a constant's name AND its value, follows both aliases a
+  relic can have (`RelicEffects.LizardTail` and `RunConstants.RelicLizardTail` name the
+  same thing), and counts `Relics.FindId("X")` as a route too, which is how Circlet is
+  wired. Getting any of those three wrong under- or over-reports, and the first draft of
+  this script did two of them.
+
+All four are **worklists, not verdicts**, and all fail loudly rather than skipping when
+they cannot map a monster, a card or a relic to its source — a rename is exactly when a silent skip
+would report the renamed thing as clean. `audit_cards.py` and `audit_relics.py` exit
+non-zero only on a STALE note, never on an unread entry: unread is the progress bar, stale
+is a defect, and something verified against a version of the game that no longer exists is
+worse than an unread one because the note says it was checked.
+
+Both READ tables start EMPTY of pre-existing work on purpose. Ironclad's 92 cards and the
+107 modelled relics were written against `decompiled/` before either audit existed, and
+nobody can now say which version — seeding a guessed digest would put exactly the false
+confidence in them that they exist to remove.
+
 `patch_refresh.py` does everything mechanical and **classifies** the fallout:
 
 - Detects the installed Steam buildid against `data/game_version.json`.
@@ -1397,7 +2480,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 208 pass
+dotnet test src/Sts2Emulator.Tests/        # 1899 pass
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 119 pass
+uv run python -m unittest discover -s tests/python   # 411 pass
 ```

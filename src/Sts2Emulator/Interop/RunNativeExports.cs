@@ -7,8 +7,10 @@ namespace Sts2Emulator.Interop;
 
 public static class RunNativeExports
 {
-    // v11: Sts2Run_Clone forks a run, optionally resampling what the agent has not seen.
-    public const int RUN_NATIVE_API_VERSION = 11;
+    // v13: the observation carries the shop's whole board, priced.
+    // v15: the map offers a whole row, not four children -- Winged Boots' free travel.
+    // v16: state list 17 reports an open card-offer grid.
+    public const int RUN_NATIVE_API_VERSION = 16;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -18,6 +20,45 @@ public static class RunNativeExports
     public static int Sts2Run_MaxActions() => RunConstants.MaxActions;
 
     public static int Sts2Run_InfoSize() => RunConstants.RunInfoSize;
+
+    /// <summary>How many numbers <see cref="Sts2Run_ObsLayout"/> writes.</summary>
+    public const int RUN_OBS_LAYOUT_SIZE = 13;
+
+    /// <summary>
+    /// Where the run observation's variable-length blocks sit, so a consumer does not have
+    /// to hard-code offsets that move whenever a block grows:
+    ///
+    /// <c>[scalars, deck offset, deck slots, ints per card, relic offset, relic slots,
+    /// ints per relic, shop offset, shop slots, ints per shop slot, map choices, map node
+    /// type offset, map choice offset]</c>
+    ///
+    /// Offsets are relative to the start of the run block, which itself begins at the
+    /// combat observation's own size.
+    /// </summary>
+    /// <returns>How many numbers were written, or -1 if the buffer is too small.</returns>
+    public static unsafe int Sts2Run_ObsLayout(int* buf, int len)
+    {
+        if (len < RUN_OBS_LAYOUT_SIZE)
+        {
+            return -1;
+        }
+
+        var layout = new Span<int>(buf, len);
+        layout[0] = RunConstants.RunScalarObsSize;
+        layout[1] = RunConstants.DeckObsOffset;
+        layout[2] = RunConstants.MaxObservedDeck;
+        layout[3] = RunConstants.DeckSlotSize;
+        layout[4] = RunConstants.RelicObsOffset;
+        layout[5] = RunConstants.MaxObservedRelics;
+        layout[6] = RunConstants.RelicSlotSize;
+        layout[7] = RunConstants.ShopObsOffset;
+        layout[8] = RunConstants.ShopSlots;
+        layout[9] = RunConstants.ShopSlotSize;
+        layout[10] = RunConstants.MapChoices;
+        layout[11] = RunConstants.MapNodeTypeObsOffset;
+        layout[12] = RunConstants.MapChoiceObsOffset;
+        return RUN_OBS_LAYOUT_SIZE;
+    }
 
     public static int Sts2Run_Create()
     {
@@ -231,6 +272,18 @@ public static class RunNativeExports
                 ],
                 output
             ),
+            // 17: the cards on an OFFER grid, if one is open. A card-select phase is two
+            // different screens wearing one phase -- a grid of cards the run has rolled
+            // and is offering (CardSelectCmd.FromChooseACardScreen, which the game calls
+            // `card_select` and resolves on the click) versus a selection over the deck
+            // (which toggles and needs a confirm). A replay has to tell them apart to know
+            // whether an answer needs a confirm after it, and guessing from a screen
+            // message is not the same as asking the run.
+            17 => WriteIntArray(run.State.PendingOfferCards, output),
+            // 18: Scroll Boxes' bundles, flat -- bundle 0's three cards then bundle 1's.
+            // The screen offers a WHOLE bundle, so an agent needs all six to choose
+            // between them, and a replay needs them to map the live screen's indexes.
+            18 => WriteIntArray(run.State.BundleOffer, output),
             _ => -3,
         };
     }
@@ -238,6 +291,97 @@ public static class RunNativeExports
     public static int Sts2Run_GetPhase(int handle)
     {
         return TryGet(handle, out var run) ? (int)run.State.Phase : -1;
+    }
+
+    /// <summary>
+    /// Hand a run extra HP, for soaking only. A random or greedy policy dies around
+    /// floor six and never exercises the back half of the act, so scripts/soak_act_one.py
+    /// uses this to reach the boss. It is a DEBUG hook and not a game rule: anything a
+    /// boosted soak turns up has to be reproduced on an untouched run before it counts.
+    /// </summary>
+    public static unsafe int Sts2Run_DebugSetHp(int handle, int hp, int maxHp, int* obsBuf)
+    {
+        if (!TryGet(handle, out var run))
+        {
+            return -1;
+        }
+
+        run.State.PlayerMaxHp = Math.Max(1, maxHp);
+        run.State.PlayerHp = Math.Clamp(hp, 1, run.State.PlayerMaxHp);
+        run.WriteObservation(new Span<int>(obsBuf, RunConstants.RunObsSize));
+        return 0;
+    }
+
+    /// <summary>
+    /// <c>CreatureCmd.GainMaxHp</c>: raise the maximum and heal by the same amount.
+    /// </summary>
+    /// <remarks>
+    /// The mirror of the mod's <c>debug_gain_max_hp</c>, and it exists so a BUFFED live
+    /// capture can be replayed. Not the same as <c>DebugSetHp</c>, which sets absolutes:
+    /// the game's command heals as it raises, so a replay that only moved the maximum
+    /// would diverge on HP one step after the buff. It routes through the same
+    /// <c>RunNonCombatEffects.GainMaxHp</c> that every relic uses, which is the version
+    /// captures have already checked.
+    /// </remarks>
+    public static unsafe int Sts2Run_DebugGainMaxHp(int handle, int amount, int* obsBuf)
+    {
+        if (!TryGet(handle, out var run))
+        {
+            return -1;
+        }
+
+        Core.Run.RunNonCombatEffects.GainMaxHp(run.State, amount);
+        run.WriteObservation(new Span<int>(obsBuf, RunConstants.RunObsSize));
+        return 0;
+    }
+
+    /// <summary>
+    /// <c>RunManager.EnterNextAct</c> on demand — the mod's <c>debug_enter_next_act</c>.
+    /// </summary>
+    /// <remarks>
+    /// Not a shortcut around the rules: it calls the same <c>RunEngine.EnterNextAct</c>
+    /// the boss reward does. What it skips is having to WIN act 1 first, which is several
+    /// minutes of buffed run per act-2 data point and a boss fight that can lose.
+    /// Returns 1 when an act was entered and 0 when the run was already in its last.
+    /// </remarks>
+    public static unsafe int Sts2Run_DebugEnterNextAct(int handle, int* obsBuf)
+    {
+        if (!TryGet(handle, out var run))
+        {
+            return -1;
+        }
+
+        bool entered = run.EnterNextAct();
+        run.WriteObservation(new Span<int>(obsBuf, RunConstants.RunObsSize));
+        return entered ? 1 : 0;
+    }
+
+    /// <summary>Upgrade every upgradable card in the deck. Debug hook, as above.</summary>
+    /// <remarks>
+    /// Every mutating export refreshes the observation before returning, and these three
+    /// did not — which is invisible for a soak, because it steps immediately afterwards
+    /// and the next step rewrites it anyway, and fatal for a replay, whose snapshot for
+    /// the buff step IS the buffed state. The deck is read out of the observation buffer
+    /// while HP is read from the live info struct, so an unrefreshed buffer showed the
+    /// max HP moving and the upgrades not happening at all.
+    /// </remarks>
+    public static unsafe int Sts2Run_DebugUpgradeDeck(int handle, int* obsBuf)
+    {
+        if (!TryGet(handle, out var run))
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < run.State.Deck.Count; i++)
+        {
+            if (Core.Run.RunConstants.IsRunCardUpgradable(run.State.Deck[i]))
+            {
+                run.State.Deck[i] = run.State.Deck[i] with { Upgraded = true };
+            }
+        }
+
+        run.WriteObservation(new Span<int>(obsBuf, RunConstants.RunObsSize));
+        return 0;
     }
 
     public static int Sts2Run_PlayerWon(int handle)

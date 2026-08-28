@@ -1,5 +1,5 @@
 {
-  "rooms_entered": 110,
+  "rooms_entered": 58,
   "state_type": "boss",
   "battle": {
     "round": 1,
@@ -35,6 +35,182 @@
     "hp": 64,
     "max_hp": 80,
     "block": 0,
+    "deck": [
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 0
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 1
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 2
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 3
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [],
+        "index": 4
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 5
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 6
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 7
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "index": 8
+      },
+      {
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ],
+        "index": 9
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "name": "Ascender's Bane",
+        "type": "Curse",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. Ethereal. Eternal.",
+        "rarity": "Curse",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Eternal",
+            "description": "Cannot be removed or transformed from your Deck."
+          },
+          {
+            "name": "Unplayable",
+            "description": "Unplayable cards cannot be played."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ],
+        "index": 10
+      }
+    ],
     "energy": 3,
     "max_energy": 3,
     "hand": [
@@ -258,12 +434,17 @@
     "completed_combat_rooms": -1,
     "total_floor": 1,
     "ascension": 8,
-    "turns": 6
+    "turns": 8,
+    "play": false,
+    "add_cards": []
   },
   "turn_trace": [
     {
       "turn": 2,
       "action": 5,
+      "actions": [
+        5
+      ],
       "player_hp": 64,
       "player_max_hp": 80,
       "enemies": [
@@ -287,6 +468,9 @@
     {
       "turn": 3,
       "action": 5,
+      "actions": [
+        5
+      ],
       "player_hp": 42,
       "player_max_hp": 80,
       "enemies": [
@@ -310,6 +494,9 @@
     {
       "turn": 4,
       "action": 5,
+      "actions": [
+        5
+      ],
       "player_hp": 29,
       "player_max_hp": 80,
       "enemies": [
@@ -333,6 +520,9 @@
     {
       "turn": 5,
       "action": 5,
+      "actions": [
+        5
+      ],
       "player_hp": 23,
       "player_max_hp": 80,
       "enemies": [
@@ -356,6 +546,9 @@
     {
       "turn": 6,
       "action": 5,
+      "actions": [
+        5
+      ],
       "player_hp": 10,
       "player_max_hp": 80,
       "enemies": [
@@ -379,6 +572,9 @@
     {
       "turn": 7,
       "action": 5,
+      "actions": [
+        5
+      ],
       "player_hp": 4,
       "player_max_hp": 80,
       "enemies": [

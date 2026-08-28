@@ -17,7 +17,7 @@ public static class BuffSystem
             }
         }
 
-        int idx = buffs.FindIndex(b => b.Id == id);
+        int idx = IndexOf(buffs, id);
         if (idx >= 0)
         {
             int newVal = buffs[idx].Magnitude + magnitude;
@@ -36,15 +36,48 @@ public static class BuffSystem
         }
     }
 
+    /// <summary>
+    /// Index of <paramref name="id" /> in <paramref name="buffs" />, or -1.
+    /// </summary>
+    /// <remarks>
+    /// A hand-written loop rather than <c>FindIndex(b =&gt; b.Id == id)</c>, because that
+    /// lambda CAPTURES `id` — so it allocates a closure and a delegate on every call, and
+    /// this is the most-called function in the emulator (242 call sites, several of them
+    /// per point of damage). It was ~3KB of garbage per attacking enemy, which is most of
+    /// what made the enemy phase the hottest path in a step. Buff lists are a handful of
+    /// entries; the scan is cheaper than the allocation was.
+    /// </remarks>
+    private static int IndexOf(List<BuffState> buffs, BuffId id)
+    {
+        for (int i = 0; i < buffs.Count; i++)
+        {
+            if (buffs[i].Id == id)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     public static int Get(List<BuffState> buffs, BuffId id)
     {
-        int idx = buffs.FindIndex(b => b.Id == id);
+        int idx = IndexOf(buffs, id);
         return idx >= 0 ? buffs[idx].Magnitude : 0;
     }
 
     public static bool Has(List<BuffState> buffs, BuffId id) => Get(buffs, id) > 0;
 
-    public static void Remove(List<BuffState> buffs, BuffId id) => buffs.RemoveAll(b => b.Id == id);
+    public static void Remove(List<BuffState> buffs, BuffId id)
+    {
+        for (int i = buffs.Count - 1; i >= 0; i--)
+        {
+            if (buffs[i].Id == id)
+            {
+                buffs.RemoveAt(i);
+            }
+        }
+    }
 
     public static bool TryConsumeArtifact(List<BuffState> buffs)
     {
@@ -54,7 +87,7 @@ public static class BuffSystem
             return false;
         }
 
-        int artifactIdx = buffs.FindIndex(b => b.Id == BuffId.Artifact);
+        int artifactIdx = IndexOf(buffs, BuffId.Artifact);
         if (artifact == 1)
         {
             buffs.RemoveAt(artifactIdx);
@@ -88,6 +121,30 @@ public static class BuffSystem
             var b = buffs[i];
             switch (b.Id)
             {
+                // SlumberPower.AfterSideTurnEnd, which ticks for its OWNER's side only --
+                // the beetle is an enemy, and this runs for the enemies. Its other
+                // decrement, on unblocked damage, is in DealDamageToEnemy.
+                // IntangiblePower.AfterSideTurnEnd decrements at the end of the ENEMY
+                // side turn whoever owns it, which is this moment. Listed apart from the
+                // duration DEBUFFS below because it is a Buff: PowerCmd.Apply's
+                // skip-a-tick grace is only given to a debuff landing on a player-side
+                // creature, so an Intangible the player gains this turn ticks tonight.
+                // TaintedPower.AfterSideTurnEnd REMOVES itself outright rather than
+                // decrementing, so a round's worth of Skills is paid for once.
+                case BuffId.Tainted:
+                    buffs.RemoveAt(i);
+                    break;
+
+                case BuffId.Intangible:
+                    buffs[i] = b with { Magnitude = b.Magnitude - 1 };
+                    if (buffs[i].Magnitude <= 0)
+                    {
+                        buffs.RemoveAt(i);
+                    }
+
+                    break;
+
+                case BuffId.Slumber:
                 case BuffId.Vulnerable:
                 case BuffId.Weak:
                 case BuffId.Frail:
@@ -135,9 +192,18 @@ public static class BuffSystem
         List<BuffState> defenderBuffs
     )
     {
+        // Everything in this function is the POWERED-ATTACK path, which is what lets the
+        // two hooks below live here at all. `ValueProp.IsPoweredAttack` is `Move &&
+        // !Unpowered` -- attack damage from Attack cards and from enemy creatures
+        // attacking -- and the two callers are exactly those: EnemyAI.DealAttackDamage and
+        // CardEffects.DealDamageToEnemy. Relic, potion, thorns and poison damage all go
+        // through the `Unpowered` helpers instead and never arrive here.
         float dmg = baseDamage;
         dmg += Get(attackerBuffs, BuffId.Strength);
         dmg += Get(attackerBuffs, BuffId.Vigor);
+        // TaintedPower.ModifyDamageAdditive, which the Infested Prism's Vital Spark stamps
+        // on the player for every Skill they play.
+        dmg += Get(defenderBuffs, BuffId.Tainted);
         if (Get(attackerBuffs, BuffId.Weak) > 0)
         {
             dmg *= 0.75f;
@@ -153,8 +219,86 @@ public static class BuffSystem
             float mult = 1.5f + Get(attackerBuffs, BuffId.CrueltyPower) / 100f;
             dmg *= mult;
         }
-        return Math.Max(0, (int)dmg);
+
+        // SurroundedPower.ModifyDamageMultiplicative, the Kaiser Crab's: an attack from
+        // the half at the player's BACK lands at 1.5x. It belongs here rather than at the
+        // point of damage because the game's readout shows the modified number --
+        // AttackIntent.GetSingleDamage runs the move through Hook.ModifyDamage first --
+        // and a live capture confirms it: the Crusher opens announcing 18 for a base 12.
+        int facing = Get(defenderBuffs, BuffId.Surrounded);
+        bool fromBehind =
+            facing == Run.RunConstants.FacingRight
+                ? Get(attackerBuffs, BuffId.BackAttackLeft) > 0
+                : facing == Run.RunConstants.FacingLeft
+                    && Get(attackerBuffs, BuffId.BackAttackRight) > 0;
+        if (fromBehind)
+        {
+            dmg *= 1.5f;
+        }
+
+        // TrackingPower.ModifyDamageMultiplicative: a powered CARD attack against a target
+        // that has Weak is multiplied by the power's own amount, so Tracking 2 is double
+        // damage. It reads the DEFENDER's Weak and the ATTACKER's Tracking.
+        int tracking = Get(attackerBuffs, BuffId.Tracking);
+        if (tracking > 0 && Get(defenderBuffs, BuffId.Weak) > 0)
+        {
+            dmg *= tracking;
+        }
+
+        // DoubleDamagePower.ModifyDamageMultiplicative returns a flat `2m` for a powered
+        // CARD attack by its owner. The amount is a STACK COUNT and not a multiplier --
+        // two stacks are still double, and buy a second turn of it rather than quadruple
+        // damage.
+        //
+        // The game also requires `cardSource != null`, which this function cannot see.
+        // Player damage that is not from a card is Unpowered in the emulator and does not
+        // reach here, so the two agree for every source that exists today -- the same
+        // standing caveat Tracking above carries.
+        if (Get(attackerBuffs, BuffId.DoubleDamage) > 0)
+        {
+            dmg *= 2;
+        }
+
+        // SoarPower.ModifyDamageMultiplicative: a flying Owl Magistrate takes half from a
+        // POWERED attack, which is the only kind that reaches this function.
+        if (Get(defenderBuffs, BuffId.Soar) > 0)
+        {
+            dmg *= 0.5f;
+        }
+
+        return CapIncomingDamage(Math.Max(0, (int)dmg), defenderBuffs);
     }
+
+    /// <summary>
+    /// <c>IntangiblePower.ModifyDamageCap</c>: damage aimed at its owner is capped at 1.
+    /// </summary>
+    /// <remarks>
+    /// The cap runs inside <c>Hook.ModifyDamage</c> under the <c>Cap</c> flag, and
+    /// <c>ModifyDamageHookType.All</c> — which is what almost every back-end call passes —
+    /// includes it. So this belongs with the additive and multiplicative modifiers rather
+    /// than at the point of damage, and it reaches the READOUT as well as the blow:
+    /// <c>AttackIntent.GetSingleDamage</c> runs the move through the same hook, so an
+    /// intangible player is told the enemy will hit them for 1, not for thirty.
+    ///
+    /// Applied per HIT, which is where the game applies it: a two-hit attack against an
+    /// intangible creature announces 2 and lands two ones.
+    /// </remarks>
+    public static int CapIncomingDamage(int damage, List<BuffState> defenderBuffs) =>
+        Get(defenderBuffs, BuffId.Intangible) > 0 ? Math.Min(damage, 1) : damage;
+
+    /// <summary>
+    /// <c>IntangiblePower.ModifyHpLostAfterOsty</c>: any HP loss of 1 or more becomes 1.
+    /// </summary>
+    /// <remarks>
+    /// The second half of Intangible, and the reason the power carries two hooks: the cap
+    /// above governs the damage NUMBER — what block absorbs, what a preview shows — and
+    /// this one is the backstop on HP itself. It is what covers HP lost by a route that is
+    /// not an attack at all. Poison happens to be capped by the first hook rather than this
+    /// one, since <c>PoisonPower</c> runs its own damage through
+    /// <c>Hook.ModifyDamage(..., All, ...)</c>, but either way the answer is 1.
+    /// </remarks>
+    public static int CapHpLoss(int hpLoss, List<BuffState> defenderBuffs) =>
+        Get(defenderBuffs, BuffId.Intangible) > 0 ? Math.Min(hpLoss, 1) : hpLoss;
 
     public static int IncomingBlock(int baseBlock, List<BuffState> buffs, bool isDefend = false)
     {

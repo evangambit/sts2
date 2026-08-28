@@ -1,0 +1,566 @@
+{
+  "_comment": "Captured from the live game by scripts/capture_shop.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
+  "seed": "ABCDEF",
+  "ascension": 8,
+  "floor": 1,
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1"
+  },
+  "stock": [
+    {
+      "index": 0,
+      "category": "card",
+      "price": 51,
+      "on_sale": false,
+      "is_stocked": true,
+      "id": "SWORD_BOOMERANG",
+      "is_upgraded": null
+    },
+    {
+      "index": 1,
+      "category": "card",
+      "price": 50,
+      "on_sale": false,
+      "is_stocked": true,
+      "id": "MOLTEN_FIST",
+      "is_upgraded": null
+    },
+    {
+      "index": 2,
+      "category": "card",
+      "price": 78,
+      "on_sale": false,
+      "is_stocked": true,
+      "id": "BURNING_PACT",
+      "is_upgraded": null
+    },
+    {
+      "index": 3,
+      "category": "card",
+      "price": 78,
+      "on_sale": false,
+      "is_stocked": true,
+      "id": "COLOSSUS",
+      "is_upgraded": null
+    },
+    {
+      "index": 4,
+      "category": "card",
+      "price": 37,
+      "on_sale": true,
+      "is_stocked": true,
+      "id": "RUPTURE",
+      "is_upgraded": null
+    },
+    {
+      "index": 5,
+      "category": "card",
+      "price": 89,
+      "on_sale": false,
+      "is_stocked": true,
+      "id": "DARK_SHACKLES",
+      "is_upgraded": null
+    },
+    {
+      "index": 6,
+      "category": "card",
+      "price": 169,
+      "on_sale": false,
+      "is_stocked": true,
+      "id": "HAND_OF_GREED",
+      "is_upgraded": null
+    },
+    {
+      "index": 7,
+      "category": "relic",
+      "price": 201,
+      "on_sale": null,
+      "is_stocked": true,
+      "id": "AKABEKO",
+      "is_upgraded": null
+    },
+    {
+      "index": 8,
+      "category": "relic",
+      "price": 184,
+      "on_sale": null,
+      "is_stocked": true,
+      "id": "RED_MASK",
+      "is_upgraded": null
+    },
+    {
+      "index": 9,
+      "category": "relic",
+      "price": 219,
+      "on_sale": null,
+      "is_stocked": true,
+      "id": "KIFUDA",
+      "is_upgraded": null
+    },
+    {
+      "index": 10,
+      "category": "potion",
+      "price": 77,
+      "on_sale": null,
+      "is_stocked": true,
+      "id": "HEART_OF_IRON",
+      "is_upgraded": null
+    },
+    {
+      "index": 11,
+      "category": "potion",
+      "price": 52,
+      "on_sale": null,
+      "is_stocked": true,
+      "id": "ATTACK_POTION",
+      "is_upgraded": null
+    },
+    {
+      "index": 12,
+      "category": "potion",
+      "price": 76,
+      "on_sale": null,
+      "is_stocked": true,
+      "id": "REGEN_POTION",
+      "is_upgraded": null
+    },
+    {
+      "index": 13,
+      "category": "card_removal",
+      "price": 100,
+      "on_sale": null,
+      "is_stocked": true,
+      "id": null,
+      "is_upgraded": null
+    }
+  ],
+  "before": {
+    "state_type": "shop",
+    "run": {
+      "act": 1,
+      "floor": 1,
+      "ascension": 8
+    },
+    "player": {
+      "character": "The Ironclad",
+      "hp": 64,
+      "max_hp": 80,
+      "block": 0,
+      "energy": null,
+      "max_energy": null,
+      "gold": 99,
+      "deck": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "description": "Deal 6 damage.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 5,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 6,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 7,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 8,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "description": "Gain 5 Block.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 9,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        },
+        {
+          "index": 10,
+          "id": "ASCENDERS_BANE",
+          "name": "Ascender's Bane",
+          "type": "Curse",
+          "cost": "0",
+          "description": "Unplayable. Ethereal. Eternal.",
+          "can_play": null,
+          "target_type": null,
+          "is_upgraded": false
+        }
+      ],
+      "deck_size": 11,
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "slot": null,
+          "counter": null
+        }
+      ],
+      "potions": [],
+      "max_potion_slots": 2,
+      "status": [],
+      "hand": [],
+      "draw_pile": [],
+      "discard_pile": [],
+      "exhaust_pile": []
+    },
+    "battle": null,
+    "event": {},
+    "rewards": {},
+    "card_reward": {},
+    "map": {},
+    "shop": {
+      "items": [
+        {
+          "index": 0,
+          "category": "card",
+          "price": 51,
+          "is_stocked": true,
+          "can_afford": true,
+          "on_sale": false,
+          "card_id": "SWORD_BOOMERANG",
+          "card_name": "Sword Boomerang",
+          "card_type": "Attack",
+          "card_cost": "1",
+          "card_star_cost": null,
+          "card_rarity": "Common",
+          "card_description": "Deal 3 damage to a random enemy 3 times.",
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "category": "card",
+          "price": 50,
+          "is_stocked": true,
+          "can_afford": true,
+          "on_sale": false,
+          "card_id": "MOLTEN_FIST",
+          "card_name": "Molten Fist",
+          "card_type": "Attack",
+          "card_cost": "1",
+          "card_star_cost": null,
+          "card_rarity": "Common",
+          "card_description": "Deal 10 damage. Double the enemy's Vulnerable. Exhaust.",
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "category": "card",
+          "price": 78,
+          "is_stocked": true,
+          "can_afford": true,
+          "on_sale": false,
+          "card_id": "BURNING_PACT",
+          "card_name": "Burning Pact",
+          "card_type": "Skill",
+          "card_cost": "1",
+          "card_star_cost": null,
+          "card_rarity": "Uncommon",
+          "card_description": "Exhaust 1 card. Draw 2 cards.",
+          "keywords": [
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "category": "card",
+          "price": 78,
+          "is_stocked": true,
+          "can_afford": true,
+          "on_sale": false,
+          "card_id": "COLOSSUS",
+          "card_name": "Colossus",
+          "card_type": "Skill",
+          "card_cost": "1",
+          "card_star_cost": null,
+          "card_rarity": "Uncommon",
+          "card_description": "Gain 5 Block. You receive 50% less damage from Vulnerable enemies this turn.",
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "category": "card",
+          "price": 37,
+          "is_stocked": true,
+          "can_afford": true,
+          "on_sale": true,
+          "card_id": "RUPTURE",
+          "card_name": "Rupture",
+          "card_type": "Power",
+          "card_cost": "1",
+          "card_star_cost": null,
+          "card_rarity": "Uncommon",
+          "card_description": "Whenever you lose HP on your turn, gain 1 Strength.",
+          "keywords": [
+            {
+              "name": "Strength",
+              "description": "Strength adds additional damage to Attacks."
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "category": "card",
+          "price": 89,
+          "is_stocked": true,
+          "can_afford": true,
+          "on_sale": false,
+          "card_id": "DARK_SHACKLES",
+          "card_name": "Dark Shackles",
+          "card_type": "Skill",
+          "card_cost": "0",
+          "card_star_cost": null,
+          "card_rarity": "Uncommon",
+          "card_description": "Enemy loses 9 Strength this turn. Exhaust.",
+          "keywords": [
+            {
+              "name": "Strength",
+              "description": "Strength adds additional damage to Attacks."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "category": "card",
+          "price": 169,
+          "is_stocked": true,
+          "can_afford": false,
+          "on_sale": false,
+          "card_id": "HAND_OF_GREED",
+          "card_name": "Hand of Greed",
+          "card_type": "Attack",
+          "card_cost": "2",
+          "card_star_cost": null,
+          "card_rarity": "Rare",
+          "card_description": "Deal 20 damage. If Fatal, gain 20 Gold.",
+          "keywords": [
+            {
+              "name": "Fatal",
+              "description": "Triggers whenever this card kills a non-minion enemy."
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "category": "relic",
+          "price": 201,
+          "is_stocked": true,
+          "can_afford": false,
+          "relic_id": "AKABEKO",
+          "relic_name": "Akabeko",
+          "relic_description": "At the start of each combat, gain 8 Vigor.",
+          "keywords": [
+            {
+              "name": "Vigor",
+              "description": "Your next Attack deals additional damage."
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "category": "relic",
+          "price": 184,
+          "is_stocked": true,
+          "can_afford": false,
+          "relic_id": "RED_MASK",
+          "relic_name": "Red Mask",
+          "relic_description": "At the start of each combat, apply 1 Weak to ALL enemies.",
+          "keywords": [
+            {
+              "name": "Weak",
+              "description": "Weakened creatures deal 25% less damage with Attacks."
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "category": "relic",
+          "price": 219,
+          "is_stocked": true,
+          "can_afford": false,
+          "relic_id": "KIFUDA",
+          "relic_name": "Kifuda",
+          "relic_description": "Upon pickup, Enchant up to 3 cards with Adroit.",
+          "keywords": [
+            {
+              "name": "Adroit",
+              "description": "Gain 3 Block."
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "category": "potion",
+          "price": 77,
+          "is_stocked": true,
+          "can_afford": true,
+          "potion_id": "HEART_OF_IRON",
+          "potion_name": "Heart of Iron",
+          "potion_description": "Gain 7 Plating.",
+          "keywords": [
+            {
+              "name": "Plating",
+              "description": "At the end of your turn, gain Block. Plating is reduced by 1 at the start of your turn."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "category": "potion",
+          "price": 52,
+          "is_stocked": true,
+          "can_afford": true,
+          "potion_id": "ATTACK_POTION",
+          "potion_name": "Attack Potion",
+          "potion_description": "Choose 1 of 3 random Attack cards to add into your Hand. It's free to play this turn.",
+          "keywords": []
+        },
+        {
+          "index": 12,
+          "category": "potion",
+          "price": 76,
+          "is_stocked": true,
+          "can_afford": true,
+          "potion_id": "REGEN_POTION",
+          "potion_name": "Regen Potion",
+          "potion_description": "Gain 5 Regen.",
+          "keywords": [
+            {
+              "name": "Regen",
+              "description": "Regen heals HP at the end of your turn. Each turn, Regen is reduced by 1."
+            }
+          ]
+        },
+        {
+          "index": 13,
+          "category": "card_removal",
+          "price": 100,
+          "is_stocked": true,
+          "can_afford": false
+        }
+      ],
+      "can_proceed": false
+    },
+    "rest": {},
+    "rest_site": {},
+    "treasure": {},
+    "bundle_select": {},
+    "menu_screen": null,
+    "options": null
+  }
+}

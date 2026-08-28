@@ -31,6 +31,7 @@ from sts2_gym.run_env import (
     NODE_ELITE,
     NODE_NORMAL,
     PHASE_ANCIENT,
+    PHASE_BUNDLE_SELECT,
     PHASE_CARD_REWARD,
     PHASE_COMBAT,
     PHASE_COMPLETE,
@@ -44,12 +45,24 @@ from sts2_gym.run_env import (
 )
 
 COMBAT_STATES = {"monster", "elite", "boss"}
+# Out-of-band buffs a capture may have applied to the live run; see apply_debug_buff.
+DEBUG_BUFF_ACTIONS = {"debug_gain_max_hp", "debug_upgrade_deck", "debug_enter_next_act"}
+# The intent types that announce DAMAGE. DeathBlowIntent derives from SingleAttackIntent
+# and reports its own name, so matching on "Attack" alone read a Gas Bomb as not
+# attacking at all.
+ATTACK_INTENTS = {"Attack", "DeathBlow"}
 DEFAULT_BOUNDARY_FIELDS = [
     "state_type",
     "run.floor",
     "player.hp",
     "player.max_hp",
     "player.gold",
+    # Which event, not just that there IS one. Without this a run that drew a
+    # different event still looked like it matched -- both sides say "event" --
+    # and the divergence only surfaced once the two runs had drifted far enough
+    # to disagree about gold. That is exactly how an Underdocks run hid a wrong
+    # event for 60 steps.
+    "event.event_id",
 ]
 PHASE_STATE_TYPES = {
     PHASE_CARD_REWARD: "card_reward",
@@ -62,6 +75,7 @@ PHASE_STATE_TYPES = {
     PHASE_SHOP: "shop",
     PHASE_TREASURE: "treasure",
     PHASE_TRANSFORM_SELECT: "card_select",
+    PHASE_BUNDLE_SELECT: "bundle_select",
 }
 COMBAT_NODE_STATE_TYPES = {
     NODE_NORMAL: "monster",
@@ -120,10 +134,33 @@ def is_boundary_transition(
 DEFAULT_PER_STEP_FIELDS = [
     "state_type",
     "player.hp",
+    "player.max_hp",
     "player.gold",
+    # Block and energy are the two combat numbers the snapshot already carried and
+    # never checked. The Fishing Rod bug's proximate symptom was BLOCK -- 8 where the
+    # emulator gave 5 -- and it went unnoticed until it turned into HP three steps on.
+    "player.block",
+    "player.energy",
     "player.hand",
+    # What the run HOLDS, not just what it is doing. A missing relic or a card that
+    # never got upgraded changes everything downstream, and both were invisible.
+    "player.deck",
+    "player.relics",
     "battle.enemies",
 ]
+
+
+def apply_debug_buff(env: Any, payload: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
+    """Apply to the emulator the same buff the capture applied to the live game.
+
+    Returns the refreshed observation and info, because the snapshot recorded for this
+    step has to show the buffed state on both sides.
+    """
+    if payload["action"] == "debug_gain_max_hp":
+        return env.debug_gain_max_hp(int(payload.get("amount", 0)))
+    if payload["action"] == "debug_enter_next_act":
+        return env.debug_enter_next_act()
+    return env.debug_upgrade_deck()
 
 
 def normalise_for_compare(field: str, value: Any) -> Any:
@@ -134,18 +171,73 @@ def normalise_for_compare(field: str, value: Any) -> Any:
     on both sides is what makes a wide comparison usable rather than all-noise.
     """
     if field == "player.hand":
-        return [card.get("id") if isinstance(card, dict) else card for card in value or []]
+        # (id, upgraded) rather than the id alone: an upgrade does not change the id,
+        # so Defend and Defend+ compared equal and a lost upgrade read as a match.
+        return [
+            (
+                (card.get("id"), bool(card.get("is_upgraded")))
+                if isinstance(card, dict)
+                else (card, False)
+            )
+            for card in value or []
+        ]
+    if field in {"player.deck", "player.relics"}:
+        # A deck or relic list compared as an unordered multiset: both sides agree on
+        # WHAT the run holds, but not on the order it is stored in.
+        return sorted(
+            (
+                (item.get("id"), bool(item.get("is_upgraded")))
+                if isinstance(item, dict)
+                else (item, False)
+            )
+            for item in value or []
+        )
     if field == "battle.enemies":
         # The emulator keeps a dead enemy in the roster at 0 HP so an agent's
         # observation has stable slots; the game removes the creature outright. Compare
         # the living ones, the same way combat_sweep.living_emu_enemies does, or every
         # fight where something dies reads as an extra attacker.
         return [
-            (enemy.get("hp"), enemy.get("block"))
+            (enemy.get("hp"), enemy.get("block"), _attack_intent(enemy))
             for enemy in value or []
             if isinstance(enemy, dict) and (enemy.get("hp") or 0) > 0
         ]
     return value
+
+
+def _attack_intent(enemy: dict[str, Any]) -> int | None:
+    """Return the damage an enemy is announcing, or None if it is not attacking.
+
+    Only the ATTACK intents are compared, and only their damage. The two sides name the
+    other kinds differently -- the game distinguishes StatusCard from Debuff where the
+    emulator does not -- so comparing those would be noise, and the observation does
+    not carry a hit count for the emulator side to answer with. Damage is the number
+    that has to agree to the point: an intent transcribed a point or two high is the
+    classic way an enemy diverges with nothing else looking wrong.
+
+    "Attack" is not the only name for one. `DeathBlowIntent` derives from
+    `SingleAttackIntent` and reports its own type, and a Gas Bomb announcing ("DeathBlow",
+    "8") was read here as not attacking at all -- so the reference said None where the
+    emulator said 8 and the two disagreed about nothing. It carries real damage in the
+    same label format, so it is compared like any other attack.
+    """
+    intents = enemy.get("intents")
+    if intents is not None:
+        # Reference side: a list of {type, label}, where a multi-hit reads "1x3".
+        for intent in intents:
+            if intent.get("type") not in ATTACK_INTENTS:
+                continue
+            # The game's label is per-hit by count ("1x3"); the emulator's observation
+            # announces the TOTAL, which is what AnnouncedDamage returns. Multiply out
+            # so the two sides are talking about the same number.
+            damage, _, hits = str(intent.get("label", "")).partition("x")
+            if not damage.isdigit():
+                return None
+            return int(damage) * (int(hits) if hits.isdigit() else 1)
+        return None
+    if int(enemy.get("intent_type", -1)) != 0:  # IntentType.Attack
+        return None
+    return int(enemy.get("intent_mag", 0))
 
 
 def first_divergences(
@@ -162,10 +254,32 @@ def first_divergences(
         for field in fields:
             if field in first:
                 continue
-            ref_value = normalise_for_compare(field, compare_traces.get_path(ref, field))
-            emu_value = normalise_for_compare(field, compare_traces.get_path(emu, field))
-            if field == "player.hand":
-                ref_value = [slugs.get(card, card) for card in ref_value]
+            # A snapshot the capture took before the run had a deck records nothing
+            # rather than an empty one, and no run ever really holds zero cards. Read
+            # an absent deck as "not recorded" instead of as a divergence.
+            if field == "player.deck" and not compare_traces.get_path(ref, field):
+                continue
+            ref_value = normalise_for_compare(
+                field,
+                compare_traces.get_path(ref, field),
+            )
+            emu_value = normalise_for_compare(
+                field,
+                compare_traces.get_path(emu, field),
+            )
+            if field in {"player.hand", "player.deck"}:
+                # Only the id half needs translating; the flag means the same thing
+                # on both sides.
+                ref_value = [
+                    (slugs.get(card, card), upgraded) for card, upgraded in ref_value
+                ]
+            if field == "player.deck":
+                ref_value = sorted(ref_value)
+            if field == "player.relics":
+                relics = relic_slug_to_id()
+                ref_value = sorted(
+                    (relics.get(relic, relic), flag) for relic, flag in ref_value
+                )
             if ref_value != emu_value:
                 first[field] = (
                     f"first divergence in {field} at step {index}: "
@@ -186,7 +300,29 @@ def card_slug_to_id() -> dict[str, int]:
     ).read_text()
     return {
         match.group(2): int(match.group(1))
-        for match in re.finditer(r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"', text)
+        for match in re.finditer(
+            r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"',
+            text,
+        )
+    }
+
+
+@functools.cache
+def relic_slug_to_id() -> dict[str, int]:
+    """Map the game's relic entry ids to ours, so relics can be compared."""
+    text = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "Sts2Emulator"
+        / "Generated"
+        / "Relics.g.cs"
+    ).read_text()
+    return {
+        match.group(2): int(match.group(1))
+        for match in re.finditer(
+            r'Id: (\d+), Name: "[^"]*", Entry: "([A-Z0-9_]*)"',
+            text,
+        )
     }
 
 
@@ -340,22 +476,50 @@ def replay_trace(
             replay_steps = replay_steps[:max_steps]
 
         current_target_map: dict[str, int] = {}
-        prev_ref_state: str | None = None
+        previous_reference_enemies: list[dict[str, Any]] = []
 
         for reference_step in replay_steps:
             payload = reference_step.get("action")
             ref_summary = compare_traces.summary(reference_step)
-            ref_state = ref_summary.get("state_type")
+            # The game RENUMBERS its entity ids as enemies die, so the map has to be
+            # rebuilt every step rather than once on entering the fight. It is built
+            # from the state the action was chosen in -- the previous step -- and its
+            # values are ordinals among living enemies. Resolving them against the
+            # emulator's own list is execute_command's job, not this one's: doing it
+            # here left translate_target's two FALLBACK paths unresolved, which is E79.
+            #
+            # Gated on the PREVIOUS step's enemy list, not on this step's state type.
+            # A capture pairs an action with the state it PRODUCED, so the killing blow
+            # of a fight is recorded against the rewards screen it opened -- and gating
+            # on that emptied the map for exactly the attack that ends a combat, which
+            # then fell through to the entity id's suffix. That is E80: the last Strike
+            # of a Fogmog fight was aimed at FOGMOG_0, read as ordinal 0, and landed on
+            # the eye sitting in front of it.
+            current_target_map = build_target_map(previous_reference_enemies)
+            previous_reference_enemies = (
+                compare_traces.get_path(ref_summary, "battle.enemies") or []
+            )
 
-            # Build target map when entering a new combat from a reference battle enemy list.
-            if ref_state in COMBAT_STATES and prev_ref_state not in COMBAT_STATES:
-                ref_enemies = (
-                    compare_traces.get_path(ref_summary, "battle.enemies") or []
+            # The two run-scoped debug buffs are applied to the emulator directly rather
+            # than translated into an action: they are not moves the run makes, they are
+            # the same out-of-band change the capture made to the live game. Both sides
+            # must see it at the same step or everything after it diverges by
+            # construction, which is why the capture RECORDS them as steps.
+            if payload is not None and payload.get("action") in DEBUG_BUFF_ACTIONS:
+                obs, info = apply_debug_buff(env, payload)
+                emulator_trace.append(
+                    make_step(
+                        int(reference_step.get("step") or len(emulator_trace)),
+                        payload,
+                        0.0,
+                        False,
+                        False,
+                        obs,
+                        info,
+                        valid_actions(env),
+                    ),
                 )
-                current_target_map = build_target_map(ref_enemies)
-            elif ref_state not in COMBAT_STATES:
-                current_target_map = {}
-            prev_ref_state = ref_state
+                continue
 
             try:
                 action = translate_command(payload, obs, info, env, reference_step)
@@ -488,6 +652,10 @@ def summarize_player(
         "energy": int(obs[3]) if in_combat else None,
         "gold": int(info["gold"]),
         "deck_size": int(info["deck_size"]),
+        "deck": [
+            {"id": int(card["card_id"]), "is_upgraded": bool(card["upgraded"])}
+            for card in info["deck"]
+        ],
         "relics": [{"id": int(relic_id)} for relic_id in info["relics"]],
         "potions": [
             {"id": int(potion_id)}
@@ -499,17 +667,29 @@ def summarize_player(
 
 
 def summarize_hand(obs: np.ndarray) -> list[dict[str, Any]]:
+    """Read the hand, with the upgrade flag the card slot already carries.
+
+    Recording the id alone made Defend and Defend+ the same card, since an upgrade
+    does not change the id. A run whose Defend+ had silently lost its upgrade played
+    it for 5 block where the game played it for 8, and the hand comparison saw two
+    identical hands -- the difference only surfaced as HP, three steps later.
+    """
+    slot = native.OBS_CARD_SLOT_SIZE
     return [
-        {"index": hand_index, "id": int(obs[8 + hand_index * 2])}
-        for hand_index in range(10)
-        if int(obs[8 + hand_index * 2]) != 0
+        {
+            "index": hand_index,
+            "id": int(obs[native.OBS_HAND_OFFSET + hand_index * slot]),
+            "is_upgraded": bool(obs[native.OBS_HAND_OFFSET + hand_index * slot + 1]),
+        }
+        for hand_index in range(native.OBS_MAX_HAND)
+        if int(obs[native.OBS_HAND_OFFSET + hand_index * slot]) != 0
     ]
 
 
 def summarize_battle(obs: np.ndarray) -> dict[str, Any]:
     enemies = []
     for enemy_index in range(native.MAX_ENEMIES):
-        base = 54 + enemy_index * 15
+        base = native.OBS_ENEMY_OFFSET + enemy_index * native.OBS_ENEMY_SLOT_SIZE
         hp = int(obs[base])
         max_hp = int(obs[base + 1])
         if hp == 0 and max_hp == 0:
@@ -540,6 +720,33 @@ def summarize_card_reward(info: dict[str, Any]) -> dict[str, Any]:
     return {"cards": cards}
 
 
+def _event_names() -> dict[int, str]:
+    """Map the emulator's event ids to the game's ModelId.Entry, off RunConstants.
+
+    Derived rather than written down: the constant's own name IS the entry, in
+    PascalCase, so ``EventSunkenTreasury`` is ``SUNKEN_TREASURY``.
+    """
+    source = (
+        Path(__file__).resolve().parent.parent
+        / "src"
+        / "Sts2Emulator"
+        / "Core"
+        / "Run"
+        / "RunConstants.cs"
+    ).read_text(encoding="utf-8")
+    names: dict[int, str] = {}
+    for name, value in re.findall(
+        r"public const int Event(\w+)\s*=\s*(-?\d+);",
+        source,
+    ):
+        entry = re.sub(r"(?<!^)(?=[A-Z])", "_", name).upper()
+        names.setdefault(int(value), entry)
+    return names
+
+
+EVENT_NAMES = _event_names()
+
+
 def summarize_event(info: dict[str, Any]) -> dict[str, Any]:
     if int(info["phase"]) == PHASE_ANCIENT:
         return {
@@ -550,7 +757,8 @@ def summarize_event(info: dict[str, Any]) -> dict[str, Any]:
                 if int(relic_id) != 0
             ],
         }
-    return {"event_id": int(info["event_id"])}
+    event_id = int(info["event_id"])
+    return {"event_id": EVENT_NAMES.get(event_id, event_id)}
 
 
 def summarize_map(info: dict[str, Any]) -> dict[str, Any]:

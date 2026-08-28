@@ -64,7 +64,7 @@ def render(names: list[str]) -> str:
         "namespace Sts2Emulator.Tests;",
         "",
         "/// <summary>",
-        "/// Every encounter <c>CombatFactory</c> can build, which is what \"modelled\" means",
+        '/// Every encounter <c>CombatFactory</c> can build, which is what "modelled" means',
         "/// for a combat. Consumed by <c>CombatCoverageTests</c>.",
         "/// </summary>",
         "internal static class ImplementedEncounters",
@@ -91,7 +91,9 @@ def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(render(names), encoding="utf-8")
     tested = sum(1 for n in names if has_suite(n))
-    print(f"{len(names)} encounters modelled, {tested} with a test suite -> {OUT.relative_to(REPO)}")
+    print(
+        f"{len(names)} encounters modelled, {tested} with a test suite -> {OUT.relative_to(REPO)}"
+    )
 
 
 if __name__ == "__main__":

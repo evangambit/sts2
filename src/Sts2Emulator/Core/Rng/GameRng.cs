@@ -69,6 +69,17 @@ public sealed class GameRng
         return _rng.NextDouble();
     }
 
+    /// <summary>
+    /// The game's <c>Rng.NextFloat(min, max)</c>, which is
+    /// <c>(float)(NextDouble() * (max - min) + min)</c> -- the cast to float happens
+    /// after the arithmetic, and the comparison thresholds it feeds are floats too.
+    /// </summary>
+    public float NextFloat(float min = 0f, float max = 1f)
+    {
+        CallCount++;
+        return (float)(_rng.NextDouble() * (max - min) + min);
+    }
+
     public T NextItem<T>(IReadOnlyList<T> items)
     {
         if (items.Count == 0)

@@ -22,270 +22,166 @@ public static class RunRewardGenerator
     /// </summary>
     public static ReadOnlySpan<int> IroncladRewardPool => GeneratedData.CardPools.Ironclad;
 
-    public static ReadOnlySpan<int> IroncladTransformPool =>
+    /// <summary>
+    /// What a card may be transformed into, given what it is now.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// CardFactory.GetDefaultTransformationOptions draws from the ORIGINAL card's own
+    /// pool -- an Ironclad card becomes an Ironclad card, a curse becomes a curse --
+    /// falling back to Colorless only for the rarities that have no pool of their own
+    /// (Ancient, Event, Token) and for Quest cards. It then keeps Common, Uncommon and
+    /// Rare, drops the original itself, and drops multiplayer-only cards.
+    /// </para>
+    /// <para>
+    /// The rarity filter is skipped when the original is a Status or a Curse, which is
+    /// how a curse transforms into another curse rather than into nothing at all.
+    /// </para>
+    /// <para>
+    /// One hand-written list used to stand for all of this. It held 83 cards where the
+    /// Ironclad case has 80: it carried Break and Corruption, which are Ancient, and
+    /// Demonic Shield and Tank, which are multiplayer-only, and it was missing Feed.
+    /// </para>
+    /// </remarks>
+    public static int[] TransformOptionsFor(int originalCardId)
+    {
+        var original = GeneratedData.Cards.Get(originalCardId);
+        bool ownPoolHasNoHome =
+            original.Rarity is CardRarity.Ancient or CardRarity.Event or CardRarity.Token;
+        int[] pool = ownPoolHasNoHome
+            ? GeneratedData.CardPools.Colorless.ToArray()
+            : PoolContaining(originalCardId);
+
+        // Status and Curse originals keep the whole pool; everything else is narrowed to
+        // the three rarities a run can actually be handed.
+        bool keepEveryRarity = original.Rarity is CardRarity.Status or CardRarity.Curse;
+
+        return
         [
-            9,
-            13,
-            18,
-            20,
-            29,
-            31,
-            46,
-            45,
-            47,
-            50,
-            58,
-            59,
-            60,
-            66,
-            69,
-            546,
-            87,
-            95,
-            99,
-            107,
-            113,
-            114,
-            119,
-            141,
-            142,
-            147,
-            150,
-            155,
-            174,
-            175,
-            185,
-            188,
-            189,
-            195,
-            205,
-            238,
-            240,
-            246,
-            247,
-            254,
-            261,
-            262,
-            263,
-            265,
-            268,
-            272,
-            273,
-            295,
-            313,
-            328,
-            332,
-            334,
-            339,
-            349,
-            353,
-            358,
-            364,
-            374,
-            378,
-            381,
-            404,
-            414,
-            421,
-            433,
-            454,
-            462,
-            464,
-            465,
-            466,
-            486,
-            492,
-            493,
-            494,
-            505,
-            508,
-            516,
-            517,
-            519,
-            525,
-            526,
-            529,
-            533,
-            538,
+            .. pool.Where(cardId =>
+                cardId != originalCardId
+                && IsAllowedSolo(cardId)
+                && (
+                    keepEveryRarity
+                    || GeneratedData.Cards.Get(cardId).Rarity
+                        is CardRarity.Common
+                            or CardRarity.Uncommon
+                            or CardRarity.Rare
+                )
+            ),
+        ];
+    }
+
+    /// <summary>The pool a card belongs to, which is the pool it transforms within.</summary>
+    private static int[] PoolContaining(int cardId)
+    {
+        foreach (
+            var pool in (int[][])
+                [
+                    GeneratedData.CardPools.Ironclad.ToArray(),
+                    GeneratedData.CardPools.Curse.ToArray(),
+                    GeneratedData.CardPools.Status.ToArray(),
+                    GeneratedData.CardPools.Colorless.ToArray(),
+                ]
+        )
+        {
+            if (pool.Contains(cardId))
+            {
+                return pool;
+            }
+        }
+
+        // A card in no pool the emulator models: the Ironclad pool is the only sensible
+        // home, and it is what the old single list assumed for everything.
+        return GeneratedData.CardPools.Ironclad.ToArray();
+    }
+
+    /// <summary>
+    /// The Colorless pool, as the game declares it. Callers filter it: the solo filter
+    /// runs at pick time, the way CardFactory.FilterForPlayerCount runs on every pool.
+    ///
+    /// A hand-written copy stood here with 63 entries against the pool's 64 -- it kept
+    /// ten multiplayer-only cards the pick would drop anyway and left out Coordinate for
+    /// no reason anyone recorded.
+    /// </summary>
+    public static ReadOnlySpan<int> ColorlessRewardPool => GeneratedData.CardPools.Colorless;
+
+    /// <summary>
+    /// What the merchant can stock, by card type. The game does not keep per-type shop
+    /// lists at all: MerchantInventory hands CardFactory.CreateForMerchant the player's
+    /// whole character pool and it filters by type at pick time, dropping Basic cards
+    /// and anything multiplayer-only.
+    ///
+    /// Hand-written copies of these lists used to live here and they were far short of
+    /// the real thing -- 20 attacks, 18 skills and 5 powers against the pool's 35, 28
+    /// and 19 -- with three Colorless cards mixed into the skills for good measure. A
+    /// short pool does not just narrow the choice: NextItem indexes into it, so every
+    /// slot after the first came back with a different card than the game stocked.
+    /// </summary>
+    private static readonly int[] _shopAttackCards = ShopPoolOfType(CardType.Attack);
+    private static readonly int[] _shopSkillCards = ShopPoolOfType(CardType.Skill);
+    private static readonly int[] _shopPowerCards = ShopPoolOfType(CardType.Power);
+
+    public static ReadOnlySpan<int> ShopAttackCards => _shopAttackCards;
+
+    public static ReadOnlySpan<int> ShopSkillCards => _shopSkillCards;
+
+    public static ReadOnlySpan<int> ShopPowerCards => _shopPowerCards;
+
+    private static int[] ShopPoolOfType(CardType type) =>
+        [
+            .. GeneratedData
+                .CardPools.Ironclad.ToArray()
+                .Where(cardId =>
+                {
+                    var def = GeneratedData.Cards.Get(cardId);
+                    return def.Type == type
+                        && def.Rarity != CardRarity.Basic
+                        && IsAllowedSolo(cardId);
+                }),
         ];
 
-    public static ReadOnlySpan<int> ColorlessRewardPool =>
-        [
-            10,
-            14,
-            23,
-            32,
-            34,
-            38,
-            51,
-            73,
-            80,
-            121,
-            146,
-            153,
-            168,
-            170,
-            173,
-            181,
-            191,
-            193,
-            197,
-            213,
-            225,
-            234,
-            250,
-            255,
-            260,
-            266,
-            270,
-            271,
-            277,
-            286,
-            297,
-            300,
-            306,
-            307,
-            327,
-            333,
-            342,
-            343,
-            363,
-            365,
-            366,
-            369,
-            372,
-            380,
-            394,
-            396,
-            401,
-            406,
-            411,
-            415,
-            416,
-            417,
-            431,
-            455,
-            470,
-            491,
-            498,
-            499,
-            504,
-            506,
-            521,
-            522,
-            535,
-        ];
+    /// <summary>
+    /// What a potion roll may offer: the character's own pool followed by the shared
+    /// one, which is how PotionFactory.GetPotionOptions builds it. Order is load-bearing
+    /// because NextItem indexes into the concatenation.
+    ///
+    /// A hand-written list stood here and held 43 of the 48, so a roll that agreed with
+    /// the game on rarity still landed on a different potion.
+    /// </summary>
+    private static readonly int[] _potionRewardPool =
+    [
+        .. GeneratedData.PotionPools.Ironclad.ToArray(),
+        .. GeneratedData.PotionPools.Shared.ToArray(),
+    ];
 
-    public static ReadOnlySpan<int> ShopAttackCards =>
-        [
-            13,
-            20,
-            50,
-            60,
-            69,
-            87,
-            147,
-            189,
-            240,
-            247,
-            268,
-            349,
-            358,
-            421,
-            454,
-            465,
-            486,
-            508,
-            519,
-            538,
-        ];
-
-    public static ReadOnlySpan<int> ShopSkillCards =>
-        [18, 31, 46, 45, 150, 155, 174, 175, 205, 238, 396, 414, 433, 455, 493, 516, 517, 521];
-
-    public static ReadOnlySpan<int> ShopPowerCards => [185, 265, 273, 462, 533];
-
-    public static ReadOnlySpan<int> PotionRewardPool =>
-        [
-            6, // Blood Potion
-            55, // Soldier's Stew
-            1,
-            2,
-            4,
-            5,
-            8,
-            9,
-            10,
-            13,
-            14,
-            15,
-            17,
-            18,
-            19,
-            21,
-            22,
-            23,
-            24,
-            26,
-            28,
-            29,
-            30,
-            32,
-            34,
-            36,
-            37,
-            38,
-            40,
-            42,
-            48,
-            49,
-            50,
-            51,
-            53,
-            54,
-            56,
-            57,
-            58,
-            59,
-            60,
-            62,
-            63,
-        ];
-
-    public static ReadOnlySpan<int> RelicRewardPool =>
-        [
-            3,
-            4,
-            9,
-            10,
-            19,
-            23,
-            41,
-            110,
-            114,
-            128,
-            135,
-            144,
-            149,
-            169,
-            170,
-            172,
-            186,
-            190,
-            215,
-            250,
-            252,
-            279,
-            282,
-            286,
-        ];
+    public static ReadOnlySpan<int> PotionRewardPool => _potionRewardPool;
 
     public static void GenerateCombatRewards(RunState state)
     {
+        // ChosenCheese.AfterCombatEnd: GainMaxHp(1). Gaining a maximum heals by the same
+        // amount, so a fight won at 2 HP ends at 3 before Burning Blood's six -- which is
+        // how this surfaced, as a single point of player HP after 126 clean steps of a
+        // capture (`NXV45HW43K`). The emulator could already be GIVEN the relic by Room
+        // Full of Cheese and then did nothing with it.
+        if (HasRelic(state, RunConstants.RelicChosenCheese))
+        {
+            RunNonCombatEffects.GainMaxHp(state, 1);
+        }
+
         if (HasRelic(state, RunConstants.RelicBurningBlood))
         {
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 6);
         }
+
+        // `AmethystAubergine.TryModifyRewards` adds a GoldReward after any combat room,
+        // except the final act's boss -- where the run ends and there is no reward screen
+        // to add it to. The gold goes through ModifyGoldGained, so Ectoplasm still zeroes
+        // it and Bowler Hat still raises it.
+        bool finalActBoss =
+            state.LastResolvedRoomType == RunConstants.NodeBoss
+            && state.CurrentActIndex >= state.Acts.Count - 1;
+        state.Gold += Effects.RelicEffects.ExtraCombatRewardGold(state, finalActBoss);
 
         if (HasRelic(state, RunConstants.RelicBlackBlood))
         {
@@ -303,19 +199,59 @@ public static class RunRewardGenerator
         bool hasPotionReward = CheckPotionRoll(state, state.PlayerRng.Rewards.NextDouble());
         ClearRewardScreen(state);
         state.RewardGold = GoldRewardForCurrentNode(state);
+        // A Heist's gold is its own row, claimed separately and shown after the fight's
+        // ordinary gold.
+        if (state.ActiveCombat?.StolenBackGold > 0)
+        {
+            state.PendingGoldRewards.Add(state.ActiveCombat.StolenBackGold);
+            state.ActiveCombat.StolenBackGold = 0;
+        }
+
+        // The Hunt's kill adds a whole extra CardReward to the room. `CardReward` does not
+        // roll its cards in the constructor -- `Populate()` does, when the screen is built
+        // -- so the extra offer's three cards come off the rewards stream here with the
+        // rest, not at the moment of the kill.
+        //
+        // UNVERIFIED: whether the extra offer populates BEFORE or AFTER the room's
+        // ordinary one. Both are RewardsSetIndex 5, so the order is the order they were
+        // added, and the extra was added during the combat while the ordinary set is built
+        // at its end. Taken as "after" here; a capture of a run that plays The Hunt to a
+        // kill would settle it, and until then every card the rewards stream produces from
+        // the second offer on is a guess.
+        int extraCardRewards = state.ActiveCombat?.ExtraCardRewards ?? 0;
+        for (int i = 0; i < extraCardRewards; i++)
+        {
+            state.PendingCardOffers.Add(RollExtraCardOffer(state));
+        }
+
+        if (state.ActiveCombat is not null)
+        {
+            state.ActiveCombat.ExtraCardRewards = 0;
+        }
+
         if (hasPotionReward)
         {
             state.RewardPotion = NextPotion(state, state.PlayerRng.Rewards);
         }
 
-        state.PendingRelicReward =
-            state.CurrentNodeType is RunConstants.NodeElite or RunConstants.NodeBoss;
+        // Only an ELITE hands over a relic. RewardsSet's Boss case is gold, potion, card
+        // and nothing else -- the relic in the Elite case has no counterpart there. The
+        // emulator gave one for both, so beating the act 1 boss handed over a Whetstone
+        // the run never earned, and its pickup upgraded two attacks in the deck.
+        state.PendingRelicReward = state.CurrentNodeType is RunConstants.NodeElite;
+
+        // The CARDS are rolled before the relic. RewardsSet builds gold, potion, card,
+        // relic and then populates them in that order, and only sorts by RewardsSetIndex
+        // afterwards -- so the order the screen SHOWS them in (relic above the card) is
+        // not the order they were rolled in. The relic's rarity roll comes off
+        // PlayerRng.Rewards like everything else, so taking it early handed the card
+        // offer the relic's value and shifted all three cards by a draw.
+        PopulateCardReward(state);
         if (state.PendingRelicReward)
         {
             state.RelicReward = NextRelic(state);
         }
 
-        PopulateCardReward(state);
         state.RewardCardPending = true;
         state.Phase = RunPhase.RelicReward;
     }
@@ -387,13 +323,37 @@ public static class RunRewardGenerator
         ];
     }
 
+    /// <summary>
+    /// Moves the next owed relic onto the screen, which carries one at a time. When the
+    /// queue runs dry, anything waiting on the whole screen being answered happens here --
+    /// which for Neow's Bones is its curse.
+    /// </summary>
+    public static void OfferNextBonusRelic(RunState state)
+    {
+        if (state.RelicReward != 0)
+        {
+            return;
+        }
+
+        if (state.PendingBonusRelicRewards.Count > 0)
+        {
+            state.RelicReward = state.PendingBonusRelicRewards[0];
+            state.PendingBonusRelicRewards.RemoveAt(0);
+            return;
+        }
+
+        RunNonCombatEffects.AddNeowsBonesCurse(state);
+    }
+
     public static bool HasPendingRewards(RunState state)
     {
         return state.RewardGold != 0
             || state.RewardPotion != 0
             || state.RelicReward != 0
             || state.RewardCardPending
-            || state.PendingOtherCharacterCardRewards > 0;
+            || state.PendingCardOffers.Count > 0
+            || state.PendingOtherCharacterCardRewards > 0
+            || state.PendingBonusRelicRewards.Count > 0;
     }
 
     public static bool ClaimNextReward(RunState state)
@@ -409,6 +369,7 @@ public static class RunRewardGenerator
             {
                 state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, state.RewardGold);
                 state.RewardGold = 0;
+                OfferNextGold(state);
                 return true;
             }
             itemIndex--;
@@ -429,12 +390,14 @@ public static class RunRewardGenerator
         {
             if (itemIndex == 0)
             {
-                if (state.Relics.All(relic => relic.DefId != state.RelicReward))
-                {
-                    state.Relics.Add(new RelicInstance(state.RelicReward));
-                }
-
+                int claimed = state.RelicReward;
                 state.RelicReward = 0;
+                // A relic claimed off a reward screen is obtained through RelicCmd.Obtain,
+                // which runs its AfterObtained -- a live capture's Silken Tress zeroed the
+                // player's gold the moment it was taken. Adding it to the list and
+                // stopping there is what this used to do.
+                RunNonCombatEffects.ApplyRelicPickup(state, claimed);
+                OfferNextBonusRelic(state);
                 return true;
             }
             itemIndex--;
@@ -448,7 +411,20 @@ public static class RunRewardGenerator
             return true;
         }
 
+        if (state.PendingCardOffers.Count > 0 && itemIndex == 0)
+        {
+            OfferNextCardOffer(state);
+            state.RewardCardPending = false;
+            state.ReturnToRewardScreenAfterCardReward = true;
+            state.Phase = RunPhase.CardReward;
+            return true;
+        }
+
         if (state.RewardCardPending)
+        {
+            itemIndex--;
+        }
+        else if (state.PendingCardOffers.Count > 0)
         {
             itemIndex--;
         }
@@ -478,9 +454,267 @@ public static class RunRewardGenerator
         state.RewardCardPending = false;
         state.ReturnToRewardScreenAfterCardReward = false;
         state.RelicReward = 0;
+        state.PendingGoldRewards.Clear();
+        state.PendingCardOffers.Clear();
     }
 
-    private static void PopulateCardReward(RunState state)
+    /// <summary>Moves the next queued gold pile onto the screen, if the screen is free.</summary>
+    public static void OfferNextGold(RunState state)
+    {
+        if (state.PendingGoldRewards.Count == 0 || state.RewardGold != 0)
+        {
+            return;
+        }
+
+        state.RewardGold = state.PendingGoldRewards[0];
+        state.PendingGoldRewards.RemoveAt(0);
+    }
+
+    /// <summary>
+    /// Put the head of the queue on the card screen, leaving the rest queued.
+    /// </summary>
+    public static void OfferFirstPendingCardOffer(RunState state)
+    {
+        if (state.PendingCardOffers.Count > 0)
+        {
+            OfferNextCardOffer(state);
+        }
+    }
+
+    /// <summary>Moves the next queued card offer onto the card screen.</summary>
+    private static void OfferNextCardOffer(RunState state)
+    {
+        var offer = state.PendingCardOffers[0];
+        state.PendingCardOffers.RemoveAt(0);
+        Array.Clear(state.RewardCards);
+        Array.Clear(state.RewardUpgraded);
+        for (int i = 0; i < state.RewardCards.Length && i < offer.Length; i++)
+        {
+            state.RewardCards[i] = offer[i];
+        }
+    }
+
+    /// <summary>
+    /// A card offer of a pinned rarity, rolled off a given stream: the Crystal Sphere's
+    /// buried card rewards are <c>CardRarityOddsType.Uniform</c> over the character's pool
+    /// filtered to one rarity, with the event's own Rng overriding the player's.
+    /// CreateForReward then rolls an upgrade per card whatever the odds, so each card is
+    /// two draws.
+    /// </summary>
+    /// <summary>
+    /// A relic's own "choose a card" screen: <c>CardFactory.CreateForReward</c> over one
+    /// pool, with <c>CardCreationSource.Other</c>.
+    /// </summary>
+    /// <remarks>
+    /// Source Other means <c>RollForRarity</c> goes down <c>RollWithBaseOdds</c> -- the
+    /// flat odds, with the running rare-chance offset neither read nor grown -- so a card
+    /// costs three draws: its rarity, itself, and an upgrade roll. Two cards is six draws,
+    /// which is exactly what Lead Paperweight's stand-in count in
+    /// <c>AdvanceRewardRngForNeowRelic</c> used to burn. That is the tell that the count
+    /// was right and only the CARDS were missing.
+    /// </remarks>
+    public static int[] GenerateOtherSourceCardOffer(
+        RunState state,
+        ReadOnlySpan<int> pool,
+        int count
+    )
+    {
+        var poolCards = pool.ToArray();
+        var blacklist = new List<int>();
+        var offer = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            int rarity = RollCardRarity(
+                state,
+                RegularEncounterCardOdds,
+                mutateOffset: false,
+                state.PlayerRng.Rewards,
+                useOffset: false
+            );
+            offer[i] = ChooseCardWithRarity(poolCards, rarity, blacklist, state.PlayerRng.Rewards);
+            blacklist.Add(offer[i]);
+            RollCardUpgrade(state, offer[i], state.PlayerRng.Rewards);
+        }
+
+        return offer;
+    }
+
+    /// <summary>
+    /// Hefty Tablet's three: the owner's pool filtered to Rare, <c>Uniform</c> odds and
+    /// the <c>NoUpgradeRoll</c> flag.
+    /// </summary>
+    /// <remarks>
+    /// Uniform skips <c>RollForRarity</c> outright and NoUpgradeRoll skips the upgrade, so
+    /// each card is a SINGLE draw -- three for the screen, which is what its stand-in
+    /// count burned.
+    /// </remarks>
+    public static int[] GenerateRareOnlyCardOffer(RunState state, int count)
+    {
+        var blacklist = new List<int>();
+        var offer = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            offer[i] = ChooseCardWithRarity(
+                IroncladRewardPool,
+                RarityRare,
+                blacklist,
+                state.PlayerRng.Rewards
+            );
+            blacklist.Add(offer[i]);
+        }
+
+        return offer;
+    }
+
+    /// <summary>
+    /// Puts a pre-rolled offer on a CHOOSE-A-CARD grid, which is what
+    /// <c>CardSelectCmd.FromChooseACardScreen</c> raises -- the live game calls this
+    /// screen <c>card_select</c>, not <c>card_reward</c>. The two are different screens
+    /// and the difference is visible in every capture.
+    /// </summary>
+    public static void OfferPreRolledCards(RunState state, int[] offer)
+    {
+        state.PendingOfferCards = offer;
+        state.PendingOfferPicks = 1;
+        state.Phase = RunPhase.TransformSelect;
+    }
+
+    public static int[] GenerateFixedRarityCardOffer(
+        RunState state,
+        int count,
+        CardRarity rarity,
+        GameRng rng
+    ) => GenerateFixedRarityCardOffer(state, count, rarity, rng, IroncladRewardPool);
+
+    /// <summary>
+    /// As above, over a NAMED pool — Sea Glass draws from another character's.
+    /// </summary>
+    public static int[] GenerateFixedRarityCardOffer(
+        RunState state,
+        int count,
+        CardRarity rarity,
+        GameRng rng,
+        ReadOnlySpan<int> pool
+    )
+    {
+        int rarityValue = rarity switch
+        {
+            CardRarity.Rare => RarityRare,
+            CardRarity.Uncommon => RarityUncommon,
+            _ => RarityCommon,
+        };
+        var blacklist = new List<int>();
+        var offer = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            offer[i] = ChooseCardWithRarity(pool, rarityValue, blacklist, rng);
+            blacklist.Add(offer[i]);
+            RollCardUpgrade(state, offer[i], rng);
+        }
+
+        return offer;
+    }
+
+    /// <summary>
+    /// One potion of a named rarity, uniformly. No rarity roll first: the Crystal Sphere's
+    /// potions pin their own rarity and take <c>rng.NextItem</c> over what is left, the way
+    /// the Potion Courier's Ransack does.
+    /// </summary>
+    public static int NextPotionOfRarity(GameRng rng, Core.PotionRarity rarity)
+    {
+        var available = PotionRewardPool
+            .ToArray()
+            .Where(potionId => GeneratedData.Potions.Get(potionId).Rarity == rarity)
+            .ToArray();
+        return available.Length > 0
+            ? rng.NextItem(available)
+            : rng.NextItem(PotionRewardPool.ToArray());
+    }
+
+    /// <summary>
+    /// Roll the cards an event offers on a grid -- Brain Leech's five, Room Full of
+    /// Cheese's eight.
+    /// </summary>
+    /// <remarks>
+    /// CardCreationOptions.ForNonCombatWithDefaultOdds is CardCreationSource.Other with
+    /// RegularEncounter odds and the NoUpgradeRoll flag, so each card is two draws on the
+    /// Rewards stream rather than three: the rarity, off the flat odds with no running
+    /// offset, and the card itself. A combat reward's third draw is the upgrade roll, and
+    /// this path does not make it.
+    /// </remarks>
+    /// <param name="fixedRarity">
+    /// Set when the event pins the rarity itself, as Room Full of Cheese does by filtering
+    /// its pool to Commons and asking for Uniform odds. CreateForReward skips RollForRarity
+    /// entirely on the Uniform branch, so a pinned rarity is one draw per card rather than
+    /// two -- getting that wrong shifts the whole grid.
+    /// </param>
+    public static int[] GenerateEventOfferCards(
+        RunState state,
+        int count,
+        ReadOnlySpan<int> pool,
+        CardRarity? fixedRarity = null
+    )
+    {
+        var blacklist = new List<int>();
+        var offers = new List<int>();
+        for (int i = 0; i < count; i++)
+        {
+            int rarity = fixedRarity switch
+            {
+                CardRarity.Common => RarityCommon,
+                CardRarity.Uncommon => RarityUncommon,
+                CardRarity.Rare => RarityRare,
+                _ => RollCardRarity(
+                    state,
+                    RegularEncounterCardOdds,
+                    mutateOffset: false,
+                    state.PlayerRng.Rewards,
+                    useOffset: false
+                ),
+            };
+            int cardId = ChooseCardWithRarity(pool, rarity, blacklist, state.PlayerRng.Rewards);
+            offers.Add(cardId);
+            blacklist.Add(cardId);
+        }
+
+        return [.. offers];
+    }
+
+    /// <summary>
+    /// A whole extra card-reward offer, rolled the way the room's ordinary one is.
+    /// </summary>
+    /// <remarks>
+    /// The draws matter more than the cards: each option costs a rarity roll, a card
+    /// choice and an upgrade roll off `PlayerRng.Rewards`, in that order, and an offer
+    /// that skipped any of them would shift every reward the run generated afterwards.
+    ///
+    /// `PendingCardOffers` carries ids only, so the upgrade flag an option rolled is lost
+    /// when the offer is shown — a limitation of that mechanism rather than of this
+    /// caller, and the same one every other pending offer already has. The roll is still
+    /// made, so the STREAM is right even where the flag is dropped.
+    /// </remarks>
+    private static int[] RollExtraCardOffer(RunState state)
+    {
+        var blacklist = new List<int>();
+        var offer = new int[3];
+        for (int i = 0; i < offer.Length; i++)
+        {
+            int rarity = RollRewardCardRarity(state);
+            int cardId = ChooseCardWithRarity(
+                IroncladRewardPool,
+                rarity,
+                blacklist,
+                state.PlayerRng.Rewards
+            );
+            offer[i] = cardId;
+            blacklist.Add(cardId);
+            RollCardUpgrade(state, cardId, state.PlayerRng.Rewards);
+        }
+
+        return offer;
+    }
+
+    internal static void PopulateCardReward(RunState state)
     {
         Array.Clear(state.RewardCards);
         Array.Clear(state.RewardUpgraded);
@@ -497,9 +731,17 @@ public static class RunRewardGenerator
             );
             state.RewardCards[i] = cardId;
             blacklist.Add(cardId);
+            // The roll comes FIRST and unconditionally: CardFactory.CreateForReward calls
+            // RollForUpgrade for every card unless NoUpgradeRoll is set, and RollForUpgrade
+            // draws its float before it even asks whether the card is upgradable. Written
+            // as one `||` chain with silverCrucibleUpgrade in front, C# short-circuits and
+            // the draw never happens -- so a run holding Silver Crucible spent two values
+            // per reward card where the game spends three, and every card the rewards
+            // stream produced from the second one on was a different card.
+            bool rolledUpgrade = RollCardUpgrade(state, cardId, state.PlayerRng.Rewards);
             state.RewardUpgraded[i] =
                 silverCrucibleUpgrade
-                || RollCardUpgrade(state, cardId, state.PlayerRng.Rewards)
+                || rolledUpgrade
                 // TryModifyCardRewardOptionsLate: an egg upgrades the option on the screen,
                 // not just the copy that reaches the deck.
                 || RunNonCombatEffects
@@ -590,7 +832,17 @@ public static class RunRewardGenerator
             blacklist.Add(cardId);
             state.PlayerRng.Rewards.NextDouble();
             int cost = ShopCardCost(cardId, colorless: false, state.PlayerRng.Shops);
-            state.ShopCosts[i] = i == saleIndex ? cost / 2 : cost;
+            if (i == saleIndex)
+            {
+                // MerchantEntry.Populate calls CalcCost, and SetOnSale calls it again --
+                // so the discounted slot prices itself twice, and the second roll is the
+                // one that stands. Halving a single roll instead left the Shops stream a
+                // draw short from here on, which is why every slot after the sale came
+                // back with a different card.
+                cost = ShopCardCost(cardId, colorless: false, state.PlayerRng.Shops) / 2;
+            }
+
+            state.ShopCosts[i] = cost;
         }
 
         for (int i = 0; i < 2; i++)
@@ -609,23 +861,45 @@ public static class RunRewardGenerator
             state.ShopCosts[action] = ShopCardCost(cardId, colorless: true, state.PlayerRng.Shops);
         }
 
-        _ = RollRelicRarity(state.PlayerRng.Rewards);
-        _ = RollRelicRarity(state.PlayerRng.Rewards);
+        // MerchantInventory.PopulateRelicEntries builds its three slots as
+        // [RollRarity, RollRarity, RelicRarity.Shop] and fills each at that rarity. The
+        // two rolls were being made and then thrown away, with all three slots pulled at
+        // Shop rarity -- so the rolls lined the stream up correctly and then the relics
+        // came from the wrong queues.
+        RelicRarity[] slotRarities =
+        [
+            RelicGrabBag.RollRarity(state.PlayerRng.Rewards),
+            RelicGrabBag.RollRarity(state.PlayerRng.Rewards),
+            RelicRarity.Shop,
+        ];
         for (int i = 0; i < state.ShopRelics.Length; i++)
         {
-            state.ShopRelics[i] = NextRelic(state);
+            state.ShopRelics[i] = NextShopRelic(state, slotRarities[i]);
             state.ShopCosts[7 + i] = ShopRelicCost(state.ShopRelics[i], state.PlayerRng.Shops);
         }
 
+        // MerchantInventory.PopulatePotionEntries rolls all three potions in one
+        // CreateRandomPotionsOutOfCombat call and only then builds the entries that price
+        // them, so the draws are three picks followed by three costs -- not a pick and a
+        // cost three times over. Interleaving them read the same number of values off the
+        // Shops stream in the wrong order, which left every potion after the first
+        // rolling its rarity against a price.
         var potionBlacklist = new List<int>();
         for (int i = 0; i < state.ShopPotions.Length; i++)
         {
             int potion = NextPotion(state, state.PlayerRng.Shops, potionBlacklist);
             state.ShopPotions[i] = potion;
             potionBlacklist.Add(potion);
-            state.ShopCosts[10 + i] = ShopPotionCost(potion, state.PlayerRng.Shops);
+        }
+
+        for (int i = 0; i < state.ShopPotions.Length; i++)
+        {
+            state.ShopCosts[10 + i] = ShopPotionCost(state.ShopPotions[i], state.PlayerRng.Shops);
         }
         state.ShopCosts[RunConstants.ShopRemoveAction] = 100 + 50 * state.ShopRemovalsUsed;
+        // A fresh merchant stocks the service again -- the price carries across shops,
+        // the once-per-visit limit does not.
+        state.ShopRemovalUsedThisVisit = false;
 
         // Membership Card's ModifyMerchantPrice: DynamicVar("Discount", 50m) as a
         // percentage of the original, applied to every entry the merchant quotes.
@@ -647,7 +921,7 @@ public static class RunRewardGenerator
             return false;
         }
 
-        int maxPotionSlots = Math.Min(2, state.PotionSlots.Length);
+        int maxPotionSlots = Math.Min(state.MaxPotionSlots, state.PotionSlots.Length);
         for (int i = 0; i < maxPotionSlots; i++)
         {
             if (state.PotionSlots[i] != 0)
@@ -661,24 +935,135 @@ public static class RunRewardGenerator
         return false;
     }
 
-    public static int NextRelic(RunState state)
-    {
-        var available = RelicRewardPool
-            .ToArray()
-            .Where(relicId => state.Relics.All(relic => relic.DefId != relicId))
-            .ToArray();
-        return available.Length == 0
-            ? state.Rng.UpFront.NextItem(RelicRewardPool.ToArray())
-            : state.Rng.UpFront.NextItem(available);
-    }
+    /// <summary>
+    /// The game's <c>RelicFactory.PullNextRelicFromFront</c>: roll a rarity off the
+    /// player's rewards stream, take the front of that rarity's queue, and strike it from
+    /// the shared bag too. Shops call <see cref="NextShopRelic"/>, which reads the same
+    /// queues from the back.
+    ///
+    /// This used to re-roll uniformly from a flat pool on the UpFront stream, filtered to
+    /// relics the player did not already own. Wrong mechanism, wrong stream, and a rarity
+    /// distribution that did not exist: the queue is the reason a run does not see the
+    /// same relic twice, and the 50/33/17 rarity split is the reason it sees Commons most.
+    /// </summary>
+    public static int NextRelic(RunState state, GameRng? rngOverride = null) =>
+        PullRelic(state, fromFront: true, rngOverride: rngOverride);
 
-    private static int GoldRewardForCurrentNode(RunState state)
+    /// <summary>
+    /// A shop pull of a NAMED rarity, filtered to relics that may be sold. Welcome to
+    /// Wongos asks for a Common for its bargain bin and a Rare for its featured item, so
+    /// neither is the usual rolled rarity -- and both go through the shop filter, which
+    /// five relics fail.
+    /// </summary>
+    public static int NextShopRelicOfRarity(RunState state, RelicRarity rarity)
     {
-        if (state.ActiveCombat?.EncounterId == RunConstants.GremlinMercEncounterId)
+        var allowed = RelicGrabBag.AllowedInSoloRun(state.Floor);
+        int? relicId = state.RelicBag.Pull(
+            rarity,
+            fromFront: true,
+            allowed,
+            relicId => GeneratedData.Relics.Get(relicId).IsAllowedInShops
+        );
+        if (relicId is null)
         {
-            return 0;
+            return FallbackRelic;
         }
 
+        state.SharedRelicBag.Remove(relicId.Value);
+        return relicId.Value;
+    }
+
+    /// <summary>Shops pull the same queues from the BACK.</summary>
+    public static int NextShopRelic(RunState state, RelicRarity rarity = RelicRarity.Shop) =>
+        PullRelic(state, fromFront: false, rarity);
+
+    private static int PullRelic(
+        RunState state,
+        bool fromFront,
+        RelicRarity? rarity = null,
+        GameRng? rngOverride = null
+    )
+    {
+        var rolled = rarity ?? RelicGrabBag.RollRarity(rngOverride ?? state.PlayerRng.Rewards);
+        var allowed = RelicGrabBag.AllowedInSoloRun(state.Floor);
+        int? relicId = state.RelicBag.Pull(rolled, fromFront, allowed);
+        if (relicId is null)
+        {
+            // RelicFactory falls back to a fixed relic when the bag has nothing left.
+            return FallbackRelic;
+        }
+
+        state.SharedRelicBag.Remove(relicId.Value);
+        return relicId.Value;
+    }
+
+    /// <summary>
+    /// <c>RelicFactory.FallbackRelic</c>, handed over when every queue is exhausted.
+    /// </summary>
+    private static int FallbackRelic =>
+        GeneratedData.Relics.FindId("Circlet")
+        ?? throw new InvalidOperationException("No relic named Circlet");
+
+    /// <summary>
+    /// <c>ScrollBoxes.GenerateRandomBundles</c>: two bundles of two Commons and one
+    /// Uncommon, all six distinct, drawn from the character's pool on
+    /// <c>PlayerRng.Rewards</c>.
+    /// </summary>
+    /// <remarks>
+    /// Uniform odds with <c>NoRarityModification</c>, so there is no rarity roll and no
+    /// upgrade roll: the only draws are the six <c>NextItem</c> picks, in bundle order,
+    /// two Commons then the Uncommon. The <c>usedCardIds</c> set spans BOTH bundles, so
+    /// the second bundle draws from a pool three cards smaller. The 1% all-Claw bundle is
+    /// Defect's alone and its <c>NextInt(100)</c> sits behind a <c>flag &amp;&amp;</c> that
+    /// never runs for anyone else, so it costs no draw here.
+    /// </remarks>
+    public static int[][] GenerateScrollBoxBundles(RunState state)
+    {
+        var rng = state.PlayerRng.Rewards;
+        var used = new List<int>();
+        var bundles = new int[2][];
+        for (int bundle = 0; bundle < 2; bundle++)
+        {
+            var cards = new int[3];
+            for (int card = 0; card < 2; card++)
+            {
+                cards[card] = rng.NextItem(BundleCandidates(used, RarityCommon));
+                used.Add(cards[card]);
+            }
+
+            cards[2] = rng.NextItem(BundleCandidates(used, RarityUncommon));
+            used.Add(cards[2]);
+            bundles[bundle] = cards;
+        }
+
+        return bundles;
+    }
+
+    private static int[] BundleCandidates(List<int> used, int rarity) =>
+        IroncladRewardPool
+            .ToArray()
+            .Where(cardId =>
+                IsAllowedSolo(cardId) && RarityOf(cardId) == rarity && !used.Contains(cardId)
+            )
+            .ToArray();
+
+    /// <summary>
+    /// <c>RewardsSet</c>: <c>GoldReward(Encounter.MinGoldReward * GoldProportion,
+    /// Encounter.MaxGoldReward * GoldProportion)</c>. A monster room's 10-20 becomes 7-15
+    /// once A8's Poverty multiplier is applied, which is the range below.
+    /// </summary>
+    /// <remarks>
+    /// The Gremlin Merc encounter used to return a flat 0 here, which was right for the
+    /// runs it was fitted to and wrong about why. Its <c>CalculateGoldProportion</c> pays
+    /// in FULL when nothing escaped — `9V9WN98106` kills the fat gremlin and is paid 9 —
+    /// half when a gremlin escaped having stolen nothing, and nothing at all when one
+    /// escaped with the loot, which is what `WK1DEGZD8P`, `J09SPL8Y3V` and `NXV45HW43K`
+    /// each captured. A zero proportion means no reward and therefore **no draw**:
+    /// <c>RewardsSet</c> guards the whole row behind <c>if (GoldProportion > 0f)</c>, so a
+    /// run that rolls one anyway is off by a value for the rest of the act.
+    /// </remarks>
+    private static int GoldRewardForCurrentNode(RunState state)
+    {
         if (state.CurrentNodeType == RunConstants.NodeElite)
         {
             return state.PlayerRng.Rewards.NextInt(26, 34);
@@ -686,10 +1071,43 @@ public static class RunRewardGenerator
 
         if (state.CurrentNodeType == RunConstants.NodeBoss)
         {
-            state.PlayerRng.Rewards.NextInt(100, 101);
-            return 100;
+            // A boss's Min and Max are both 100, and A8's Poverty multiplier takes a
+            // quarter off BEFORE the roll -- the same 0.75 already baked into the monster
+            // range (10-20 -> 7-15) and the elite one (35-45 -> 26-33). Only this branch
+            // was written as a flat 100, and no capture could contradict it until one
+            // finally won an act.
+            return state.PlayerRng.Rewards.NextInt(75, 76);
         }
-        return state.PlayerRng.Rewards.NextInt(7, 16);
+
+        double proportion = CombatGoldProportion(state);
+        if (proportion <= 0)
+        {
+            return 0;
+        }
+
+        // Math.Round on the SCALED bounds, the way RewardsSet does it -- not a scaled roll.
+        int min = (int)Math.Round(7 * proportion, MidpointRounding.AwayFromZero);
+        int max = (int)Math.Round(15 * proportion, MidpointRounding.AwayFromZero);
+        return state.PlayerRng.Rewards.NextInt(min, max + 1);
+    }
+
+    /// <summary>
+    /// <c>CombatRoom.GoldProportion</c>. Every encounter is 1 except the Gremlin Merc's,
+    /// the only one that overrides <c>CalculateGoldProportion</c>.
+    /// </summary>
+    private static double CombatGoldProportion(RunState state)
+    {
+        var combat = state.ActiveCombat;
+        if (
+            combat is null
+            || combat.EncounterId != RunConstants.GremlinMercEncounterId
+            || !combat.FatGremlinEscaped
+        )
+        {
+            return 1;
+        }
+
+        return combat.MercGoldWasStolen ? 0 : 0.5;
     }
 
     /// <summary>The RegularEncounter rarity odds: rare, then uncommon.</summary>
@@ -837,6 +1255,19 @@ public static class RunRewardGenerator
             : rng.NextItem(PotionRewardPool.ToArray());
     }
 
+    /// <summary>
+    /// The Potion Courier's Ransack rolls only among Uncommon potions, so it does NOT
+    /// roll a rarity first -- it filters the pool and takes one.
+    /// </summary>
+    public static int NextUncommonPotion(RunState state, GameRng rng)
+    {
+        var available = PotionRewardPool
+            .ToArray()
+            .Where(potionId => PotionRarity(potionId) == RarityUncommon)
+            .ToArray();
+        return available.Length > 0 ? rng.NextItem(available) : NextPotion(state, rng);
+    }
+
     private static int RollPotionRarity(GameRng rng)
     {
         double roll = rng.NextDouble();
@@ -861,7 +1292,11 @@ public static class RunRewardGenerator
             : RarityRare;
     }
 
-    private static int ShopCardCost(int cardId, bool colorless, GameRng rng)
+    /// <summary>
+    /// What the merchant asks for a card before any discount. Internal so a test can
+    /// tell a sale slot from a cheap card.
+    /// </summary>
+    internal static int ShopCardCost(int cardId, bool colorless, GameRng rng)
     {
         int baseCost = RarityOf(cardId) switch
         {
@@ -871,16 +1306,39 @@ public static class RunRewardGenerator
         };
         if (colorless)
         {
-            baseCost = RoundPositive(baseCost * 1.15);
+            baseCost = RoundToEven(baseCost * 1.15f);
         }
 
-        return RoundPositive(baseCost * NextDouble(rng, 0.95, 1.05));
+        // MerchantCardEntry.CalcCost is float arithmetic end to end, rounded the way
+        // Mathf.RoundToInt rounds.
+        return RoundToEven(baseCost * NextFloat(rng, 0.95f, 1.05f));
     }
 
+    /// <summary>
+    /// The game's <c>MerchantRelicEntry.CalcCost</c>: the relic's MerchantCost jittered
+    /// and rounded. MerchantCost is not per-relic data at all -- RelicModel derives it
+    /// from the rarity, and the only relics that override it are the Fake Merchant's,
+    /// which all sell for 50. A hand-written table of base costs used to stand in for
+    /// it, defaulting anything it did not know to 200.
+    /// </summary>
     private static int ShopRelicCost(int relicId, GameRng rng)
     {
-        int baseCost = ShopRelicBaseCosts.GetValueOrDefault(relicId, 200);
-        return RoundPositive(baseCost * NextDouble(rng, 0.85, 1.15));
+        var def = GeneratedData.Relics.Get(relicId);
+        int baseCost = def.Name.StartsWith("Fake", StringComparison.Ordinal)
+            ? 50
+            : def.Rarity switch
+            {
+                RelicRarity.Common => 175,
+                RelicRarity.Uncommon => 225,
+                RelicRarity.Rare => 275,
+                RelicRarity.Shop => 200,
+                RelicRarity.None => 1,
+                // Ancient, Starter and Event relics are priced out of reach rather than
+                // excluded, which is the game's way of saying they are never for sale.
+                _ => 999999999,
+            };
+
+        return RoundToEven(baseCost * NextFloat(rng, 0.85f, 1.15f));
     }
 
     private static int ShopPotionCost(int potionId, GameRng rng)
@@ -897,7 +1355,23 @@ public static class RunRewardGenerator
     private static double NextDouble(GameRng rng, double min, double max) =>
         min + rng.NextDouble() * (max - min);
 
+    /// <summary>
+    /// The game's <c>Rng.NextFloat(min, max)</c>: computed in double, then cast to
+    /// float. The cast is not cosmetic -- the merchant multiplies a price by this and
+    /// rounds, so carrying the extra double precision moves the odd price by one gold.
+    /// </summary>
+    private static float NextFloat(GameRng rng, float min, float max) =>
+        (float)(rng.NextDouble() * (double)(max - min) + min);
+
     private static int RoundPositive(double value) => (int)(value + 0.5);
+
+    /// <summary>
+    /// Godot's <c>Mathf.RoundToInt</c>, which is <c>Math.Round</c> -- and .NET rounds a
+    /// midpoint to even, not away from zero. It matters here because merchant prices land
+    /// on a midpoint exactly: a Rare colourless card is 150 * 1.15f, which is 172.5f to
+    /// the bit, and the two rules disagree by a gold on every one of them.
+    /// </summary>
+    private static int RoundToEven(double value) => (int)Math.Round(value);
 
     private static bool HasRelic(RunState state, int relicId) =>
         state.Relics.Any(relic => relic.DefId == relicId);
@@ -914,8 +1388,86 @@ public static class RunRewardGenerator
     /// </summary>
     private static int RarityOf(int cardId) => (int)GeneratedData.Cards.Get(cardId).Rarity;
 
+    /// <summary>
+    /// The card rarity a potion trades for at The Future of Potions, from the event's own
+    /// GetCardRarity: Rare and Event potions buy Rare cards, Uncommon buys Uncommon, and
+    /// Common and Token buy Common.
+    /// </summary>
+    public static CardRarity CardRarityForPotion(int potionId) =>
+        GeneratedData.Potions.Get(potionId).Rarity switch
+        {
+            Core.PotionRarity.Rare or Core.PotionRarity.Event => CardRarity.Rare,
+            Core.PotionRarity.Uncommon => CardRarity.Uncommon,
+            _ => CardRarity.Common,
+        };
+
+    /// <summary>
+    /// The card types a potion can buy at The Future of Potions. Power is off the table
+    /// for a Common or Token potion -- and the reason is in the pool: the Ironclad has no
+    /// Common Power at all, so rolling one would filter the reward down to nothing and
+    /// offer the player an empty screen.
+    /// </summary>
+    public static CardType[] FutureOfPotionsCardTypes(int potionId) =>
+        GeneratedData.Potions.Get(potionId).Rarity
+            is Core.PotionRarity.Common
+                or Core.PotionRarity.Token
+            ? [CardType.Attack, CardType.Skill]
+            : [CardType.Attack, CardType.Skill, CardType.Power];
+
+    /// <summary>
+    /// The Future of Potions offers THREE upgraded cards, all of one rarity and one type:
+    /// the rarity comes from the potion handed over, and the type is rolled per potion
+    /// from Attack/Skill/Power -- with Power off the table for a Common or Token potion,
+    /// which cannot buy one.
+    ///
+    /// The odds are uniform over the filtered pool, not the usual rarity roll, so this
+    /// picks cards rather than rolling a rarity first.
+    /// </summary>
+    public static void EnterFutureOfPotionsReward(RunState state, int potionId, GameRng rng)
+    {
+        var rarity = CardRarityForPotion(potionId);
+        var type = rng.NextItem(FutureOfPotionsCardTypes(potionId));
+
+        var pool = IroncladRewardPool
+            .ToArray()
+            .Where(IsAllowedSolo)
+            .Where(cardId =>
+                GeneratedData.Cards.Get(cardId).Rarity == rarity
+                && GeneratedData.Cards.Get(cardId).Type == type
+            )
+            .ToList();
+
+        Array.Clear(state.RewardCards);
+        Array.Clear(state.RewardUpgraded);
+        for (int i = 0; i < state.RewardCards.Length && pool.Count > 0; i++)
+        {
+            int cardId = rng.NextItem(pool);
+            pool.Remove(cardId);
+            state.RewardCards[i] = cardId;
+            // reward.AfterGenerated upgrades every card in the reward.
+            state.RewardUpgraded[i] = true;
+        }
+
+        state.RewardGold = 0;
+        state.RewardPotion = 0;
+        state.RelicReward = 0;
+        state.PendingPotionRewards.Clear();
+        state.RewardCardPending = true;
+        state.Phase = RunPhase.CardReward;
+    }
+
+    /// <summary>
+    /// A potion's rarity, from the extracted potion data. A hand-written table stood
+    /// here and defaulted anything it did not list to Common, which put every potion it
+    /// had never heard of into the bucket a Common roll draws from.
+    /// </summary>
     private static int PotionRarity(int potionId) =>
-        PotionRarityById.GetValueOrDefault(potionId, RarityCommon);
+        GeneratedData.Potions.Get(potionId).Rarity switch
+        {
+            Core.PotionRarity.Rare => RarityRare,
+            Core.PotionRarity.Uncommon => RarityUncommon,
+            _ => RarityCommon,
+        };
 
     private static int[] RarityFallbacks(int rarity) =>
         rarity switch
@@ -924,83 +1476,4 @@ public static class RunRewardGenerator
             RarityUncommon => [RarityUncommon, RarityRare, RarityCommon],
             _ => [RarityRare, RarityCommon, RarityUncommon],
         };
-
-    private static readonly Dictionary<int, int> PotionRarityById = new()
-    {
-        [1] = 2,
-        [2] = 1,
-        [3] = 3,
-        [4] = 2,
-        [5] = 1,
-        [6] = 1,
-        [8] = 3,
-        [9] = 2,
-        [10] = 1,
-        [13] = 2,
-        [14] = 1,
-        [15] = 3,
-        [16] = 3,
-        [17] = 2,
-        [18] = 1,
-        [19] = 3,
-        [21] = 1,
-        [22] = 3,
-        [23] = 1,
-        [24] = 1,
-        [26] = 2,
-        [28] = 3,
-        [29] = 2,
-        [30] = 2,
-        [32] = 3,
-        [34] = 2,
-        [36] = 2,
-        [37] = 3,
-        [38] = 3,
-        [39] = 3,
-        [40] = 3,
-        [42] = 2,
-        [47] = 2,
-        [48] = 1,
-        [49] = 2,
-        [50] = 2,
-        [51] = 3,
-        [52] = 3,
-        [53] = 1,
-        [54] = 3,
-        [56] = 1,
-        [57] = 2,
-        [58] = 3,
-        [59] = 1,
-        [60] = 1,
-        [61] = 2,
-        [62] = 1,
-        [63] = 1,
-    };
-
-    private static readonly Dictionary<int, int> ShopRelicBaseCosts = new()
-    {
-        [3] = 175,
-        [4] = 175,
-        [9] = 175,
-        [10] = 175,
-        [23] = 175,
-        [41] = 275,
-        [110] = 175,
-        [114] = 225,
-        [128] = 175,
-        [135] = 200,
-        [144] = 275,
-        [149] = 275,
-        [169] = 175,
-        [170] = 275,
-        [172] = 175,
-        [186] = 175,
-        [190] = 225,
-        [215] = 175,
-        [250] = 175,
-        [252] = 175,
-        [279] = 175,
-        [282] = 175,
-        [286] = 999999999,
-    };
 }

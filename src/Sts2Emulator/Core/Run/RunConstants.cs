@@ -8,12 +8,102 @@ public static class RunConstants
     // apart the moment the combat block grew, and the run observation silently
     // reserved the old width for it.
     public const int CombatObsSize = CombatObservation.ObsSize;
-    public const int RunExtraObsSize = 35;
+
+    /// <summary>Where the map's node types start in the scalar block; one slot per choice.</summary>
+    public const int MapNodeTypeObsOffset = 12;
+
+    /// <summary>Where the encounter behind each map choice starts; one slot per choice.</summary>
+    public const int MapChoiceObsOffset = MapNodeTypeObsOffset + MapChoices;
+
+    public const int RelicRewardObsOffset = MapChoiceObsOffset + MapChoices;
+    public const int CurrentEventObsOffset = RelicRewardObsOffset + 1;
+    public const int PotionObsOffset = CurrentEventObsOffset + 1;
+    public const int PotionObsSlots = 3;
+
+    /// <summary>
+    /// The run's flat scalars: phase, floor, gold, the screen in front of the player.
+    /// Derived from the blocks inside it rather than written down, because widening the
+    /// map's choice arrays moves everything after them.
+    /// </summary>
+    public const int RunScalarObsSize = PotionObsOffset + PotionObsSlots;
+
+    /// <summary>
+    /// How many of the deck's cards the observation carries. A run that grew past this
+    /// would have its later cards unseen -- which the count at offset 3 still reports, so
+    /// the truncation is visible rather than silent -- but 64 is well past what a full
+    /// four-act run reaches, let alone Act 1.
+    /// </summary>
+    public const int MaxObservedDeck = 64;
+
+    /// <summary>Per card: def id, upgraded, enchantment, and the amount it was applied at.</summary>
+    public const int DeckSlotSize = 4;
+
+    public const int MaxObservedRelics = 32;
+
+    /// <summary>Per relic: def id, its counter, and whether the run has spent it.</summary>
+    public const int RelicSlotSize = 3;
+
+    /// <summary>
+    /// Where the deck begins. Slot <c>i</c> is <c>State.Deck[i]</c>, and deliberately so:
+    /// a card-select screen's action <c>i</c> indexes the same list, so sorting the
+    /// observation into a canonical multiset would break the agent's only way to say
+    /// which card it means. The order carries no information the player does not have --
+    /// a deck is inspectable in full -- so nothing leaks by keeping it.
+    /// </summary>
+    public const int DeckObsOffset = RunScalarObsSize;
+
+    public const int RelicObsOffset = DeckObsOffset + MaxObservedDeck * DeckSlotSize;
+
+    /// <summary>
+    /// One slot per thing a merchant sells, indexed by the action that buys it: seven
+    /// cards, three relics, three potions, and the card-removal service at 13. Slot
+    /// <c>i</c> is shop action <c>i</c>, the way a deck slot is a card-select action.
+    /// </summary>
+    public const int ShopSlots = 14;
+
+    /// <summary>
+    /// Per slot: what is on it, and what it costs. The removal slot has no item, so its id
+    /// is 0 and only its price means anything. A sale is already in the price -- the game
+    /// halves the slot's cost rather than flagging it -- so there is nothing else to carry.
+    /// </summary>
+    public const int ShopSlotSize = 2;
+
+    public const int ShopObsOffset = RelicObsOffset + MaxObservedRelics * RelicSlotSize;
+    public const int RunExtraObsSize = ShopObsOffset + ShopSlots * ShopSlotSize;
     public const int RunObsSize = CombatObsSize + RunExtraObsSize;
     public const int RunInfoSize = 11;
-    public const int MaxActions = 32;
-    public const int MapChoices = 4;
+
+    /// <summary>
+    /// How wide the run's action mask is. 32 was enough while the widest screen was a
+    /// shop, and silently wrong past that: <c>SetMask</c> drops anything it cannot fit,
+    /// so a deck grown past 32 cards had its later cards unselectable at a card-select
+    /// screen, without a word. The Crystal Sphere is what forced the issue -- its board
+    /// is 121 cells and each may be divined with either tool -- so the mask now covers
+    /// 242 and rounds up.
+    /// </summary>
+    public const int MaxActions = 256;
+
+    /// <summary>The Crystal Sphere's board is 11x11.</summary>
+    public const int CrystalSphereSize = 11;
+    public const int CrystalSphereCells = CrystalSphereSize * CrystalSphereSize;
+
+    /// <summary>
+    /// Actions 0..120 divine a cell with the big tool, 121..241 with the small one; a
+    /// cell's index is <c>x * 11 + y</c>. The tool is folded into the action rather than
+    /// set by one of its own, because setting a tool costs the game nothing -- and a free
+    /// action is a cycle an agent can ride forever.
+    /// </summary>
+    public const int CrystalSphereSmallToolAction = CrystalSphereCells;
     public const int MapWidth = 7;
+
+    /// <summary>
+    /// How many map nodes the player may be offered at once. Ordinarily that is the
+    /// current node's children -- never more than four -- but <c>MapTravel</c> offers the
+    /// WHOLE of the next row while <c>Hook.ShouldAllowFreeTravel</c> holds, and a row is
+    /// as wide as the map. It was 4, so a Winged Boots run could not even be handed its
+    /// options, let alone choose among them.
+    /// </summary>
+    public const int MapChoices = MapWidth;
     public const int MapBossRow = 16;
     public const int MapPathIterations = 7;
 
@@ -30,8 +120,25 @@ public static class RunConstants
     public const int MapFinalRestRow = MapBossRow - 1;
     public const int MapStartCol = MapWidth / 2;
     public const int RewardSkipAction = 3;
+
+    /// <summary>
+    /// Commits the highlighted bundle on the Scroll Boxes screen. The game answers that
+    /// screen in two steps — `select_bundle` then `confirm_bundle_selection` — and a
+    /// capture spends an action on each, so the emulator does too.
+    /// </summary>
+    public const int BundleConfirmAction = 2;
     public const int RestHealAction = 0;
     public const int RestUpgradeAction = 1;
+
+    /// <summary>
+    /// The rest option Pael's Growth adds: copy every Clone-enchanted card in the deck.
+    /// </summary>
+    /// <remarks>
+    /// Offered whenever the relic is HELD — <c>TryModifyRestSiteOptions</c> adds it
+    /// unconditionally and <c>IsEnabled</c> is the base's true — not when the deck happens
+    /// to hold a Clone card. With none it simply copies nothing.
+    /// </remarks>
+    public const int RestCloneAction = 2;
     public const int ShopRemoveAction = 13;
     public const int ShopSkipAction = 14;
     public const int EventSkipAction = 3;
@@ -45,6 +152,20 @@ public static class RunConstants
     public const int NodeBoss = 6;
     public const int NodeEvent = 7;
 
+    /// <summary>
+    /// <c>MapPointType.Ancient</c>. <c>StandardActMap</c> stamps it onto the STARTING map
+    /// point of every act, after every other type has been assigned. Act 1's is Neow and
+    /// the run begins standing on it, which is why the emulator got away without the type
+    /// for so long; act 2 opens on the map with its ancient as the only thing to travel
+    /// to, and the run has to walk there like any other room.
+    /// </summary>
+    public const int NodeAncient = 8;
+
+    /// <summary>
+    /// The emulator's own act ids. These are REGIONS, not ordinals: a run's first act is
+    /// Overgrowth or Underdocks depending on the seed, and Hive and Glory always follow
+    /// in that order.
+    /// </summary>
     public const int ActOvergrowth = 1;
     public const int ActUnderdocks = 2;
 
@@ -147,6 +268,191 @@ public static class RunConstants
     // Underdocks bosses: LagavulinMatriarch, SoulFysh, WaterfallGiant.
     public static ReadOnlySpan<int> UnderdocksBossEncounters => [77, 79, 84];
 
+    // Hive is act 2 for every run: ActsByIndex has one candidate at index 1, and
+    // ActModel.GetRandomList still spends a draw picking it. The pools below are
+    // Hive.GenerateAllEncounters() filtered by kind, IN ITS DECLARATION ORDER, which is
+    // the same rule the two act-1 regions follow and the thing a shuffled bag depends on.
+    //
+    // Every one of these already had an id except ExoskeletonsNormal: the emulator's
+    // `Exoskeletons` is the four-monster roster, which is the game's WEAK variant.
+    // Several of the others carry the emulator's older shorter names (`Chompers` is
+    // ChompersNormal, `Obscura` is TheObscuraNormal, `Tunneler` is TunnelerWeak), and a
+    // few of those ROSTERS do not match the game's yet -- the emulator's Tunneler holds
+    // one where TunnelerWeak holds two. That is a fight-time problem, not a generation
+    // one: what a pool needs is identity and order.
+    // Hive weak: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak.
+    /// <summary>
+    /// <c>CombatFactory.ActOneEncounter.ExoskeletonsNormal</c>, appended at the end of
+    /// that enum — named here so the pool below does not carry a bare 87 that silently
+    /// means something else if anything is ever inserted.
+    /// </summary>
+    public const int ExoskeletonsNormalEncounterId = 87;
+
+    public static ReadOnlySpan<int> HiveWeakEncounters => [31, 4, 35, 33];
+
+    // Hive normals: BowlbugsNormal, ChompersNormal, ExoskeletonsNormal,
+    // HunterKillerNormal, LouseProgenitorNormal, MytesNormal, OvicopterNormal,
+    // SlumberingBeetleNormal, SpinyToadNormal, TheObscuraNormal.
+    public static ReadOnlySpan<int> HiveNormalEncounters =>
+        [32, 1, ExoskeletonsNormalEncounterId, 41, 40, 36, 39, 37, 38, 53];
+
+    // Hive elites: DecimillipedeElite, EntomancerElite, InfestedPrismsElite.
+    public static ReadOnlySpan<int> HiveEliteEncounters => [69, 63, 64];
+
+    // Hive bosses: KaiserCrabBoss, KnowledgeDemonBoss, TheInsatiableBoss -- declaration
+    // order, which puts KaiserCrab before KnowledgeDemon and TheInsatiable last.
+    public static ReadOnlySpan<int> HiveBossEncounters => [75, 76, 81];
+
+    /// <summary>
+    /// <c>ActModel.NumberOfWeakEncounters</c> and <c>BaseNumberOfRooms</c>. The base is
+    /// 3 weak, and Overgrowth and Underdocks both take it; Hive declares 2 and 14 rooms,
+    /// Glory 2 and 13. The emulator hardcoded act 1's numbers, which is correct for the
+    /// only act it generated and wrong for every act after.
+    /// </summary>
+    public static (int Weak, int Rooms) ActRoomCounts(int act) =>
+        act switch
+        {
+            ActHive => (2, 14),
+            ActGlory => (2, 13),
+            _ => (3, 15),
+        };
+
+    public const int ActHive = 3;
+    public const int ActGlory = 4;
+
+    /// <summary>
+    /// <c>ModelDb.ActsByIndex</c>: the acts a run may play at each index, in the order the
+    /// game declares them. <c>ActModel.GetRandomList</c> takes ONE per index off the
+    /// act_selection stream — including where there is only one candidate, which still
+    /// spends a draw.
+    /// </summary>
+    /// <remarks>
+    /// This is the extension point, and it is deliberately data. The devs have said act 2
+    /// and act 3 will get alternates the way act 1 has Overgrowth and Underdocks: that is
+    /// a new entry in an existing row, and the selection already rolls over whatever the
+    /// row holds. A fourth act is a new row. Neither needs the generator touched — though
+    /// a new act does need its pools and its <see cref="ActRoomCounts"/> entry, and an
+    /// alternate needs the same, because those are the act's own data and not something
+    /// that can be inferred.
+    /// </remarks>
+    public static readonly int[][] ActCandidatesByIndex =
+    [
+        [ActOvergrowth, ActUnderdocks],
+        [ActHive],
+        [ActGlory],
+    ];
+
+    /// <summary>Every act's elite list is fifteen long, whatever the act.</summary>
+    public const int EliteSequenceLength = 15;
+
+    /// <summary>
+    /// The ancients, by the entry name their own Rng stream is keyed on. Act 1's is Neow;
+    /// Hive's three are below, one of which each act draws in the last line of
+    /// <c>ActModel.GenerateRooms</c>.
+    /// </summary>
+    /// <summary>Ascender's Bane, which the game refuses to remove from a deck.</summary>
+    public const int CardAscendersBane = 10001;
+
+    /// <summary>Zen Weaver's Breathing Techniques hands out two of these.</summary>
+    public const int CardEnlightenment = 165;
+
+    /// <summary>The curse Reflections' Shatter adds after copying the deck.</summary>
+    public const int CardBadLuck = 10021;
+
+    /// <summary>Zen Weaver's three prices, its CanonicalVars.</summary>
+    public const int ZenWeaverBreathingCost = 50;
+
+    public const int ZenWeaverEmotionalCost = 125;
+
+    public const int ZenWeaverAcupunctureCost = 250;
+
+    /// <summary>The card Tinker Time builds, and only Tinker Time.</summary>
+    public const int CardMadScience = 292;
+
+    /// <summary>
+    /// How many characters Orobas may brand a Sea Glass with: everyone unlocked except
+    /// the player's own, which is four on the mature profile the captures are taken on.
+    /// Only the DRAW matters — the chosen character brands a relic the emulator does not
+    /// model — but skipping it would shift every pool pick after it.
+    /// </summary>
+    public const int OtherCharacterCount = 4;
+
+    /// <summary>
+    /// The characters Orobas may brand a Sea Glass with, in the order it draws over them:
+    /// <c>ModelDb.AllCharacters</c> is Ironclad, Silent, Regent, Necrobinder, Defect, and
+    /// Orobas takes <c>Where(c => c.Id != Owner.Character.Id)</c> — so for an Ironclad run
+    /// that is these four, in this order.
+    /// </summary>
+    public static ReadOnlySpan<int> OtherCharacterPoolFor(int index) =>
+        index switch
+        {
+            0 => GeneratedData.CardPools.Silent,
+            1 => GeneratedData.CardPools.Regent,
+            2 => GeneratedData.CardPools.Necrobinder,
+            _ => GeneratedData.CardPools.Defect,
+        };
+
+    public const string AncientNeow = "NEOW";
+
+    public const string AncientDarv = "DARV";
+    public const string AncientNonupeipe = "NONUPEIPE";
+    public const string AncientTanx = "TANX";
+    public const string AncientVakuu = "VAKUU";
+
+    /// <summary>
+    /// <c>ActModel.GetUnlockedAncients</c>, act by act. Both act-1 regions declare exactly
+    /// ONE ancient and it is Neow, so act 1's pick is a one-item <c>NextItem</c> that
+    /// still spends its draw. Hive declares three and drops Orobas when its epoch is
+    /// unrevealed; Glory declares three of its own. The mature profile the captures are
+    /// taken on has everything revealed.
+    /// </summary>
+    public static string[] AncientsFor(int act) =>
+        act switch
+        {
+            ActHive => [AncientOrobas, AncientPael, AncientTezcatara],
+            ActGlory => [AncientNonupeipe, AncientTanx, AncientVakuu],
+            _ => [AncientNeow],
+        };
+
+    public const string AncientOrobas = "OROBAS";
+    public const string AncientPael = "PAEL";
+    public const string AncientTezcatara = "TEZCATARA";
+
+    // Orobas: ElectricShrymp, GlassEye, SandCastle; AlchemicalCoffer, Driftwood,
+    // RadiantPearl; TouchOfOrobas and ArchaicTooth.
+    public static ReadOnlySpan<int> OrobasPool1 => [71, 101, 229];
+    public static ReadOnlySpan<int> OrobasPool2 => [2, 68, 211];
+    public static ReadOnlySpan<int> OrobasPool3 => [268, 6];
+
+    // The ancients' blessings that DO something when taken.
+    public const int RelicElectricShrymp = 71;
+    public const int RelicGlassEye = 101;
+    public const int RelicSandCastle = 229;
+    public const int RelicAlchemicalCoffer = 2;
+    public const int RelicPaelsHorn = 180;
+    public const int RelicYummyCookie = 296;
+    public const int RelicBiiigHug = 17;
+    public const int RelicStorybook = 251;
+
+    public const int RelicPrismaticGemOption = 208;
+    public const int RelicSeaGlass = 232;
+
+    // Pael: PaelsFlesh, PaelsHorn, PaelsTears; PaelsWing; PaelsEye, PaelsBlood.
+    public static ReadOnlySpan<int> PaelPool1 => [178, 180, 182];
+    public static ReadOnlySpan<int> PaelPool2 => [184];
+    public static ReadOnlySpan<int> PaelPool3 => [177, 175];
+    public const int RelicPaelsClaw = 176;
+    public const int RelicPaelsTooth = 183;
+    public const int RelicPaelsGrowth = 179;
+    public const int RelicPaelsLegion = 181;
+
+    // Tezcatara: VeryHotCocoa, YummyCookie; BiiigHug, Storybook, ToastyMittens;
+    // GoldenCompass, PumpkinCandle, ToyBox, SealOfGold.
+    public static ReadOnlySpan<int> TezcataraPool1 => [283, 296];
+    public static ReadOnlySpan<int> TezcataraPool2 => [17, 251, 266];
+    public static ReadOnlySpan<int> TezcataraPool3 => [104, 209, 271, 233];
+    public const int RelicNutritiousSoup = 168;
+
     public const int RelicBurningBlood = 36;
     public const int RelicFrozenEgg = 93;
     public const int RelicLizardTail = 137;
@@ -160,8 +466,12 @@ public static class RunConstants
     public const int RelicBlackBlood = 19;
     public const int RelicMeatOnTheBone = 149;
     public const int RelicArcaneScroll = 5;
+    public const int RelicChosenCheese = 48;
     public const int RelicCursedPearl = 54;
     public const int RelicFishingRod = 89;
+
+    /// <summary>FishingRod's DynamicVar("Combats", 3m): it fires every third monster room.</summary>
+    public const int FishingRodCombats = 3;
     public const int RelicGoldenPearl = 105;
     public const int RelicHeftyTablet = 111;
     public const int RelicKaleidoscope = 124;
@@ -190,6 +500,12 @@ public static class RunConstants
     public const int RelicStrawberry = 252;
     public const int RelicStoneHumidifier = 250;
     public const int RelicWingedBoots = 293;
+
+    /// <summary>
+    /// Winged Boots' <c>DynamicVar("Rooms", 3m)</c>: how many times it will carry the
+    /// player to a node the map does not connect to before it is used up.
+    /// </summary>
+    public const int WingedBootsTravels = 3;
     public const int RelicPrismaticGem = 1533;
 
     public const int RelicAstrolabe = 1332;
@@ -199,6 +515,72 @@ public static class RunConstants
     public const int RelicPandorasBox = 1510;
 
     /// <summary>Normal rooms drawn from the act's weak pool before the normal one.</summary>
+    /// <summary>Endless Conveyor's GoldVar(40): the price of one grab.</summary>
+    public const int ConveyorGrabCost = 40;
+
+    /// <summary>The construct fight Punch Off's second page starts.</summary>
+    /// <summary>The fight Dense Vegetation's Rest wakes up, entered from the event.</summary>
+    public const int DenseVegetationEncounterId = 55;
+
+    /// <summary>SurroundedPower.Direction.Right, the enum's zero and the player's start.</summary>
+    public const int FacingRight = 1;
+
+    /// <summary>SurroundedPower.Direction.Left.</summary>
+    public const int FacingLeft = 2;
+
+    /// <summary>CrabRagePower's PowerVar&lt;StrengthPower&gt;, paid when its partner dies.</summary>
+    public const int CrabRageStrength = 6;
+
+    /// <summary>CrabRagePower's BlockVar, unpowered.</summary>
+    public const int CrabRageBlock = 99;
+
+    /// <summary>
+    /// What Disintegration is offered AGAINST on each of the demon's three casts.
+    /// </summary>
+    public static readonly int[] CurseOfKnowledgePairs = [ST.MindRot, ST.Sloth, ST.WasteAway];
+
+    /// <summary>The Knowledge Demon's three Disintegration amounts, in cast order.</summary>
+    public static readonly int[] DisintegrationDamageValues = [6, 7, 8];
+
+    /// <summary>MindRot's PowerVar: draw this many fewer cards.</summary>
+    public const int MindRotAmount = 1;
+
+    /// <summary>Sloth's PowerVar: play at most this many cards a turn.</summary>
+    public const int SlothAmount = 3;
+
+    /// <summary>WasteAway's PowerVar: this much less energy each turn.</summary>
+    public const int WasteAwayAmount = 1;
+
+    /// <summary>ReattachPower's Amount on every Decimillipede segment.</summary>
+    public const int DecimillipedeReattachHeal = 25;
+
+    public const int PunchOffEncounterId = 56;
+
+    // Encounters that roll something off their OWN stream, and so need an entry id.
+    public const int BowlbugsWeakEncounterId = 31;
+
+    public const int BowlbugsNormalEncounterId = 32;
+
+    public const int DecimillipedeEncounterId = 69;
+
+    public const int ScrollsWeakEncounterId = 49;
+
+    public const int ScrollsNormalEncounterId = 50;
+
+    /// <summary>Room Full of Cheese's Gorge: eight offered, two kept.</summary>
+    public const int GorgeCardChoices = 8;
+    public const int GorgeCardsKept = 2;
+
+    /// <summary>Brain Leech's IntVar("FromCardChoiceCount").</summary>
+    public const int BrainLeechCardChoices = 5;
+
+    /// <summary>
+    /// The Waterlogged Scriptorium's two paid options, from the event's own DynamicVars:
+    /// Gold(55) for the Tentacle Quill and PricklySpongeGold(99) for the sponge.
+    /// </summary>
+    public const int ScriptoriumQuillCost = 55;
+    public const int ScriptoriumSpongeCost = 99;
+
     /// <summary>Tea Master's prices, from the event's own DynamicVars.</summary>
     public const int BoneTeaCost = 50;
     public const int EmberTeaCost = 150;
@@ -210,6 +592,13 @@ public static class RunConstants
 
     public const int WeakEncountersPerAct = 3;
 
+    /// <summary>
+    /// Ascender's Bane. It used to stand in for EVERY curse any event or relic inflicted,
+    /// which is not merely the wrong name -- Ascender's Bane is Ethereal and the curses it
+    /// replaced are not, and it is one of the eight the game will never generate. Every
+    /// site names or rolls its own curse now; this is the starting deck's copy and the
+    /// last-resort fallback if the curse pool ever comes back empty.
+    /// </summary>
     public const int CursePlaceholderCard = 10001;
     public const int SpoilsMapCard = 10020;
     public const int NeowsFuryCard = 321;
@@ -231,30 +620,31 @@ public static class RunConstants
 
     public static ReadOnlySpan<int> NeowCurseOptions => [54, 111, 129, 134, 161, 205, 239, 240];
 
+    /// <summary>
+    /// The six blessings Neow offers as one of a PAIR rather than from a flat list --
+    /// LavaRock/SmallCapsule, NeowsTalisman/Pomander, NutritiousOyster/StoneHumidifier.
+    /// In <c>Neow.AllPossibleOptions</c> they are appended after the curse and positive
+    /// groups, in this order, which is the order anything shuffling that list depends on.
+    /// </summary>
+    public static ReadOnlySpan<int> NeowPairedOptions => [132, 162, 167, 201, 242, 250];
+
     public static ReadOnlySpan<int> NeowPositiveOptions =>
         [5, 29, 89, 105, 124, 133, 140, 163, 164, 195, 206, 231, 293];
 
+    /// <summary>
+    /// The game's <c>CardModel.IsUpgradable</c>: <c>CurrentUpgradeLevel &lt; MaxUpgradeLevel</c>.
+    /// </summary>
+    /// <remarks>
+    /// This used to hold fourteen card ids written out by hand, against the thirty-seven
+    /// that actually override <c>MaxUpgradeLevel</c> to zero. The twenty-three it missed
+    /// were curses and statuses, which is invisible until something upgrades AT RANDOM:
+    /// Doors of Light and Dark shuffles the upgradable cards and takes two, so one extra
+    /// name in the candidate list is a different shuffle and a different pick. A live
+    /// capture (`NXV45HW43K`) upgraded two Strikes where the emulator, counting Greed
+    /// among the candidates, upgraded a Strike and a Defend.
+    /// </remarks>
     public static bool IsRunCardUpgradable(CardInstance card)
     {
-        return !card.Upgraded && !IsNonUpgradableCard(card.DefId);
-    }
-
-    private static bool IsNonUpgradableCard(int cardId)
-    {
-        return cardId
-            is 36
-                or 128
-                or 166
-                or 206
-                or 440
-                or 457
-                or 512
-                or 10001
-                or SpoilsMapCard
-                or 10008
-                or 10009
-                or 10010
-                or 10011
-                or 10012;
+        return !card.Upgraded && GeneratedData.Cards.Get(Math.Abs(card.DefId)).Upgradable;
     }
 }

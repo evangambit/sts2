@@ -15,7 +15,7 @@ ENCOUNTER_NAMES = {
     1: "chompers",
     2: "nibbits-weak",
     3: "slimes-weak",
-    4: "exoskeletons",
+    4: "exoskeletons-weak",
     5: "inklets",
     6: "two-tailed-rats",
     7: "gremlin-merc",
@@ -93,6 +93,7 @@ ENCOUNTER_NAMES = {
     79: "soul-fysh",
     80: "test-subject",
     81: "insatiable",
+    87: "exoskeletons-normal",
     82: "kin",
     83: "vantom",
     84: "waterfall-giant",
@@ -232,7 +233,9 @@ class Sts2CombatEnv(gym.Env):
         reward = float(self._rew_buf[0])
         return self._obs(), reward, terminal, truncated, self._info()
 
-    def debug_add_card_to_hand(self, card_id: int, upgraded: bool = False) -> np.ndarray:
+    def debug_add_card_to_hand(
+        self, card_id: int, upgraded: bool = False,
+    ) -> np.ndarray:
         """Put a card on top of the hand, as the mod's debug_add_card does live.
 
         Only for differential captures: it is how a fight reaches a state the starter
@@ -242,6 +245,22 @@ class Sts2CombatEnv(gym.Env):
         assert self._handle is not None, "Call reset() before debug_add_card_to_hand()"
         native.debug_add_card_to_hand(self._handle, card_id, self._obs_buf, upgraded)
         return self._obs()
+
+    def debug_gain_max_hp(self, amount: int) -> np.ndarray:
+        """Raise max HP and heal by it, as the mod's debug_gain_max_hp does live.
+
+        Only for differential captures. A boss capture is worth what it survives: the
+        Kaiser Crab kills a starter deck two moves short of either half's table, and a
+        capture that never reaches a move cannot put that move under test.
+        """
+        assert self._handle is not None, "Call reset() before debug_gain_max_hp()"
+        native.debug_gain_max_hp(self._handle, amount, self._obs_buf)
+        return self._obs()
+
+    def pending_selection_kind(self) -> int:
+        """Report the card selection this combat is waiting on, or 0 for none."""
+        assert self._handle is not None, "Call reset() before pending_selection_kind()"
+        return native.pending_selection_kind(self._handle)
 
     def action_masks(self) -> np.ndarray:
         """Return a boolean mask of valid actions (for MaskablePPO)."""
