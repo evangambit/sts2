@@ -62,6 +62,7 @@ uv run python -m unittest discover -s tests/python
 uv run python scripts/audit_enemy_moves.py        # monster behaviour vs the source
 uv run python scripts/audit_ascension_literals.py # A9 values used at A8
 uv run python scripts/audit_card_keywords.py      # card keywords the table never got
+uv run python scripts/audit_cards.py              # which cards have been READ vs the source
 
 # Regenerate game data / decompiled source for the current patch
 bash scripts/decompile.sh "<game dir>"        # → decompiled/ (gitignored), needs ilspycmd
@@ -2382,9 +2383,22 @@ no game running:
   the emulator answers without ever touching `rng` is a finding, while a conditional
   branch is often modelled correctly by seeding MoveIndex.
 
-Both are **worklists, not verdicts**, and both fail loudly rather than skipping when they
-cannot map a monster to its emulator block — a rename is exactly when a silent skip would
-report the renamed monster as clean.
+- `audit_cards.py` — which cards have been **read** against the current source, as a
+  digest plus a note per card. `CardCoverageTests.Pending` answers "does this card have a
+  test", and this session proved how weak that is: **every divergence in E158-E185 was
+  found in a card that had already passed it.** A test written from a wrong reading passes
+  forever, and one written from a RIGHT reading of an old source passes forever too — the
+  emulator and the test drift together while the game moves under both. So the audit
+  records the version that was read, and re-flags when the card changes underneath it.
+  The number worth watching is `tested but unread`: cards that LOOK covered, which is
+  exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
+
+All three are **worklists, not verdicts**, and all fail loudly rather than skipping when
+they cannot map a monster or a card to its source — a rename is exactly when a silent skip
+would report the renamed thing as clean. `audit_cards.py` exits non-zero only on a STALE
+note, never on an unread card: unread is the progress bar, stale is a defect, and a card
+someone verified against a version of the game that no longer exists is worse than an
+unread one because the note says it was checked.
 
 `patch_refresh.py` does everything mechanical and **classifies** the fallout:
 
