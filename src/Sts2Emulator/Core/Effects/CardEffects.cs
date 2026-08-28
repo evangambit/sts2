@@ -3136,6 +3136,14 @@ public static class CardEffects
                 break;
             }
 
+            case CardSelectionKind.DiscardToHand when index < state.DiscardPile.Count:
+            {
+                var picked = state.DiscardPile[index];
+                state.DiscardPile.RemoveAt(index);
+                state.Hand.Add(picked);
+                break;
+            }
+
             case CardSelectionKind.MarkHandCardSly when index < state.Hand.Count:
                 state.Hand[index] = state.Hand[index] with { SlyThisTurn = true };
                 break;
@@ -3604,7 +3612,11 @@ public static class CardEffects
                 }
                 else if (def.Name == "MomentumStrike")
                 {
-                    card = card with { CostForCombat = 0 };
+                    // `base.EnergyCost.SetThisCombat(0)` -- the card is free for the rest
+                    // of the combat once it has been played. This used to assign to
+                    // `card`, which is a BY-VALUE parameter, so the copy that went to the
+                    // discard pile was untouched and the card never got cheaper.
+                    state.PlayedCardCostForCombat = 0;
                 }
                 else if (def.Name == "Synthesis")
                 {
@@ -3651,7 +3663,14 @@ public static class CardEffects
                 }
                 else if (def.Name == "LightningRod")
                 {
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Thunder, upgraded ? 3 : 2);
+                    // `PowerVar<LightningRodPower>(2m)`, and `OnUpgrade` raises the BLOCK
+                    // -- so the power is 2 at both levels. It channels a Lightning orb at
+                    // each turn's energy reset and decrements, which is two TURNS of orbs.
+                    //
+                    // The emulator applied `BuffId.Thunder`, which is read by the Lightning
+                    // EVOKE for extra damage: a different power on a different orb event,
+                    // at a number this card does not have.
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.LightningRod, 2);
                 }
 
                 return true;
@@ -3861,7 +3880,11 @@ public static class CardEffects
                 return true;
             }
             case "Turbo":
+                // `EnergyVar(2)` +1, and then a VOID into the discard pile. The Void is
+                // the card's whole cost -- an unplayable, Ethereal status that clogs the
+                // next shuffle -- and the emulator handed out the energy for free.
                 state.Energy += upgraded ? 3 : 2;
+                AddGeneratedStatusToDiscard(state, 10040, rng);
                 return true;
             case "DoubleEnergy":
                 state.Energy *= 2;
@@ -3922,8 +3945,19 @@ public static class CardEffects
                 DealDamageMultiHit(state, Dmg(def, upgraded, card), state.Energy, rng);
                 return true;
             case "Hologram":
+                // `CardSelectCmd.FromCombatPile` over the DISCARD pile: the player picks
+                // what comes back. Taking the most recently discarded card is the same
+                // picking-for-the-player Headbutt had (E-series), and on this card it is
+                // the entire point -- a Hologram that returns whatever happens to be on
+                // top is a worse Hologram than the one the game prints.
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                MoveDiscardCardsToHand(state, 1);
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.DiscardToHand,
+                    state.DiscardPile.Count,
+                    def.Id,
+                    autoPick: state.DiscardPile.Count - 1
+                );
                 return true;
             case "Hotfix":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, 2);
@@ -3969,8 +4003,12 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.TrashToTreasure, 1);
                 return true;
             case "Uproar":
+                // The card `StableShuffle`s the draw pile's playable Attacks on
+                // `Rng.Shuffle` and takes the first -- a ROLLED attack, drawing from the
+                // shuffle stream. Taking the first in pile order is deterministic where
+                // the game is not, and leaves the stream undrawn.
                 DealDamageMultiHit(state, Dmg(def, upgraded, card), 2, rng);
-                AutoPlayFirstDrawPileAttack(state, rng);
+                AutoPlayRandomDrawPileAttack(state, rng);
                 return true;
             case "Voltaic":
                 for (int i = 0; i < state.LightningOrbsChanneledThisCombat; i++)
@@ -4047,7 +4085,11 @@ public static class CardEffects
                 if (target != null)
                 {
                     DealDamageToEnemy(state, target, Dmg(def, upgraded, card));
-                    if (target.CurrentIntent.Type == IntentType.Attack)
+                    // `MonsterModel.IntendsToAttack` is `NextMove.Intents.Any(...)` -- ANY
+                    // intent of the move, not just the one shown first. An enemy whose
+                    // move is a block-then-attack announces the block as its primary
+                    // intent and was reading as "not attacking".
+                    if (IntendsToAttack(target))
                     {
                         ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, upgraded ? 2 : 1, rng);
                     }
@@ -5481,6 +5523,59 @@ public static class CardEffects
         {
             ChannelRandomOrb(state, rng);
         }
+    }
+
+    /// <summary>
+    /// `MonsterModel.IntendsToAttack`: whether ANY intent of the announced move is an
+    /// attack. The game also counts `IntentType.DeathBlow`, which the emulator's IntentType
+    /// does not model separately — those moves announce as Attack here.
+    /// </summary>
+    private static bool IntendsToAttack(EnemyState enemy) =>
+        enemy.CurrentIntent.Type == IntentType.Attack
+        || enemy.SecondaryIntent?.Type == IntentType.Attack;
+
+    /// <summary>
+    /// Uproar's attack: the playable Attacks in the draw pile, shuffled on the SHUFFLE
+    /// stream, first one taken. Not the first in pile order — that is deterministic where
+    /// the game is not, and it leaves the stream undrawn, which desynchronises every roll
+    /// after it.
+    /// </summary>
+    private static void AutoPlayRandomDrawPileAttack(CombatState state, Random rng)
+    {
+        var candidates = new List<int>();
+        for (int i = 0; i < state.DrawPile.Count; i++)
+        {
+            var candidate = GeneratedData.Cards.Get(state.DrawPile[i].DefId);
+            if (candidate.Type == CardType.Attack && !candidate.Unplayable)
+            {
+                candidates.Add(i);
+            }
+        }
+
+        // The game falls back to ANY attack when every one of them is Unplayable.
+        if (candidates.Count == 0)
+        {
+            for (int i = 0; i < state.DrawPile.Count; i++)
+            {
+                if (GeneratedData.Cards.Get(state.DrawPile[i].DefId).Type == CardType.Attack)
+                {
+                    candidates.Add(i);
+                }
+            }
+        }
+
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        // The game rolls this on Rng.Shuffle; fall back to the combat rng when a state
+        // was built without one, as the other shuffle sites do.
+        Random shuffle = state.ShuffleRng ?? rng;
+        int index = candidates[shuffle.Next(candidates.Count)];
+        var chosen = state.DrawPile[index];
+        state.RemoveFromDrawPileAt(index);
+        PlayNestedCard(GeneratedData.Cards.Get(chosen.DefId), chosen.Upgraded, state, rng, chosen);
     }
 
     private static void AutoPlayFirstDrawPileAttack(CombatState state, Random rng)

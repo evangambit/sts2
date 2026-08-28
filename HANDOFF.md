@@ -192,12 +192,13 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   `RUN_OBS_SIZE` 630 → 661, and `NATIVE_API_VERSION` is 22. Anything holding a trained
   policy or a cached obs width — the `emulator-rl` worktree above all — needs a rebuild
   and a retrain, and will fail loudly rather than quietly if it does not get one.
-  The 87 cards are the next Defect work.
+  **The 4 basics and 20 commons are pinned too** (E180-E185, six wrong). 63 cards left:
+  36 uncommons, 25 rares, 2 ancients.
 - ✅ **Every Ironclad card — all 92 — has tests**, written against `decompiled/` with the
   source cited per file, never against emulator output. `CardCoverageTests` is the guard:
   `scripts/generate_card_coverage.py` scrapes the `case` labels out of `CardEffects.Apply`
   into `ImplementedCards.g.cs`, and implementing a card now fails the build until it is
-  tested or explicitly deferred in `Pending` (**310 left**).
+  tested or explicitly deferred in `Pending` (**286 left**).
   Caveat worth knowing: the guard only sees cards with their own `case`. Strike, Defend
   and Giant Rock run on the generic damage-and-block path and were invisible to it — they
   have tests now, but an empty `Pending` still means "every card with effect code", not

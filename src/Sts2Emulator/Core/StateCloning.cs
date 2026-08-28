@@ -104,6 +104,7 @@ public static class StateCloning
             EndTurnAwaitingSelection = combat.EndTurnAwaitingSelection,
             AfterimageBeforePlay = combat.AfterimageBeforePlay,
             ResolvingDefendCard = combat.ResolvingDefendCard,
+            PlayedCardCostForCombat = combat.PlayedCardCostForCombat,
             AutoPlayQueue = [.. combat.AutoPlayQueue],
             Orbs = [.. combat.Orbs],
             OrbCapacity = combat.OrbCapacity,

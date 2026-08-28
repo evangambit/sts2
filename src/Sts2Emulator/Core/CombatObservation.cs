@@ -199,6 +199,7 @@ public static class CombatObservation
                 var pile = selection.Kind switch
                 {
                     CardSelectionKind.DiscardToDrawPileTop => s.DiscardPile,
+                    CardSelectionKind.DiscardToHand => s.DiscardPile,
                     CardSelectionKind.DrawPileToHand => s.DrawPile,
                     _ => s.Hand,
                 };

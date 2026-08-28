@@ -258,6 +258,9 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
+                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
+                        ? state.PlayedCardCostForCombat
+                        : card.CostForCombat,
                 },
                 rng: rng
             );
@@ -272,6 +275,9 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
+                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
+                        ? state.PlayedCardCostForCombat
+                        : card.CostForCombat,
                 }
             );
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FeralUsed, 1);
@@ -286,6 +292,9 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
+                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
+                        ? state.PlayedCardCostForCombat
+                        : card.CostForCombat,
                 }
             );
         }
@@ -299,6 +308,9 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
+                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
+                        ? state.PlayedCardCostForCombat
+                        : card.CostForCombat,
                     SlyForCombat = card.SlyForCombat || MasterPlannerMarks(state, def),
                 }
             );
@@ -308,6 +320,7 @@ public static class CombatEngine
         state.PlayedCardEnchantSpent = false;
         state.PlayedCardEnchantGrew = false;
         state.PlayedCardCostBump = 0;
+        state.PlayedCardCostForCombat = int.MinValue;
         if (def.Name == "Shiv")
         {
             state.ShivsPlayedThisTurn++;
@@ -826,6 +839,17 @@ public static class CombatEngine
         if (prepTime > 0)
         {
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Vigor, prepTime);
+        }
+
+        // `LightningRodPower.AfterEnergyReset` channels a Lightning orb and DECREMENTS,
+        // so an amount of 2 is two TURNS of orbs. Its own comment explains why it fires
+        // here rather than at side-turn start: an orb evoked to make room would otherwise
+        // have its Plasma energy wiped by the reset, or its Frost block cleared.
+        int lightningRod = BuffSystem.Get(state.PlayerBuffs, BuffId.LightningRod);
+        if (lightningRod > 0)
+        {
+            Effects.CardEffects.ChannelOrb(state, OrbType.Lightning, rng);
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.LightningRod, -1);
         }
 
         int nextTurnEnergy = BuffSystem.Get(state.PlayerBuffs, BuffId.NextTurnEnergy);
@@ -1407,6 +1431,16 @@ public static class CombatEngine
                     var card = state.DrawPile[index];
                     state.RemoveFromDrawPileAt(index);
                     state.Hand.Add(card);
+                }
+
+                break;
+
+            case CardSelectionKind.DiscardToHand:
+                if (index < state.DiscardPile.Count)
+                {
+                    var recovered = state.DiscardPile[index];
+                    state.DiscardPile.RemoveAt(index);
+                    state.Hand.Add(recovered);
                 }
 
                 break;

@@ -81,6 +81,18 @@ public sealed class CombatState
     /// that blocks having to remember to say so.
     /// </summary>
     public bool ResolvingDefendCard;
+
+    /// <summary>
+    /// `EnergyCost.SetThisCombat(n)` on the card being played — Momentum Strike zeroes its
+    /// own cost for the rest of the combat. `int.MinValue` means the card said nothing.
+    /// </summary>
+    /// <remarks>
+    /// Handed back through the state for the same reason `PlayedCardCostBump` is:
+    /// `CardEffects.Apply` takes the card BY VALUE, so an arm that assigns to its own
+    /// parameter changes nothing at all. Momentum Strike did exactly that and had been
+    /// free-after-one-play only in the local variable.
+    /// </remarks>
+    public int PlayedCardCostForCombat = int.MinValue;
     public List<CardInstance> AutoPlayQueue = [];
 
     // Defect-style orb queue.

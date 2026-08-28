@@ -263,6 +263,19 @@ public enum BuffId
     WellLaidPlans,
 
     /// <summary>
+    /// <c>LightningRodPower</c>: channels a Lightning orb at each turn's energy reset and
+    /// DECREMENTS, so an amount of 2 buys two turns of orbs rather than two orbs at once.
+    /// </summary>
+    /// <remarks>
+    /// The power's own comment explains the timing and it is not incidental: it fires at
+    /// AfterEnergyReset rather than BeforeSideTurnStart "so the player will still get
+    /// benefits from orbs that might be evoked to make room for the new Lightning Orb" —
+    /// a Plasma evoked to make room would otherwise have its energy wiped by the reset,
+    /// and a Frost's block cleared.
+    /// </remarks>
+    LightningRod,
+
+    /// <summary>
     /// <c>ShadowStepPower</c>: converts itself into <see cref="DoubleDamage" /> at the
     /// start of its owner's next turn and then removes itself. Shadow Step's real payload,
     /// held for a turn.

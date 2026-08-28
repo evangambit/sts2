@@ -92,6 +92,13 @@ public enum CardSelectionKind
     /// zero, so keeping nothing is a legal answer and the action space has to offer it.
     /// </remarks>
     RetainForNextTurn = 12,
+
+    /// <summary>
+    /// Hologram: a card from the DISCARD pile goes to hand. Headbutt's screen with a
+    /// different destination — <see cref="DiscardToDrawPileTop" /> is the same pile and
+    /// the same question, asked about the top of the draw pile instead.
+    /// </summary>
+    DiscardToHand = 13,
 }
 
 /// <summary>
