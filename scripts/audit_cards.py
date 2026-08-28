@@ -66,6 +66,11 @@ COSMETIC = re.compile(
         | protected\s+override\s+IEnumerable<string>\s+ExtraRunAssetPaths\s*=>.*
         | NCombatRoom\.Instance.*;
         | (NGame|SaveManager|NDebugAudioManager)\..*;
+        # Relic-side UI, for the sibling audit that shares this stripper. No card source
+        # contains any of these, so adding them moved no card digest -- checked before the
+        # patch rather than after, because a stripper change silently re-flags every note.
+        | Flash\(\);
+        | public\s+override\s+(bool\s+(ShowCounter|HasUponPickupEffect)|int\s+DisplayAmount)\s*=>.*
         )\s*$""",
     re.VERBOSE,
 )

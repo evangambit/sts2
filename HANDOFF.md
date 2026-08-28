@@ -63,6 +63,7 @@ uv run python scripts/audit_enemy_moves.py        # monster behaviour vs the sou
 uv run python scripts/audit_ascension_literals.py # A9 values used at A8
 uv run python scripts/audit_card_keywords.py      # card keywords the table never got
 uv run python scripts/audit_cards.py              # which cards have been READ vs the source
+uv run python scripts/audit_relics.py             # which relics the emulator models at all
 
 # Regenerate game data / decompiled source for the current patch
 bash scripts/decompile.sh "<game dir>"        # → decompiled/ (gitignored), needs ilspycmd
@@ -2409,12 +2410,28 @@ no game running:
   The number worth watching is `tested but unread`: cards that LOOK covered, which is
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
 
-All three are **worklists, not verdicts**, and all fail loudly rather than skipping when
-they cannot map a monster or a card to its source — a rename is exactly when a silent skip
-would report the renamed thing as clean. `audit_cards.py` exits non-zero only on a STALE
-note, never on an unread card: unread is the progress bar, stale is a defect, and a card
-someone verified against a version of the game that no longer exists is worse than an
-unread one because the note says it was checked.
+- `audit_relics.py` — which relics the emulator **models**, and which have been read. The
+  only one of the four that answers "is this implemented at all", because relics have no
+  `CardCoverageTests.Pending` equivalent and nothing else could: **107 of 296**. The
+  distinction it draws that a name search cannot is between a relic the reward code can
+  HAND OUT and a relic that DOES something — `RelicGrabBag` deals all 296, and the other
+  189 land inert. It matches on a constant's name AND its value, follows both aliases a
+  relic can have (`RelicEffects.LizardTail` and `RunConstants.RelicLizardTail` name the
+  same thing), and counts `Relics.FindId("X")` as a route too, which is how Circlet is
+  wired. Getting any of those three wrong under- or over-reports, and the first draft of
+  this script did two of them.
+
+All four are **worklists, not verdicts**, and all fail loudly rather than skipping when
+they cannot map a monster, a card or a relic to its source — a rename is exactly when a silent skip
+would report the renamed thing as clean. `audit_cards.py` and `audit_relics.py` exit
+non-zero only on a STALE note, never on an unread entry: unread is the progress bar, stale
+is a defect, and something verified against a version of the game that no longer exists is
+worse than an unread one because the note says it was checked.
+
+Both READ tables start EMPTY of pre-existing work on purpose. Ironclad's 92 cards and the
+107 modelled relics were written against `decompiled/` before either audit existed, and
+nobody can now say which version — seeding a guessed digest would put exactly the false
+confidence in them that they exist to remove.
 
 `patch_refresh.py` does everything mechanical and **classifies** the fallout:
 
