@@ -336,6 +336,30 @@ READ: dict[str, tuple[str, str]] = {
         "359bc2d2f386",
         "30/40 block; Exhaust comes from the keyword, not the body",
     ),
+    "InfernalBlade": (
+        "0106fa2512e6",
+        "one FilterForCombat Attack from the character pool, free this turn, on CombatCardGeneration",
+    ),
+    "Inferno": (
+        "9b0065783023",
+        "InfernoPower 6/9 plus IncrementSelfDamage on play",
+    ),
+    "Inflame": (
+        "5b400a015a56",
+        "plain StrengthPower 2/3, applied immediately",
+    ),
+    "IronWave": (
+        "5ae0af44ddee",
+        "BLOCK first then damage, 5/7 each",
+    ),
+    "Juggernaut": (
+        "38b6caecf3ef",
+        "JuggernautPower 6/8",
+    ),
+    "Juggling": (
+        "0781143380ce",
+        "JugglingPower 1; the upgrade adds INNATE, not an amount",
+    ),
     "MachineLearning": (
         "b89f428eb295",
         "ModifyHandDraw + CardsVar(1); the upgrade adds Innate",

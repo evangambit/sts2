@@ -68,4 +68,51 @@ public class InfernalBladeTests
         Assert.Single(state.Hand);
         Assert.Equal(IC.AshenStrike, state.Hand[0].DefId);
     }
+
+    /// <summary>
+    /// The pool is `CardFactory.FilterForCombat` over the character's own cards: Attacks
+    /// that are `CanBeGeneratedInCombat` and are not Basic, Ancient or Event. A hand-kept
+    /// copy of that answer had drifted in both directions at once, and the two errors
+    /// cancelled in COUNT so the shuffle still consumed the right number of draws.
+    /// </summary>
+    [Fact]
+    public void ThePoolExcludesAncientAndIncludesTheCommonItHadDropped()
+    {
+        var seen = new HashSet<int>();
+        for (int seed = 0; seed < 300; seed++)
+        {
+            var fight = Fight.Hand(new CardInstance(IC.InfernalBlade, false)).Energy(3);
+            fight.State.CardGenerationRng = new CountingRandom(seed);
+            fight.Play(0);
+            foreach (var c in fight.State.Hand)
+            {
+                seen.Add(c.DefId);
+            }
+        }
+
+        // Break is Ancient; the game never rolls it here.
+        Assert.DoesNotContain(IC.Break, seen);
+        // Iron Wave is Common and was absent from the hand-written list entirely.
+        Assert.Contains(IC.IronWave, seen);
+        // Feed declares CanBeGeneratedInCombat => false.
+        Assert.DoesNotContain(IC.Feed, seen);
+        // Strike is Basic.
+        Assert.DoesNotContain(IC.StrikeIronclad, seen);
+    }
+
+    /// <summary>
+    /// It rolls on `Rng.CombatCardGeneration`, not on whatever Random the play happened to
+    /// carry — a card reading the wrong stream desynchronises every later draw.
+    /// </summary>
+    [Fact]
+    public void ItRollsOnTheCardGenerationStream()
+    {
+        var fight = Fight.Hand(new CardInstance(IC.InfernalBlade, false)).Energy(3);
+        var stream = new CountingRandom(7);
+        fight.State.CardGenerationRng = stream;
+
+        fight.Play(0);
+
+        Assert.True(stream.CallCount > 0, "the generation stream should have been drawn from");
+    }
 }

@@ -101,6 +101,10 @@ public readonly record struct CardDef(
     // CardModel.CanBeGeneratedByModifiers: eight curses refuse to be handed out by
     // anything that rolls one, so a curse roll has to filter on it.
     bool CanBeGeneratedByModifiers = true,
+    // `CardModel.CanBeGeneratedInCombat`. Fourteen cards refuse to be rolled by an
+    // in-combat generator -- Feed and The Hunt among them -- and `FilterForCombat` drops
+    // them alongside the Basic, Ancient and Event rarities.
+    bool CanBeGeneratedInCombat = true,
     // CardModel.IsUpgradable is CurrentUpgradeLevel < MaxUpgradeLevel, and 38 cards
     // override MaxUpgradeLevel to zero -- every curse and status. This is that override,
     // read from the source rather than restated: the hand-kept list of ids it replaces

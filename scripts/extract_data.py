@@ -346,6 +346,12 @@ def extract_cards() -> str:
         # anything that rolls one -- Neow's Bones among them -- so the roll has to read it.
         if "CanBeGeneratedByModifiers => false" in text:
             flags.append("CanBeGeneratedByModifiers: false")
+        # CardModel.CanBeGeneratedInCombat. Fourteen cards refuse to be rolled by an
+        # in-combat generator, and CardFactory.FilterForCombat drops them alongside the
+        # Basic, Ancient and Event rarities. Infernal Blade kept a hand-written copy of
+        # that answer and it had drifted by two entries in opposite directions.
+        if "CanBeGeneratedInCombat => false" in text:
+            flags.append("CanBeGeneratedInCombat: false")
         # CardModel.MaxUpgradeLevel. The base is 1; the cards that override it all
         # override it to 0, which is what IsUpgradable reads to refuse an upgrade.
         if "MaxUpgradeLevel => 0" in text:

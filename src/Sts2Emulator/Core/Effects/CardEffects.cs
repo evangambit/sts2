@@ -6333,6 +6333,23 @@ public static class CardEffects
         }
     }
 
+    /// <summary>
+    /// `InfernalBlade`: one random Attack from the character's own pool, free for the turn.
+    /// </summary>
+    /// <remarks>
+    /// The pool is DERIVED rather than listed. `CardFactory.FilterForCombat` keeps cards
+    /// that are `CanBeGeneratedInCombat` and are not Basic, Ancient or Event, and a
+    /// hand-kept copy of that answer had drifted: it carried Break, which is Ancient and
+    /// the game excludes, and was missing Iron Wave, which is Common and the game keeps.
+    /// The two errors cancelled in COUNT, so the shuffle consumed the right number of
+    /// draws and only the card that fell out was wrong -- which is exactly the shape a
+    /// hand-kept list fails in.
+    ///
+    /// `TakeRandom` is `UnstableShuffle(rng).Take(count)`, and the game's Fisher-Yates
+    /// walks the list from the top swapping with `NextInt(i + 1)`, so the loop below
+    /// matches it draw for draw. The stream is `Rng.CombatCardGeneration`, not whatever
+    /// Random happened to be passed in.
+    /// </remarks>
     private static void AddRandomInfernalBladeAttack(CombatState state, Random rng)
     {
         if (state.Hand.Count >= MaxCardsInHand)
@@ -6340,14 +6357,37 @@ public static class CardEffects
             return;
         }
 
-        int[] options = [.. _infernalBladeAttackPool];
-        for (int i = options.Length - 1; i > 0; i--)
+        var options = InfernalBladePool();
+        var generation = CardGenerationRng(state, rng);
+        for (int i = options.Count - 1; i > 0; i--)
         {
-            int j = rng.Next(i + 1);
+            int j = generation.Next(i + 1);
             (options[i], options[j]) = (options[j], options[i]);
         }
 
         state.Hand.Add(new CardInstance(options[0], false, FreeThisTurn: true));
+    }
+
+    /// <summary>The Ironclad Attacks `FilterForCombat` leaves standing, in pool order.</summary>
+    private static List<int> InfernalBladePool()
+    {
+        var pool = new List<int>();
+        foreach (int id in GeneratedData.CardPools.Ironclad)
+        {
+            var candidate = GeneratedData.Cards.Get(id);
+            if (
+                candidate.Type == CardType.Attack
+                && candidate.Rarity != CardRarity.Basic
+                && candidate.Rarity != CardRarity.Ancient
+                && candidate.Rarity != CardRarity.Event
+                && candidate.CanBeGeneratedInCombat
+            )
+            {
+                pool.Add(id);
+            }
+        }
+
+        return pool;
     }
 
     private static void DealUnpoweredDamageToEnemy(EnemyState target, int amount) =>
@@ -6708,7 +6748,8 @@ public static class CardEffects
                 break;
             }
 
-            int defId = _attackPool[CardGenerationRng(state, rng).Next(_attackPool.Length)];
+            var attackPool = InfernalBladePool();
+            int defId = attackPool[CardGenerationRng(state, rng).Next(attackPool.Count)];
             state.Hand.Add(new CardInstance(defId, false));
         }
     }
@@ -7141,45 +7182,6 @@ public static class CardEffects
         IC.Vicious,
         IC.Whirlwind,
     ];
-
-    private static readonly int[] _infernalBladeAttackPool =
-    [
-        IC.Anger,
-        IC.AshenStrike,
-        IC.BodySlam,
-        IC.Break,
-        IC.Breakthrough,
-        IC.Bludgeon,
-        IC.Bully,
-        IC.Cinder,
-        IC.Conflagration,
-        IC.Dismantle,
-        IC.FiendFire,
-        IC.FightMe,
-        IC.Headbutt,
-        IC.Hemokinesis,
-        IC.HowlFromBeyond,
-        IC.Mangle,
-        IC.MoltenFist,
-        IC.PactsEnd,
-        IC.PerfectedStrike,
-        IC.Pillage,
-        IC.PommelStrike,
-        IC.Rampage,
-        IC.SetupStrike,
-        IC.Spite,
-        IC.Stomp,
-        IC.SwordBoomerang,
-        IC.TearAsunder,
-        IC.Thrash,
-        IC.Thunderclap,
-        IC.TwinStrike,
-        IC.Unrelenting,
-        IC.Uppercut,
-        IC.Whirlwind,
-    ];
-
-    private static readonly int[] _attackPool = _infernalBladeAttackPool;
 
     private static readonly int[] _generatedClassPool =
     [
