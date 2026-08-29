@@ -229,7 +229,7 @@ public static class CardEffects
             }
 
             case IC.BodySlam: // 1/0-cost, dmg = player's current block
-                DealDamage(state, state.PlayerBlock);
+                DealDamage(state, DmgFrom(state, state.PlayerBlock, def, card));
                 break;
 
             case IC.IronWave: // 1-cost, gain 5/7 block, then deal 5/7 damage
@@ -243,14 +243,17 @@ public static class CardEffects
                 break;
 
             case IC.AshenStrike: // 1-cost, 6 + 3/4 per exhausted card
-                DealDamage(state, 6 + state.ExhaustPile.Count * (upgraded ? 4 : 3));
+                DealDamage(
+                    state,
+                    DmgFrom(state, 6 + state.ExhaustPile.Count * (upgraded ? 4 : 3), def, card)
+                );
                 break;
 
             case IC.Bully: // 0-cost, 4 + 2/3 * target's Vulnerable stacks
             {
                 var t = FirstEnemy(state);
                 int vuln = t != null ? BuffSystem.Get(t.Buffs, BuffId.Vulnerable) : 0;
-                DealDamage(state, 4 + (upgraded ? 3 : 2) * vuln);
+                DealDamage(state, DmgFrom(state, 4 + (upgraded ? 3 : 2) * vuln, def, card));
                 break;
             }
 
@@ -414,9 +417,14 @@ public static class CardEffects
             case IC.PerfectedStrike: // 2-cost, 6 + 2/3 per Strike card in all piles
                 DealDamage(
                     state,
-                    6
-                        + (CountStrikeCards(state) + (def.Name.Contains("Strike") ? 1 : 0))
-                            * (upgraded ? 3 : 2)
+                    DmgFrom(
+                        state,
+                        6
+                            + (CountStrikeCards(state) + (def.Name.Contains("Strike") ? 1 : 0))
+                                * (upgraded ? 3 : 2),
+                        def,
+                        card
+                    )
                 );
                 break;
 
@@ -904,18 +912,21 @@ public static class CardEffects
                 break;
 
             case CL.GoldAxe: // 1-cost, damage equals cards played this combat
-                DealDamage(state, state.CardsPlayedThisCombat);
+                DealDamage(state, DmgFrom(state, state.CardsPlayedThisCombat, def, card));
                 break;
 
             case CL.MindBlast: // 1/0-cost, damage equals draw pile size, Innate
-                DealDamage(state, state.DrawPile.Count);
+                DealDamage(state, DmgFrom(state, state.DrawPile.Count, def, card));
                 break;
 
             case CL.Rend: // 2-cost, 15/18 + 5/8 per non-temporary debuff on target
             {
                 var target = FirstEnemy(state);
                 int debuffs = target != null ? CountRendDebuffs(target) : 0;
-                DealDamage(state, (upgraded ? 18 : 15) + debuffs * (upgraded ? 8 : 5));
+                DealDamage(
+                    state,
+                    DmgFrom(state, (upgraded ? 18 : 15) + debuffs * (upgraded ? 8 : 5), def, card)
+                );
                 break;
             }
 
@@ -1591,7 +1602,7 @@ public static class CardEffects
                 // CalculationBaseVar(1) + ExtraDamageVar(1) x the number of CardDrawnEntry
                 // rows for this player, which is every card drawn this COMBAT. The flat
                 // 25/35 was a guess at what that averages to.
-                DealDamage(state, MurderDamage(state, upgraded));
+                DealDamage(state, DmgFrom(state, MurderDamage(state, upgraded), def, card));
                 break;
 
             case SI.Neutralize: // 0-cost, 3/4 damage and Weak 1/2
@@ -1688,7 +1699,15 @@ public static class CardEffects
                 // CalculationBaseVar(13m) with ExtraDamageVar(2m) times -(hand count,
                 // excluding this card). The old formula scaled up with Attacks played,
                 // which is neither the right direction nor the right input.
-                DealDamage(state, Math.Max(0, (upgraded ? 16 : 13) - 2 * state.Hand.Count));
+                DealDamage(
+                    state,
+                    DmgFrom(
+                        state,
+                        Math.Max(0, (upgraded ? 16 : 13) - 2 * state.Hand.Count),
+                        def,
+                        card
+                    )
+                );
                 break;
 
             case SI.Predator: // 2-cost, 15/20 damage, and draw 2 more NEXT turn
@@ -4769,16 +4788,30 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.BlockNextTurn, upgraded ? 3 : 2);
                 return true;
             case "SoulStorm":
-                DealDamageToAll(state, state.ExhaustPile.Count * (upgraded ? 3 : 2));
+                DealDamageToAll(
+                    state,
+                    DmgFrom(state, state.ExhaustPile.Count * (upgraded ? 3 : 2), def, card)
+                );
                 return true;
             case "TheScythe":
                 DealDamage(state, 13 + state.CardsExhaustedThisTurn * (upgraded ? 2 : 1));
                 return true;
             case "TimesUp":
-                DealDamage(state, state.CardsPlayedThisCombat * (upgraded ? 2 : 1));
+                DealDamage(
+                    state,
+                    DmgFrom(state, state.CardsPlayedThisCombat * (upgraded ? 2 : 1), def, card)
+                );
                 return true;
             case "DeathMarch":
-                DealDamage(state, 8 + state.DrawnCardsSinceAutomationProc * (upgraded ? 6 : 4));
+                DealDamage(
+                    state,
+                    DmgFrom(
+                        state,
+                        8 + state.DrawnCardsSinceAutomationProc * (upgraded ? 6 : 4),
+                        def,
+                        card
+                    )
+                );
                 return true;
             case "Hang":
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -4816,13 +4849,19 @@ public static class CardEffects
                 GainEnergy(state, 1);
                 return true;
             case "Unleash":
-                DealDamage(state, 6 + state.OstyMaxHp / Math.Max(1, upgraded ? 3 : 4));
+                DealDamage(
+                    state,
+                    DmgFrom(state, 6 + state.OstyMaxHp / Math.Max(1, upgraded ? 3 : 4), def, card)
+                );
                 return true;
             case "Squeeze":
-                DealDamage(state, 5 + state.OstyMaxHp * (upgraded ? 6 : 5));
+                DealDamage(
+                    state,
+                    DmgFrom(state, 5 + state.OstyMaxHp * (upgraded ? 6 : 5), def, card)
+                );
                 return true;
             case "Protector":
-                DealDamage(state, (upgraded ? 5 : 0) + state.OstyMaxHp);
+                DealDamage(state, DmgFrom(state, (upgraded ? 5 : 0) + state.OstyMaxHp, def, card));
                 return true;
             case "Calcify":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 6 : 4);
@@ -5734,11 +5773,30 @@ public static class CardEffects
     /// tenth Attack" -- none of which the buff chokepoint can see, because it takes buff
     /// lists and not a card.
     /// </remarks>
-    private static int Dmg(CombatState state, CardDef def, bool upgraded, CardInstance card)
+    private static int Dmg(CombatState state, CardDef def, bool upgraded, CardInstance card) =>
+        DmgFrom(
+            state,
+            upgraded ? def.BaseDamage + def.UpgradeDamage : def.BaseDamage,
+            def,
+            card
+        );
+
+    /// <summary>
+    /// Everything <see cref="Dmg" /> adds on top of a printed damage number, applied to a
+    /// base the CALLER computed.
+    /// </summary>
+    /// <remarks>
+    /// Cards whose damage is a calculation — Body Slam off block, Ashen Strike off the
+    /// exhaust pile, Perfected Strike off the Strikes in the deck — reach the same
+    /// `DamageCmd.Attack` as any other attack, just with a `CalculatedDamageVar` instead
+    /// of a `DamageVar`. So every enchantment and relic bonus applies to them exactly as
+    /// it does to a printed number. Seventeen of them were passing their computed total
+    /// straight to <c>DealDamage</c>, which skipped the lot: a Sharp Body Slam hit for
+    /// its block and nothing more.
+    /// </remarks>
+    private static int DmgFrom(CombatState state, int baseDamage, CardDef def, CardInstance card)
     {
-        int damage =
-            (upgraded ? def.BaseDamage + def.UpgradeDamage : def.BaseDamage)
-            + card.EnchantedWith(Enchantment.Sharp);
+        int damage = baseDamage + card.EnchantedWith(Enchantment.Sharp);
 
         // Vigorous.EnchantDamageAdditive adds its amount while the enchantment is Normal
         // and nothing once it has fired.
@@ -5779,7 +5837,7 @@ public static class CardEffects
             damage = (int)(damage * 1.5m);
         }
 
-        damage += RelicEffects.CardDamageBonus(state, def, upgraded);
+        damage += RelicEffects.CardDamageBonus(state, def, card.Upgraded);
         // `MysticLighter.ModifyDamageAdditive`: 9 more from a powered attack played off an
         // ENCHANTED card, whatever the enchantment is.
         if (card.Enchantment != Enchantment.None && def.Type == CardType.Attack)

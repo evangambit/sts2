@@ -106,6 +106,10 @@ READ: dict[str, tuple[str, str]] = {
         "5a7e572eee34",
         "a clone of itself with SetThisCombat(0) into the discard",
     ),
+    "Aggression": (
+        "02e647254c95",
+        "AggressionPower 1; the upgrade adds the INNATE keyword, not an amount",
+    ),
     "AllForOne": (
         "078fa2a6ae3b",
         "every 0-cost Attack/Skill/Power in the DISCARD returns to hand; the filter excludes Status and Curse",
@@ -117,6 +121,10 @@ READ: dict[str, tuple[str, str]] = {
     "Armaments": (
         "c5f41cadb022",
         "FromHandForUpgrade ASKS; upgraded takes every upgradable card with no choice",
+    ),
+    "AshenStrike": (
+        "30f92abca715",
+        "6 + 3/4 per card in the exhaust pile, through the ordinary attack command",
     ),
     "Barricade": (
         "3c6ea5ef5e01",
@@ -137,6 +145,10 @@ READ: dict[str, tuple[str, str]] = {
     "BlackHole": (
         "21c730e6ad53",
         "applies BlackHolePower 3/4; the POWER hits all enemies Unpowered on stars gained",
+    ),
+    "BloodWall": (
+        "da48d5654770",
+        "2 HP first, then 16/20 block",
     ),
     "Bloodletting": (
         "8c6b8815f1ef",
@@ -170,6 +182,10 @@ READ: dict[str, tuple[str, str]] = {
         "56019526be10",
         "4 + 2/3 per stack of the TARGET's Vulnerable; the upgrade raises the multiplier",
     ),
+    "BurningPact": (
+        "680b497e0b0c",
+        "exhaust a CHOSEN card, THEN draw 2/3 -- the draw must not seed its own candidates",
+    ),
     "Cinder": (
         "029fc97a5586",
         "18/24 then exhaust a random hand card on Rng.CombatCardSelection",
@@ -199,6 +215,14 @@ READ: dict[str, tuple[str, str]] = {
         "BeforeHandDraw adds Amount random POWER cards to hand; the upgrade is the cost",
     ),
     "Defragment": ("3e9d0372c793", "PowerVar<FocusPower>(1m) +1, permanent"),
+    "CrimsonMantle": (
+        "99f07a8dd302",
+        "CrimsonMantlePower at 8/10 and IncrementSelfDamage on play",
+    ),
+    "Cruelty": (
+        "fb996cba1975",
+        "CrueltyPower 25, upgrading by another 25",
+    ),
     "DefendIronclad": (
         "f44f2ddf1ff3",
         "5 block upgrading by 3",

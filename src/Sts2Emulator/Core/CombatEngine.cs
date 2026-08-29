@@ -1269,8 +1269,12 @@ public static class CombatEngine
                 state.PlayedCardEnchantSpent = true;
                 break;
             case Enchantment.Corrupted:
-                // Unblockable, unpowered, and every play -- not once.
-                Effects.CardEffects.DealDamageToPlayer(state, 2);
+                // `ValueProp.Unblockable | Unpowered | Move`, and every play -- not once.
+                // Unblockable means it does NOT touch block: this went through
+                // DealDamageToPlayer, which spends block first, so a blocking player paid
+                // the enchantment's price out of their block and a Body Slam played off it
+                // then hit for less. LoseHp is the unblockable-unpowered path.
+                Effects.CardEffects.LoseHp(state, 2);
                 break;
             case Enchantment.Adroit:
                 // `RecalculateValues` sets a BlockVar from the amount, so the block IS the
