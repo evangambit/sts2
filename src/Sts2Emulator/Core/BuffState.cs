@@ -325,6 +325,14 @@ public enum BuffId
     /// renumbers everything after it.
     /// </summary>
     BlackHole,
+
+    /// <summary>
+    /// <c>NoEnergyGainPower.ModifyEnergyGain</c> returns 0: the owner gains no energy for
+    /// the rest of the turn. The only implementer of the energy-modifier chain, and Expect
+    /// A Fight's entire cost -- the card was granting its energy and never applying it.
+    /// Removed <c>AfterSideTurnEnd</c>, so it lasts the turn it was played and no longer.
+    /// </summary>
+    NoEnergyGain,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

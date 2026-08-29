@@ -2419,8 +2419,15 @@ no game running:
   first one's shape: gold through `RunNonCombatEffects.GainGold` / `CardEffects.GainGold`
   (E216) and stars through `CardEffects.GainStars` (E220). Neither is written by a bare
   `+=` any more; anything that has to REACT to a gain rather than resize it hangs off
-  there. **When a resource has an `After<X>Gained` hook, a `+=` cannot dispatch it** —
-  worth checking next for HP, block and energy. The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  there. **When a resource has an `After<X>Gained` hook, a `+=` cannot dispatch it.**
+  Block and energy have since been swept too (E221, E222). Block already had its
+  chokepoint and needed one bypass closed; energy has no gain hook at all but does have a
+  one-implementer MODIFIER chain, so it got a chokepoint in order to be zeroed rather than
+  to dispatch. All four are pinned by `BlockChokepointTests`, which greps `Core/` and
+  fails when a resource grows a second writer — the fixes are one-line calls and nothing
+  else stops the next bare `+=` being written. HP is the remaining one:
+  `AfterCurrentHpChanged` has five listeners (Crusher, Rocket, NecroMastery, Meat on the
+  Bone, Red Skull). The run-side hooks it exposes are `ApplyAfterRoomEntered`
   (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
   `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
   looked like "room entered" turned out to be four different hooks. The

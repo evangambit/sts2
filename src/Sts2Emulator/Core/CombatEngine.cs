@@ -782,6 +782,10 @@ public static class CombatEngine
         // poison-on-draw lasts the turn it was played and no longer.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.CorrosiveWave);
 
+        // `NoEnergyGainPower.AfterSideTurnEnd` -- the same shape: Expect A Fight's lockout
+        // lasts the turn it was played and no longer.
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.NoEnergyGain);
+
         // ── Start of next player turn ─────────────────────────────────────────
         state.Turn++;
         state.PlayerTurn = true;
@@ -929,7 +933,7 @@ public static class CombatEngine
         int nextTurnEnergy = BuffSystem.Get(state.PlayerBuffs, BuffId.NextTurnEnergy);
         if (nextTurnEnergy > 0)
         {
-            state.Energy += nextTurnEnergy;
+            Effects.CardEffects.GainEnergy(state, nextTurnEnergy);
             BuffSystem.Remove(state.PlayerBuffs, BuffId.NextTurnEnergy);
         }
 
@@ -1240,7 +1244,7 @@ public static class CombatEngine
         switch (card.Enchantment)
         {
             case Enchantment.Sown when !card.EnchantSpent:
-                state.Energy += card.EnchantAmount;
+                Effects.CardEffects.GainEnergy(state, card.EnchantAmount);
                 state.PlayedCardEnchantSpent = true;
                 break;
             case Enchantment.Swift when !card.EnchantSpent:
@@ -1768,7 +1772,7 @@ public static class CombatEngine
             // rather than after them.
             if (Effects.RelicEffects.Has(state.Relics, Effects.RelicEffects.GremlinHorn))
             {
-                state.Energy++;
+                Effects.CardEffects.GainEnergy(state, 1);
                 Effects.CardEffects.DrawCards(state, 1, rng);
             }
 
@@ -2685,7 +2689,7 @@ public static class CombatEngine
 
             if (state.SubroutineBeforePlay > 0)
             {
-                state.Energy += state.SubroutineBeforePlay;
+                Effects.CardEffects.GainEnergy(state, state.SubroutineBeforePlay);
             }
 
             int galvanic = state

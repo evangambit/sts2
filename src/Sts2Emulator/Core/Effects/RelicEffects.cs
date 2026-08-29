@@ -287,6 +287,9 @@ public static class RelicEffects
         // out for turn one.
         int extraEnergy = state.Relics.Count(relic => MaxEnergyRelics.Contains(relic.DefId));
         state.MaxEnergy += extraEnergy;
+        // NOT through GainEnergy: this is part of turn one's RESET catching up with the
+        // new maximum, not a `PlayerCmd.GainEnergy`, and the reset is a different path
+        // that `NoEnergyGainPower` does not touch.
         state.Energy += extraEnergy;
 
         // `Girya.AfterRoomEntered(CombatRoom)` -- Strength equal to the lifts spent on it.
@@ -404,7 +407,7 @@ public static class RelicEffects
         if (HasRelic(state, BoomingConch) && state.IsEliteCombat)
         {
             CardEffects.DrawCards(state, 2, rng);
-            state.Energy += 1;
+            CardEffects.GainEnergy(state, 1);
         }
     }
 
@@ -438,12 +441,12 @@ public static class RelicEffects
         {
             if (HasRelic(state, Lantern))
             {
-                state.Energy += 1;
+                CardEffects.GainEnergy(state, 1);
             }
 
             if (HasRelic(state, VenerableTeaSetActive))
             {
-                state.Energy += 2;
+                CardEffects.GainEnergy(state, 2);
             }
 
             if (HasRelic(state, Akabeko))
@@ -487,7 +490,7 @@ public static class RelicEffects
 
         if (CountTowards(state, HappyFlower, period: 3))
         {
-            state.Energy += 1;
+            CardEffects.GainEnergy(state, 1);
         }
 
         if (CountTowards(state, Pendulum, period: 3))
@@ -500,7 +503,7 @@ public static class RelicEffects
         if (turnNumber > 1 && HasRelic(state, ArtOfWar) && state.AttackCardsPlayedThisTurn == 0)
         {
             // AfterEnergyReset: the energy arrives on a turn following one with no Attack.
-            state.Energy += 1;
+            CardEffects.GainEnergy(state, 1);
         }
 
         // Pocketwatch's ModifyHandDraw runs after the tallies are cleared, so the verdict
@@ -558,7 +561,7 @@ public static class RelicEffects
         // X-cost card or a cost reduction changes the answer — and ignores card type.
         if (HasRelic(state, IvoryTile) && energySpent >= 3)
         {
-            state.Energy += 1;
+            CardEffects.GainEnergy(state, 1);
         }
 
         switch (def.Type)
@@ -594,7 +597,7 @@ public static class RelicEffects
                 // counter is deliberately absent from PerTurnCounters.
                 if (CountTowards(state, Nunchaku, period: 10))
                 {
-                    state.Energy += 1;
+                    CardEffects.GainEnergy(state, 1);
                 }
 
                 break;
@@ -903,7 +906,7 @@ public static class RelicEffects
         // Candelabra is turn TWO only -- `TurnNumber == 2`, not "from turn two".
         if (turnNumber == 2 && HasRelic(state, Candelabra))
         {
-            state.Energy += 2;
+            CardEffects.GainEnergy(state, 2);
         }
 
         // `VenerableTeaSet.AfterEnergyReset` pays once, on the first energy reset of the
@@ -911,7 +914,7 @@ public static class RelicEffects
         // the rest site; the existing VenerableTeaSetActive id is that armed marker.
         if (turnNumber == 1 && HasRelic(state, VenerableTeaSetActive))
         {
-            state.Energy += 2;
+            CardEffects.GainEnergy(state, 2);
             state.Relics.RemoveAll(relic => relic.DefId == VenerableTeaSetActive);
         }
 
@@ -1040,7 +1043,7 @@ public static class RelicEffects
     {
         if (turnNumber == 3 && HasRelic(state, Chandelier))
         {
-            state.Energy += 3;
+            CardEffects.GainEnergy(state, 3);
         }
 
         if (turnNumber == 1 && HasRelic(state, Bellows))

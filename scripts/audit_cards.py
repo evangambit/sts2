@@ -139,9 +139,17 @@ READ: dict[str, tuple[str, str]] = {
         "53673a33b554",
         "ModifyCardPlayCount +1 while the turn's first-in-series plays are under Amount; upgrade removes Ethereal",
     ),
+    "ExpectAFight": (
+        "722db1388dbf",
+        "gains 1 energy per Attack in hand, THEN NoEnergyGainPower on itself",
+    ),
     "Feed": (
         "9a10f38d7248",
         "GainMaxHp heals as well as raising the cap; gated on ShouldOwnerDeathTriggerFatal",
+    ),
+    "FeelNoPain": (
+        "c6a7a56768d2",
+        "CreatureCmd.GainBlock(..., Unpowered) -- the command, so Juggernaut sees it",
     ),
     "FlakCannon": (
         "5dea026eae0b",
