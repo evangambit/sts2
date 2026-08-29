@@ -2410,7 +2410,9 @@ no game running:
   records the version that was read, and re-flags when the card changes underneath it.
   The number worth watching is `tested but unread`: cards that LOOK covered, which is
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in. That
-  burn-down is now the main line of work — **155 left**, down from 194. The first
+  burn-down is now the main line of work — **113 left**, down from 194, and
+  **Ironclad is finished**: all 92 read. What remains is Colourless (63), Silent (44)
+  and six odds and ends. The first
   batch read Ironclad's 18 alphabetically-first cards and found two wrong (E227,
   E228), so budget roughly one divergence per nine cards, and expect one existing
   test per divergence to be asserting the wrong behaviour and need rewriting.

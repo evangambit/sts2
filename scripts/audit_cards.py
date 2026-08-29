@@ -474,21 +474,85 @@ READ: dict[str, tuple[str, str]] = {
         "fec43030abca",
         "5 damage, 2/3 hits if unblocked damage was received this turn",
     ),
+    "Stampede": (
+        "a9fc2868fdae",
+        "StampedePower 1; the upgrade cuts the cost",
+    ),
     "Stoke": (
         "43556213b53a",
         "exhaust the hand, then that many cards from GetForCombat -- duplicates allowed",
+    ),
+    "Stomp": (
+        "370912279495",
+        "12/15 to all; its cost falls by the Attacks played this turn, both on entry and per play",
+    ),
+    "StoneArmor": (
+        "79f0cdcae3a0",
+        "PlatingPower 4/6",
     ),
     "StrikeIronclad": (
         "67c1d4a0a5d2",
         "6 damage upgrading by 3",
     ),
+    "SwordBoomerang": (
+        "07bb371af7ba",
+        "DamageVar(3) x 3/4 at random opponents, re-rolled per hit; the upgrade raises the REPEAT",
+    ),
+    "Tank": (
+        "37d5bdd8725d",
+        "MultiplayerOnly; TankPower does nothing with no allies",
+    ),
+    "Taunt": (
+        "a49b0ccef74a",
+        "7/8 block and Vulnerable 1/2 -- the upgrade raises BOTH",
+    ),
+    "TearAsunder": (
+        "90dc93ac180a",
+        "5/7 x (1 + unblocked hits received this COMBAT, not this turn)",
+    ),
     "TheHunt": (
         "f5fda73d95f0",
         "extra CardReward of 3 from the room's own pool, behind the Fatal gate",
     ),
+    "Thrash": (
+        "9ba3bc8cab0c",
+        "4/6 x2, then eats a random Attack and permanently ADDS its damage",
+    ),
+    "Thunderclap": (
+        "332719e08b6f",
+        "4/7 to all plus Vulnerable 1 to all; the upgrade raises damage only",
+    ),
     "TrashToTreasure": (
         "5176cb66ae7c",
         "a generated Status channels Amount RANDOM orbs on Rng.CombatOrbGeneration",
+    ),
+    "Tremble": (
+        "88e37b1f3dc3",
+        "Vulnerable 3/4, Exhaust",
+    ),
+    "TrueGrit": (
+        "c0e7e5c71d11",
+        "7/9 block; upgraded the exhaust is CHOSEN, otherwise it is CombatCardSelection",
+    ),
+    "TwinStrike": (
+        "d7183e4fde0a",
+        "5/7 x2",
+    ),
+    "Unmovable": (
+        "97a2d149b01f",
+        "UnmovablePower 1; the upgrade cuts the cost",
+    ),
+    "Unrelenting": (
+        "3bd320e53b1e",
+        "14/20 then FreeAttackPower 1",
+    ),
+    "Uppercut": (
+        "86c14967d906",
+        "13 damage with NO damage upgrade; Weak and Vulnerable both at the Power var 1/2",
+    ),
+    "Vicious": (
+        "2bf236b729ef",
+        "ViciousPower at CardsVar 1/2",
     ),
     "Voltaic": (
         "2acb93296cb5",
@@ -603,6 +667,10 @@ READ: dict[str, tuple[str, str]] = {
     "Thunder": (
         "a42888593e4b",
         "AfterOrbEvoked on a Lightning orb adds Amount at that orb's targets",
+    ),
+    "Whirlwind": (
+        "5d4c9161e732",
+        "HasEnergyCostX; 5/8 x the X value to all enemies",
     ),
     "WhiteNoise": (
         "fb9249522b8f",

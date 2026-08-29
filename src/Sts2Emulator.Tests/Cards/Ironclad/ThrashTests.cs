@@ -27,4 +27,61 @@ public class ThrashTests
         Assert.Equal(0, state.ExhaustPile.Count(c => c.DefId == IC.Thrash)); // Thrash does not exhaust itself
         Assert.DoesNotContain(state.Hand, c => c.DefId == IC.StrikeIronclad);
     }
+
+    /// <summary>
+    /// The exhaust is only half the card. `base.DynamicVars.Damage.BaseValue += damage`:
+    /// Thrash permanently gains the damage of the Attack it ate, so it grows all combat.
+    /// The emulator exhausted the card and threw the number away.
+    /// </summary>
+    [Fact]
+    public void ItAbsorbsTheDamageOfTheAttackItExhausts()
+    {
+        var fight = Fight
+            .Hand(new CardInstance(IC.Thrash, false), new CardInstance(IC.Bludgeon, false))
+            .Energy(3)
+            .Enemy(hp: 300);
+
+        fight.Play(0);
+
+        // Bludgeon is the only Attack in hand, so it is what gets eaten: +32.
+        var grown = fight.State.DiscardPile.Single(c => c.DefId == IC.Thrash);
+        Assert.Equal(32, grown.BonusDamage);
+    }
+
+    /// <summary>The growth rides the copy, so the next play hits for the larger number.</summary>
+    [Fact]
+    public void TheGrowthShowsOnTheNextPlay()
+    {
+        var fight = Fight
+            .Hand(new CardInstance(IC.Thrash, false), new CardInstance(IC.Bludgeon, false))
+            .Energy(6)
+            .Enemy(hp: 400);
+        fight.Play(0);
+        int afterFirst = fight.Enemy0.Hp;
+
+        // Replay the grown copy out of the discard pile.
+        var grown = fight.State.DiscardPile.Single(c => c.DefId == IC.Thrash);
+        fight.State.DiscardPile.Remove(grown);
+        fight.State.Hand.Add(grown);
+        fight.State.Energy = 3;
+        fight.Play(fight.State.Hand.Count - 1);
+
+        int secondVolley = afterFirst - fight.Enemy0.Hp;
+        // Two hits of (4 printed + 32 absorbed).
+        Assert.Equal(2 * 36, secondVolley);
+    }
+
+    [Fact]
+    public void WithNoAttackInHandItGrowsNothing()
+    {
+        var fight = Fight
+            .Hand(new CardInstance(IC.Thrash, false), new CardInstance(IC.DefendIronclad, false))
+            .Energy(3)
+            .Enemy(hp: 300);
+
+        fight.Play(0);
+
+        var played = fight.State.DiscardPile.Single(c => c.DefId == IC.Thrash);
+        Assert.Equal(0, played.BonusDamage);
+    }
 }

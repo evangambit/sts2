@@ -114,4 +114,45 @@ public class CalculatedDamageTests
         Assert.Equal(20, fight.State.PlayerBlock);
         Assert.Equal(58, fight.State.PlayerHp);
     }
+
+    /// <summary>
+    /// Two cards hardcoded their PRINTED damage rather than calling `Dmg()`, which is the
+    /// same gap as the calculated ones for a different reason — and an eyeball review of
+    /// Conflagration passed it. Only a scan comparing every literal against the generated
+    /// `BaseDamage` found them.
+    /// </summary>
+    [Fact]
+    public void SharpRaisesEveryHitOfSwordBoomerang()
+    {
+        var fight = Fight.Hand(Sharp(IC.SwordBoomerang)).Energy(3).Enemy(hp: 200);
+
+        fight.Play(0);
+
+        // 3 hits of (3 printed + 5 Sharp), all onto the only living enemy.
+        Assert.Equal(200 - 3 * 8, fight.Enemy0.Hp);
+    }
+
+    [Fact]
+    public void SharpRaisesEveryHitOfConflagration()
+    {
+        var fight = Fight.Hand(Sharp(IC.Conflagration)).Energy(3).Enemy(hp: 200).Enemy(hp: 200);
+
+        fight.Play(0);
+
+        // 4 hits of (2 printed + 5 Sharp) on each enemy.
+        Assert.Equal(200 - 4 * 7, fight.Enemy0.Hp);
+        Assert.Equal(200 - 4 * 7, fight.Enemy1.Hp);
+    }
+
+    [Fact]
+    public void WithoutTheEnchantmentBothArePrinted()
+    {
+        var boomerang = Fight.Hand(new CardInstance(IC.SwordBoomerang, false)).Energy(3).Enemy(hp: 200);
+        boomerang.Play(0);
+        Assert.Equal(200 - 3 * 3, boomerang.Enemy0.Hp);
+
+        var conflagration = Fight.Hand(new CardInstance(IC.Conflagration, false)).Energy(3).Enemy(hp: 200);
+        conflagration.Play(0);
+        Assert.Equal(200 - 4 * 2, conflagration.Enemy0.Hp);
+    }
 }

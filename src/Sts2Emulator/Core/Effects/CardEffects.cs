@@ -263,7 +263,9 @@ public static class CardEffects
                 break;
 
             case IC.Conflagration: // 1-cost, 2 dmg × 4/5 hits to ALL enemies
-                DealDamageToAllMultiHit(state, 2, upgraded ? 5 : 4);
+                // The 2 is a DamageVar, so it takes enchantments and relic bonuses like
+                // any printed number -- hardcoding it skipped them.
+                DealDamageToAllMultiHit(state, Dmg(state, def, upgraded, card), upgraded ? 5 : 4);
                 break;
 
             case CL.DramaticEntrance: // 0-cost, 11/15 damage to ALL enemies, exhaust
@@ -495,7 +497,12 @@ public static class CardEffects
                 // TargetingRandomOpponents, and AttackCommand re-rolls the target inside
                 // its per-hit loop — so each hit picks again, rather than the card picking
                 // one enemy and hitting it N times.
-                DealDamageToRandomEnemiesMultiHit(state, 3, upgraded ? 4 : 3, rng);
+                DealDamageToRandomEnemiesMultiHit(
+                    state,
+                    Dmg(state, def, upgraded, card),
+                    upgraded ? 4 : 3,
+                    rng
+                );
                 break;
 
             case IC.Tank: // 1/0-cost, apply TankPower (multiplayer only)
@@ -535,9 +542,27 @@ public static class CardEffects
                 break;
             }
 
-            case IC.Thrash: // 1-cost, 4/6 dmg × 2 + exhaust a random Attack from hand
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), 2, rng);
-                ExhaustRandomCardOfTypeFromHand(state, CardType.Attack, rng);
+            case IC.Thrash: // 1-cost, 4/6 dmg × 2, then EAT a random Attack from hand
+                // `+ card.BonusDamage` for the same reason Rampage's call site has it: the
+                // field is growth this COPY has banked, and Dmg only reads it for Momentum.
+                DealDamageMultiHit(
+                    state,
+                    Dmg(state, def, upgraded, card) + card.BonusDamage,
+                    2,
+                    rng
+                );
+                {
+                    // The exhaust is only half of it. `base.DynamicVars.Damage.BaseValue +=
+                    // damage` -- Thrash permanently gains the damage of the card it ate, so
+                    // it grows all combat and keeps the growth in the discard pile. It rides
+                    // BonusDamage, the field Rampage's growth already uses.
+                    var eaten = ExhaustRandomCardOfTypeFromHand(state, CardType.Attack, rng);
+                    if (eaten is { } meal)
+                    {
+                        state.PlayedCardBonusDamage += EatenAttackDamage(state, meal);
+                    }
+                }
+
                 break;
 
             case IC.Uppercut: // 2-cost, 13/13 dmg + Weak 1/2 + Vulnerable 1/2
@@ -5885,7 +5910,8 @@ public static class CardEffects
         ExhaustCard(state, card, rng: rng);
     }
 
-    private static void ExhaustRandomCardOfTypeFromHand(
+    /// <summary>Exhausts one random card of a type from hand, and returns it.</summary>
+    private static CardInstance? ExhaustRandomCardOfTypeFromHand(
         CombatState state,
         CardType type,
         Random rng
@@ -5897,13 +5923,31 @@ public static class CardEffects
             .ToList();
         if (candidates.Count == 0)
         {
-            return;
+            return null;
         }
 
         var chosen = candidates[CardSelectionRng(state, rng).Next(candidates.Count)];
         state.Hand.RemoveAt(chosen.idx);
         ExhaustCard(state, chosen.card, rng: rng);
+        return chosen.card;
     }
+
+    /// <summary>
+    /// The damage Thrash absorbs from the Attack it exhausts.
+    /// </summary>
+    /// <remarks>
+    /// The game reads `CalculatedDamage` if the card has one, else `Damage`, else
+    /// `OstyDamage`, and runs the result through `Hook.ModifyDamage` with the EATEN card as
+    /// the source -- so the meal's own enchantments count and the eater's do not. `Dmg`
+    /// is that same set of per-card modifiers.
+    ///
+    /// The calculated-damage cards are the gap: their number lives inside the switch here
+    /// rather than in a var that can be evaluated out of context, so eating a Body Slam
+    /// contributes its PRINTED zero instead of the player's block. Recorded rather than
+    /// guessed at, since a wrong number is worse than a low one.
+    /// </remarks>
+    private static int EatenAttackDamage(CombatState state, CardInstance eaten) =>
+        Dmg(state, GeneratedData.Cards.Get(eaten.DefId), eaten.Upgraded, eaten);
 
     private static void UpgradeFirstCardInHand(CombatState state)
     {
