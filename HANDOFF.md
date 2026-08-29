@@ -2410,12 +2410,19 @@ no game running:
   records the version that was read, and re-flags when the card changes underneath it.
   The number worth watching is `tested but unread`: cards that LOOK covered, which is
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in. That
-  burn-down is now the main line of work — **178 left**, down from 194. The first
+  burn-down is now the main line of work — **155 left**, down from 194. The first
   batch read Ironclad's 18 alphabetically-first cards and found two wrong (E227,
   E228), so budget roughly one divergence per nine cards, and expect one existing
   test per divergence to be asserting the wrong behaviour and need rewriting.
-  `/tmp/pair.py` in that session dumped source-vs-emulator side by side, which is
-  the only way the rate is bearable; rebuild it rather than reading files one by one.
+  `scripts/card_pair.py` dumps source-vs-emulator side by side, which is the only way
+  the rate is bearable; use it rather than opening two files per card.
+
+  One warning from the 39 read so far. `card_pair.py` shows the emulator's `case` for a
+  card and nothing else, so a mechanic implemented ELSEWHERE — Howl from Beyond's
+  replay-from-exhaust lives in `CombatEngine.EndTurn`, not in its `case` — reads as
+  missing. Before concluding a card is short, grep the whole tree for its name and check
+  whether it already has a test. Howl had both, and a duplicate implementation was
+  written and reverted before its own existing test caught the double damage.
 
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
   **171/296**, and 63 read. The shared pool's commons, uncommons and rares are all

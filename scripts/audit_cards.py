@@ -223,13 +223,41 @@ READ: dict[str, tuple[str, str]] = {
         "fb996cba1975",
         "CrueltyPower 25, upgrading by another 25",
     ),
+    "DarkEmbrace": (
+        "26b6580c09cd",
+        "DarkEmbracePower 1; the upgrade cuts the cost",
+    ),
     "DefendIronclad": (
         "f44f2ddf1ff3",
         "5 block upgrading by 3",
     ),
+    "DemonForm": (
+        "f52b476dd53f",
+        "DemonFormPower at the StrengthPower var, 2 upgrading by 1",
+    ),
+    "DemonicShield": (
+        "11bc94552c75",
+        "MultiplayerOnly; 1 HP then block equal to the OWNER's block onto the target",
+    ),
+    "Dismantle": (
+        "a0cb031ae545",
+        "8/10, and TWO hits if the target is Vulnerable",
+    ),
+    "Dominate": (
+        "8b5e72efd2ac",
+        "Vulnerable 1/2 first, then Strength equal to the target's TOTAL Vulnerable",
+    ),
+    "DrumOfBattle": (
+        "ee20d3312b87",
+        "draw 2 always; the upgrade raises the ENERGY paid when it is exhausted",
+    ),
     "EchoForm": (
         "53673a33b554",
         "ModifyCardPlayCount +1 while the turn's first-in-series plays are under Amount; upgrade removes Ethereal",
+    ),
+    "EvilEye": (
+        "7c6b062b5cc4",
+        "the block gain runs TWICE if a card was exhausted this turn",
     ),
     "ExpectAFight": (
         "722db1388dbf",
@@ -243,9 +271,25 @@ READ: dict[str, tuple[str, str]] = {
         "c6a7a56768d2",
         "CreatureCmd.GainBlock(..., Unpowered) -- the command, so Juggernaut sees it",
     ),
+    "FiendFire": (
+        "66ba4f725312",
+        "hand exhausted first, hit count is the pre-exhaust hand size",
+    ),
+    "FightMe": (
+        "c12475a629c3",
+        "5/6 x2, Strength 3/4 to self and 1 to the TARGET -- a buff, not a debuff",
+    ),
     "FlakCannon": (
         "5dea026eae0b",
         "exhausts every Status outside the exhaust pile FIRST, then hits once per status at rolled targets",
+    ),
+    "FlameBarrier": (
+        "2d01c20a3d54",
+        "12/16 block and FlameBarrierPower 4/6",
+    ),
+    "ForgottenRitual": (
+        "7d1014df5741",
+        "3/4 energy, and only if a card was exhausted this turn",
     ),
     "GeneticAlgorithm": (
         "9c7cc2b93b94",
@@ -255,9 +299,29 @@ READ: dict[str, tuple[str, str]] = {
         "6d55f411d5c9",
         "same Fatal gate as Feed -- Minion AND Reattach, not Minion alone",
     ),
+    "Havoc": (
+        "5046a8d1658e",
+        "AutoPlayFromDrawPile top 1 with forceExhaust",
+    ),
+    "Headbutt": (
+        "c989485a6f72",
+        "9/12 then a CHOSEN discard-pile card onto the top of the draw pile",
+    ),
     "HelixDrill": (
         "0cf3cb9ebaea",
         "hit count is the turn's EnergySpentEntry total minus its own cost, which is zero",
+    ),
+    "Hellraiser": (
+        "4ada1dc48662",
+        "HellraiserPower 1; the upgrade cuts the cost",
+    ),
+    "Hemokinesis": (
+        "a26ba01b34ce",
+        "2 HP unblockable first, then 15/20",
+    ),
+    "HowlFromBeyond": (
+        "b16c87857714",
+        "16/21 to all, and AfterAutoPostPlayPhaseEntered replays it from EXHAUST every turn",
     ),
     "Hyperbeam": (
         "9f924a47ae24",
@@ -267,6 +331,10 @@ READ: dict[str, tuple[str, str]] = {
     "Ignition": (
         "8f6b9df8dc23",
         "MultiplayerOnly; channels Plasma on the TARGET ally, which is the player alone",
+    ),
+    "Impervious": (
+        "359bc2d2f386",
+        "30/40 block; Exhaust comes from the keyword, not the body",
     ),
     "MachineLearning": (
         "b89f428eb295",
