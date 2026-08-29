@@ -185,6 +185,14 @@ READ: dict[str, tuple[str, str]] = {
         "f22064bd3dad",
         "X-cost; evokes the FRONT orb X times, dequeuing only on the last",
     ),
+    "NecroMastery": (
+        "97601e8d4de7",
+        "SummonVar(5)+3, then NecroMasteryPower -- not 10/13 and not Strength",
+    ),
+    "Orbit": (
+        "a367fc160548",
+        "OrbitPower at EnergyVar(1); the upgrade cuts COST, not the amount",
+    ),
     "Quadcast": (
         "152560e8ca9a",
         "RepeatVar(4) evokes of the FRONT orb, dequeuing on the last; the upgrade is the cost",

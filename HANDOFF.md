@@ -2432,9 +2432,12 @@ no game running:
   the listeners all gate on `CombatManager.IsInProgress`, so the ~35 run-side HP writes
   were never in scope; and Sandpit's `Kill(force: true)` blocks death prevention, so
   Lizard Tail correctly does not save you. Each of the four exceptions carries the comment
-  that says why. Remaining listeners not yet modelled: `NecroMasteryPower` (Osty's HP loss
-  reflected at every enemy) and `OrbitPower` on `AfterEnergySpent`, both Necrobinder/Regent
-  and blocked on those card pools. The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  that says why. Every listener on those five hooks is now
+  modelled (E225, E226) — the last two, `NecroMasteryPower` and `OrbitPower`, were NOT
+  blocked on the Necrobinder/Regent card pools as previously recorded here: each is applied
+  by exactly one card. What actually blocked NecroMastery was that **Osty could not be
+  damaged**, so `DieForYouPower`'s redirect had to be built first; Osty now takes the
+  unblocked remainder of a powered attack, with overkill passing through to the player. The run-side hooks it exposes are `ApplyAfterRoomEntered`
   (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
   `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
   looked like "room entered" turned out to be four different hooks. The

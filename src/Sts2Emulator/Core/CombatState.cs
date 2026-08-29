@@ -132,6 +132,13 @@ public sealed class CombatState
     // Regent star resource.
     public int Stars;
 
+    /// <summary>
+    /// Energy spent since Orbit was played, for `OrbitPower`'s every-fourth payout. Its
+    /// own counter rather than `EnergySpentThisTurn` because the game's is per POWER
+    /// INSTANCE and cumulative over the combat, not per turn.
+    /// </summary>
+    public int OrbitEnergySpent;
+
     // Potions: slot index → potion def ID, 0 = empty
     public int[] PotionSlots = new int[3];
 

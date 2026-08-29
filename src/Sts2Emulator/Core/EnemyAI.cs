@@ -4022,6 +4022,23 @@ public static class EnemyAI
         int absorbed = Math.Min(state.PlayerBlock, damage);
         state.PlayerBlock -= absorbed;
         int unblocked = damage - absorbed;
+
+        // `DieForYouPower.ModifyUnblockedDamageTarget`: a living Osty becomes the target of
+        // the UNBLOCKED remainder of a powered attack aimed at its owner. The block is the
+        // player's and is spent above -- only what got through is redirected.
+        //
+        // Osty is a sponge with a capacity, NOT a shield. `CreatureCmd` deals the redirected
+        // damage to the pet and then, because the target changed, deals that result's
+        // OverkillDamage -- the part beyond what Osty had left -- to the original target
+        // after all. So a big enough hit still reaches the player for the excess, and every
+        // player-side consequence below runs on that excess rather than on the whole blow.
+        if (unblocked > 0 && state.OstyHp > 0)
+        {
+            int toOsty = Math.Min(unblocked, state.OstyHp);
+            Effects.CardEffects.DamageOsty(state, toOsty);
+            unblocked -= toOsty;
+        }
+
         if (unblocked > 0)
         {
             state.UnblockedDamageHitCount++;

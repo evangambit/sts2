@@ -333,6 +333,21 @@ public enum BuffId
     /// Removed <c>AfterSideTurnEnd</c>, so it lasts the turn it was played and no longer.
     /// </summary>
     NoEnergyGain,
+
+    /// <summary>
+    /// <c>OrbitPower.AfterEnergySpent</c>: every FOUR energy spent over the combat pays
+    /// this much energy back. The count is cumulative and does not reset per turn, and it
+    /// starts when the power lands -- energy spent before Orbit was played does not count.
+    /// </summary>
+    Orbit,
+
+    /// <summary>
+    /// <c>NecroMasteryPower.AfterCurrentHpChanged</c>: when OSTY loses HP, every enemy
+    /// takes that loss times this amount, <c>Unblockable | Unpowered</c>. It reads the
+    /// pet's HP change, not the player's, which is why Osty had to become something that
+    /// can be damaged before the power could exist at all.
+    /// </summary>
+    NecroMastery,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

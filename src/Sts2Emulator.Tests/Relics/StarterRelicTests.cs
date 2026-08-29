@@ -131,13 +131,35 @@ public class BoundPhylacteryTests
     {
         var fight = Fight.WithRelics(RelicEffects.BoundPhylactery);
         fight.State.Hand.Clear();
+        // Osty is a damage sink now, and a one-HP one dies to the first thing that gets
+        // through. Block keeps it alive so what is measured is the growth and not the
+        // re-summon -- see AOneHpOstyDiesToAHitAndComesBackAtOne for the other path.
+        fight.State.PlayerBlock = 200;
 
         fight.EndTurn();
         Assert.Equal(2, fight.State.OstyMaxHp);
 
         fight.State.Hand.Clear();
+        fight.State.PlayerBlock = 200;
         fight.EndTurn();
         Assert.Equal(3, fight.State.OstyMaxHp);
+    }
+
+    /// <summary>
+    /// The relic's real job, now that the pet can actually die: one HP is one hit, and the
+    /// next turn puts a fresh body up rather than growing the old one.
+    /// </summary>
+    [Fact]
+    public void AOneHpOstyDiesToAHitAndComesBackAtOne()
+    {
+        var fight = Fight.WithRelics(RelicEffects.BoundPhylactery);
+        fight.State.Hand.Clear();
+        fight.State.PlayerBlock = 0;
+
+        fight.EndTurn();
+
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
     }
 
     /// <summary>A dead Osty comes back the next turn, which is the relic's real job.</summary>

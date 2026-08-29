@@ -3514,6 +3514,32 @@ public static class CardEffects
     }
 
     /// <summary>
+    /// `Hook.AfterEnergySpent`, dispatched from `CardModel.SpendEnergy` -- which runs when
+    /// the cost is paid and therefore BEFORE the card's own effect resolves. So an Orbit
+    /// payout can hand energy back in time for the card that triggered it to be paid for.
+    ///
+    /// `OrbitPower` is the only listener. `triggers = spent / 4 - triggerCount` in the
+    /// game, which after every call leaves triggerCount equal to spent / 4 -- so the
+    /// crossings can be counted from the running total alone.
+    /// </summary>
+    public static void ApplyAfterEnergySpent(CombatState state, int amount)
+    {
+        int orbit = BuffSystem.Get(state.PlayerBuffs, BuffId.Orbit);
+        if (orbit <= 0 || amount <= 0)
+        {
+            return;
+        }
+
+        int before = state.OrbitEnergySpent / 4;
+        state.OrbitEnergySpent += amount;
+        int triggers = state.OrbitEnergySpent / 4 - before;
+        if (triggers > 0)
+        {
+            GainEnergy(state, orbit * triggers);
+        }
+    }
+
+    /// <summary>
     /// `PlayerCmd.GainEnergy`. Energy has no `AfterEnergyGained` hook -- unlike gold and
     /// stars, nothing REACTS to a gain -- but it does have a modifier chain, and that
     /// chain has exactly one implementer: `NoEnergyGainPower` returns 0 for the owner.
@@ -4520,8 +4546,12 @@ public static class CardEffects
                 AddSoulsToDrawPile(state, upgraded ? 4 : 3, upgraded);
                 return true;
             case "NecroMastery":
-                SummonOsty(state, upgraded ? 13 : 10);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 1);
+                // `SummonVar(5m)` upgrading by 3, not 10/13 -- and the power applied is
+                // `NecroMasteryPower`, not Strength. Someone modelled "a power at amount
+                // 1" as the only power to hand; the card is a 5 HP body AND the engine
+                // that turns damage to that body into damage to the whole room.
+                SummonOsty(state, upgraded ? 8 : 5);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.NecroMastery, 1);
                 return true;
             case "PullAggro":
                 SummonOsty(state, upgraded ? 5 : 4);
@@ -5565,9 +5595,13 @@ public static class CardEffects
             case "Capacitor":
             case "Hailstorm":
             case "Iteration":
+            case "Orbit":
+                // Was falling through to a Focus body -- a Defect stat on a Regent card.
+                // `EnergyVar(1)`, and the upgrade cuts the COST rather than the amount.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Orbit, 1);
+                break;
             case "Loop":
             case "MachineLearning":
-            case "Orbit":
             case "Spinner":
             case "Storm":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, upgraded ? 2 : 1);
@@ -6032,6 +6066,49 @@ public static class CardEffects
         {
             state.OstyMaxHp = amount;
             state.OstyHp = amount;
+        }
+    }
+
+    /// <summary>
+    /// Osty receiving damage, which nothing in the emulator could do before: `OstyHp` was
+    /// only ever summoned, grown or zeroed, so the pet was decorative and
+    /// `NecroMasteryPower` had no HP loss to hang off.
+    ///
+    /// `NecroMasteryPower.AfterCurrentHpChanged` fires on the loss ACTUALLY TAKEN, so a
+    /// hit larger than Osty's remaining HP reflects only what Osty had left --
+    /// `-delta * Amount`, and delta is the real change.
+    /// </summary>
+    internal static void DamageOsty(CombatState state, int amount, Random? rng = null)
+    {
+        if (amount <= 0 || state.OstyHp <= 0)
+        {
+            return;
+        }
+
+        int before = state.OstyHp;
+        state.OstyHp = Math.Max(0, state.OstyHp - amount);
+        int lost = before - state.OstyHp;
+        if (lost <= 0)
+        {
+            return;
+        }
+
+        int necroMastery = BuffSystem.Get(state.PlayerBuffs, BuffId.NecroMastery);
+        if (necroMastery > 0)
+        {
+            // `ValueProp.Unblockable | ValueProp.Unpowered`, at every hittable enemy.
+            foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToList())
+            {
+                DealUnpoweredDamageToEnemy(state, enemy, lost * necroMastery);
+            }
+        }
+
+        if (state.OstyHp <= 0)
+        {
+            // `ShouldCreatureBeRemovedFromCombatAfterDeath` is false for Osty, so a dead
+            // pet stays in combat to be re-summoned rather than being cleared away. The
+            // max is kept for the same reason -- see BoundPhylactery's every-turn summon.
+            state.OstyHp = 0;
         }
     }
 

@@ -129,6 +129,8 @@ public static class CombatEngine
         // reports: an X card is printed at zero and takes the rest of the bar inside its
         // own effect, so the printed cost would tell a relic the play was free.
         int energySpent = def.HasEnergyCostX ? state.Energy : energyToSpend;
+        // `SpendEnergy` dispatches AfterEnergySpent here, before the card resolves.
+        Effects.CardEffects.ApplyAfterEnergySpent(state, energySpent);
         state.Hand.RemoveAt(handIndex);
         if (def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.Smoggy) > 0)
         {
