@@ -406,7 +406,13 @@ public static class CombatFactory
 
         RelicEffects.ApplyBeforeOpeningHand(state, rng);
 
-        int handDraw = ApplyTurnOneDrawPileReorder(state.DrawPile, 5);
+        // Five, plus Ring of the Snake's two -- passed into the reorder rather than
+        // added after it, because the reorder is what decides WHICH cards the opening
+        // hand takes and it has to know how many that is.
+        int handDraw = ApplyTurnOneDrawPileReorder(
+            state.DrawPile,
+            5 + RelicEffects.ExtraOpeningHandDraw(state)
+        );
 
         for (int i = 0; i < handDraw && state.DrawPile.Count > 0; i++)
         {

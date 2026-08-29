@@ -78,6 +78,11 @@ public static class RelicEffects
     public const int BeatingRemnant = 11;
     public const int Girya = 100;
     public const int GamblingChip = 97;
+    // The four Starter relics, one per character. Every run of that character holds one.
+    public const int BoundPhylactery = 30;
+    public const int CrackedCore = 52;
+    public const int DivineRight = 64;
+    public const int RingOfTheSnake = 221;
     // The shop pool.
     public const int BeltBuckle = 14;
     public const int Cauldron = 42;
@@ -202,6 +207,23 @@ public static class RelicEffects
     }
 
     /// <summary>
+    /// `BoundPhylactery.AfterEnergyResetLate`: Osty is re-summoned at the start of every
+    /// turn EXCEPT the first, whose summon `BeforeCombatStart` already did.
+    ///
+    /// The game picks `AfterEnergyResetLate` deliberately and says why: anything that
+    /// asks whether Osty exists -- Friendship is the one it names -- has to run BEFORE
+    /// the summon, or the relic answers its own question. On a living Osty the summon is
+    /// `GainMaxHp`, so turn after turn it is +1 rather than a fresh pet.
+    /// </summary>
+    internal static void ApplyBoundPhylacteryTurnStart(CombatState state, int turnNumber)
+    {
+        if (turnNumber != 1 && HasRelic(state, BoundPhylactery))
+        {
+            CardEffects.SummonOsty(state, 1);
+        }
+    }
+
+    /// <summary>
     /// Relics whose combat counter means "spent for the rest of the run" rather than
     /// something a fresh combat resets. The run carries these in RunState.UsedUpRelics.
     /// </summary>
@@ -276,6 +298,32 @@ public static class RelicEffects
         if (state.IsEliteRoom && HasRelic(state, SlingOfCourage))
         {
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 2);
+        }
+
+        // The three Starter relics that open a combat with something. Every run of that
+        // character holds one, so these are the most-exercised relics in the game and
+        // were the last four with nothing behind them.
+        //
+        // `CrackedCore.BeforeSideTurnStart` guards on `TurnNumber <= 1`, so its Lightning
+        // is a combat-start channel and not a per-turn one.
+        if (HasRelic(state, CrackedCore))
+        {
+            CardEffects.ChannelOrb(state, OrbType.Lightning, rng);
+        }
+
+        // `DivineRight.AfterRoomEntered(CombatRoom)`: three Stars, and stars live on the
+        // PlayerCombatState -- so this is three at the top of every fight, not three that
+        // accumulate across the run.
+        if (HasRelic(state, DivineRight))
+        {
+            CardEffects.GainStars(state, 3);
+        }
+
+        // `BoundPhylactery.BeforeCombatStart` summons Osty at `SummonVar(1)` -- one HP,
+        // which is a body to soak one hit rather than a wall.
+        if (HasRelic(state, BoundPhylactery))
+        {
+            CardEffects.SummonOsty(state, 1);
         }
 
         RefreshBeltBuckle(state);
@@ -473,6 +521,17 @@ public static class RelicEffects
     /// </summary>
     public static int ExtraHandDraw(CombatState state) =>
         state.Relics.Any(relic => relic.DefId == Pocketwatch && relic.Counter > 0) ? 3 : 0;
+
+    /// <summary>
+    /// `RingOfTheSnake.ModifyHandDraw`: `CardsVar(2)` while `TurnNumber > 1` is false, so
+    /// it pays on turn ONE and never again -- Silent opens on seven cards.
+    ///
+    /// It rides the opening hand rather than `ExtraHandDraw` because that is where turn
+    /// one's draw happens: the turn-start path only ever runs from turn two, where this
+    /// relic is already spent.
+    /// </summary>
+    public static int ExtraOpeningHandDraw(CombatState state) =>
+        HasRelic(state, RingOfTheSnake) ? 2 : 0;
 
     /// <summary>
     /// The relics that pay out every Nth card of a type played in one turn. The game holds

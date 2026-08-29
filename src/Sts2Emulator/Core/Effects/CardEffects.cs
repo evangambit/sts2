@@ -3477,6 +3477,35 @@ public static class CardEffects
             && CombatEngine.AnyOtherSegmentAlive(state, target)
         );
 
+    /// <summary>
+    /// `PlayerCmd.GainStars`. Stars were gained by a bare `Stars +=` at five places and
+    /// the game gains them at one, which is exactly the shape the gold chokepoint was
+    /// built to fix: `AfterStarsGained` is a hook, and `+=` cannot dispatch one.
+    ///
+    /// `BlackHolePower` is its only listener, and it fires per GAIN rather than per star.
+    /// Spending stars is `LoseStars`, a different command, and dispatches nothing.
+    /// </summary>
+    public static void GainStars(CombatState state, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        state.Stars += amount;
+
+        int blackHole = BuffSystem.Get(state.PlayerBuffs, BuffId.BlackHole);
+        if (blackHole > 0)
+        {
+            // `CreatureCmd.Damage(..., ValueProp.Unpowered, ...)`, so Strength stays out
+            // of it -- and `HittableEnemies`, so a dead one is not hit again.
+            foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToList())
+            {
+                DealUnpoweredDamageToEnemy(state, enemy, blackHole);
+            }
+        }
+    }
+
     public static void GainGold(CombatState state, int amount)
     {
         amount = RelicEffects.ModifyGoldGained(state.Relics, amount);
@@ -4812,7 +4841,7 @@ public static class CardEffects
                 return true;
             case "GatherLight":
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                state.Stars += 1;
+                GainStars(state, 1);
                 return true;
             case "Glitterstream":
                 GainBlock(state, upgraded ? 13 : 11, rng);
@@ -4854,7 +4883,7 @@ public static class CardEffects
                     DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
                     if (hpBefore > 0 && target.Hp == 0)
                     {
-                        state.Stars += 5;
+                        GainStars(state, 5);
                     }
                 }
 
@@ -4890,11 +4919,11 @@ public static class CardEffects
                 return true;
             case "ShiningStrike":
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                state.Stars += 2;
+                GainStars(state, 2);
                 return true;
             case "SolarStrike":
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                state.Stars += upgraded ? 2 : 1;
+                GainStars(state, upgraded ? 2 : 1);
                 return true;
             case "Stardust":
             {
@@ -5439,6 +5468,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
                 break;
             case "BlackHole":
+                // Was falling through to a Strength body it has nothing to do with. The
+                // card applies `BlackHolePower` at 3/4, and the POWER is what fires: it
+                // hits every enemy for its amount each time the player gains stars.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.BlackHole, upgraded ? 4 : 3);
+                break;
             case "CallOfTheVoid":
             case "ConsumingShadow":
             case "Countdown":
@@ -5914,7 +5948,7 @@ public static class CardEffects
         }
     }
 
-    private static void SummonOsty(CombatState state, int amount)
+    internal static void SummonOsty(CombatState state, int amount)
     {
         if (amount <= 0)
         {

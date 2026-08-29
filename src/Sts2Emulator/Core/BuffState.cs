@@ -317,6 +317,14 @@ public enum BuffId
     /// the emulator granted the Focus without it.
     /// </summary>
     BiasedCognition,
+
+    /// <summary>
+    /// <c>BlackHolePower.AfterStarsGained</c>: damage to every enemy each time the player
+    /// GAINS stars -- Unpowered, so Strength does not raise it. Appended, like every other
+    /// member: <c>CombatObservation</c> writes <c>(int)buff.Id</c>, so an insertion
+    /// renumbers everything after it.
+    /// </summary>
+    BlackHole,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

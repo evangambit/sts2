@@ -114,6 +114,10 @@ READ: dict[str, tuple[str, str]] = {
         "d4f233f5adf2",
         "TWO vars: FocusPower(4m) +1, and BiasedCognitionPower(1m) which drains a Focus every turn",
     ),
+    "BlackHole": (
+        "21c730e6ad53",
+        "applies BlackHolePower 3/4; the POWER hits all enemies Unpowered on stars gained",
+    ),
     "Buffer": (
         "6d70e0ecc365",
         "PowerVar<BufferPower>(1m) +1; each charge zeroes one instance of HP loss",

@@ -155,13 +155,25 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "BoundPhylactery": (
+        "1974cb754224",
+        "Osty at 1 HP on BeforeCombatStart, then AfterEnergyResetLate every turn but 1",
+    ),
     "Cauldron": (
         "347be997cb85",
         "RewardsCmd.OfferCustom over FIVE potion rewards -- five screens, not five potions",
     ),
+    "CrackedCore": (
+        "ed1f64e1fb2a",
+        "one Lightning, TurnNumber <= 1 -- a combat-start channel, not a per-turn one",
+    ),
     "DingyRug": (
         "55c82644d092",
         "colourless pool CONCATENATED onto the character pool, not swapped for it",
+    ),
+    "DivineRight": (
+        "45a08da82257",
+        "3 Stars per CombatRoom entered; stars are per-combat, so 3 every fight",
     ),
     "DollysMirror": (
         "a4e8e0269cc0",
@@ -190,6 +202,10 @@ READ: dict[str, tuple[str, str]] = {
     "PunchDagger": (
         "820601153a7c",
         "one ATTACK enchanted Momentum 5; Momentum accumulates on play and pays what it has banked",
+    ),
+    "RingOfTheSnake": (
+        "6bf562b9a37f",
+        "ModifyHandDraw +2 while TurnNumber is 1 -- the OPENING hand, not turn-start",
     ),
     "RoyalStamp": (
         "b3d522ada300",

@@ -795,6 +795,9 @@ public static class CombatEngine
         state.CardsPlayedThisTurn = 0;
         state.ShivsPlayedThisTurn = 0;
 
+        // After the energy reset, which is where the game puts it and says why.
+        Effects.RelicEffects.ApplyBoundPhylacteryTurnStart(state, state.Turn + 1);
+
         Effects.CardEffects.TriggerAllOrbAfterTurnStartPassives(state, rng);
 
         int spinner = BuffSystem.Get(state.PlayerBuffs, BuffId.Spinner);

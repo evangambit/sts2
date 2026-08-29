@@ -2412,12 +2412,15 @@ no game running:
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
 
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
-  **167/296**, and 59 read. The shared pool's commons, uncommons and rares are all
-  modelled, and **the whole 22-relic Shop pool is done** — six went in as one reward-list
-  batch (E214) and Dragon Fruit closed it by giving gold a single chokepoint (E216).
-  Gold is now gained through `RunNonCombatEffects.GainGold` / `CardEffects.GainGold` and
-  never by a bare `Gold +=`; anything that has to react to a gain rather than resize it
-  hangs off there. The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  **171/296**, and 63 read. The shared pool's commons, uncommons and rares are all
+  modelled, the **whole 22-relic Shop pool is done** (E214, E216), and so are **all four
+  Starter relics** — one per character, held by every run of that character (E219).
+  Two resources now have single chokepoints, and the second was found by looking for the
+  first one's shape: gold through `RunNonCombatEffects.GainGold` / `CardEffects.GainGold`
+  (E216) and stars through `CardEffects.GainStars` (E220). Neither is written by a bare
+  `+=` any more; anything that has to REACT to a gain rather than resize it hangs off
+  there. **When a resource has an `After<X>Gained` hook, a `+=` cannot dispatch it** —
+  worth checking next for HP, block and energy. The run-side hooks it exposes are `ApplyAfterRoomEntered`
   (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
   `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
   looked like "room entered" turned out to be four different hooks. The
