@@ -551,6 +551,23 @@ public static class RunNonCombatEffects
                 state.TransformSelectedDeckIndex = -2;
                 return RunFollowUp.TransformSelect;
 
+            // `Orrery.AfterObtained` offers FIVE CardRewards at once -- a whole screen each,
+            // not five cards on one. The count field Prayer Wheel added carries them.
+            case Effects.RelicEffects.Orrery:
+                state.ExtraCardRewardsOwed += 5;
+                RunRewardGenerator.PopulateCardReward(state);
+                return RunFollowUp.PreRolledCardReward;
+
+            // `Cauldron.AfterObtained` offers five POTION rewards, through the same pending
+            // queue Tiny Mailbox's two go through.
+            case Effects.RelicEffects.Cauldron:
+                for (int i = 0; i < 5; i++)
+                {
+                    state.PendingPotionRewards.Add(0);
+                }
+
+                return RunFollowUp.BonusRelicRewards;
+
             // The five shop relics whose AfterObtained raises a DECK-SELECTION screen.
             // All five go through the same machinery Empty Cage and the events use; what
             // differs is the kind, the count and the enchantment they apply.

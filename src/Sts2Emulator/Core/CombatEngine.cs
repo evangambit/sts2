@@ -1699,6 +1699,14 @@ public static class CombatEngine
                 return ResumeOwedEndTurn(state, rng);
         }
 
+        // A screen that was owed while another stood follows it. Toolbox's pick is the one
+        // case: its screen is up at combat start where the Chip's would otherwise be.
+        if (state.PendingSelection is null && state.GamblingChipOwed)
+        {
+            state.GamblingChipOwed = false;
+            OpenGamblingChipScreen(state);
+        }
+
         return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
     }
 

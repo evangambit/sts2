@@ -2662,6 +2662,7 @@ public static class CardEffects
 
             state.PlayerHp -= hpLoss;
             state.PlayerHpLostThisTurn += hpLoss;
+            state.TookUnblockedDamage = true;
             // Beating Remnant measures its 20-per-turn cap against what actually landed.
             state.UnblockedDamageThisTurn += hpLoss;
             // Hook.AfterDamageReceived does not care who dealt the damage, so a card that
@@ -3636,6 +3637,40 @@ public static class CardEffects
     /// Noise use. The pool here is the IRONCLAD one, because the run engine is Ironclad
     /// only; a character-selectable run would need this to follow the character.
     /// </remarks>
+    /// <summary>
+    /// Toolbox's screen: three DISTINCT colourless cards, one of which joins the hand.
+    /// Rolled on the card-generation stream, as `CardFactory.GetDistinctForCombat` is.
+    /// </summary>
+    internal static void OpenToolboxSelection(CombatState state, Random rng)
+    {
+        var pool = GeneratedData.CardPools.Colorless;
+        if (pool.Length == 0)
+        {
+            return;
+        }
+
+        var stream = state.CardGenerationRng ?? rng;
+        var offer = new List<int>();
+        // "Distinct" is the game's word and it means no duplicates on the screen, not
+        // three tries that might collide.
+        for (int guard = 0; offer.Count < 3 && guard < 64; guard++)
+        {
+            int id = pool[stream.Next(pool.Length)];
+            if (!offer.Contains(id))
+            {
+                offer.Add(id);
+            }
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.GeneratedCardToHand,
+            Candidates = [.. Enumerable.Range(0, offer.Count)],
+            SourceCardDefId = RelicEffects.Toolbox,
+            GeneratedCandidates = offer,
+        };
+    }
+
     internal static void AddRandomPoolCardToHand(CombatState state, Random rng)
     {
         var pool = GeneratedData.CardPools.Ironclad;

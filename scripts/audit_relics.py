@@ -155,6 +155,14 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "Cauldron": (
+        "347be997cb85",
+        "RewardsCmd.OfferCustom over FIVE potion rewards -- five screens, not five potions",
+    ),
+    "DingyRug": (
+        "55c82644d092",
+        "colourless pool CONCATENATED onto the character pool, not swapped for it",
+    ),
     "DollysMirror": (
         "a4e8e0269cc0",
         "FromDeckGeneric filtered to c.Type != Quest, then RunState.CloneCard into the deck",
@@ -166,6 +174,14 @@ READ: dict[str, tuple[str, str]] = {
     "Kifuda": (
         "743acbcfa22c",
         "up to 3 cards enchanted Adroit 3; Adroit blocks its amount on play, any card type",
+    ),
+    "LavaLamp": (
+        "ff2048c78530",
+        "upgrade flag read ONCE for the whole screen; gated on unblocked damage taken",
+    ),
+    "Orrery": (
+        "8e30d4ed2a03",
+        "five whole CardReward screens via OfferCustom, not five cards on one screen",
     ),
     "PunchDagger": (
         "820601153a7c",
@@ -215,6 +231,10 @@ READ: dict[str, tuple[str, str]] = {
     "GamblingChip": (
         "d45aa622fe97",
         "AfterPlayerTurnStart on turn 1: a min-0 max-unbounded discard screen, then DiscardAndDraw of the whole list",
+    ),
+    "Toolbox": (
+        "b4af222a7789",
+        "3 DISTINCT colourless cards, choose 1 to hand, at combat start",
     ),
     "UnsettlingLamp": (
         "273f5adb0eba",
@@ -350,6 +370,10 @@ READ: dict[str, tuple[str, str]] = {
     "Vambrace": (
         "661865f6a216",
         "the FIRST card block of a combat is doubled; it latches only once an amount above zero lands",
+    ),
+    "WingCharm": (
+        "4cb68d06f63c",
+        "Swift on one option; Powers-only, so a screen with no Power gets nothing",
     ),
 }
 

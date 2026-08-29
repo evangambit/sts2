@@ -2412,10 +2412,12 @@ no game running:
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
 
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
-  **161/296**, and 52 read. The shared pool's commons, uncommons and rares are all
-  modelled, and 15 of its 22 Shop-rarity relics. The 7 left want a REWARD-LIST hook
-  (Cauldron, Orrery, Dingy Rug, Wing Charm, Lava Lamp, Toolbox) or a gold chokepoint
-  (Dragon Fruit) — see E210's note on why the latter is not a one-liner. The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  **166/296**, and 58 read. The shared pool's commons, uncommons and rares are all
+  modelled, and **21 of its 22 Shop-rarity relics** — the last six went in as one
+  reward-list batch (Cauldron, Orrery, Dingy Rug, Wing Charm, Lava Lamp, Toolbox; E214).
+  Only **Dragon Fruit** is left, and it wants a gold chokepoint spanning run `Gold` and
+  combat `PlayerGold` across 26 sites — see E210's note on why that is not a one-liner.
+  The run-side hooks it exposes are `ApplyAfterRoomEntered`
   (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
   `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
   looked like "room entered" turned out to be four different hooks. The

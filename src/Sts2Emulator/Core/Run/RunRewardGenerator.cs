@@ -730,16 +730,24 @@ public static class RunRewardGenerator
         Array.Clear(state.RewardCards);
         Array.Clear(state.RewardUpgraded);
         bool silverCrucibleUpgrade = ConsumeSilverCrucibleCardRewardUpgrade(state);
+        // `LavaLamp.TryModifyCardRewardOptionsLate` upgrades every upgradable option after
+        // a combat that landed no unblocked damage. Read once, like Silver Crucible's, so
+        // one condition decides the whole screen.
+        bool lavaLampUpgrade = Effects.RelicEffects.UpgradesCardRewards(state);
+
+        // `DingyRug.ModifyCardRewardCreationOptions` ADDS the colourless pool to the ones
+        // a reward rolls from rather than replacing them, so the character's own cards are
+        // still on offer alongside.
+        int[] pool = Effects.RelicEffects.AddsColourlessToCardRewards(state)
+            ? [.. IroncladRewardPool.ToArray(), .. GeneratedData.CardPools.Colorless.ToArray()]
+            : IroncladRewardPool.ToArray();
+
+        state.RewardEnchantIndex = -1;
         var blacklist = new List<int>();
         for (int i = 0; i < state.RewardCards.Length; i++)
         {
             int rarity = RollRewardCardRarity(state);
-            int cardId = ChooseCardWithRarity(
-                IroncladRewardPool,
-                rarity,
-                blacklist,
-                state.PlayerRng.Rewards
-            );
+            int cardId = ChooseCardWithRarity(pool, rarity, blacklist, state.PlayerRng.Rewards);
             state.RewardCards[i] = cardId;
             blacklist.Add(cardId);
             // The roll comes FIRST and unconditionally: CardFactory.CreateForReward calls
@@ -752,6 +760,7 @@ public static class RunRewardGenerator
             bool rolledUpgrade = RollCardUpgrade(state, cardId, state.PlayerRng.Rewards);
             state.RewardUpgraded[i] =
                 silverCrucibleUpgrade
+                || lavaLampUpgrade
                 || rolledUpgrade
                 // TryModifyCardRewardOptionsLate: an egg upgrades the option on the screen,
                 // not just the copy that reaches the deck.
@@ -759,6 +768,44 @@ public static class RunRewardGenerator
                     .UpgradedByEggs(state, new CardInstance(cardId, Upgraded: false))
                     .Upgraded;
         }
+
+        ApplyWingCharmToCardReward(state);
+    }
+
+    /// <summary>
+    /// `WingCharm.TryModifyCardRewardOptionsLate`: ONE option that can take Swift, rolled
+    /// on `Rng.Niche`, gains it. Runs after the options are settled because the game's
+    /// hook is a Late one — it modifies the screen, not the roll that filled it.
+    /// </summary>
+    private static void ApplyWingCharmToCardReward(RunState state)
+    {
+        if (!Effects.RelicEffects.EnchantsACardReward(state))
+        {
+            return;
+        }
+
+        var eligible = new List<int>();
+        for (int i = 0; i < state.RewardCards.Length; i++)
+        {
+            if (
+                state.RewardCards[i] != 0
+                && Enchantments.CanEnchant(
+                    new CardInstance(state.RewardCards[i], state.RewardUpgraded[i]),
+                    Enchantment.Swift
+                )
+            )
+            {
+                eligible.Add(i);
+            }
+        }
+
+        if (eligible.Count == 0)
+        {
+            return;
+        }
+
+        state.RewardEnchantIndex = eligible[state.Rng.Niche.NextInt(eligible.Count)];
+        state.RewardEnchantment = Enchantment.Swift;
     }
 
     private static bool ConsumeSilverCrucibleCardRewardUpgrade(RunState state)

@@ -267,6 +267,12 @@ public sealed class CombatState
     /// </summary>
     public int GamblingChipDiscarded;
 
+    /// <summary>
+    /// Whether Gambling Chip's screen is owed but could not be raised because another one
+    /// was already up. Only Toolbox does that, and only on turn one.
+    /// </summary>
+    public bool GamblingChipOwed;
+
     /// <summary>`BurningSticks`: whether its once-per-combat copy has been spent.</summary>
     public bool BurningSticksUsed;
 
@@ -278,6 +284,18 @@ public sealed class CombatState
 
     /// <summary>Whether this combat is an ELITE room's, which Sling of Courage reads.</summary>
     public bool IsEliteRoom;
+
+    /// <summary>
+    /// Whether the player has taken UNBLOCKED, blockable damage this combat — Lava Lamp's
+    /// condition.
+    /// </summary>
+    /// <remarks>
+    /// Set from `DealDamageToPlayer`, which is the blockable path: block is subtracted
+    /// there, so anything left is damage the player could have blocked and did not.
+    /// Unblockable HP loss goes through `LoseHp` instead and correctly does not count,
+    /// which is what the relic's `props.HasFlag(ValueProp.Unblockable)` check is for.
+    /// </remarks>
+    public bool TookUnblockedDamage;
 
     /// <summary>
     /// A once-per-combat enchantment on the card being played has just fired, so the copy

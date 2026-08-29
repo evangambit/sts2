@@ -153,6 +153,22 @@ public sealed class RunState
     /// more than one bit with Miniature Tent, which keeps the screen open.
     /// </summary>
     public int RestOptionsTaken;
+
+    /// <summary>
+    /// Whether the last combat dealt the player any UNBLOCKED, blockable damage — Lava
+    /// Lamp's condition. Unblockable damage is excluded, so a Burn does not spoil it.
+    /// </summary>
+    public bool TookUnblockedDamageThisCombat;
+
+    /// <summary>
+    /// Which card-reward option carries an enchantment, and which one. Wing Charm is the
+    /// only source; -1 is "none". The enchantment rides on the OPTION rather than on the
+    /// card that reaches the deck, because the game enchants the reward the player sees.
+    /// </summary>
+    public int RewardEnchantIndex = -1;
+
+    /// <inheritdoc cref="RewardEnchantIndex" />
+    public Enchantment RewardEnchantment;
     public int CurrentNodeType;
     public int[] NeowOptions = new int[3];
     public int[] RewardCards = new int[3];

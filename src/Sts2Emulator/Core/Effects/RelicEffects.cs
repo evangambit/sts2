@@ -80,7 +80,12 @@ public static class RelicEffects
     public const int GamblingChip = 97;
     // The shop pool.
     public const int BeltBuckle = 14;
+    public const int Cauldron = 42;
+    public const int DingyRug = 61;
     public const int DollysMirror = 65;
+    public const int LavaLamp = 131;
+    public const int Orrery = 174;
+    public const int WingCharm = 292;
     public const int GnarledHammer = 103;
     public const int Kifuda = 125;
     public const int PunchDagger = 210;
@@ -1091,6 +1096,31 @@ public static class RelicEffects
         turnNumber > 1 && HasRelic(state, Bread) ? maxEnergy + 1 : maxEnergy;
 
     /// <summary>
+    /// `LavaLamp.TryModifyCardRewardOptionsLate`: every upgradable option on the card
+    /// reward screen is upgraded, if the combat took no UNBLOCKED, blockable damage.
+    /// </summary>
+    /// <remarks>
+    /// Its `AfterDamageReceived` ignores `ValueProp.Unblockable` — so a Burn or a curse's
+    /// self-damage does not spoil it, and only damage the player could have blocked does.
+    /// </remarks>
+    public static bool UpgradesCardRewards(Run.RunState state) =>
+        Has(state.Relics, LavaLamp) && !state.TookUnblockedDamageThisCombat;
+
+    /// <summary>
+    /// `DingyRug.ModifyCardRewardCreationOptions`: the COLOURLESS pool is added to the
+    /// pools a card reward rolls from — added, not replaced, so the character's own cards
+    /// are still on offer.
+    /// </summary>
+    public static bool AddsColourlessToCardRewards(Run.RunState state) =>
+        Has(state.Relics, DingyRug);
+
+    /// <summary>
+    /// `WingCharm.TryModifyCardRewardOptionsLate`: ONE option on the screen, rolled on
+    /// `Rng.Niche` from those that can take it, gains the Swift enchantment.
+    /// </summary>
+    public static bool EnchantsACardReward(Run.RunState state) => Has(state.Relics, WingCharm);
+
+    /// <summary>
     /// `MysticLighter.ModifyDamageAdditive`: 9 more from a powered attack whose card
     /// carries ANY enchantment — `cardSource?.Enchantment == null` is the only filter.
     /// </summary>
@@ -1186,6 +1216,13 @@ public static class RelicEffects
     /// `GamblingChip.AfterPlayerTurnStart` on turn one: a discard screen with no upper
     /// bound, and the draw comes after.
     /// </summary>
+    /// <summary>
+    /// `Toolbox.BeforeHandDraw` on turn one: three distinct COLOURLESS cards offered, one
+    /// taken into hand. A choose-a-card screen, not a random grant.
+    /// </summary>
+    internal static bool OpensToolboxScreen(CombatState state, int turnNumber) =>
+        turnNumber <= 1 && HasRelic(state, Toolbox);
+
     internal static bool OpensGamblingChipScreen(CombatState state, int turnNumber) =>
         turnNumber <= 1 && state.Hand.Count > 0 && HasRelic(state, GamblingChip);
 

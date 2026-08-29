@@ -242,6 +242,9 @@ public sealed class RunEngine
         // with the combat.
         combat.IsEliteRoom = State.LastResolvedRoomType == RunConstants.NodeElite;
 
+        // `LavaLamp.AfterRoomEntered` clears its flag as the fight begins.
+        State.TookUnblockedDamageThisCombat = false;
+
         Effects.RelicEffects.RestoreUsedUpRelics(combat, State.UsedUpRelics);
 
         // The combat is handed relic IDS, so every instance starts with a zero counter --
@@ -1142,6 +1145,12 @@ public sealed class RunEngine
             reward = result.Reward;
             terminal = result.Terminal;
             State.LastPlayerWon = result.Terminal && result.PlayerWon;
+            // `LavaLamp.AfterDamageReceived` latches on the first UNBLOCKED, blockable hit.
+            // Read off the combat's own tally, which counts exactly that.
+            if (State.ActiveCombat is { } fight && fight.TookUnblockedDamage)
+            {
+                State.TookUnblockedDamageThisCombat = true;
+            }
             if (result.Terminal)
             {
                 SyncAfterCombat();
@@ -1583,7 +1592,16 @@ public sealed class RunEngine
 
             RunNonCombatEffects.AddCardToDeck(
                 State,
-                new CardInstance(cardId, State.RewardUpgraded[action])
+                new CardInstance(
+                    cardId,
+                    State.RewardUpgraded[action],
+                    // Wing Charm enchants the OPTION on the screen, so the enchantment
+                    // travels with the card the player picks -- and only with that one.
+                    Enchantment: action == State.RewardEnchantIndex
+                        ? State.RewardEnchantment
+                        : Enchantment.None,
+                    EnchantAmount: action == State.RewardEnchantIndex ? 1 : 0
+                )
             );
         }
         else if (action != RunConstants.RewardSkipAction)
