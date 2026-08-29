@@ -133,6 +133,17 @@
   python scripts/generate_card_capture_tests.py               # -> Cards/CardCaptures.g.cs
   ```
 
+  `--enchantment Sharp` stages an enchantment on the card first, through the mod's
+  `debug_enchant_card`. That exists for one question `decompiled/` cannot settle:
+  whether an enchantment reaches a card whose damage is a CALCULATION rather than a
+  printed number, and whether a multi-hit attack pays the bonus once or per hit.
+  Seventeen cards were changed on a reading of that, and only the game can confirm it:
+
+  ```
+  python scripts/capture_card.py --card BodySlam --enchantment Sharp --enchant-amount 5
+  python scripts/capture_card.py --card SwordBoomerang --enchantment Sharp --enchant-amount 5
+  ```
+
 - Events are captured the same way, through the mod's `debug_start_event`:
 
   ```

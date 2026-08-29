@@ -81,15 +81,25 @@ def stage_card(
     upgraded: bool,
     energy: int,
     timeout: float = 15.0,
+    enchantment: str | None = None,
+    enchant_amount: float = 1.0,
 ) -> tuple[dict[str, Any], int]:
     """Put the card in hand with enough energy to play it, and return (state, index).
 
     Both actions are fire-and-forget on the mod side -- the game resolves them on its
     own loop -- so this polls for the card rather than trusting the acknowledgement.
 
+    ``enchantment`` is the reason this script exists in its current form. What
+    ``decompiled/`` states plainly is that an enchantment is a damage modifier; what it
+    does NOT settle is whether one reaches a card whose damage is a CALCULATION rather
+    than a printed number, and whether a multi-hit attack pays the bonus once or per
+    hit. Seventeen cards in the emulator depend on the answer. Staging a Sharp Body Slam
+    and reading what the game reports is the only way to know.
+
     Raises:
-        RuntimeError: if the mod rejects either action, or the card never appears
-            (most often an STS2MCP build predating ``debug_add_card``).
+        RuntimeError: if the mod rejects any action, or the card never appears
+            (most often an STS2MCP build predating ``debug_add_card`` /
+            ``debug_enchant_card``).
 
     """
     result = trace_real_game.post_action(
@@ -110,6 +120,23 @@ def stage_card(
     )
     if result.get("status") != "ok":
         raise RuntimeError(f"debug_set_energy failed: {result}")
+
+    if enchantment is not None:
+        # debug_add_card puts the card on TOP of the hand, so index 0 is the one just
+        # staged. The mod refuses rather than throws when the enchantment does not fit
+        # the card, so a bad pairing surfaces here instead of taking the game down.
+        result = trace_real_game.post_action(
+            base_url,
+            {
+                "action": "debug_enchant_card",
+                "enchantment": enchantment,
+                "pile": "hand",
+                "index": 0,
+                "amount": enchant_amount,
+            },
+        )
+        if result.get("status") != "ok":
+            raise RuntimeError(f"debug_enchant_card failed: {result}")
 
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -247,6 +274,8 @@ def capture(
     target_index: int,
     reuse_run: bool,
     powers: list[str],
+    enchantment: str | None = None,
+    enchant_amount: float = 1.0,
 ) -> dict[str, Any]:
     if not reuse_run:
         wait_for_menu_options(base_url)
@@ -264,7 +293,14 @@ def capture(
         apply_powers(base_url, powers, start_real_game_run.get_state(base_url))
         trace_real_game.wait_for_state(base_url, 0.5)
 
-    before_state, index = stage_card(base_url, card, upgraded, energy)
+    before_state, index = stage_card(
+        base_url,
+        card,
+        upgraded,
+        energy,
+        enchantment=enchantment,
+        enchant_amount=enchant_amount,
+    )
     assert_playable(before_state, index, card)
     after_state = play_card(base_url, index, target_index, before_state)
 
@@ -317,16 +353,24 @@ def ordered_piles(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def default_out(card: str, upgraded: bool, encounter: str, powers: list[str]) -> Path:
+def default_out(
+    card: str,
+    upgraded: bool,
+    encounter: str,
+    powers: list[str],
+    enchantment: str | None = None,
+) -> Path:
     suffix = "-upgraded" if upgraded else ""
     # Staged powers change what the capture proves, so they belong in the filename --
-    # otherwise a Vulnerable capture silently overwrites the plain one.
+    # otherwise a Vulnerable capture silently overwrites the plain one. An enchantment
+    # is the same kind of claim and gets the same treatment.
     staged = (
         "-" + "-".join(p.split("=")[0].removesuffix("_POWER").lower() for p in powers)
         if powers
         else ""
     )
-    return FIXTURES / f"{card}{suffix}{staged}-{encounter}.json"
+    enchanted = f"-{enchantment.lower()}" if enchantment else ""
+    return FIXTURES / f"{card}{suffix}{staged}{enchanted}-{encounter}.json"
 
 
 def main() -> None:
@@ -337,6 +381,16 @@ def main() -> None:
         help="card entry id or class name, e.g. MoltenFist",
     )
     parser.add_argument("--upgraded", action="store_true")
+    parser.add_argument(
+        "--enchantment",
+        help="enchant the staged card first, e.g. Sharp -- needs a mod with debug_enchant_card",
+    )
+    parser.add_argument(
+        "--enchant-amount",
+        type=float,
+        default=1.0,
+        help="amount for --enchantment (ignored by enchantments that read their own vars)",
+    )
     parser.add_argument("--encounter", default=DEFAULT_ENCOUNTER)
     parser.add_argument("--seed", default=DEFAULT_SEED)
     parser.add_argument("--ascension", type=int, default=8)
@@ -379,9 +433,17 @@ def main() -> None:
         args.target,
         args.reuse_run,
         args.power,
+        enchantment=args.enchantment,
+        enchant_amount=args.enchant_amount,
     )
 
-    out = args.out or default_out(args.card, args.upgraded, args.encounter, args.power)
+    out = args.out or default_out(
+        args.card,
+        args.upgraded,
+        args.encounter,
+        args.power,
+        args.enchantment,
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {out.relative_to(REPO)}")
