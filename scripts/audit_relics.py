@@ -155,6 +155,43 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "BeltBuckle": (
+        "5e49a1df2ee2",
+        "Dexterity 2 while the belt is EMPTY, applied and REMOVED as potions come and go",
+    ),
+    "Bread": (
+        "8fb48b3c1227",
+        "ModifyMaxEnergy +1 from turn two, and LoseEnergy(2) at turn one's side-turn start",
+    ),
+    "BurningSticks": (
+        "fa843fb29415",
+        "the first SKILL exhausted each combat is cloned back into hand",
+    ),
+    "ChemicalX": ("fd59024bb334", "ModifyXValue +2 on every X-cost card"),
+    "GhostSeed": (
+        "47df9c72ce0a",
+        "every BASIC card tagged Strike or Defend gains Ethereal",
+    ),
+    "MiniatureTent": (
+        "146a42576172",
+        "ShouldDisableRemainingRestSiteOptions returns false, so one option does not end the visit",
+    ),
+    "MysticLighter": (
+        "12bd29d1afac",
+        "9 more damage from a powered attack whose card carries ANY enchantment",
+    ),
+    "RingingTriangle": (
+        "b900ec558dcd",
+        "ShouldFlush is false on turn ONE, so the opening hand is kept whole",
+    ),
+    "SlingOfCourage": (
+        "198e914c8f58",
+        "AfterRoomEntered(RoomType.Elite) applies StrengthPower(2)",
+    ),
+    "TheAbacus": (
+        "4f2984365e33",
+        "AfterShuffle gains BlockVar(6, Unpowered), every shuffle",
+    ),
     "GamblingChip": (
         "d45aa622fe97",
         "AfterPlayerTurnStart on turn 1: a min-0 max-unbounded discard screen, then DiscardAndDraw of the whole list",

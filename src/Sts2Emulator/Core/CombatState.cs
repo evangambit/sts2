@@ -267,6 +267,18 @@ public sealed class CombatState
     /// </summary>
     public int GamblingChipDiscarded;
 
+    /// <summary>`BurningSticks`: whether its once-per-combat copy has been spent.</summary>
+    public bool BurningSticksUsed;
+
+    /// <summary>
+    /// `BeltBuckle`: whether its Dexterity is currently applied. Tracked rather than
+    /// recomputed because the grant has to be REMOVED when the belt fills again.
+    /// </summary>
+    public bool BeltBuckleApplied;
+
+    /// <summary>Whether this combat is an ELITE room's, which Sling of Courage reads.</summary>
+    public bool IsEliteRoom;
+
     /// <summary>
     /// A once-per-combat enchantment on the card being played has just fired, so the copy
     /// that lands in its result pile must carry the spent flag. CardEffects takes the card

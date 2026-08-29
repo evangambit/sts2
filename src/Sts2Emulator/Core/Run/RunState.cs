@@ -137,6 +137,12 @@ public sealed class RunState
     /// generator and wiring it through the reward phase is its own change.
     /// </remarks>
     public int ExtraCardRewardsOwed;
+
+    /// <summary>
+    /// Rest options already taken on THIS visit, as a bitmask of action ids. Only ever
+    /// more than one bit with Miniature Tent, which keeps the screen open.
+    /// </summary>
+    public int RestOptionsTaken;
     public int CurrentNodeType;
     public int[] NeowOptions = new int[3];
     public int[] RewardCards = new int[3];

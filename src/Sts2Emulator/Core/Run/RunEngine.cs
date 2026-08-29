@@ -238,6 +238,10 @@ public sealed class RunEngine
             aiRng,
             State.CompletedCombatRoomsBeforeCurrent
         );
+        // Sling of Courage reads the ROOM, not the encounter, so the room type travels
+        // with the combat.
+        combat.IsEliteRoom = State.LastResolvedRoomType == RunConstants.NodeElite;
+
         Effects.RelicEffects.RestoreUsedUpRelics(combat, State.UsedUpRelics);
 
         // The combat is handed relic IDS, so every instance starts with a zero counter --
@@ -534,15 +538,25 @@ public sealed class RunEngine
                 break;
 
             case RunPhase.Rest:
-                SetMask(mask, RunConstants.RestHealAction);
-                if (State.Deck.Any(RunConstants.IsRunCardUpgradable))
+                if (!RestOptionSpent(RunConstants.RestHealAction))
+                {
+                    SetMask(mask, RunConstants.RestHealAction);
+                }
+
+                if (
+                    State.Deck.Any(RunConstants.IsRunCardUpgradable)
+                    && !RestOptionSpent(RunConstants.RestUpgradeAction)
+                )
                 {
                     SetMask(mask, RunConstants.RestUpgradeAction);
                 }
 
                 if (State.Relics.Any(relic => relic.DefId == RunConstants.RelicPaelsGrowth))
                 {
-                    SetMask(mask, RunConstants.RestCloneAction);
+                    if (!RestOptionSpent(RunConstants.RestCloneAction))
+                    {
+                        SetMask(mask, RunConstants.RestCloneAction);
+                    }
                 }
 
                 // `Girya.TryModifyRestSiteOptions` returns FALSE once three lifts are
@@ -551,7 +565,10 @@ public sealed class RunEngine
                 // relic model.
                 if (GiryaLiftsLeft() > 0)
                 {
-                    SetMask(mask, RunConstants.RestLiftAction);
+                    if (!RestOptionSpent(RunConstants.RestLiftAction))
+                    {
+                        SetMask(mask, RunConstants.RestLiftAction);
+                    }
                 }
 
                 // `Shovel.TryModifyRestSiteOptions` adds Dig unconditionally while the
@@ -559,7 +576,10 @@ public sealed class RunEngine
                 // pull does.
                 if (State.Relics.Any(relic => relic.DefId == Effects.RelicEffects.Shovel))
                 {
-                    SetMask(mask, RunConstants.RestDigAction);
+                    if (!RestOptionSpent(RunConstants.RestDigAction))
+                    {
+                        SetMask(mask, RunConstants.RestDigAction);
+                    }
                 }
 
                 SetMask(mask, RunConstants.RewardSkipAction);
@@ -1072,7 +1092,9 @@ public sealed class RunEngine
                         isRestSite: true,
                         cameFromUnknown: false
                     );
-                    State.Phase = RunPhase.Rest;
+                    State.RestOptionsTaken = 0;
+                    State.RestOptionsTaken = 0;
+            State.Phase = RunPhase.Rest;
                     break;
                 case RunConstants.NodeShop:
                     State.LastResolvedRoomType = RunConstants.NodeShop;
@@ -1948,10 +1970,31 @@ public sealed class RunEngine
     /// Girya's remaining lifts. `maxLifts` is 3 and `TimesLifted` lives on the relic; the
     /// emulator keeps it in the instance's Counter.
     /// </summary>
+    /// <summary>
+    /// Whether this rest visit has already taken that option. Only reachable with
+    /// Miniature Tent, which is the one relic that lets a visit take more than one.
+    /// </summary>
+    private bool RestOptionSpent(int action) => (State.RestOptionsTaken & (1 << action)) != 0;
+
     private int GiryaLiftsLeft()
     {
         int index = State.Relics.FindIndex(relic => relic.DefId == Effects.RelicEffects.Girya);
         return index < 0 ? 0 : Math.Max(0, 3 - State.Relics[index].Counter);
+    }
+
+    /// <summary>
+    /// Ends the rest visit after an option is taken — unless Miniature Tent is held, whose
+    /// `ShouldDisableRemainingRestSiteOptions` returns FALSE and leaves the rest of the
+    /// screen available. The option just taken is spent either way, so the Tent buys
+    /// another DIFFERENT option rather than the same one twice.
+    /// </summary>
+    private void FinishRestOption(int action)
+    {
+        State.RestOptionsTaken |= 1 << action;
+        if (!Effects.RelicEffects.KeepsRestSiteOpen(State))
+        {
+            State.RestResultPending = true;
+        }
     }
 
     private int StepRest(int action, out bool terminal)
@@ -1978,7 +2021,7 @@ public sealed class RunEngine
                 return 0;
             }
 
-            State.RestResultPending = true;
+            FinishRestOption(action);
             return 0;
         }
         if (action == RunConstants.RestLiftAction && GiryaLiftsLeft() > 0)
@@ -1990,7 +2033,7 @@ public sealed class RunEngine
             {
                 Counter = State.Relics[index].Counter + 1,
             };
-            State.RestResultPending = true;
+            FinishRestOption(action);
             return 0;
         }
 
@@ -2003,7 +2046,7 @@ public sealed class RunEngine
             // queue and the same END an elite reward pulls from, so a dug relic is one the
             // run will not offer again.
             RunNonCombatEffects.ApplyRelicPickup(State, RunRewardGenerator.NextRelic(State));
-            State.RestResultPending = true;
+            FinishRestOption(action);
             return 0;
         }
 
@@ -2022,7 +2065,7 @@ public sealed class RunEngine
                 RunNonCombatEffects.AddCardToDeck(State, card);
             }
 
-            State.RestResultPending = true;
+            FinishRestOption(action);
             return 0;
         }
 
@@ -4161,6 +4204,7 @@ public sealed class RunEngine
             State.Deck[action] = State.Deck[action] with { Upgraded = true };
             State.PendingRestUpgrade = false;
             State.RestResultPending = true;
+            State.RestOptionsTaken = 0;
             State.Phase = RunPhase.Rest;
             return 0;
         }

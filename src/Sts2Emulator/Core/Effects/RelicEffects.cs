@@ -78,6 +78,18 @@ public static class RelicEffects
     public const int BeatingRemnant = 11;
     public const int Girya = 100;
     public const int GamblingChip = 97;
+    // The shop pool.
+    public const int BeltBuckle = 14;
+    public const int Bread = 32;
+    public const int BurningSticks = 37;
+    public const int ChemicalX = 46;
+    public const int GhostSeed = 99;
+    public const int MiniatureTent = 154;
+    public const int MysticLighter = 160;
+    public const int RingingTriangle = 219;
+    public const int SlingOfCourage = 241;
+    public const int TheAbacus = 260;
+    public const int Toolbox = 267;
     public const int UnsettlingLamp = 278;
     public const int Shovel = 236;
     public const int Bellows = 13;
@@ -221,6 +233,16 @@ public static class RelicEffects
         // `Girya.AfterRoomEntered(CombatRoom)` -- Strength equal to the lifts spent on it.
         // Read off the relic INSTANCE's counter, which is why the run has to hand the
         // counter to the combat rather than just the relic's id.
+        // `SlingOfCourage.AfterRoomEntered(RoomType.Elite)`: 2 Strength on the fight that
+        // room starts. The relic's hook fires before the combat exists, so the room TYPE
+        // has to be handed over rather than looked up.
+        if (state.IsEliteRoom && HasRelic(state, SlingOfCourage))
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 2);
+        }
+
+        RefreshBeltBuckle(state);
+
         int girya = state.Relics.FirstOrDefault(relic => relic.DefId == Girya).Counter;
         if (girya > 0)
         {
@@ -1054,6 +1076,106 @@ public static class RelicEffects
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 5);
         }
     }
+
+    /// <summary>
+    /// `Bread.ModifyMaxEnergy`: +1 from turn TWO onwards. Turn one is excluded here and
+    /// then charged 2 at its side-turn start, which is the card's whole shape — a bad
+    /// first turn bought with a better every turn after.
+    /// </summary>
+    internal static int ModifyMaxEnergy(CombatState state, int maxEnergy, int turnNumber) =>
+        turnNumber > 1 && HasRelic(state, Bread) ? maxEnergy + 1 : maxEnergy;
+
+    /// <summary>
+    /// `MysticLighter.ModifyDamageAdditive`: 9 more from a powered attack whose card
+    /// carries ANY enchantment — `cardSource?.Enchantment == null` is the only filter.
+    /// </summary>
+    internal static int EnchantedCardDamageBonus(CombatState state) =>
+        HasRelic(state, MysticLighter) ? 9 : 0;
+
+    /// <summary>`ChemicalX.ModifyXValue`: every X-cost card resolves two higher.</summary>
+    internal static int ModifyXValue(CombatState state, int x) =>
+        HasRelic(state, ChemicalX) ? x + 2 : x;
+
+    /// <summary>
+    /// `RingingTriangle.ShouldFlush` returns false on turn ONE, so the opening hand is
+    /// retained whole rather than discarded.
+    /// </summary>
+    internal static bool SkipsHandFlush(CombatState state, int turnNumber) =>
+        turnNumber <= 1 && HasRelic(state, RingingTriangle);
+
+    /// <summary>
+    /// `MiniatureTent.ShouldDisableRemainingRestSiteOptions` returns false — so taking one
+    /// rest option leaves the others available instead of ending the visit.
+    /// </summary>
+    public static bool KeepsRestSiteOpen(Run.RunState state) => Has(state.Relics, MiniatureTent);
+
+    /// <summary>`TheAbacus.AfterShuffle`: 6 unpowered block every time the pile is shuffled.</summary>
+    internal static void ApplyAfterShuffle(CombatState state, Random? rng)
+    {
+        if (HasRelic(state, TheAbacus))
+        {
+            CardEffects.GainUnpoweredBlock(state, 6, rng);
+        }
+    }
+
+    /// <summary>
+    /// `BurningSticks.AfterCardExhausted`: the first SKILL exhausted each combat is copied
+    /// back into hand. Once per combat, and Skills only.
+    /// </summary>
+    internal static void ApplyBurningSticks(CombatState state, CardInstance card)
+    {
+        if (
+            state.BurningSticksUsed
+            || !HasRelic(state, BurningSticks)
+            || GeneratedData.Cards.Get(card.DefId).Type != CardType.Skill
+        )
+        {
+            return;
+        }
+
+        state.BurningSticksUsed = true;
+        if (state.Hand.Count < CardEffects.MaxCardsInHand)
+        {
+            state.Hand.Add(card with { FreeThisTurn = false });
+        }
+    }
+
+    /// <summary>
+    /// `BeltBuckle`: Dexterity 2 while the owner holds NO potions, applied and removed as
+    /// the belt fills and empties rather than checked once.
+    /// </summary>
+    /// <remarks>
+    /// Re-evaluated at every point the game hooks — combat start, and after a potion is
+    /// procured, used or discarded — because the whole design is that it toggles. A
+    /// once-at-combat-start reading would give the Dexterity to a player who then drinks
+    /// their way out of it, and withhold it from one who empties their belt mid-fight.
+    /// </remarks>
+    internal static void RefreshBeltBuckle(CombatState state)
+    {
+        if (!HasRelic(state, BeltBuckle))
+        {
+            return;
+        }
+
+        bool shouldHold = !state.PotionSlots.Any(slot => slot != 0);
+        if (shouldHold == state.BeltBuckleApplied)
+        {
+            return;
+        }
+
+        BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, shouldHold ? 2 : -2);
+        state.BeltBuckleApplied = shouldHold;
+    }
+
+    /// <summary>
+    /// `GhostSeed.AfterCardEnteredCombat`: every BASIC Strike or Defend gains Ethereal.
+    /// </summary>
+    /// <remarks>
+    /// The tag stand-in is the same one `Card.IsStrikeOrDefend` uses, and here the caveat
+    /// does not bite: the filter is `Rarity == Basic` AND tagged, and among Basic cards
+    /// the entry slug and the tag agree for every character.
+    /// </remarks>
+    internal static bool MakesBasicsEthereal(CombatState state) => HasRelic(state, GhostSeed);
 
     /// <summary>
     /// `GamblingChip.AfterPlayerTurnStart` on turn one: a discard screen with no upper

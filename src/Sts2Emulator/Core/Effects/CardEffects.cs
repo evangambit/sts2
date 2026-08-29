@@ -273,7 +273,7 @@ public static class CardEffects
 
             case CL.Volley: // X-cost, 10/14 damage X times to random enemies
             {
-                int x = state.Energy;
+                int x = RelicEffects.ModifyXValue(state, state.Energy);
                 state.Energy = 0;
                 DealDamageToRandomEnemiesMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
                 break;
@@ -533,7 +533,7 @@ public static class CardEffects
 
             case IC.Whirlwind: // X-cost, 5/8 dmg × (energy spent) to ALL enemies
             {
-                int x = state.Energy;
+                int x = RelicEffects.ModifyXValue(state, state.Energy);
                 state.Energy = 0;
                 DealDamageToAllMultiHit(state, Dmg(state, def, upgraded, card), x);
                 break;
@@ -1525,7 +1525,7 @@ public static class CardEffects
                 // which the emulator ignored entirely. And the Strength loss is a plain
                 // `StrengthPower(-powerAmount)`: PERMANENT, not the temporary one that is
                 // handed back at end of turn.
-                int x = state.Energy + (upgraded ? 1 : 0);
+                int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
                 ApplyEnemyDebuff(state, BuffId.Strength, -x, rng);
                 ApplyEnemyDebuff(state, BuffId.Weak, x, rng);
                 state.Energy = 0;
@@ -1741,7 +1741,7 @@ public static class CardEffects
 
             case SI.Skewer: // X-cost, 8/11 damage X times
             {
-                int x = state.Energy;
+                int x = RelicEffects.ModifyXValue(state, state.Energy);
                 state.Energy = 0;
                 DealDamageMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
                 break;
@@ -2527,6 +2527,7 @@ public static class CardEffects
 
     public static void ShuffleDiscardIntoDraw(CombatState state, Random rng)
     {
+        RelicEffects.ApplyAfterShuffle(state, rng);
         int count = state.DiscardPile.Count + state.DrawPile.Count;
         if (_shuffleCards is null || _shuffleCards.Length < count)
         {
@@ -2599,6 +2600,7 @@ public static class CardEffects
         state.ExhaustPile.Add(card with { FreeThisTurn = false });
         state.CardsExhaustedThisTurn++;
         RelicEffects.ApplyAfterCardExhausted(state, causedByEthereal, rng);
+        RelicEffects.ApplyBurningSticks(state, card);
         if (card.DefId == IC.DrumOfBattle)
         {
             state.Energy += card.Upgraded ? 3 : 2;
@@ -3948,7 +3950,7 @@ public static class CardEffects
                 return true;
             case "Tempest":
             {
-                int x = state.Energy + (upgraded ? 1 : 0);
+                int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
                 state.Energy = 0;
                 for (int i = 0; i < x; i++)
                 {
@@ -3959,7 +3961,7 @@ public static class CardEffects
             }
             case "MultiCast":
             {
-                int x = state.Energy + (upgraded ? 1 : 0);
+                int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
                 state.Energy = 0;
                 for (int i = 0; i < x; i++)
                 {
@@ -5531,6 +5533,12 @@ public static class CardEffects
         }
 
         damage += RelicEffects.CardDamageBonus(state, def, upgraded);
+        // `MysticLighter.ModifyDamageAdditive`: 9 more from a powered attack played off an
+        // ENCHANTED card, whatever the enchantment is.
+        if (card.Enchantment != Enchantment.None && def.Type == CardType.Attack)
+        {
+            damage += RelicEffects.EnchantedCardDamageBonus(state);
+        }
         damage *= RelicEffects.CardDamageMultiplier(state, def);
 
         return damage;

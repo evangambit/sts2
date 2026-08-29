@@ -55,8 +55,11 @@ public class GiryaTests
         {
             Assert.Contains(RunConstants.RestLiftAction, RestActions(engine));
             engine.Step(RunConstants.RestLiftAction, -1, out _, out _, out _);
+            // A NEW rest visit: each option can be taken once per visit now that Miniature
+            // Tent can keep the screen open, so the per-visit mask resets with the visit.
             engine.State.Phase = RunPhase.Rest;
             engine.State.RestResultPending = false;
+            engine.State.RestOptionsTaken = 0;
         }
 
         Assert.DoesNotContain(RunConstants.RestLiftAction, RestActions(engine));
@@ -159,8 +162,10 @@ public class ShovelTests
     {
         var engine = AtARestSite(RelicEffects.Shovel);
         engine.Step(RunConstants.RestDigAction, -1, out _, out _, out _);
+        // A new visit, for the same reason as above.
         engine.State.Phase = RunPhase.Rest;
         engine.State.RestResultPending = false;
+        engine.State.RestOptionsTaken = 0;
 
         Assert.Contains(RunConstants.RestDigAction, RestActions(engine));
     }

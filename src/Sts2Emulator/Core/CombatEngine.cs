@@ -513,14 +513,27 @@ public static class CombatEngine
         }
 
         // Move hand to discard, exhausting ethereal cards unless a retain-hand effect is active.
+        // `RingingTriangle.ShouldFlush` is false on turn one, so the whole opening hand
+        // is kept rather than discarded -- a stronger thing than RetainHand, which the
+        // loop below already honours, because it is not spent.
         int retainHand = BuffSystem.Get(state.PlayerBuffs, BuffId.RetainHand);
+        if (Effects.RelicEffects.SkipsHandFlush(state, state.Turn + 1))
+        {
+            retainHand = Math.Max(retainHand, 1);
+        }
         var nextHand = new List<CardInstance>();
         foreach (var card in state.Hand)
         {
             var def = GeneratedData.Cards.Get(card.DefId);
             // Three cards drop Ethereal when upgraded, not one: this was `def.Id == 159`,
             // which is Echo Form, and said nothing about Apparition or Void Form.
-            if (card.IsEthereal())
+            // `GhostSeed.AfterCardEnteredCombat` gives Ethereal to every BASIC Strike or
+            // Defend. Read here rather than baked onto the instance because the relic
+            // grants the KEYWORD, and a keyword the relic gave is one it takes back if the
+            // relic ever leaves.
+            bool ghostSeeded =
+                Effects.RelicEffects.MakesBasicsEthereal(state) && IsBasicStrikeOrDefend(card);
+            if (card.IsEthereal() || ghostSeeded)
             {
                 Effects.CardEffects.ExhaustCard(state, card, causedByEthereal: true, rng: rng);
                 continue;
@@ -776,7 +789,7 @@ public static class CombatEngine
         // carries instead of refilling.
         if (Effects.RelicEffects.ShouldResetEnergy(state, state.Turn + 1))
         {
-            state.Energy = EffectiveMaxEnergy(state);
+            state.Energy = EffectiveMaxEnergyForTurn(state, state.Turn + 1);
         }
         state.PlayerHpLostThisTurn = 0;
         state.CardsPlayedThisTurn = 0;
@@ -846,6 +859,7 @@ public static class CombatEngine
 
         Effects.RelicEffects.ApplyStartOfPlayerTurnShared(state, state.Turn + 1, rng);
         Effects.RelicEffects.ApplyStartOfPlayerTurnRares(state, state.Turn + 1, rng);
+        Effects.RelicEffects.RefreshBeltBuckle(state);
 
         int coolant = BuffSystem.Get(state.PlayerBuffs, BuffId.Coolant);
         if (coolant > 0)
@@ -1104,6 +1118,7 @@ public static class CombatEngine
         // `ReptileTrinket.AfterPotionUsed`, and it is AFTER: a potion that grants Strength
         // of its own has already landed, so the two stack rather than one replacing it.
         Effects.RelicEffects.ApplyAfterPotionUsed(state);
+        Effects.RelicEffects.RefreshBeltBuckle(state);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
@@ -1186,6 +1201,13 @@ public static class CombatEngine
         int sloth = BuffSystem.Get(state.PlayerBuffs, BuffId.Sloth);
         return sloth > 0 && state.CardsPlayedThisTurn >= sloth;
     }
+
+    /// <summary>
+    /// `ModifyMaxEnergy` from the relics that change it per TURN rather than per combat.
+    /// Bread is the only one; the flat +1 relics are folded into MaxEnergy at combat start.
+    /// </summary>
+    private static int EffectiveMaxEnergyForTurn(CombatState state, int turnNumber) =>
+        Effects.RelicEffects.ModifyMaxEnergy(state, EffectiveMaxEnergy(state), turnNumber);
 
     private static int EffectiveMaxEnergy(CombatState state)
     {
@@ -2448,6 +2470,21 @@ public static class CombatEngine
         state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
         state.StormBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Storm);
         state.SubroutineBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Subroutine);
+    }
+
+    /// <summary>
+    /// `GhostSeed.CanAffect`: Basic rarity AND tagged Strike or Defend. The entry-slug
+    /// stand-in for the tag is exact within Basic rarity, which is the only rarity this
+    /// asks about — the caveat `Card.IsStrikeOrDefend` carries is about cards ABOVE Basic.
+    /// </summary>
+    private static bool IsBasicStrikeOrDefend(CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return def.Rarity == CardRarity.Basic
+            && (
+                def.Entry.StartsWith("STRIKE_", StringComparison.Ordinal)
+                || def.Entry.StartsWith("DEFEND_", StringComparison.Ordinal)
+            );
     }
 
     private static void RemoveFirstMatchingCard(List<CardInstance> pile, CardInstance card)
