@@ -39,12 +39,15 @@ for name in sys.argv[1:]:
     print("=" * 78); print(f"### {name}")
     SKIP = ("using", "namespace", "///", "public sealed class", "ArgumentNullException",
             "HoverTip", "TriggerAnim", "WithHitFx", "Flash()", "SfxCmd", "PreviewCardPileAdd(")
+    # Indentation is PRESERVED. An earlier version stripped it, and Second Wind's block
+    # gain then read as sitting outside its foreach when it is inside -- per card exhausted
+    # rather than once. Nesting is exactly what these comparisons turn on, so braces stay
+    # too; only the vfx/anim/sfx lines are dropped.
     body = []
     for l in src.read_text().split("\n"):
-        s = l.strip()
-        if not s or s in ("{", "}") or any(k in l for k in SKIP):
+        if not l.strip() or any(k in l for k in SKIP):
             continue
-        body.append(s)
+        body.append(l.replace("\t", "    "))
     print("--- SOURCE"); print("\n".join(body))
     print("--- EMULATOR")
     hits = [i for i, l in enumerate(CE)

@@ -481,8 +481,9 @@ public static class CardEffects
                 {
                     if (state.Hand.Count < MaxCardsInHand)
                     {
-                        int defId = _ironcladPool[
-                            CardGenerationRng(state, rng).Next(_ironcladPool.Length)
+                        var ironcladPool = IroncladGenerationPool();
+                        int defId = ironcladPool[
+                            CardGenerationRng(state, rng).Next(ironcladPool.Count)
                         ];
                         state.Hand.Add(new CardInstance(defId, upgraded));
                     }
@@ -2302,7 +2303,8 @@ public static class CardEffects
 
         var selectionRng = CardSelectionRng(state, rng);
         int idx = selectionRng.Next(state.Hand.Count);
-        int defId = _ironcladPool[selectionRng.Next(_ironcladPool.Length)];
+        var ironcladPool = IroncladGenerationPool();
+        int defId = ironcladPool[selectionRng.Next(ironcladPool.Count)];
         state.Hand[idx] = new CardInstance(defId, false);
     }
 
@@ -6368,27 +6370,46 @@ public static class CardEffects
         state.Hand.Add(new CardInstance(options[0], false, FreeThisTurn: true));
     }
 
-    /// <summary>The Ironclad Attacks `FilterForCombat` leaves standing, in pool order.</summary>
-    private static List<int> InfernalBladePool()
+    /// <summary>
+    /// `CardFactory.FilterForCombat` over a character's pool: what an in-combat generator
+    /// is allowed to roll. Cards that are `CanBeGeneratedInCombat` and are not Basic,
+    /// Ancient or Event, in pool order.
+    /// </summary>
+    /// <remarks>
+    /// DERIVED, because both hand-written copies of this answer had drifted. Infernal
+    /// Blade's carried Break and lacked Iron Wave, which cancelled in count; the Ironclad
+    /// one carried Break, Corruption, Feed and Not Yet and lacked Cascade, which did NOT
+    /// cancel -- 83 entries where the game has 80, so every roll was over the wrong range
+    /// rather than occasionally landing on the wrong card.
+    /// </remarks>
+    private static List<int> CombatGenerationPool(ReadOnlySpan<int> pool, CardType? type = null)
     {
-        var pool = new List<int>();
-        foreach (int id in GeneratedData.CardPools.Ironclad)
+        var filtered = new List<int>();
+        foreach (int id in pool)
         {
             var candidate = GeneratedData.Cards.Get(id);
             if (
-                candidate.Type == CardType.Attack
+                (type is null || candidate.Type == type)
                 && candidate.Rarity != CardRarity.Basic
                 && candidate.Rarity != CardRarity.Ancient
                 && candidate.Rarity != CardRarity.Event
                 && candidate.CanBeGeneratedInCombat
             )
             {
-                pool.Add(id);
+                filtered.Add(id);
             }
         }
 
-        return pool;
+        return filtered;
     }
+
+    /// <summary>The Ironclad Attacks a combat generator may roll.</summary>
+    private static List<int> InfernalBladePool() =>
+        CombatGenerationPool(GeneratedData.CardPools.Ironclad, CardType.Attack);
+
+    /// <summary>Every Ironclad card a combat generator may roll.</summary>
+    private static List<int> IroncladGenerationPool() =>
+        CombatGenerationPool(GeneratedData.CardPools.Ironclad);
 
     private static void DealUnpoweredDamageToEnemy(EnemyState target, int amount) =>
         DealUnpoweredDamageToEnemy(null, target, amount, triggerThorns: false);
@@ -6734,7 +6755,8 @@ public static class CardEffects
                 break;
             }
 
-            int defId = _ironcladPool[CardGenerationRng(state, rng).Next(_ironcladPool.Length)];
+            var ironcladPool = IroncladGenerationPool();
+            int defId = ironcladPool[CardGenerationRng(state, rng).Next(ironcladPool.Count)];
             state.Hand.Add(new CardInstance(defId, true));
         }
     }
@@ -7096,92 +7118,6 @@ public static class CardEffects
         }
     }
 
-    private static readonly int[] _ironcladPool =
-    [
-        IC.Aggression,
-        IC.Anger,
-        IC.Armaments,
-        IC.AshenStrike,
-        IC.Barricade,
-        IC.BattleTrance,
-        IC.BloodWall,
-        IC.Bloodletting,
-        IC.Bludgeon,
-        IC.BodySlam,
-        IC.Brand,
-        IC.Break,
-        IC.Breakthrough,
-        IC.Bully,
-        IC.BurningPact,
-        IC.Cinder,
-        IC.Colossus,
-        IC.Conflagration,
-        IC.Corruption,
-        IC.CrimsonMantle,
-        IC.Cruelty,
-        IC.DarkEmbrace,
-        IC.DemonForm,
-        IC.DemonicShield,
-        IC.Dismantle,
-        IC.Dominate,
-        IC.DrumOfBattle,
-        IC.EvilEye,
-        IC.ExpectAFight,
-        IC.Feed,
-        IC.FeelNoPain,
-        IC.FiendFire,
-        IC.FightMe,
-        IC.FlameBarrier,
-        IC.ForgottenRitual,
-        IC.Havoc,
-        IC.Headbutt,
-        IC.Hellraiser,
-        IC.Hemokinesis,
-        IC.HowlFromBeyond,
-        IC.Impervious,
-        IC.InfernalBlade,
-        IC.Inferno,
-        IC.Inflame,
-        IC.IronWave,
-        IC.Juggernaut,
-        IC.Juggling,
-        IC.Mangle,
-        IC.MoltenFist,
-        IC.NotYet,
-        IC.Offering,
-        IC.OneTwoPunch,
-        IC.PactsEnd,
-        IC.PerfectedStrike,
-        IC.Pillage,
-        IC.PommelStrike,
-        IC.PrimalForce,
-        IC.Pyre,
-        IC.Rage,
-        IC.Rampage,
-        IC.Rupture,
-        IC.SecondWind,
-        IC.SetupStrike,
-        IC.ShrugItOff,
-        IC.Spite,
-        IC.Stampede,
-        IC.Stoke,
-        IC.Stomp,
-        IC.StoneArmor,
-        IC.SwordBoomerang,
-        IC.Tank,
-        IC.Taunt,
-        IC.TearAsunder,
-        IC.Thrash,
-        IC.Thunderclap,
-        IC.Tremble,
-        IC.TrueGrit,
-        IC.TwinStrike,
-        IC.Unmovable,
-        IC.Unrelenting,
-        IC.Uppercut,
-        IC.Vicious,
-        IC.Whirlwind,
-    ];
 
     private static readonly int[] _generatedClassPool =
     [

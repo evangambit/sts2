@@ -365,6 +365,14 @@ READ: dict[str, tuple[str, str]] = {
         "ModifyHandDraw + CardsVar(1); the upgrade adds Innate",
     ),
     "MeteorStrike": ("15edd7313998", "5-cost, 24 +6, and three Plasma"),
+    "Mangle": (
+        "9f81ad699e06",
+        "15/20 then ManglePower 10/15 -- a TemporaryStrengthPower, so it lapses",
+    ),
+    "MoltenFist": (
+        "74f5009156a4",
+        "10/14, then reapplies the target's CURRENT Vulnerable if it survives",
+    ),
     "MultiCast": (
         "f22064bd3dad",
         "X-cost; evokes the FRONT orb X times, dequeuing only on the last",
@@ -373,25 +381,85 @@ READ: dict[str, tuple[str, str]] = {
         "97601e8d4de7",
         "SummonVar(5)+3, then NecroMasteryPower -- not 10/13 and not Strength",
     ),
+    "NotYet": (
+        "d23576d6487a",
+        "heal 10/13; CanBeGeneratedInCombat is false",
+    ),
+    "Offering": (
+        "93f6ff753d2f",
+        "6 HP, 2 energy, draw 3/5 -- the upgrade raises the CARDS, not the energy",
+    ),
+    "OneTwoPunch": (
+        "a56222737af0",
+        "OneTwoPunchPower at the Attacks var, 1 upgrading by 1",
+    ),
     "Orbit": (
         "a367fc160548",
         "OrbitPower at EnergyVar(1); the upgrade cuts COST, not the amount",
+    ),
+    "PactsEnd": (
+        "53815c93c362",
+        "17/23 to all, and ONLY when the exhaust pile holds 3+",
+    ),
+    "PerfectedStrike": (
+        "c59e041d1155",
+        "6 + 2/3 per CardTag.Strike in AllCards -- which includes the PlayPile, so it counts itself",
+    ),
+    "Pillage": (
+        "bb4f6f43b2ee",
+        "6/9 then draw one at a time while the drawn card is an Attack and the hand has room",
+    ),
+    "PommelStrike": (
+        "18799fa29bff",
+        "9/10 and draw 1/2",
+    ),
+    "PrimalForce": (
+        "b118064bae03",
+        "every transformable Attack in hand becomes a GiantRock, upgraded if the card is",
+    ),
+    "Pyre": (
+        "06ccde0bb08d",
+        "PyrePower at EnergyVar(1), upgrading by 1",
     ),
     "Quadcast": (
         "152560e8ca9a",
         "RepeatVar(4) evokes of the FRONT orb, dequeuing on the last; the upgrade is the cost",
     ),
+    "Rage": (
+        "cfadf3ad1cf6",
+        "RagePower 3/5",
+    ),
     "Rainbow": (
         "8e12f5e76a5e",
         "one of Lightning, Frost, Dark; the upgrade removes Exhaust",
+    ),
+    "Rampage": (
+        "fe99395a9326",
+        "hits for its CURRENT damage then raises its own var by 5/9; growth lives on the copy",
     ),
     "Reboot": (
         "ec209d59f6ad",
         "hand into the draw pile, shuffle, then draw CardsVar(4) +2",
     ),
+    "Rupture": (
+        "165723b123ef",
+        "RupturePower 1/2",
+    ),
+    "SecondWind": (
+        "c58bbda5f4af",
+        "the block gain is INSIDE the exhaust loop -- per non-Attack exhausted, not once",
+    ),
+    "SetupStrike": (
+        "e5ed2377e470",
+        "7/9 then SetupStrikePower 2/3, which is a TemporaryStrengthPower",
+    ),
     "Shatter": (
         "31e3abaee6cc",
         "hits all, then evokes the front orb TWICE per orb held",
+    ),
+    "ShrugItOff": (
+        "cfb33fefb5a4",
+        "8/11 block and draw 1",
     ),
     "SignalBoost": (
         "ad8073ddb8d1",
@@ -402,6 +470,14 @@ READ: dict[str, tuple[str, str]] = {
         "the Glass orb on play is the WHOLE upgrade; the power channels one at each energy reset",
     ),
     "Supercritical": ("f347dfeb9219", "EnergyVar(4) +2, Exhaust"),
+    "Spite": (
+        "fec43030abca",
+        "5 damage, 2/3 hits if unblocked damage was received this turn",
+    ),
+    "Stoke": (
+        "43556213b53a",
+        "exhaust the hand, then that many cards from GetForCombat -- duplicates allowed",
+    ),
     "StrikeIronclad": (
         "67c1d4a0a5d2",
         "6 damage upgrading by 3",

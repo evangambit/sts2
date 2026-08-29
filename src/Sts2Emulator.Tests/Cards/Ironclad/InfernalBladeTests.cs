@@ -115,4 +115,33 @@ public class InfernalBladeTests
 
         Assert.True(stream.CallCount > 0, "the generation stream should have been drawn from");
     }
+
+    /// <summary>
+    /// Stoke rolls over the whole character pool rather than just its Attacks, and its
+    /// hand-written copy was the wrong SIZE — 83 where the game has 80 — so every roll was
+    /// over the wrong range rather than occasionally landing on the wrong card.
+    /// </summary>
+    [Fact]
+    public void StokesPoolExcludesWhatFilterForCombatDrops()
+    {
+        var seen = new HashSet<int>();
+        for (int seed = 0; seed < 400; seed++)
+        {
+            var fight = Fight.Hand(new CardInstance(IC.Stoke, false), new CardInstance(IC.Bludgeon, false))
+                .Energy(3);
+            fight.State.CardGenerationRng = new CountingRandom(seed);
+            fight.Play(0);
+            foreach (var c in fight.State.Hand)
+            {
+                seen.Add(c.DefId);
+            }
+        }
+
+        Assert.NotEmpty(seen);
+        // Ancient rarity, and two that declare CanBeGeneratedInCombat => false.
+        Assert.DoesNotContain(IC.Break, seen);
+        Assert.DoesNotContain(IC.Corruption, seen);
+        Assert.DoesNotContain(IC.Feed, seen);
+        Assert.DoesNotContain(IC.NotYet, seen);
+    }
 }

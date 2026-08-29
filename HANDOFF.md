@@ -2424,6 +2424,11 @@ no game running:
   whether it already has a test. Howl had both, and a duplicate implementation was
   written and reverted before its own existing test caught the double damage.
 
+  The tool USED to strip indentation, and Second Wind's block gain then read as
+  sitting outside its `foreach` when it is inside — one gain rather than one per
+  card exhausted. Nesting is what these comparisons turn on; it preserves
+  indentation now, and that near-miss is why.
+
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
   **171/296**, and 63 read. The shared pool's commons, uncommons and rares are all
   modelled, the **shared pool's 22 Shop-rarity relics are done** (E214, E216), and so are
