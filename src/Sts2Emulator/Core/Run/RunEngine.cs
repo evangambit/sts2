@@ -240,6 +240,24 @@ public sealed class RunEngine
         );
         Effects.RelicEffects.RestoreUsedUpRelics(combat, State.UsedUpRelics);
 
+        // The combat is handed relic IDS, so every instance starts with a zero counter --
+        // but a relic's counter is run state in the game, where the relic is one object
+        // for the whole run. Girya's lifts are the case that made this matter: a combat
+        // that cannot see them applies no Strength at all.
+        foreach (var runRelic in runRelics)
+        {
+            if (runRelic.Counter == 0)
+            {
+                continue;
+            }
+
+            int index = combat.Relics.FindIndex(relic => relic.DefId == runRelic.DefId);
+            if (index >= 0)
+            {
+                combat.Relics[index] = combat.Relics[index] with { Counter = runRelic.Counter };
+            }
+        }
+
         State.ActiveCombat = combat;
         State.ActiveCombatRng = combatRng;
         State.LastPlayerWon = false;
@@ -525,6 +543,23 @@ public sealed class RunEngine
                 if (State.Relics.Any(relic => relic.DefId == RunConstants.RelicPaelsGrowth))
                 {
                     SetMask(mask, RunConstants.RestCloneAction);
+                }
+
+                // `Girya.TryModifyRestSiteOptions` returns FALSE once three lifts are
+                // spent, so the option leaves the screen rather than becoming a no-op.
+                // The count is kept on the relic instance, as the game keeps it on the
+                // relic model.
+                if (GiryaLiftsLeft() > 0)
+                {
+                    SetMask(mask, RunConstants.RestLiftAction);
+                }
+
+                // `Shovel.TryModifyRestSiteOptions` adds Dig unconditionally while the
+                // relic is held; digging with an empty bag falls back the way any relic
+                // pull does.
+                if (State.Relics.Any(relic => relic.DefId == Effects.RelicEffects.Shovel))
+                {
+                    SetMask(mask, RunConstants.RestDigAction);
                 }
 
                 SetMask(mask, RunConstants.RewardSkipAction);
@@ -1909,6 +1944,16 @@ public sealed class RunEngine
         return 0;
     }
 
+    /// <summary>
+    /// Girya's remaining lifts. `maxLifts` is 3 and `TimesLifted` lives on the relic; the
+    /// emulator keeps it in the instance's Counter.
+    /// </summary>
+    private int GiryaLiftsLeft()
+    {
+        int index = State.Relics.FindIndex(relic => relic.DefId == Effects.RelicEffects.Girya);
+        return index < 0 ? 0 : Math.Max(0, 3 - State.Relics[index].Counter);
+    }
+
     private int StepRest(int action, out bool terminal)
     {
         terminal = false;
@@ -1936,6 +1981,32 @@ public sealed class RunEngine
             State.RestResultPending = true;
             return 0;
         }
+        if (action == RunConstants.RestLiftAction && GiryaLiftsLeft() > 0)
+        {
+            int index = State.Relics.FindIndex(relic =>
+                relic.DefId == Effects.RelicEffects.Girya
+            );
+            State.Relics[index] = State.Relics[index] with
+            {
+                Counter = State.Relics[index].Counter + 1,
+            };
+            State.RestResultPending = true;
+            return 0;
+        }
+
+        if (
+            action == RunConstants.RestDigAction
+            && State.Relics.Any(relic => relic.DefId == Effects.RelicEffects.Shovel)
+        )
+        {
+            // `RelicCmd.Obtain(RelicFactory.PullNextRelicFromFront(owner))` -- the same
+            // queue and the same END an elite reward pulls from, so a dug relic is one the
+            // run will not offer again.
+            RunNonCombatEffects.ApplyRelicPickup(State, RunRewardGenerator.NextRelic(State));
+            State.RestResultPending = true;
+            return 0;
+        }
+
         if (
             action == RunConstants.RestCloneAction
             && State.Relics.Any(relic => relic.DefId == RunConstants.RelicPaelsGrowth)

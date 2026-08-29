@@ -76,6 +76,8 @@ public static class RelicEffects
     public const int AmethystAubergine = 3;
     // The shared pool's rares.
     public const int BeatingRemnant = 11;
+    public const int Girya = 100;
+    public const int Shovel = 236;
     public const int Bellows = 13;
     public const int Chandelier = 44;
     public const int GamePiece = 98;
@@ -213,6 +215,15 @@ public static class RelicEffects
         int extraEnergy = state.Relics.Count(relic => MaxEnergyRelics.Contains(relic.DefId));
         state.MaxEnergy += extraEnergy;
         state.Energy += extraEnergy;
+
+        // `Girya.AfterRoomEntered(CombatRoom)` -- Strength equal to the lifts spent on it.
+        // Read off the relic INSTANCE's counter, which is why the run has to hand the
+        // counter to the combat rather than just the relic's id.
+        int girya = state.Relics.FirstOrDefault(relic => relic.DefId == Girya).Counter;
+        if (girya > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, girya);
+        }
 
         if (HasRelic(state, PhilosophersStone))
         {
@@ -1040,6 +1051,17 @@ public static class RelicEffects
         {
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 5);
         }
+    }
+
+    /// <summary>
+    /// `Girya.AfterRoomEntered(CombatRoom)`: Strength equal to the number of times it has
+    /// been LIFTED, at the start of every combat. Zero lifts is zero Strength, so a Girya
+    /// nobody rested with does nothing at all.
+    /// </summary>
+    public static int GiryaStrength(Run.RunState state)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == Girya);
+        return index < 0 ? 0 : state.Relics[index].Counter;
     }
 
     /// <summary>

@@ -155,6 +155,14 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "Girya": (
+        "172ad3bb2bdb",
+        "TryModifyRestSiteOptions offers LIFT while TimesLifted < 3; AfterRoomEntered(CombatRoom) applies that much Strength",
+    ),
+    "Shovel": (
+        "c2680c695562",
+        "TryModifyRestSiteOptions offers DIG unconditionally; it pulls the next relic from the FRONT of the bag",
+    ),
     "BeatingRemnant": (
         "0071ec697a57",
         "caps the TURN's total unblocked damage at 20, not one hit; the running total resets at side-turn start",
