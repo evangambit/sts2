@@ -80,6 +80,11 @@ public static class RelicEffects
     public const int GamblingChip = 97;
     // The shop pool.
     public const int BeltBuckle = 14;
+    public const int DollysMirror = 65;
+    public const int GnarledHammer = 103;
+    public const int Kifuda = 125;
+    public const int PunchDagger = 210;
+    public const int RoyalStamp = 224;
     public const int Bread = 32;
     public const int BurningSticks = 37;
     public const int ChemicalX = 46;

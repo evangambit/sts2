@@ -2412,11 +2412,10 @@ no game running:
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
 
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
-  **156/296**, and 47 read. The shared pool's commons, uncommons and rares are all
-  modelled, and 10 of its 22 Shop-rarity relics. The 12 left there all want machinery
-  rather than a body: a deck-selection screen at PICKUP (Dolly's Mirror, Gnarled Hammer,
-  Kifuda, Punch Dagger, Royal Stamp), a reward-list hook (Cauldron, Orrery, Dingy Rug,
-  Wing Charm, Lava Lamp, Toolbox), or a gold chokepoint (Dragon Fruit). The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  **161/296**, and 52 read. The shared pool's commons, uncommons and rares are all
+  modelled, and 15 of its 22 Shop-rarity relics. The 7 left want a REWARD-LIST hook
+  (Cauldron, Orrery, Dingy Rug, Wing Charm, Lava Lamp, Toolbox) or a gold chokepoint
+  (Dragon Fruit) — see E210's note on why the latter is not a one-liner. The run-side hooks it exposes are `ApplyAfterRoomEntered`
   (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
   `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
   looked like "room entered" turned out to be four different hooks. The

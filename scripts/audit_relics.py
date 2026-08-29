@@ -155,6 +155,26 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "DollysMirror": (
+        "a4e8e0269cc0",
+        "FromDeckGeneric filtered to c.Type != Quest, then RunState.CloneCard into the deck",
+    ),
+    "GnarledHammer": (
+        "4cc92a15551a",
+        "CardSelectorPrefs(prompt, 0, 3) then Sharp at 3 -- its own amount, not Self-Help Book's 2",
+    ),
+    "Kifuda": (
+        "743acbcfa22c",
+        "up to 3 cards enchanted Adroit 3; Adroit blocks its amount on play, any card type",
+    ),
+    "PunchDagger": (
+        "820601153a7c",
+        "one ATTACK enchanted Momentum 5; Momentum accumulates on play and pays what it has banked",
+    ),
+    "RoyalStamp": (
+        "b3d522ada300",
+        "one Attack or Skill enchanted RoyallyApproved, whose OnEnchant adds Innate AND Retain",
+    ),
     "BeltBuckle": (
         "5e49a1df2ee2",
         "Dexterity 2 while the belt is EMPTY, applied and REMOVED as potions come and go",

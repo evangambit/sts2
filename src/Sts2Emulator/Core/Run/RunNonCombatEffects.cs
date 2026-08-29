@@ -140,7 +140,11 @@ public static class RunNonCombatEffects
     private static bool HasRelic(RunState state, int relicId) =>
         state.Relics.Any(relic => relic.DefId == relicId);
 
-    public static RunFollowUp ApplyRelicPickup(RunState state, int relicId)
+    public static RunFollowUp ApplyRelicPickup(
+        RunState state,
+        int relicId,
+        SelectionReturn returnTo = SelectionReturn.Map
+    )
     {
         if (state.Relics.All(relic => relic.DefId != relicId))
         {
@@ -546,6 +550,67 @@ public static class RunNonCombatEffects
             case RunConstants.RelicEmptyCage:
                 state.TransformSelectedDeckIndex = -2;
                 return RunFollowUp.TransformSelect;
+
+            // The five shop relics whose AfterObtained raises a DECK-SELECTION screen.
+            // All five go through the same machinery Empty Cage and the events use; what
+            // differs is the kind, the count and the enchantment they apply.
+            case Effects.RelicEffects.DollysMirror:
+                return BeginDeckSelection(state, DeckSelection.Duplicate, 0, returnTo: returnTo)
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+
+            case Effects.RelicEffects.GnarledHammer:
+                // `CardSelectorPrefs(prompt, 0, 3)` -- up to THREE cards, and Sharp at 3
+                // rather than the 2 Self-Help Book applies.
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.Sharp,
+                    count: 3,
+                    enchantAmount: 3,
+                    returnTo: returnTo
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+
+            case Effects.RelicEffects.Kifuda:
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.Adroit,
+                    count: 3,
+                    enchantAmount: 3,
+                    returnTo: returnTo
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+
+            case Effects.RelicEffects.PunchDagger:
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.Momentum,
+                    enchantAmount: 5,
+                    returnTo: returnTo
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+
+            case Effects.RelicEffects.RoyalStamp:
+                // The game shuffles the eligible cards on Rng.Niche before offering them,
+                // which changes the ORDER of the screen and not what is on it. The
+                // emulator offers the deck in deck order, so the shuffle is not modelled
+                // and no stream draw is spent -- recorded rather than faked, because a
+                // wrong draw on Niche desynchronises far more than a screen's ordering.
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.RoyallyApproved,
+                    enchantAmount: 1,
+                    returnTo: returnTo
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
         }
 
         return RunFollowUp.None;
@@ -991,6 +1056,9 @@ public static class RunNonCombatEffects
             DeckSelection.TransformTo => GeneratedData.Cards.Get(card.DefId).Rarity
                 == CardRarity.Basic,
             DeckSelection.Upgrade => RunConstants.IsRunCardUpgradable(card),
+            // Dolly's Mirror excludes only Quest cards; a curse is a legal copy.
+            DeckSelection.Duplicate => GeneratedData.Cards.Get(card.DefId).Type
+                != CardType.Quest,
             // `FromDeckForRemoval` filters on `c.IsRemovable && filter(c)`, so the Eternal
             // check applies to this one too.
             DeckSelection.RemoveUpgradable => RunConstants.IsRunCardUpgradable(card)
@@ -1030,6 +1098,9 @@ public static class RunNonCombatEffects
                             ? state.PendingSelectionEnchantAmount
                             : SelfHelpBookAmount((Enchantment)state.PendingSelectionArg),
                 };
+                break;
+            case DeckSelection.Duplicate:
+                AddCardToDeck(state, card);
                 break;
             case DeckSelection.TransformTo:
                 state.Deck[deckIndex] = new CardInstance(

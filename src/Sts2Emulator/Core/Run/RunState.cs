@@ -31,6 +31,16 @@ public enum DeckSelection
     /// nothing at all where a plain removal would offer everything.
     /// </remarks>
     RemoveUpgradable,
+
+    /// <summary>
+    /// Dolly's Mirror: the chosen card is COPIED into the deck, not changed.
+    /// </summary>
+    /// <remarks>
+    /// `CardSelectCmd.FromDeckGeneric` with `c.Type != CardType.Quest` — a wider filter
+    /// than any other selection here, because duplicating a curse is a legal thing to want
+    /// and only Quest cards are excluded.
+    /// </remarks>
+    Duplicate,
 }
 
 /// <summary>One act's generated rooms, as <c>ActModel._rooms</c> holds them.</summary>

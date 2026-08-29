@@ -1253,6 +1253,17 @@ public static class CombatEngine
                 // Unblockable, unpowered, and every play -- not once.
                 Effects.CardEffects.DealDamageToPlayer(state, 2);
                 break;
+            case Enchantment.Adroit:
+                // `RecalculateValues` sets a BlockVar from the amount, so the block IS the
+                // amount -- and unlike Nimble it is not restricted to Skills.
+                Effects.CardEffects.GainBlock(state, card.EnchantAmount, rng);
+                break;
+            case Enchantment.Momentum:
+                // `OnPlay` adds the amount to a running bonus the CARD carries. The damage
+                // is read before this runs, which is why the first play of a freshly
+                // enchanted card gets nothing.
+                state.PlayedCardBonusDamage += card.EnchantAmount;
+                break;
             case Enchantment.Inky:
                 // Inky.OnPlay applies Weak 1 to what the card hit. It is the only modelled
                 // enchantment whose payload lands on an ENEMY rather than on its owner.

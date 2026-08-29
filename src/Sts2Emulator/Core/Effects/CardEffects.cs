@@ -5516,6 +5516,15 @@ public static class CardEffects
             damage += card.EnchantAmount;
         }
 
+        // Momentum.EnchantDamageAdditive pays the bonus the card has ACCUMULATED. It rides
+        // on BonusDamage, the field Rampage's growth already uses -- both are "damage this
+        // copy has permanently gained" -- but it is added HERE rather than at a call site,
+        // because Momentum can be on any Attack and Rampage is one card.
+        if (card.Enchantment == Enchantment.Momentum)
+        {
+            damage += card.BonusDamage;
+        }
+
         // Inky.EnchantDamageAdditive pays its own `DamageVar(1m)` rather than the amount
         // it was applied at -- the enchantment declares `ShowAmount => false` because its
         // numbers are vars on itself. So an Inky Shiv is 5, and would still be 5 if
