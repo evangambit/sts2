@@ -77,6 +77,8 @@ public static class RelicEffects
     // The shared pool's rares.
     public const int BeatingRemnant = 11;
     public const int Girya = 100;
+    public const int GamblingChip = 97;
+    public const int UnsettlingLamp = 278;
     public const int Shovel = 236;
     public const int Bellows = 13;
     public const int Chandelier = 44;
@@ -1050,6 +1052,61 @@ public static class RelicEffects
         if (cameFromUnknown && Has(state.Relics, Planisphere))
         {
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 5);
+        }
+    }
+
+    /// <summary>
+    /// `GamblingChip.AfterPlayerTurnStart` on turn one: a discard screen with no upper
+    /// bound, and the draw comes after.
+    /// </summary>
+    internal static bool OpensGamblingChipScreen(CombatState state, int turnNumber) =>
+        turnNumber <= 1 && state.Hand.Count > 0 && HasRelic(state, GamblingChip);
+
+    /// <summary>
+    /// `UnsettlingLamp`: the FIRST card of a combat that lands a debuff on an enemy has
+    /// its debuffs doubled — all of them, for that one card.
+    /// </summary>
+    /// <remarks>
+    /// The game latches in `BeforePowerAmountChanged` on the first qualifying application
+    /// and unlatches in `AfterCardPlayed` for that same card, so a card applying three
+    /// debuffs gets all three doubled and the next card gets none. Modelled with a
+    /// per-combat spent flag plus a per-card latch for the same reason.
+    ///
+    /// The game also excludes debuffs whose source is a TEMPORARY power already doubled
+    /// (`HasDoubledTemporaryPowerSource`), which stops the internally-applied Strength of
+    /// a TemporaryStrengthPower being doubled twice. The emulator applies those two as one
+    /// pair through `ApplyTemporaryStrengthDownTo`, so the double lands once either way.
+    /// </remarks>
+    internal static int ModifyEnemyDebuffMagnitude(CombatState state, BuffId id, int magnitude)
+    {
+        if (magnitude == 0 || state.UnsettlingLampSpent || !HasRelic(state, UnsettlingLamp))
+        {
+            return magnitude;
+        }
+
+        // `power.GetTypeForAmount(amount) != PowerType.Debuff` -- the SIGN decides for a
+        // power that reads both ways. Strength down is a negative magnitude and is very
+        // much a debuff; Weak and Vulnerable are positive ones. Reading only positives
+        // doubled Malaise's Weak and left its Strength loss alone, which is half a card.
+        bool isDebuff = id == BuffId.Strength ? magnitude < 0 : magnitude > 0;
+        if (!isDebuff)
+        {
+            return magnitude;
+        }
+
+        state.UnsettlingLampCard = true;
+        return magnitude * 2;
+    }
+
+    /// <summary>
+    /// `AfterCardPlayed` on the latched card: the doubling is finished for the combat.
+    /// </summary>
+    internal static void FinishUnsettlingLampCard(CombatState state)
+    {
+        if (state.UnsettlingLampCard)
+        {
+            state.UnsettlingLampCard = false;
+            state.UnsettlingLampSpent = true;
         }
     }
 

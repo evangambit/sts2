@@ -371,6 +371,8 @@ public static class CombatEngine
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterCardPlayedRares(state, def, rng);
+        // The Lamp's latch closes when the card that claimed it finishes resolving.
+        Effects.RelicEffects.FinishUnsettlingLampCard(state);
         Effects.RelicEffects.ApplyAfterHandEmptied(state, rng);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
@@ -1449,7 +1451,14 @@ public static class CombatEngine
         {
             // Declining answers the whole screen: the game's minimum is zero, not "at
             // least one per reopen", so keeping nothing ends it rather than asking again.
+            var declined = selection.Kind;
             state.PendingSelection = null;
+            if (declined == CardSelectionKind.DiscardAnyThenDraw)
+            {
+                CloseGamblingChipScreen(state, rng);
+                return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
+            }
+
             return ResumeOwedEndTurn(state, rng);
         }
 
@@ -1508,6 +1517,22 @@ public static class CombatEngine
                     var card = state.DrawPile[index];
                     state.RemoveFromDrawPileAt(index);
                     state.Hand.Add(card);
+                }
+
+                break;
+
+            case CardSelectionKind.DiscardAnyThenDraw:
+                if (index < state.Hand.Count)
+                {
+                    var pitched = state.Hand[index];
+                    state.Hand.RemoveAt(index);
+                    Effects.CardEffects.DiscardMovedCards(state, [pitched]);
+                    state.GamblingChipDiscarded++;
+                }
+
+                if (!OpenGamblingChipScreen(state))
+                {
+                    CloseGamblingChipScreen(state, rng);
                 }
 
                 break;
@@ -2335,6 +2360,45 @@ public static class CombatEngine
     /// `!card.ShouldRetainThisTurn` — a card that will survive the flush anyway is not
     /// worth spending a pick on and the game does not offer it.
     /// </summary>
+    /// <summary>Combat setup's entry to the same screen.</summary>
+    internal static void OpenGamblingChipScreenForCombatStart(CombatState state) =>
+        OpenGamblingChipScreen(state);
+
+    /// <summary>
+    /// Raises Gambling Chip's screen if there is anything left to offer, and reports
+    /// whether it did. Reopened after every pick, because the count has no upper bound.
+    /// </summary>
+    private static bool OpenGamblingChipScreen(CombatState state)
+    {
+        if (state.Hand.Count == 0)
+        {
+            return false;
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.DiscardAnyThenDraw,
+            Candidates = [.. Enumerable.Range(0, state.Hand.Count)],
+            SourceCardDefId = 0,
+            Skippable = true,
+        };
+        return true;
+    }
+
+    /// <summary>
+    /// `CardCmd.DiscardAndDraw(list, list.Count)` — the draw is for as many as were
+    /// pitched, and it happens once, when the screen closes.
+    /// </summary>
+    private static void CloseGamblingChipScreen(CombatState state, Random rng)
+    {
+        int drawn = state.GamblingChipDiscarded;
+        state.GamblingChipDiscarded = 0;
+        if (drawn > 0)
+        {
+            Effects.CardEffects.DrawCards(state, drawn, rng);
+        }
+    }
+
     private static bool OpenRetainSelection(CombatState state)
     {
         int picks = BuffSystem.Get(state.PlayerBuffs, BuffId.WellLaidPlans);

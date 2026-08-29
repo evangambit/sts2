@@ -422,6 +422,15 @@ public static class CombatFactory
         // turn-start seam, which only runs from turn two.
         RelicEffects.ApplyStartOfPlayerTurnRares(state, 1, rng);
 
+        // `GamblingChip.AfterPlayerTurnStart` on turn one. Raised last of the turn-one
+        // hooks so Bellows has already upgraded the hand and the Puzzlebox has added its
+        // card -- both are things the player would want to see before choosing what to
+        // pitch, and the game's ordering gives them the same way.
+        if (RelicEffects.OpensGamblingChipScreen(state, 1))
+        {
+            CombatEngine.OpenGamblingChipScreenForCombatStart(state);
+        }
+
         RelicEffects.ApplyCombatStart(state, rng);
         RelicEffects.ApplyStartOfPlayerTurn(state, rng);
 

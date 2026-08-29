@@ -2412,7 +2412,8 @@ no game running:
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
 
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
-  **143/296**, and 35 read. The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  **145/296**, and 37 read. The shared pool's COMMONS, UNCOMMONS and RARES are now all
+  modelled; what is left there is 22 Shop-rarity, 2 Ancient and 1 Event. The run-side hooks it exposes are `ApplyAfterRoomEntered`
   (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
   `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
   looked like "room entered" turned out to be four different hooks. The

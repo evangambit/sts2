@@ -155,6 +155,14 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "GamblingChip": (
+        "d45aa622fe97",
+        "AfterPlayerTurnStart on turn 1: a min-0 max-unbounded discard screen, then DiscardAndDraw of the whole list",
+    ),
+    "UnsettlingLamp": (
+        "273f5adb0eba",
+        "the first card each combat to land a debuff on an enemy has ALL its debuffs doubled; the latch is per CARD",
+    ),
     "Girya": (
         "172ad3bb2bdb",
         "TryModifyRestSiteOptions offers LIFT while TimesLifted < 3; AfterRoomEntered(CombatRoom) applies that much Strength",

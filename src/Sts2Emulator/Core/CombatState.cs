@@ -252,6 +252,22 @@ public sealed class CombatState
     public bool RainbowRingPaidThisTurn;
 
     /// <summary>
+    /// `UnsettlingLamp`: whether the doubling has been used up for this combat, and
+    /// whether the card CURRENTLY resolving is the one that claimed it. Two flags because
+    /// the card that claims it keeps the doubling for the rest of its own resolution.
+    /// </summary>
+    public bool UnsettlingLampSpent;
+
+    /// <inheritdoc cref="UnsettlingLampSpent" />
+    public bool UnsettlingLampCard;
+
+    /// <summary>
+    /// `GamblingChip`: how many cards its turn-one screen has discarded so far, which is
+    /// how many are drawn when the screen closes.
+    /// </summary>
+    public int GamblingChipDiscarded;
+
+    /// <summary>
     /// A once-per-combat enchantment on the card being played has just fired, so the copy
     /// that lands in its result pile must carry the spent flag. CardEffects takes the card
     /// by value and cannot hand a mutation back, which is the same reason

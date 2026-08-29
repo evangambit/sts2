@@ -6192,6 +6192,11 @@ public static class CardEffects
             return;
         }
 
+        // `UnsettlingLamp.ModifyPowerAmountGivenMultiplicative` doubles the debuffs of the
+        // first card each combat to land one. Applied here, at the single point every
+        // card-driven enemy debuff goes through, rather than at the call sites.
+        magnitude = RelicEffects.ModifyEnemyDebuffMagnitude(state, id, magnitude);
+
         int before = BuffSystem.Get(target.Buffs, id);
         BuffSystem.Apply(target.Buffs, id, magnitude);
         DrawForVicious(state, id, before, BuffSystem.Get(target.Buffs, id), rng);
