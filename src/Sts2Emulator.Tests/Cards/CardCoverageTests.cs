@@ -136,7 +136,6 @@ public class CardCoverageTests
         "Lethality",
         "Luminesce",
         "LunarBlast",
-        "MadScience",
         "MakeItSo",
         "ManifestAuthority",
         "Maul",

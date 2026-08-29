@@ -2856,6 +2856,81 @@ public static class CardEffects
     /// raises resolves itself. Saves and restores rather than clearing, so a nested play
     /// inside an auto-play does not hand agency back to the outer one.
     /// </summary>
+    /// <summary>
+    /// `MadScience`: the Tinker Time card. Its `TinkerType` decides the main effect and
+    /// its `TinkerRider` decorates it; the constants are the card's own fields, and none
+    /// of them move on upgrade.
+    /// </summary>
+    /// <remarks>
+    /// Three riders are NOT modelled, and are left inert rather than approximated:
+    /// Choking wants `StranglePower`, which tracks the amount at which each card was
+    /// played so it cannot trigger on itself; Curious wants a Power-card cost reduction;
+    /// and Improvement upgrades random deck cards at COMBAT END, which is a run-side seam.
+    /// The card's `Type` also follows TinkerType in the game, so a type-sensitive relic
+    /// reads it as whatever it was tinkered into -- the emulator's CardDef says Skill.
+    /// </remarks>
+    private static void PlayMadScience(CombatState state, CardInstance card, Random rng)
+    {
+        const int AttackDamage = 12;
+        const int SkillBlock = 8;
+
+        switch (card.TinkerType)
+        {
+            case CardType.Attack:
+                // Violence is read HERE rather than as a rider: it multiplies the hits.
+                DealDamageMultiHit(
+                    state,
+                    DmgFrom(state, AttackDamage, GeneratedData.Cards.Get(card.DefId), card),
+                    card.TinkerRider == TinkerRider.Violence ? 3 : 1,
+                    rng
+                );
+                break;
+
+            case CardType.Skill:
+                GainBlock(state, SkillBlock, rng);
+                break;
+
+            case CardType.Power:
+                // ExecutePower switches on the rider, so a Power with no matching rider
+                // does nothing at all.
+                if (card.TinkerRider == TinkerRider.Expertise)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 2);
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, 2);
+                }
+
+                break;
+        }
+
+        // `rider == Sapping || (uint)(rider - 3) <= 3u` -- Sapping, Choking, Energized,
+        // Wisdom, Chaos. Violence and the three Power riders are handled above.
+        switch (card.TinkerRider)
+        {
+            case TinkerRider.Sapping:
+                ApplyEnemyDebuff(state, BuffId.Weak, 2, rng);
+                ApplyEnemyDebuff(state, BuffId.Vulnerable, 2, rng);
+                break;
+
+            case TinkerRider.Energized:
+                GainEnergy(state, 2);
+                break;
+
+            case TinkerRider.Wisdom:
+                DrawCards(state, 3, rng);
+                break;
+
+            case TinkerRider.Chaos:
+                if (state.Hand.Count < MaxCardsInHand)
+                {
+                    var pool = CombatGenerationPool(GeneratedData.CardPools.Ironclad);
+                    int defId = pool[CardGenerationRng(state, rng).Next(pool.Count)];
+                    state.Hand.Add(new CardInstance(defId, false, FreeThisTurn: true));
+                }
+
+                break;
+        }
+    }
+
     private static void PlayNestedCard(
         CardDef def,
         bool upgraded,
@@ -5203,12 +5278,13 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 3 : 2);
                 return true;
             case "MadScience":
-                DealDamage(state, upgraded ? 14 : 12);
-                GainBlock(state, upgraded ? 10 : 8, rng);
-                ApplyEnemyDebuff(state, BuffId.Weak, 2, rng);
-                ApplyEnemyDebuff(state, BuffId.Vulnerable, 2, rng);
-                GainEnergy(state, 2);
-                DrawCards(state, 3, rng);
+                // A Tinker Time card is ONE of Attack/Skill/Power with ONE rider, both
+                // chosen at the event and carried on the instance -- which the run side
+                // already records. This fired every branch at once, which is not a card
+                // the game can produce: 12 damage AND 8 block AND both debuffs AND the
+                // energy AND the draw. The upgrade adds INNATE and nothing else, so the
+                // 14/12 and 10/8 were invented too.
+                PlayMadScience(state, card, rng);
                 return true;
             case "MinionStrike":
                 DealDamage(state, Dmg(state, def, upgraded, card));

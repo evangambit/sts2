@@ -365,6 +365,10 @@ READ: dict[str, tuple[str, str]] = {
         "ModifyHandDraw + CardsVar(1); the upgrade adds Innate",
     ),
     "MeteorStrike": ("15edd7313998", "5-cost, 24 +6, and three Plasma"),
+    "MadScience": (
+        "f83aed93d37c",
+        "ONE of Attack/Skill/Power plus ONE rider, both from Tinker Time; the upgrade adds INNATE only",
+    ),
     "Mangle": (
         "9f81ad699e06",
         "15/20 then ManglePower 10/15 -- a TemporaryStrengthPower, so it lapses",
