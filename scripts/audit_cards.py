@@ -110,6 +110,26 @@ READ: dict[str, tuple[str, str]] = {
         "078fa2a6ae3b",
         "every 0-cost Attack/Skill/Power in the DISCARD returns to hand; the filter excludes Status and Curse",
     ),
+    "Anger": (
+        "1f0fb33a1d62",
+        "CreateClone() into the discard -- the whole card, enchantment and all",
+    ),
+    "Armaments": (
+        "c5f41cadb022",
+        "FromHandForUpgrade ASKS; upgraded takes every upgradable card with no choice",
+    ),
+    "Barricade": (
+        "3c6ea5ef5e01",
+        "BarricadePower at 1; the upgrade cuts the cost",
+    ),
+    "Bash": (
+        "5c78737df706",
+        "8/10 damage then Vulnerable 2/3 on the target",
+    ),
+    "BattleTrance": (
+        "28d66a384f64",
+        "draw 3/4 then NoDrawPower -- the lockout is half the card",
+    ),
     "BiasedCognition": (
         "d4f233f5adf2",
         "TWO vars: FocusPower(4m) +1, and BiasedCognitionPower(1m) which drains a Focus every turn",
@@ -118,9 +138,49 @@ READ: dict[str, tuple[str, str]] = {
         "21c730e6ad53",
         "applies BlackHolePower 3/4; the POWER hits all enemies Unpowered on stars gained",
     ),
+    "Bloodletting": (
+        "8c6b8815f1ef",
+        "3 HP unblockable+unpowered, then 2/3 energy; the upgrade is on the ENERGY",
+    ),
+    "Bludgeon": (
+        "186334ba9bbd",
+        "32 damage upgrading by 10",
+    ),
+    "BodySlam": (
+        "f9c4feb15911",
+        "CalculatedDamage multiplied by the owner's Block; the upgrade cuts the cost",
+    ),
+    "Brand": (
+        "7e119d6e535f",
+        "1 HP, exhaust a CHOSEN card, then Strength 1/2",
+    ),
+    "Break": (
+        "d9af852c0606",
+        "20/30 damage then Vulnerable 5/7",
+    ),
+    "Breakthrough": (
+        "6cd7b572ed36",
+        "1 HP FIRST, then 9/13 to all enemies",
+    ),
     "Buffer": (
         "6d70e0ecc365",
         "PowerVar<BufferPower>(1m) +1; each charge zeroes one instance of HP loss",
+    ),
+    "Bully": (
+        "56019526be10",
+        "4 + 2/3 per stack of the TARGET's Vulnerable; the upgrade raises the multiplier",
+    ),
+    "Cinder": (
+        "029fc97a5586",
+        "18/24 then exhaust a random hand card on Rng.CombatCardSelection",
+    ),
+    "Colossus": (
+        "1808bffc3474",
+        "5/8 block and ColossusPower 1",
+    ),
+    "Conflagration": (
+        "a20ff9f7cabf",
+        "2 damage x 4/5 hits to all; the upgrade raises the REPEAT, not the damage",
     ),
     "ConsumingShadow": (
         "ab55da889c51",
@@ -130,11 +190,19 @@ READ: dict[str, tuple[str, str]] = {
         "5b1ac7befd20",
         "AfterSideTurnStart blocks distinct-orb-types times Amount, unpowered",
     ),
+    "Corruption": (
+        "b0a0fc0db828",
+        "CorruptionPower 1; the upgrade cuts the cost",
+    ),
     "CreativeAi": (
         "19982becfe13",
         "BeforeHandDraw adds Amount random POWER cards to hand; the upgrade is the cost",
     ),
     "Defragment": ("3e9d0372c793", "PowerVar<FocusPower>(1m) +1, permanent"),
+    "DefendIronclad": (
+        "f44f2ddf1ff3",
+        "5 block upgrading by 3",
+    ),
     "EchoForm": (
         "53673a33b554",
         "ModifyCardPlayCount +1 while the turn's first-in-series plays are under Amount; upgrade removes Ethereal",
@@ -218,6 +286,10 @@ READ: dict[str, tuple[str, str]] = {
         "the Glass orb on play is the WHOLE upgrade; the power channels one at each energy reset",
     ),
     "Supercritical": ("f347dfeb9219", "EnergyVar(4) +2, Exhaust"),
+    "StrikeIronclad": (
+        "67c1d4a0a5d2",
+        "6 damage upgrading by 3",
+    ),
     "TheHunt": (
         "f5fda73d95f0",
         "extra CardReward of 3 from the room's own pool, behind the Fatal gate",

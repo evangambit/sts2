@@ -1607,6 +1607,14 @@ public static class CombatEngine
 
                 break;
 
+            case CardSelectionKind.UpgradeInHand:
+                if (index < state.Hand.Count)
+                {
+                    state.Hand[index] = state.Hand[index] with { Upgraded = true };
+                }
+
+                break;
+
             case CardSelectionKind.QueueHandCardCopies:
                 if (index < state.Hand.Count)
                 {

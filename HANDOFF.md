@@ -2409,12 +2409,23 @@ no game running:
   emulator and the test drift together while the game moves under both. So the audit
   records the version that was read, and re-flags when the card changes underneath it.
   The number worth watching is `tested but unread`: cards that LOOK covered, which is
-  exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
+  exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in. That
+  burn-down is now the main line of work — **178 left**, down from 194. The first
+  batch read Ironclad's 18 alphabetically-first cards and found two wrong (E227,
+  E228), so budget roughly one divergence per nine cards, and expect one existing
+  test per divergence to be asserting the wrong behaviour and need rewriting.
+  `/tmp/pair.py` in that session dumped source-vs-emulator side by side, which is
+  the only way the rate is bearable; rebuild it rather than reading files one by one.
 
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
   **171/296**, and 63 read. The shared pool's commons, uncommons and rares are all
-  modelled, the **whole 22-relic Shop pool is done** (E214, E216), and so are **all four
-  Starter relics** — one per character, held by every run of that character (E219).
+  modelled, the **shared pool's 22 Shop-rarity relics are done** (E214, E216), and so are
+  the four base Starter relics (E219). Two corrections to earlier wording here, both caught
+  by the audit rather than by reading: five MORE Shop-rarity relics live in the five
+  character pools (Brimstone, Ninja Scroll, Runic Capacitor, Undying Sigil, Vitruvian
+  Minion), so the Shop rarity is not finished; and there are **ten** Starter relics, two
+  per character, of which four alternates remain — three of those sit in the EVENT pool
+  rather than being relics you start with.
   Two resources now have single chokepoints, and the second was found by looking for the
   first one's shape: gold through `RunNonCombatEffects.GainGold` / `CardEffects.GainGold`
   (E216) and stars through `CardEffects.GainStars` (E220). Neither is written by a bare

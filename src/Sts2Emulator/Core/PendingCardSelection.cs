@@ -112,6 +112,20 @@ public enum CardSelectionKind
     /// `CardCmd.DiscardAndDraw(list, list.Count)` takes the whole list at once.
     /// </remarks>
     DiscardAnyThenDraw = 14,
+
+    /// <summary>
+    /// Armaments (unupgraded): one UPGRADABLE card in hand is upgraded.
+    /// <c>CardSelectCmd.FromHandForUpgrade</c> filters the hand to upgradable cards and
+    /// asks, so the filter lives in the candidate list the way Hand Trick's does.
+    /// </summary>
+    /// <remarks>
+    /// The emulator upgraded the FIRST upgradable card. Armaments is a card whose entire
+    /// decision is which card to improve, and an agent told it always improves the
+    /// leftmost one learns a rule the game does not have. The game does auto-pick when
+    /// <c>list.Count &lt;= 1</c> — with nothing to decide there is no screen — which the
+    /// candidate list reproduces for free.
+    /// </remarks>
+    UpgradeInHand = 15,
 }
 
 /// <summary>

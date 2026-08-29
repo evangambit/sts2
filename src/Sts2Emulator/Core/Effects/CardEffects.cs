@@ -121,9 +121,13 @@ public static class CardEffects
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 break;
 
-            case IC.Anger: // 0-cost, 6/8 dmg + add copy to discard
+            case IC.Anger: // 0-cost, 6/8 dmg + add a CLONE of itself to the discard pile
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                state.DiscardPile.Add(new CardInstance(def.Id, upgraded));
+                // `CreateClone()` is `CardScope.CloneCard(this)` -- the whole card, not a
+                // fresh one off the id. A `new CardInstance(def.Id, upgraded)` drops the
+                // enchantment, so an Inky or Momentum Anger used to copy itself back into
+                // the deck stripped of the thing that made it worth copying.
+                state.DiscardPile.Add(card with { FreeThisTurn = false, RetainThisTurn = false });
                 break;
 
             // ── Colourless cards that were falling through to the approximation ──
@@ -543,15 +547,34 @@ public static class CardEffects
 
             // ── Ironclad Skills ──────────────────────────────────────────────────
 
-            case IC.Armaments: // 1-cost, gain 5 block + upgrade 1 card/all cards if upgraded
+            case IC.Armaments: // 1-cost, gain 5 block + upgrade 1 CHOSEN card, or all if upgraded
                 GainBlock(state, Blk(def, upgraded, card), rng);
                 if (upgraded)
                 {
                     UpgradeAllCardsInHand(state);
+                    break;
                 }
-                else
+
                 {
-                    UpgradeFirstCardInHand(state);
+                    // `CardSelectCmd.FromHandForUpgrade` filters to upgradable cards and
+                    // asks. Upgrading the leftmost is not a small simplification: which
+                    // card gets the upgrade is the whole card.
+                    var upgradable = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
+                    {
+                        if (IsUpgradable(state.Hand[i]))
+                        {
+                            upgradable.Add(i);
+                        }
+                    }
+
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.UpgradeInHand,
+                        upgradable,
+                        def.Id,
+                        autoPick: upgradable.Count > 0 ? upgradable[0] : 0
+                    );
                 }
 
                 break;
@@ -3206,6 +3229,10 @@ public static class CardEffects
 
             case CardSelectionKind.MarkHandCardSly when index < state.Hand.Count:
                 state.Hand[index] = state.Hand[index] with { SlyThisTurn = true };
+                break;
+
+            case CardSelectionKind.UpgradeInHand when index < state.Hand.Count:
+                state.Hand[index] = state.Hand[index] with { Upgraded = true };
                 break;
 
             case CardSelectionKind.QueueHandCardCopies when index < state.Hand.Count:
