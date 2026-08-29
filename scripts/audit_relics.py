@@ -203,6 +203,10 @@ READ: dict[str, tuple[str, str]] = {
         "820601153a7c",
         "one ATTACK enchanted Momentum 5; Momentum accumulates on play and pays what it has banked",
     ),
+    "RedSkull": (
+        "ae0375b0d602",
+        "re-asks on every CURRENT-hp change and REMOVES the 3 when healed back over half",
+    ),
     "RingOfTheSnake": (
         "6bf562b9a37f",
         "ModifyHandDraw +2 while TurnNumber is 1 -- the OPENING hand, not turn-start",

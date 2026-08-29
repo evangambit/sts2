@@ -690,7 +690,7 @@ public static class CardEffects
                 break;
 
             case IC.NotYet: // 2-cost, heal 10/13 HP
-                state.PlayerHp = Math.Min(state.PlayerHp + (upgraded ? 13 : 10), state.PlayerMaxHp);
+                HealPlayer(state, upgraded ? 13 : 10);
                 break;
 
             case IC.OneTwoPunch: // 1-cost, the next 1/2 Attack cards are played twice this turn
@@ -3553,6 +3553,30 @@ public static class CardEffects
     }
 
     /// <summary>
+    /// `CreatureCmd.Heal`. Every heal in combat comes through here so that
+    /// `ApplyAfterPlayerHpChanged` runs -- which is Red Skull's whole mechanism, since it
+    /// hands its Strength BACK the moment a heal carries the player back over half.
+    ///
+    /// The hook is on CURRENT HP only. `CreatureCmd.SetMaxHp` does not dispatch it, so a
+    /// change to the maximum alone does not re-ask the question even though it moves the
+    /// threshold -- see the two clamp sites that deliberately stay bare.
+    /// </summary>
+    public static void HealPlayer(CombatState state, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        int before = state.PlayerHp;
+        state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + amount);
+        if (state.PlayerHp != before)
+        {
+            RelicEffects.ApplyAfterPlayerHpChanged(state);
+        }
+    }
+
+    /// <summary>
     /// `CreatureCmd.GainMaxHp`: the cap rises AND the player is healed by the same amount.
     /// Raising the cap alone is a different, worse effect -- it hands the player a number
     /// they have to go and earn back at a rest site.
@@ -3560,7 +3584,8 @@ public static class CardEffects
     public static void GainMaxHp(CombatState state, int amount)
     {
         state.PlayerMaxHp += amount;
-        state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + amount);
+        // The `Heal(creature, num)` half of the command, so this dispatches like any heal.
+        HealPlayer(state, amount);
     }
 
     // Deals unblockable, unpowered HP loss to the player and triggers Rupture.
@@ -3592,6 +3617,14 @@ public static class CardEffects
         }
 
         TriggerInfernoAfterPlayerSelfDamage(state, hpBefore - state.PlayerHp);
+
+        // Every route that changes current HP dispatches `AfterCurrentHpChanged`, and
+        // self-damage is a route: Offering and Hemokinesis can put the player under half
+        // and arm Red Skull, and can kill outright and reach Lizard Tail.
+        if (state.PlayerHp != hpBefore)
+        {
+            RelicEffects.ApplyAfterPlayerHpChanged(state);
+        }
     }
 
     public static void ChannelOrb(CombatState state, OrbType type, Random? rng = null)
@@ -6327,6 +6360,10 @@ public static class CardEffects
             state.PlayerHp - BuffSystem.CapIncomingDamage(thorns, state.PlayerBuffs)
         );
         state.PlayerHpLostThisTurn += Math.Max(0, hpBeforeThorns - state.PlayerHp);
+        if (state.PlayerHp != hpBeforeThorns)
+        {
+            RelicEffects.ApplyAfterPlayerHpChanged(state);
+        }
     }
 
     private static void ApplyEnemyDebuff(CombatState state, BuffId id, int magnitude, Random rng)

@@ -2425,9 +2425,16 @@ no game running:
   one-implementer MODIFIER chain, so it got a chokepoint in order to be zeroed rather than
   to dispatch. All four are pinned by `BlockChokepointTests`, which greps `Core/` and
   fails when a resource grows a second writer — the fixes are one-line calls and nothing
-  else stops the next bare `+=` being written. HP is the remaining one:
-  `AfterCurrentHpChanged` has five listeners (Crusher, Rocket, NecroMastery, Meat on the
-  Bone, Red Skull). The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  else stops the next bare `+=` being written. HP finished the sweep (E223, E224): 16 of
+  19 in-combat HP changes did not dispatch, and combat heals now go through
+  `CardEffects.HealPlayer` beside `LoseHp`. **The scope came from what the hook does NOT
+  fire on** — `SetMaxHp` does not dispatch, so the two max-HP clamps stay bare on purpose;
+  the listeners all gate on `CombatManager.IsInProgress`, so the ~35 run-side HP writes
+  were never in scope; and Sandpit's `Kill(force: true)` blocks death prevention, so
+  Lizard Tail correctly does not save you. Each of the four exceptions carries the comment
+  that says why. Remaining listeners not yet modelled: `NecroMasteryPower` (Osty's HP loss
+  reflected at every enemy) and `OrbitPower` on `AfterEnergySpent`, both Necrobinder/Regent
+  and blocked on those card pools. The run-side hooks it exposes are `ApplyAfterRoomEntered`
   (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
   `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
   looked like "room entered" turned out to be four different hooks. The

@@ -365,7 +365,7 @@ public static class RelicEffects
 
         if (HasRelic(state, BloodVial))
         {
-            state.PlayerHp = Math.Min(state.PlayerHp + 2, state.PlayerMaxHp);
+            CardEffects.HealPlayer(state, 2);
         }
 
         if (HasRelic(state, Anchor))
@@ -751,6 +751,9 @@ public static class RelicEffects
         // percent of max HP. The relic is spent, not removed, so the counter records it.
         if (state.PlayerHp <= 0 && FiresOncePerCombat(state, LizardTail))
         {
+            // Bare on purpose: this write is INSIDE the hook, and routing it through
+            // HealPlayer would re-enter. Red Skull is re-read a few lines down anyway,
+            // against the revived total.
             state.PlayerHp = Math.Max(1, state.PlayerMaxHp / 2);
         }
 
@@ -1167,6 +1170,8 @@ public static class RelicEffects
         if (isRestSite && Has(state.Relics, EternalFeather))
         {
             int heal = state.Deck.Count / 5 * 3;
+            // Run-side: `AfterCurrentHpChanged`'s listeners all gate on
+            // `CombatManager.IsInProgress`, so a heal between combats dispatches nothing.
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + heal);
         }
 

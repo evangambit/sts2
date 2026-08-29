@@ -4059,6 +4059,9 @@ public static class EnemyAI
             int paperCuts = BuffSystem.Get(enemy.Buffs, BuffId.PaperCuts);
             if (paperCuts > 0)
             {
+                // No hook: `CreatureCmd.SetMaxHp` does not dispatch
+                // `AfterCurrentHpChanged`, so a shrinking maximum does not re-ask Red
+                // Skull's question even though it moves the threshold.
                 state.PlayerMaxHp = Math.Max(1, state.PlayerMaxHp - paperCuts);
                 state.PlayerHp = Math.Min(state.PlayerHp, state.PlayerMaxHp);
             }
@@ -4188,6 +4191,8 @@ public static class EnemyAI
             return;
         }
 
+        // Bare for the same reason as the Paper Cuts clamp above: SetMaxHp is not a
+        // current-HP change as far as the hook is concerned.
         state.PlayerMaxHp = Math.Max(1, state.PlayerMaxHp - amount);
         state.PlayerHp = Math.Min(state.PlayerHp, state.PlayerMaxHp);
     }

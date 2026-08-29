@@ -554,6 +554,7 @@ public static class CombatEngine
                     0,
                     state.PlayerHp - BuffSystem.CapHpLoss(6, state.PlayerBuffs)
                 );
+                Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
             }
 
             // Hand Trick's Sly lasts a single TURN, so a card that survives into the
@@ -685,6 +686,9 @@ public static class CombatEngine
                 BuffSystem.Apply(enemy.Buffs, BuffId.Sandpit, -1);
                 if (BuffSystem.Get(enemy.Buffs, BuffId.Sandpit) == 0)
                 {
+                    // `CreatureCmd.Kill(creature, force: true)`, and `force` is
+                    // documented as blocking death prevention -- so no hook, and Lizard
+                    // Tail and Fairy in a Bottle do not save the player from a Sandpit.
                     state.PlayerHp = 0;
                     return new StepResult(Terminal: true, PlayerWon: false, Reward: -1f);
                 }
@@ -815,6 +819,10 @@ public static class CombatEngine
         if (playerPoison > 0)
         {
             state.PlayerHp -= BuffSystem.CapHpLoss(playerPoison, state.PlayerBuffs);
+            // Poison is a route to under-half like any other, and it is the one that
+            // ticks with no card played -- so without this Red Skull could stay unarmed
+            // through a whole turn it should have been active for.
+            Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Poison, -1);
             if (PlayerIsDead(state))
             {
@@ -1163,6 +1171,8 @@ public static class CombatEngine
 
         state.PotionSlots[slot] = 0;
         state.PlayerHp = Math.Max((int)(state.PlayerMaxHp * 0.3m), 1);
+        // Thirty percent is under half, so the revive is exactly when Red Skull arms.
+        Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
         return false;
     }
 

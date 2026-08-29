@@ -42,6 +42,11 @@ public class BlockChokepointTests
     [InlineData(@"\.Stars\s*\+=", 1)]
     [InlineData(@"PlayerGold\s*\+=", 1)]
     [InlineData(@"State\.Gold\s*\+=|state\.Gold\s*\+=", 1)]
+    // The player's current HP in COMBAT has four writers that are deliberately not
+    // routed, each carrying the comment that says why: Lizard Tail's revive (which lives
+    // inside the hook and would re-enter), Sandpit's `force: true` kill (death prevention's
+    // own exception), and the two max-HP clamps (`SetMaxHp` does not dispatch). Everything
+    // else goes through HealPlayer, LoseHp, or an explicit call beside the write.
     // Energy has TWO: the chokepoint's own write, and turn one's reset catching up with a
     // +1-energy relic's new maximum, which is the reset path and not a gain.
     [InlineData(@"\.Energy\s*\+=|\.Energy\+\+", 2)]
