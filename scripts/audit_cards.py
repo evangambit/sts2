@@ -135,6 +135,10 @@ READ: dict[str, tuple[str, str]] = {
         "53673a33b554",
         "ModifyCardPlayCount +1 while the turn's first-in-series plays are under Amount; upgrade removes Ethereal",
     ),
+    "Feed": (
+        "9a10f38d7248",
+        "GainMaxHp heals as well as raising the cap; gated on ShouldOwnerDeathTriggerFatal",
+    ),
     "FlakCannon": (
         "5dea026eae0b",
         "exhausts every Status outside the exhaust pile FIRST, then hits once per status at rolled targets",
@@ -142,6 +146,10 @@ READ: dict[str, tuple[str, str]] = {
     "GeneticAlgorithm": (
         "9c7cc2b93b94",
         "BlockVar(CurrentBlock) starts at 1 and rises by IntVar(Increase, 3m) per play, on the card AND its DeckVersion",
+    ),
+    "HandOfGreed": (
+        "6d55f411d5c9",
+        "same Fatal gate as Feed -- Minion AND Reattach, not Minion alone",
     ),
     "HelixDrill": (
         "0cf3cb9ebaea",
@@ -190,6 +198,10 @@ READ: dict[str, tuple[str, str]] = {
         "the Glass orb on play is the WHOLE upgrade; the power channels one at each energy reset",
     ),
     "Supercritical": ("f347dfeb9219", "EnergyVar(4) +2, Exhaust"),
+    "TheHunt": (
+        "f5fda73d95f0",
+        "extra CardReward of 3 from the room's own pool, behind the Fatal gate",
+    ),
     "TrashToTreasure": (
         "5176cb66ae7c",
         "a generated Status channels Amount RANDOM orbs on Rng.CombatOrbGeneration",

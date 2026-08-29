@@ -44,4 +44,30 @@ public class HandOfGreedTests
 
         Assert.Equal(goldBefore + 25, fight.State.PlayerGold);
     }
+
+    /// <summary>
+    /// The Minion half of the Fatal gate was here and the Reattach half was not, which is
+    /// the shape the catalog keeps finding: one rule applied at some of its call sites.
+    /// A Decimillipede segment pays nothing until it is the last one standing.
+    /// </summary>
+    [Fact]
+    public void ASegmentPaysOnlyWhenItIsTheLast()
+    {
+        var early = Fight
+            .Hand(Card(CL.HandOfGreed))
+            .Energy(2)
+            .Enemy(hp: 1, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25))
+            .Enemy(hp: 40, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25));
+        early.Play();
+        Assert.Equal(0, early.State.PlayerGold);
+
+        var last = Fight
+            .Hand(Card(CL.HandOfGreed))
+            .Energy(2)
+            .Enemy(hp: 1, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25))
+            .Enemy(hp: 0, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25));
+        last.Play();
+        Assert.Equal(20, last.State.PlayerGold);
+    }
+
 }

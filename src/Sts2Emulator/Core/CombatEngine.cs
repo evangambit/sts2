@@ -1942,6 +1942,18 @@ public static class CombatEngine
     /// It heals 25 rather than to full, which is what separates this from the Fogmog
     /// eye's revive — a segment that comes back is not a fresh one.
     /// </remarks>
+    /// <summary>
+    /// `ReattachPower.AreAllOtherSegmentsDead`, inverted. Read by the reattach itself and
+    /// by `CardEffects.TriggersFatal`, which is the same question asked from the player's
+    /// side: a Decimillipede is only really dead when its last segment is.
+    /// </summary>
+    internal static bool AnyOtherSegmentAlive(CombatState state, EnemyState enemy) =>
+        state.Enemies.Any(other =>
+            !ReferenceEquals(other, enemy)
+            && BuffSystem.Get(other.Buffs, BuffId.Reattach) > 0
+            && (other.Hp > 0 || BuffSystem.Get(other.Buffs, BuffId.Reviving) > 0)
+        );
+
     private static bool TryReattachSegment(CombatState state, EnemyState enemy)
     {
         if (BuffSystem.Get(enemy.Buffs, BuffId.Reattach) <= 0)
@@ -1955,12 +1967,7 @@ public static class CombatEngine
         }
 
         // The last one standing stays down, and takes the rest of the creature with it.
-        bool anyOtherAlive = state.Enemies.Any(other =>
-            !ReferenceEquals(other, enemy)
-            && BuffSystem.Get(other.Buffs, BuffId.Reattach) > 0
-            && (other.Hp > 0 || BuffSystem.Get(other.Buffs, BuffId.Reviving) > 0)
-        );
-        if (!anyOtherAlive)
+        if (!AnyOtherSegmentAlive(state, enemy))
         {
             return false;
         }

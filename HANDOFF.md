@@ -2412,12 +2412,12 @@ no game running:
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
 
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
-  **166/296**, and 58 read. The shared pool's commons, uncommons and rares are all
-  modelled, and **21 of its 22 Shop-rarity relics** — the last six went in as one
-  reward-list batch (Cauldron, Orrery, Dingy Rug, Wing Charm, Lava Lamp, Toolbox; E214).
-  Only **Dragon Fruit** is left, and it wants a gold chokepoint spanning run `Gold` and
-  combat `PlayerGold` across 26 sites — see E210's note on why that is not a one-liner.
-  The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  **167/296**, and 59 read. The shared pool's commons, uncommons and rares are all
+  modelled, and **the whole 22-relic Shop pool is done** — six went in as one reward-list
+  batch (E214) and Dragon Fruit closed it by giving gold a single chokepoint (E216).
+  Gold is now gained through `RunNonCombatEffects.GainGold` / `CardEffects.GainGold` and
+  never by a bare `Gold +=`; anything that has to react to a gain rather than resize it
+  hangs off there. The run-side hooks it exposes are `ApplyAfterRoomEntered`
   (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
   `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
   looked like "room entered" turned out to be four different hooks. The

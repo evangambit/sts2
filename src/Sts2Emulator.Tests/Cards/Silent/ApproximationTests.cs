@@ -418,4 +418,25 @@ public class TheHuntTests
         Assert.Equal(1, fight.State.ExtraCardRewards);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.TheHunt));
     }
+
+    /// <summary>
+    /// The Hunt shares Feed's `ShouldOwnerDeathTriggerFatal` gate and had none at all: a
+    /// summoned minion is free to kill, so without the gate a Reptomancer fight hands out
+    /// an extra card reward for every dagger.
+    /// </summary>
+    [Fact]
+    public void KillingAMinionEarnsNoExtraReward()
+    {
+        var fight = Fight
+            .Hand(new CardInstance(SI.TheHunt, false))
+            .Energy(3)
+            .Enemy(hp: 1, buffs: new BuffState(BuffId.Minion, 1));
+
+        fight.Play(0);
+
+        Assert.True(fight.State.Enemies[0].Hp <= 0);
+        Assert.Equal(0, fight.State.ExtraCardRewards);
+        Assert.Equal(0, BuffSystem.Get(fight.State.PlayerBuffs, BuffId.TheHunt));
+    }
+
 }

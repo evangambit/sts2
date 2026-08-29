@@ -176,12 +176,16 @@ public static class RunRewardGenerator
 
         // `AmethystAubergine.TryModifyRewards` adds a GoldReward after any combat room,
         // except the final act's boss -- where the run ends and there is no reward screen
-        // to add it to. The gold goes through ModifyGoldGained, so Ectoplasm still zeroes
-        // it and Bowler Hat still raises it.
+        // to add it to. Its fifteen is claimed through GainGold like any other reward's,
+        // so Ectoplasm still zeroes it, Bowler Hat still raises it, and Dragon Fruit sees
+        // it as a gain -- which a `Gold +=` here would have silently skipped.
         bool finalActBoss =
             state.LastResolvedRoomType == RunConstants.NodeBoss
             && state.CurrentActIndex >= state.Acts.Count - 1;
-        state.Gold += Effects.RelicEffects.ExtraCombatRewardGold(state, finalActBoss);
+        RunNonCombatEffects.GainGold(
+            state,
+            Effects.RelicEffects.ExtraCombatRewardGold(state, finalActBoss)
+        );
 
         // `PrayerWheel.TryModifyRewards` after a Monster room and `WhiteStar` after an
         // Elite each add a WHOLE extra CardReward of three. The room type is the gate, and
@@ -378,7 +382,7 @@ public static class RunRewardGenerator
         {
             if (itemIndex == 0)
             {
-                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, state.RewardGold);
+                RunNonCombatEffects.GainGold(state, state.RewardGold);
                 state.RewardGold = 0;
                 OfferNextGold(state);
                 return true;
@@ -841,7 +845,7 @@ public static class RunRewardGenerator
         }
 
         int gold = state.PlayerRng.Rewards.NextInt(42, 53);
-        state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, (int)(gold * 0.75));
+        RunNonCombatEffects.GainGold(state, (int)(gold * 0.75));
         state.Phase = RunPhase.Treasure;
     }
 

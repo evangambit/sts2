@@ -575,7 +575,11 @@ public class AmethystAubergineTests
                 new RelicInstance(RelicEffects.Ectoplasm),
             ],
         };
-        Assert.Equal(0, RelicEffects.ExtraCombatRewardGold(ecto, isFinalActBoss: false));
+        RunNonCombatEffects.GainGold(
+            ecto,
+            RelicEffects.ExtraCombatRewardGold(ecto, isFinalActBoss: false)
+        );
+        Assert.Equal(0, ecto.Gold);
 
         var hat = new RunState
         {
@@ -585,7 +589,14 @@ public class AmethystAubergineTests
                 new RelicInstance(RelicEffects.BowlerHat),
             ],
         };
-        Assert.Equal(18, RelicEffects.ExtraCombatRewardGold(hat, isFinalActBoss: false));
+        // The relic hands back a RAW 15 now and `GainGold` modifies it, so the assertion
+        // is on the gold that lands rather than on the number the relic returns -- the
+        // multiply moved a layer out when the chokepoint took over the hook.
+        RunNonCombatEffects.GainGold(
+            hat,
+            RelicEffects.ExtraCombatRewardGold(hat, isFinalActBoss: false)
+        );
+        Assert.Equal(18, hat.Gold);
     }
 }
 

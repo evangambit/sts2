@@ -82,6 +82,7 @@ public static class RelicEffects
     public const int BeltBuckle = 14;
     public const int Cauldron = 42;
     public const int DingyRug = 61;
+    public const int DragonFruit = 66;
     public const int DollysMirror = 65;
     public const int LavaLamp = 131;
     public const int Orrery = 174;
@@ -172,6 +173,32 @@ public static class RelicEffects
         }
 
         return amount;
+    }
+
+    /// <summary>
+    /// `DragonFruit.AfterGoldGained`: 1 max HP, through `CreatureCmd.GainMaxHp` -- so it
+    /// HEALS 1 as well as raising the cap.
+    ///
+    /// Once per gain EVENT, not per gold: a hundred from a boss is the same +1 as fifteen
+    /// from a mushroom. And `PlayerCmd.GainGold` returns on `!(amount > 0m)` BEFORE
+    /// reaching the hook, which is why both chokepoints drop out on a zeroed amount --
+    /// Ectoplasm suppresses this relic entirely rather than merely taking the gold.
+    /// </summary>
+    internal static void ApplyAfterGoldGained(Run.RunState state)
+    {
+        if (Has(state.Relics, DragonFruit))
+        {
+            Run.RunNonCombatEffects.GainMaxHp(state, 1);
+        }
+    }
+
+    /// <inheritdoc cref="ApplyAfterGoldGained(Run.RunState)" />
+    internal static void ApplyAfterGoldGained(CombatState state)
+    {
+        if (HasRelic(state, DragonFruit))
+        {
+            CardEffects.GainMaxHp(state, 1);
+        }
     }
 
     /// <summary>
@@ -1303,10 +1330,13 @@ public static class RelicEffects
     /// except the boss of the final act — there is no reward screen to add it to when the
     /// run is over.
     /// </summary>
+    /// <remarks>
+    /// Returns the RAW 15. The reward's gold is claimed through `RunNonCombatEffects.GainGold`
+    /// like any other, and that applies `ModifyGoldGained` -- applying it here too would pay
+    /// Bowler Hat twice on this one relic.
+    /// </remarks>
     public static int ExtraCombatRewardGold(Run.RunState state, bool isFinalActBoss) =>
-        !isFinalActBoss && Has(state.Relics, AmethystAubergine)
-            ? ModifyGoldGained(state.Relics, 15)
-            : 0;
+        !isFinalActBoss && Has(state.Relics, AmethystAubergine) ? 15 : 0;
 
     /// <summary>
     /// `JuzuBracelet.ModifyUnknownMapPointRoomTypes`: a "?" can never be a Monster room.

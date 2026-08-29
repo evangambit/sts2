@@ -167,6 +167,10 @@ READ: dict[str, tuple[str, str]] = {
         "a4e8e0269cc0",
         "FromDeckGeneric filtered to c.Type != Quest, then RunState.CloneCard into the deck",
     ),
+    "DragonFruit": (
+        "cc169ada2578",
+        "AfterGoldGained -> GainMaxHp(1), which HEALS 1 too; per gain event, not per gold",
+    ),
     "GnarledHammer": (
         "4cc92a15551a",
         "CardSelectorPrefs(prompt, 0, 3) then Sharp at 3 -- its own amount, not Self-Help Book's 2",

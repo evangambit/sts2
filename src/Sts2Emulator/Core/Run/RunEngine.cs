@@ -2169,17 +2169,11 @@ public sealed class RunEngine
                 if (action == 0)
                 {
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 18);
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.JungleMazeSoloGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.JungleMazeSoloGold(State));
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.JungleMazeJoinForcesGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.JungleMazeJoinForcesGold(State));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2260,18 +2254,12 @@ public sealed class RunEngine
             case RunConstants.EventSunkenTreasury:
                 if (action == 0)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.SunkenTreasurySmallChestGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.SunkenTreasurySmallChestGold(State));
                 }
                 else if (action == 1)
                 {
                     // The big chest is paid for with Greed.
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.SunkenTreasuryLargeChestGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.SunkenTreasuryLargeChestGold(State));
                     RunNonCombatEffects.AddCardToDeck(
                         State,
                         new CardInstance(RunNonCombatEffects.NamedCard("Greed"), Upgraded: false)
@@ -2410,10 +2398,7 @@ public sealed class RunEngine
                     // flat 80, which is inside the range and so looked right in every
                     // capture that never checked the number.
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 8);
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.DenseVegetationGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.DenseVegetationGold(State));
                 }
                 else if (action == 1)
                 {
@@ -2513,10 +2498,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.SunkenStatueGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.SunkenStatueGold(State));
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 7);
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -2869,7 +2851,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(State.Relics, 100);
+                    RunNonCombatEffects.GainGold(State, 100);
                     RunNonCombatEffects.AddCardToDeck(
                         State,
                         new CardInstance(RunNonCombatEffects.TrashHeapCard(State), Upgraded: false)
@@ -3364,10 +3346,7 @@ public sealed class RunEngine
                 if (action == 0)
                 {
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 6);
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.ThisOrThatGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.ThisOrThatGold(State));
                 }
                 else if (action == 1)
                 {
@@ -3494,10 +3473,7 @@ public sealed class RunEngine
             case RunConstants.EventBugslayer:
                 if (action == 0)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(75)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(75));
                 }
                 else if (action == 1)
                 {
@@ -3528,10 +3504,7 @@ public sealed class RunEngine
                 // this is an act-2 event with no live capture behind it.
                 if (action == 0)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(125)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(125));
                 }
                 else if (action == 1)
                 {
@@ -3686,10 +3659,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(99)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(99));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3755,10 +3725,7 @@ public sealed class RunEngine
             case RunConstants.EventBattlewornDummy:
                 if (action is >= 0 and <= 2)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(40 + action * 20)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(40 + action * 20));
                     AddEventRewardCard(upgraded: action == 2);
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -3782,10 +3749,7 @@ public sealed class RunEngine
                         State,
                         new CardInstance(RunNonCombatEffects.NamedCard("Decay"), false)
                     );
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(150)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(150));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3842,10 +3806,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(80)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(80));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3861,10 +3822,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(100)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(100));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3924,7 +3882,7 @@ public sealed class RunEngine
             default:
                 if (action == 0)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(State.Relics, 50);
+                    RunNonCombatEffects.GainGold(State, 50);
                     RunRewardGenerator.AddPotion(State, 1);
                 }
                 else if (action == 1)

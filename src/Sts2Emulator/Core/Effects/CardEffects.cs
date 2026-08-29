@@ -372,10 +372,12 @@ public static class CardEffects
                 var feedTarget = FirstEnemy(state);
                 if (feedTarget != null)
                 {
+                    bool feedFatal = TriggersFatal(state, feedTarget);
                     DealDamageToEnemy(state, feedTarget, Dmg(state, def, upgraded, card));
-                    if (feedTarget.Hp <= 0)
+                    if (feedFatal && feedTarget.Hp <= 0)
                     {
-                        state.PlayerMaxHp += upgraded ? 4 : 3;
+                        // `CreatureCmd.GainMaxHp`, which heals as well as raising the cap.
+                        GainMaxHp(state, upgraded ? 4 : 3);
                     }
                 }
                 break;
@@ -928,17 +930,11 @@ public static class CardEffects
                 if (target != null)
                 {
                     int hpBefore = target.Hp;
+                    bool greedFatal = TriggersFatal(state, target);
                     DealDamageToEnemy(state, target, upgraded ? 25 : 20);
-                    if (
-                        target.Hp <= 0
-                        && hpBefore > 0
-                        && !BuffSystem.Has(target.Buffs, BuffId.Minion)
-                    )
+                    if (target.Hp <= 0 && hpBefore > 0 && greedFatal)
                     {
-                        state.PlayerGold += RelicEffects.ModifyGoldGained(
-                            state.Relics,
-                            upgraded ? 25 : 20
-                        );
+                        GainGold(state, upgraded ? 25 : 20);
                     }
                 }
                 break;
@@ -1822,8 +1818,9 @@ public static class CardEffects
                 var quarry = FirstEnemy(state);
                 if (quarry != null)
                 {
+                    bool huntFatal = TriggersFatal(state, quarry);
                     DealDamageToEnemy(state, quarry, Dmg(state, def, upgraded, card));
-                    if (quarry.Hp <= 0)
+                    if (huntFatal && quarry.Hp <= 0)
                     {
                         state.ExtraCardRewards++;
                         BuffSystem.Apply(state.PlayerBuffs, BuffId.TheHunt, 1);
@@ -3460,6 +3457,49 @@ public static class CardEffects
     }
 
     // Deals unblockable, unpowered HP loss to the player and triggers Rupture.
+    /// <summary>
+    /// `PlayerCmd.GainGold`, combat side. See the run-side twin in `RunNonCombatEffects`
+    /// for why the modify-then-return-then-hook order matters.
+    /// </summary>
+    /// <summary>
+    /// `cardPlay.Target.Powers.All(p => p.ShouldOwnerDeathTriggerFatal())` -- the gate on
+    /// every "if this kills" payout. Two powers answer false: `MinionPower` always, and
+    /// `ReattachPower` while any other Decimillipede segment still stands.
+    ///
+    /// Read BEFORE the attack, as the game reads it, which is why every caller snapshots
+    /// it rather than asking after the damage: for a segment the answer changes the moment
+    /// the board does.
+    /// </summary>
+    private static bool TriggersFatal(CombatState state, EnemyState target) =>
+        !BuffSystem.Has(target.Buffs, BuffId.Minion)
+        && !(
+            BuffSystem.Get(target.Buffs, BuffId.Reattach) > 0
+            && CombatEngine.AnyOtherSegmentAlive(state, target)
+        );
+
+    public static void GainGold(CombatState state, int amount)
+    {
+        amount = RelicEffects.ModifyGoldGained(state.Relics, amount);
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        state.PlayerGold += amount;
+        RelicEffects.ApplyAfterGoldGained(state);
+    }
+
+    /// <summary>
+    /// `CreatureCmd.GainMaxHp`: the cap rises AND the player is healed by the same amount.
+    /// Raising the cap alone is a different, worse effect -- it hands the player a number
+    /// they have to go and earn back at a rest site.
+    /// </summary>
+    public static void GainMaxHp(CombatState state, int amount)
+    {
+        state.PlayerMaxHp += amount;
+        state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + amount);
+    }
+
     public static void LoseHp(CombatState state, int amount)
     {
         int hpBefore = state.PlayerHp;
@@ -5474,7 +5514,7 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, upgraded ? 2 : 1);
                 break;
             case "Wish":
-                state.PlayerGold += RelicEffects.ModifyGoldGained(state.Relics, upgraded ? 30 : 25);
+                GainGold(state, upgraded ? 30 : 25);
                 break;
             case "WraithForm":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, upgraded ? 3 : 2);
