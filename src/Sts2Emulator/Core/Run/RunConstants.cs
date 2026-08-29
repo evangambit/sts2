@@ -139,6 +139,19 @@ public static class RunConstants
     /// to hold a Clone card. With none it simply copies nothing.
     /// </remarks>
     public const int RestCloneAction = 2;
+
+    /// <summary>
+    /// Girya's <c>LiftRestSiteOption</c>: one of three lifts, each worth a point of
+    /// Strength at the start of every later combat. Offered only while lifts remain —
+    /// <c>TryModifyRestSiteOptions</c> returns false at three.
+    /// </summary>
+    public const int RestLiftAction = 4;
+
+    /// <summary>
+    /// Shovel's <c>DigRestSiteOption</c>: pull the next relic from the FRONT of the
+    /// player's grab bag, which is the same queue and the same end an elite reward uses.
+    /// </summary>
+    public const int RestDigAction = 5;
     public const int ShopRemoveAction = 13;
     public const int ShopSkipAction = 14;
     public const int EventSkipAction = 3;

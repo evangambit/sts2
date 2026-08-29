@@ -234,6 +234,70 @@ public sealed class CombatState
     public bool VambraceSpent;
 
     /// <summary>
+    /// `BeatingRemnant.DamageReceivedThisTurn` — the running total its 20-per-turn cap is
+    /// measured against, reset at the owner's side-turn start.
+    /// </summary>
+    public int UnblockedDamageThisTurn;
+
+    /// <summary>`RainbowRing`'s three counters and its once-a-turn latch.</summary>
+    public int RainbowRingAttacks;
+
+    /// <inheritdoc cref="RainbowRingAttacks" />
+    public int RainbowRingSkills;
+
+    /// <inheritdoc cref="RainbowRingAttacks" />
+    public int RainbowRingPowers;
+
+    /// <inheritdoc cref="RainbowRingAttacks" />
+    public bool RainbowRingPaidThisTurn;
+
+    /// <summary>
+    /// `UnsettlingLamp`: whether the doubling has been used up for this combat, and
+    /// whether the card CURRENTLY resolving is the one that claimed it. Two flags because
+    /// the card that claims it keeps the doubling for the rest of its own resolution.
+    /// </summary>
+    public bool UnsettlingLampSpent;
+
+    /// <inheritdoc cref="UnsettlingLampSpent" />
+    public bool UnsettlingLampCard;
+
+    /// <summary>
+    /// `GamblingChip`: how many cards its turn-one screen has discarded so far, which is
+    /// how many are drawn when the screen closes.
+    /// </summary>
+    public int GamblingChipDiscarded;
+
+    /// <summary>
+    /// Whether Gambling Chip's screen is owed but could not be raised because another one
+    /// was already up. Only Toolbox does that, and only on turn one.
+    /// </summary>
+    public bool GamblingChipOwed;
+
+    /// <summary>`BurningSticks`: whether its once-per-combat copy has been spent.</summary>
+    public bool BurningSticksUsed;
+
+    /// <summary>
+    /// `BeltBuckle`: whether its Dexterity is currently applied. Tracked rather than
+    /// recomputed because the grant has to be REMOVED when the belt fills again.
+    /// </summary>
+    public bool BeltBuckleApplied;
+
+    /// <summary>Whether this combat is an ELITE room's, which Sling of Courage reads.</summary>
+    public bool IsEliteRoom;
+
+    /// <summary>
+    /// Whether the player has taken UNBLOCKED, blockable damage this combat — Lava Lamp's
+    /// condition.
+    /// </summary>
+    /// <remarks>
+    /// Set from `DealDamageToPlayer`, which is the blockable path: block is subtracted
+    /// there, so anything left is damage the player could have blocked and did not.
+    /// Unblockable HP loss goes through `LoseHp` instead and correctly does not count,
+    /// which is what the relic's `props.HasFlag(ValueProp.Unblockable)` check is for.
+    /// </remarks>
+    public bool TookUnblockedDamage;
+
+    /// <summary>
     /// A once-per-combat enchantment on the card being played has just fired, so the copy
     /// that lands in its result pile must carry the spent flag. CardEffects takes the card
     /// by value and cannot hand a mutation back, which is the same reason

@@ -176,12 +176,27 @@ public static class RunRewardGenerator
 
         // `AmethystAubergine.TryModifyRewards` adds a GoldReward after any combat room,
         // except the final act's boss -- where the run ends and there is no reward screen
-        // to add it to. The gold goes through ModifyGoldGained, so Ectoplasm still zeroes
-        // it and Bowler Hat still raises it.
+        // to add it to. Its fifteen is claimed through GainGold like any other reward's,
+        // so Ectoplasm still zeroes it, Bowler Hat still raises it, and Dragon Fruit sees
+        // it as a gain -- which a `Gold +=` here would have silently skipped.
         bool finalActBoss =
             state.LastResolvedRoomType == RunConstants.NodeBoss
             && state.CurrentActIndex >= state.Acts.Count - 1;
-        state.Gold += Effects.RelicEffects.ExtraCombatRewardGold(state, finalActBoss);
+        RunNonCombatEffects.GainGold(
+            state,
+            Effects.RelicEffects.ExtraCombatRewardGold(state, finalActBoss)
+        );
+
+        // `PrayerWheel.TryModifyRewards` after a Monster room and `WhiteStar` after an
+        // Elite each add a WHOLE extra CardReward of three. The room type is the gate, and
+        // the Star's three come from the BOSS pool rather than the room's own -- which is
+        // the part a "one more card reward" reading would lose.
+        state.ExtraCardRewardsOwed += Effects.RelicEffects.AddsExtraCardReward(
+            state,
+            state.LastResolvedRoomType
+        )
+            ? 1
+            : 0;
 
         if (HasRelic(state, RunConstants.RelicBlackBlood))
         {
@@ -367,7 +382,7 @@ public static class RunRewardGenerator
         {
             if (itemIndex == 0)
             {
-                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, state.RewardGold);
+                RunNonCombatEffects.GainGold(state, state.RewardGold);
                 state.RewardGold = 0;
                 OfferNextGold(state);
                 return true;
@@ -719,16 +734,24 @@ public static class RunRewardGenerator
         Array.Clear(state.RewardCards);
         Array.Clear(state.RewardUpgraded);
         bool silverCrucibleUpgrade = ConsumeSilverCrucibleCardRewardUpgrade(state);
+        // `LavaLamp.TryModifyCardRewardOptionsLate` upgrades every upgradable option after
+        // a combat that landed no unblocked damage. Read once, like Silver Crucible's, so
+        // one condition decides the whole screen.
+        bool lavaLampUpgrade = Effects.RelicEffects.UpgradesCardRewards(state);
+
+        // `DingyRug.ModifyCardRewardCreationOptions` ADDS the colourless pool to the ones
+        // a reward rolls from rather than replacing them, so the character's own cards are
+        // still on offer alongside.
+        int[] pool = Effects.RelicEffects.AddsColourlessToCardRewards(state)
+            ? [.. IroncladRewardPool.ToArray(), .. GeneratedData.CardPools.Colorless.ToArray()]
+            : IroncladRewardPool.ToArray();
+
+        state.RewardEnchantIndex = -1;
         var blacklist = new List<int>();
         for (int i = 0; i < state.RewardCards.Length; i++)
         {
             int rarity = RollRewardCardRarity(state);
-            int cardId = ChooseCardWithRarity(
-                IroncladRewardPool,
-                rarity,
-                blacklist,
-                state.PlayerRng.Rewards
-            );
+            int cardId = ChooseCardWithRarity(pool, rarity, blacklist, state.PlayerRng.Rewards);
             state.RewardCards[i] = cardId;
             blacklist.Add(cardId);
             // The roll comes FIRST and unconditionally: CardFactory.CreateForReward calls
@@ -741,6 +764,7 @@ public static class RunRewardGenerator
             bool rolledUpgrade = RollCardUpgrade(state, cardId, state.PlayerRng.Rewards);
             state.RewardUpgraded[i] =
                 silverCrucibleUpgrade
+                || lavaLampUpgrade
                 || rolledUpgrade
                 // TryModifyCardRewardOptionsLate: an egg upgrades the option on the screen,
                 // not just the copy that reaches the deck.
@@ -748,6 +772,44 @@ public static class RunRewardGenerator
                     .UpgradedByEggs(state, new CardInstance(cardId, Upgraded: false))
                     .Upgraded;
         }
+
+        ApplyWingCharmToCardReward(state);
+    }
+
+    /// <summary>
+    /// `WingCharm.TryModifyCardRewardOptionsLate`: ONE option that can take Swift, rolled
+    /// on `Rng.Niche`, gains it. Runs after the options are settled because the game's
+    /// hook is a Late one — it modifies the screen, not the roll that filled it.
+    /// </summary>
+    private static void ApplyWingCharmToCardReward(RunState state)
+    {
+        if (!Effects.RelicEffects.EnchantsACardReward(state))
+        {
+            return;
+        }
+
+        var eligible = new List<int>();
+        for (int i = 0; i < state.RewardCards.Length; i++)
+        {
+            if (
+                state.RewardCards[i] != 0
+                && Enchantments.CanEnchant(
+                    new CardInstance(state.RewardCards[i], state.RewardUpgraded[i]),
+                    Enchantment.Swift
+                )
+            )
+            {
+                eligible.Add(i);
+            }
+        }
+
+        if (eligible.Count == 0)
+        {
+            return;
+        }
+
+        state.RewardEnchantIndex = eligible[state.Rng.Niche.NextInt(eligible.Count)];
+        state.RewardEnchantment = Enchantment.Swift;
     }
 
     private static bool ConsumeSilverCrucibleCardRewardUpgrade(RunState state)
@@ -783,7 +845,7 @@ public static class RunRewardGenerator
         }
 
         int gold = state.PlayerRng.Rewards.NextInt(42, 53);
-        state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, (int)(gold * 0.75));
+        RunNonCombatEffects.GainGold(state, (int)(gold * 0.75));
         state.Phase = RunPhase.Treasure;
     }
 
@@ -842,7 +904,7 @@ public static class RunRewardGenerator
                 cost = ShopCardCost(cardId, colorless: false, state.PlayerRng.Shops) / 2;
             }
 
-            state.ShopCosts[i] = cost;
+            state.ShopCosts[i] = Effects.RelicEffects.ModifyMerchantPrice(state, cost);
         }
 
         for (int i = 0; i < 2; i++)
@@ -858,7 +920,10 @@ public static class RunRewardGenerator
             state.ShopCards[action] = cardId;
             blacklist.Add(cardId);
             state.PlayerRng.Rewards.NextDouble();
-            state.ShopCosts[action] = ShopCardCost(cardId, colorless: true, state.PlayerRng.Shops);
+            state.ShopCosts[action] = Effects.RelicEffects.ModifyMerchantPrice(
+                state,
+                ShopCardCost(cardId, colorless: true, state.PlayerRng.Shops)
+            );
         }
 
         // MerchantInventory.PopulateRelicEntries builds its three slots as
@@ -875,7 +940,10 @@ public static class RunRewardGenerator
         for (int i = 0; i < state.ShopRelics.Length; i++)
         {
             state.ShopRelics[i] = NextShopRelic(state, slotRarities[i]);
-            state.ShopCosts[7 + i] = ShopRelicCost(state.ShopRelics[i], state.PlayerRng.Shops);
+            state.ShopCosts[7 + i] = Effects.RelicEffects.ModifyMerchantPrice(
+                state,
+                ShopRelicCost(state.ShopRelics[i], state.PlayerRng.Shops)
+            );
         }
 
         // MerchantInventory.PopulatePotionEntries rolls all three potions in one
@@ -894,7 +962,10 @@ public static class RunRewardGenerator
 
         for (int i = 0; i < state.ShopPotions.Length; i++)
         {
-            state.ShopCosts[10 + i] = ShopPotionCost(state.ShopPotions[i], state.PlayerRng.Shops);
+            state.ShopCosts[10 + i] = Effects.RelicEffects.ModifyMerchantPrice(
+                state,
+                ShopPotionCost(state.ShopPotions[i], state.PlayerRng.Shops)
+            );
         }
         state.ShopCosts[RunConstants.ShopRemoveAction] = 100 + 50 * state.ShopRemovalsUsed;
         // A fresh merchant stocks the service again -- the price carries across shops,

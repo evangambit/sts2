@@ -185,6 +185,30 @@ public enum Enchantment
     /// amount it was applied at, which is why it declares <c>ShowAmount =&gt; false</c>.
     /// </summary>
     Inky,
+
+    /// <summary>
+    /// Kifuda's: block equal to its amount whenever the card is played, any card type.
+    /// `RecalculateValues` sets a `BlockVar` from the amount, so the block IS the amount.
+    /// </summary>
+    Adroit,
+
+    /// <summary>
+    /// Punch Dagger's, Attacks only: every play adds its amount to a running bonus that
+    /// the card then carries for the rest of the run.
+    /// </summary>
+    /// <remarks>
+    /// The accumulation happens in `OnPlay` and the damage is read in
+    /// `EnchantDamageAdditive`, which runs FIRST — so the play that adds the amount does
+    /// not benefit from it. A freshly enchanted card hits for its printed damage the first
+    /// time and grows from the second.
+    /// </remarks>
+    Momentum,
+
+    /// <summary>
+    /// Royal Stamp's, Attacks and Skills only: `OnEnchant` adds the Innate AND Retain
+    /// keywords to the card, permanently. It has no play-time behaviour of its own.
+    /// </summary>
+    RoyallyApproved,
 }
 
 /// <summary>
@@ -279,7 +303,9 @@ public static class CardInstanceExtensions
     public static bool IsInnate(this CardInstance card)
     {
         var def = GeneratedData.Cards.Get(card.DefId);
-        return def.Innate || (card.Upgraded && def.InnateWhenUpgraded);
+        return def.Innate
+            || (card.Upgraded && def.InnateWhenUpgraded)
+            || card.Enchantment == Enchantment.RoyallyApproved;
     }
 
     /// <summary>
@@ -309,6 +335,9 @@ public static class CardInstanceExtensions
         return def.Retain
             || (card.Upgraded && def.RetainWhenUpgraded)
             || card.Enchantment == Enchantment.Steady
+            // `RoyallyApproved.OnEnchant` adds Innate AND Retain -- both keywords, one
+            // enchantment, which is why it reads in two places rather than one.
+            || card.Enchantment == Enchantment.RoyallyApproved
             || card.RetainThisTurn;
     }
 
@@ -394,6 +423,14 @@ public static class Enchantments
 
             // Imbued.CanEnchantCardType: skills.
             Enchantment.Imbued => def.Type == CardType.Skill,
+
+            // Momentum.CanEnchantCardType: attacks.
+            Enchantment.Momentum => def.Type == CardType.Attack,
+
+            // RoyallyApproved.CanEnchantCardType is `(uint)(cardType - 1) <= 1u`, which is
+            // the GAME's Attack and Skill -- its CardType starts at 1 where this one starts
+            // at 0, so the ordinals do not transfer and the names have to.
+            Enchantment.RoyallyApproved => def.Type is CardType.Attack or CardType.Skill,
 
             // Goopy.CanEnchant: tagged Defend. The same stand-in as Spiral's -- among
             // Basic cards the tag and the name agree -- so this is right for the Defends

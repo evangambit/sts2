@@ -238,7 +238,32 @@ public sealed class RunEngine
             aiRng,
             State.CompletedCombatRoomsBeforeCurrent
         );
+        // Sling of Courage reads the ROOM, not the encounter, so the room type travels
+        // with the combat.
+        combat.IsEliteRoom = State.LastResolvedRoomType == RunConstants.NodeElite;
+
+        // `LavaLamp.AfterRoomEntered` clears its flag as the fight begins.
+        State.TookUnblockedDamageThisCombat = false;
+
         Effects.RelicEffects.RestoreUsedUpRelics(combat, State.UsedUpRelics);
+
+        // The combat is handed relic IDS, so every instance starts with a zero counter --
+        // but a relic's counter is run state in the game, where the relic is one object
+        // for the whole run. Girya's lifts are the case that made this matter: a combat
+        // that cannot see them applies no Strength at all.
+        foreach (var runRelic in runRelics)
+        {
+            if (runRelic.Counter == 0)
+            {
+                continue;
+            }
+
+            int index = combat.Relics.FindIndex(relic => relic.DefId == runRelic.DefId);
+            if (index >= 0)
+            {
+                combat.Relics[index] = combat.Relics[index] with { Counter = runRelic.Counter };
+            }
+        }
 
         State.ActiveCombat = combat;
         State.ActiveCombatRng = combatRng;
@@ -516,15 +541,48 @@ public sealed class RunEngine
                 break;
 
             case RunPhase.Rest:
-                SetMask(mask, RunConstants.RestHealAction);
-                if (State.Deck.Any(RunConstants.IsRunCardUpgradable))
+                if (!RestOptionSpent(RunConstants.RestHealAction))
+                {
+                    SetMask(mask, RunConstants.RestHealAction);
+                }
+
+                if (
+                    State.Deck.Any(RunConstants.IsRunCardUpgradable)
+                    && !RestOptionSpent(RunConstants.RestUpgradeAction)
+                )
                 {
                     SetMask(mask, RunConstants.RestUpgradeAction);
                 }
 
                 if (State.Relics.Any(relic => relic.DefId == RunConstants.RelicPaelsGrowth))
                 {
-                    SetMask(mask, RunConstants.RestCloneAction);
+                    if (!RestOptionSpent(RunConstants.RestCloneAction))
+                    {
+                        SetMask(mask, RunConstants.RestCloneAction);
+                    }
+                }
+
+                // `Girya.TryModifyRestSiteOptions` returns FALSE once three lifts are
+                // spent, so the option leaves the screen rather than becoming a no-op.
+                // The count is kept on the relic instance, as the game keeps it on the
+                // relic model.
+                if (GiryaLiftsLeft() > 0)
+                {
+                    if (!RestOptionSpent(RunConstants.RestLiftAction))
+                    {
+                        SetMask(mask, RunConstants.RestLiftAction);
+                    }
+                }
+
+                // `Shovel.TryModifyRestSiteOptions` adds Dig unconditionally while the
+                // relic is held; digging with an empty bag falls back the way any relic
+                // pull does.
+                if (State.Relics.Any(relic => relic.DefId == Effects.RelicEffects.Shovel))
+                {
+                    if (!RestOptionSpent(RunConstants.RestDigAction))
+                    {
+                        SetMask(mask, RunConstants.RestDigAction);
+                    }
                 }
 
                 SetMask(mask, RunConstants.RewardSkipAction);
@@ -1037,7 +1095,9 @@ public sealed class RunEngine
                         isRestSite: true,
                         cameFromUnknown: false
                     );
-                    State.Phase = RunPhase.Rest;
+                    State.RestOptionsTaken = 0;
+                    State.RestOptionsTaken = 0;
+            State.Phase = RunPhase.Rest;
                     break;
                 case RunConstants.NodeShop:
                     State.LastResolvedRoomType = RunConstants.NodeShop;
@@ -1085,6 +1145,12 @@ public sealed class RunEngine
             reward = result.Reward;
             terminal = result.Terminal;
             State.LastPlayerWon = result.Terminal && result.PlayerWon;
+            // `LavaLamp.AfterDamageReceived` latches on the first UNBLOCKED, blockable hit.
+            // Read off the combat's own tally, which counts exactly that.
+            if (State.ActiveCombat is { } fight && fight.TookUnblockedDamage)
+            {
+                State.TookUnblockedDamageThisCombat = true;
+            }
             if (result.Terminal)
             {
                 SyncAfterCombat();
@@ -1526,7 +1592,16 @@ public sealed class RunEngine
 
             RunNonCombatEffects.AddCardToDeck(
                 State,
-                new CardInstance(cardId, State.RewardUpgraded[action])
+                new CardInstance(
+                    cardId,
+                    State.RewardUpgraded[action],
+                    // Wing Charm enchants the OPTION on the screen, so the enchantment
+                    // travels with the card the player picks -- and only with that one.
+                    Enchantment: action == State.RewardEnchantIndex
+                        ? State.RewardEnchantment
+                        : Enchantment.None,
+                    EnchantAmount: action == State.RewardEnchantIndex ? 1 : 0
+                )
             );
         }
         else if (action != RunConstants.RewardSkipAction)
@@ -1536,6 +1611,18 @@ public sealed class RunEngine
 
         Array.Clear(State.RewardCards);
         Array.Clear(State.RewardUpgraded);
+
+        // Prayer Wheel and White Star each add a WHOLE extra CardReward, so the screen
+        // comes back rather than the run moving on. Rolled here, when the previous offer
+        // is answered, because `CardReward.Populate()` draws its three when the screen is
+        // BUILT -- not when the relic added it.
+        if (State.ExtraCardRewardsOwed > 0)
+        {
+            State.ExtraCardRewardsOwed--;
+            RunRewardGenerator.PopulateCardReward(State);
+            return 0;
+        }
+
         if (State.ReturnToRewardScreenAfterCardReward)
         {
             State.ReturnToRewardScreenAfterCardReward = false;
@@ -1897,6 +1984,37 @@ public sealed class RunEngine
         return 0;
     }
 
+    /// <summary>
+    /// Girya's remaining lifts. `maxLifts` is 3 and `TimesLifted` lives on the relic; the
+    /// emulator keeps it in the instance's Counter.
+    /// </summary>
+    /// <summary>
+    /// Whether this rest visit has already taken that option. Only reachable with
+    /// Miniature Tent, which is the one relic that lets a visit take more than one.
+    /// </summary>
+    private bool RestOptionSpent(int action) => (State.RestOptionsTaken & (1 << action)) != 0;
+
+    private int GiryaLiftsLeft()
+    {
+        int index = State.Relics.FindIndex(relic => relic.DefId == Effects.RelicEffects.Girya);
+        return index < 0 ? 0 : Math.Max(0, 3 - State.Relics[index].Counter);
+    }
+
+    /// <summary>
+    /// Ends the rest visit after an option is taken — unless Miniature Tent is held, whose
+    /// `ShouldDisableRemainingRestSiteOptions` returns FALSE and leaves the rest of the
+    /// screen available. The option just taken is spent either way, so the Tent buys
+    /// another DIFFERENT option rather than the same one twice.
+    /// </summary>
+    private void FinishRestOption(int action)
+    {
+        State.RestOptionsTaken |= 1 << action;
+        if (!Effects.RelicEffects.KeepsRestSiteOpen(State))
+        {
+            State.RestResultPending = true;
+        }
+    }
+
     private int StepRest(int action, out bool terminal)
     {
         terminal = false;
@@ -1921,9 +2039,35 @@ public sealed class RunEngine
                 return 0;
             }
 
-            State.RestResultPending = true;
+            FinishRestOption(action);
             return 0;
         }
+        if (action == RunConstants.RestLiftAction && GiryaLiftsLeft() > 0)
+        {
+            int index = State.Relics.FindIndex(relic =>
+                relic.DefId == Effects.RelicEffects.Girya
+            );
+            State.Relics[index] = State.Relics[index] with
+            {
+                Counter = State.Relics[index].Counter + 1,
+            };
+            FinishRestOption(action);
+            return 0;
+        }
+
+        if (
+            action == RunConstants.RestDigAction
+            && State.Relics.Any(relic => relic.DefId == Effects.RelicEffects.Shovel)
+        )
+        {
+            // `RelicCmd.Obtain(RelicFactory.PullNextRelicFromFront(owner))` -- the same
+            // queue and the same END an elite reward pulls from, so a dug relic is one the
+            // run will not offer again.
+            RunNonCombatEffects.ApplyRelicPickup(State, RunRewardGenerator.NextRelic(State));
+            FinishRestOption(action);
+            return 0;
+        }
+
         if (
             action == RunConstants.RestCloneAction
             && State.Relics.Any(relic => relic.DefId == RunConstants.RelicPaelsGrowth)
@@ -1939,7 +2083,7 @@ public sealed class RunEngine
                 RunNonCombatEffects.AddCardToDeck(State, card);
             }
 
-            State.RestResultPending = true;
+            FinishRestOption(action);
             return 0;
         }
 
@@ -2025,17 +2169,11 @@ public sealed class RunEngine
                 if (action == 0)
                 {
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 18);
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.JungleMazeSoloGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.JungleMazeSoloGold(State));
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.JungleMazeJoinForcesGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.JungleMazeJoinForcesGold(State));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2116,18 +2254,12 @@ public sealed class RunEngine
             case RunConstants.EventSunkenTreasury:
                 if (action == 0)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.SunkenTreasurySmallChestGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.SunkenTreasurySmallChestGold(State));
                 }
                 else if (action == 1)
                 {
                     // The big chest is paid for with Greed.
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.SunkenTreasuryLargeChestGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.SunkenTreasuryLargeChestGold(State));
                     RunNonCombatEffects.AddCardToDeck(
                         State,
                         new CardInstance(RunNonCombatEffects.NamedCard("Greed"), Upgraded: false)
@@ -2266,10 +2398,7 @@ public sealed class RunEngine
                     // flat 80, which is inside the range and so looked right in every
                     // capture that never checked the number.
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 8);
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.DenseVegetationGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.DenseVegetationGold(State));
                 }
                 else if (action == 1)
                 {
@@ -2369,10 +2498,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.SunkenStatueGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.SunkenStatueGold(State));
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 7);
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -2725,7 +2851,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(State.Relics, 100);
+                    RunNonCombatEffects.GainGold(State, 100);
                     RunNonCombatEffects.AddCardToDeck(
                         State,
                         new CardInstance(RunNonCombatEffects.TrashHeapCard(State), Upgraded: false)
@@ -3220,10 +3346,7 @@ public sealed class RunEngine
                 if (action == 0)
                 {
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 6);
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        RunNonCombatEffects.ThisOrThatGold(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.ThisOrThatGold(State));
                 }
                 else if (action == 1)
                 {
@@ -3350,10 +3473,7 @@ public sealed class RunEngine
             case RunConstants.EventBugslayer:
                 if (action == 0)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(75)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(75));
                 }
                 else if (action == 1)
                 {
@@ -3384,10 +3504,7 @@ public sealed class RunEngine
                 // this is an act-2 event with no live capture behind it.
                 if (action == 0)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(125)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(125));
                 }
                 else if (action == 1)
                 {
@@ -3542,10 +3659,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(99)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(99));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3611,10 +3725,7 @@ public sealed class RunEngine
             case RunConstants.EventBattlewornDummy:
                 if (action is >= 0 and <= 2)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(40 + action * 20)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(40 + action * 20));
                     AddEventRewardCard(upgraded: action == 2);
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -3638,10 +3749,7 @@ public sealed class RunEngine
                         State,
                         new CardInstance(RunNonCombatEffects.NamedCard("Decay"), false)
                     );
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(150)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(150));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3698,10 +3806,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(80)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(80));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3717,10 +3822,7 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(
-                        State.Relics,
-                        EventGoldAmount(100)
-                    );
+                    RunNonCombatEffects.GainGold(State, EventGoldAmount(100));
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3780,7 +3882,7 @@ public sealed class RunEngine
             default:
                 if (action == 0)
                 {
-                    State.Gold += Effects.RelicEffects.ModifyGoldGained(State.Relics, 50);
+                    RunNonCombatEffects.GainGold(State, 50);
                     RunRewardGenerator.AddPotion(State, 1);
                 }
                 else if (action == 1)
@@ -4078,6 +4180,7 @@ public sealed class RunEngine
             State.Deck[action] = State.Deck[action] with { Upgraded = true };
             State.PendingRestUpgrade = false;
             State.RestResultPending = true;
+            State.RestOptionsTaken = 0;
             State.Phase = RunPhase.Rest;
             return 0;
         }

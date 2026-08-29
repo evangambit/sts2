@@ -71,7 +71,7 @@ public static class RunNonCombatEffects
         // Neow blessing pays three times.
         if (Effects.RelicEffects.Has(state.Relics, Effects.RelicEffects.LuckyFysh))
         {
-            state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 15);
+            GainGold(state, 15);
         }
 
         int book = state.Relics.FindIndex(relic =>
@@ -140,7 +140,11 @@ public static class RunNonCombatEffects
     private static bool HasRelic(RunState state, int relicId) =>
         state.Relics.Any(relic => relic.DefId == relicId);
 
-    public static RunFollowUp ApplyRelicPickup(RunState state, int relicId)
+    public static RunFollowUp ApplyRelicPickup(
+        RunState state,
+        int relicId,
+        SelectionReturn returnTo = SelectionReturn.Map
+    )
     {
         if (state.Relics.All(relic => relic.DefId != relicId))
         {
@@ -180,7 +184,7 @@ public static class RunNonCombatEffects
                 UpgradeRandomDeckCards(state, CardType.Attack, 2);
                 break;
             case RunConstants.RelicGoldenPearl:
-                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 150);
+                GainGold(state, 150);
                 break;
             case RunConstants.RelicNeowsTorment:
                 AddCardToDeck(state, new CardInstance(RunConstants.NeowsFuryCard, Upgraded: false));
@@ -222,7 +226,7 @@ public static class RunNonCombatEffects
                 state.PlayerHp = state.PlayerMaxHp;
                 break;
             case RunConstants.RelicOldCoin:
-                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 300);
+                GainGold(state, 300);
                 break;
             case RunConstants.RelicSmallCapsule:
                 // RewardsCmd.OfferCustom with a single RelicReward: the relic goes on a
@@ -255,7 +259,7 @@ public static class RunNonCombatEffects
                 break;
             case RunConstants.RelicCursedPearl:
                 AddCardToDeck(state, new CardInstance(NamedCard("Greed"), Upgraded: false));
-                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 333);
+                GainGold(state, 333);
                 break;
             case RunConstants.RelicHeftyTablet:
                 // AfterObtained offers CardsVar(3) RARE cards from the owner's own pool --
@@ -546,6 +550,84 @@ public static class RunNonCombatEffects
             case RunConstants.RelicEmptyCage:
                 state.TransformSelectedDeckIndex = -2;
                 return RunFollowUp.TransformSelect;
+
+            // `Orrery.AfterObtained` offers FIVE CardRewards at once -- a whole screen each,
+            // not five cards on one. The count field Prayer Wheel added carries them.
+            case Effects.RelicEffects.Orrery:
+                state.ExtraCardRewardsOwed += 5;
+                RunRewardGenerator.PopulateCardReward(state);
+                return RunFollowUp.PreRolledCardReward;
+
+            // `Cauldron.AfterObtained` offers five POTION rewards, through the same pending
+            // queue Tiny Mailbox's two go through.
+            case Effects.RelicEffects.Cauldron:
+                for (int i = 0; i < 5; i++)
+                {
+                    state.PendingPotionRewards.Add(0);
+                }
+
+                return RunFollowUp.BonusRelicRewards;
+
+            // The five shop relics whose AfterObtained raises a DECK-SELECTION screen.
+            // All five go through the same machinery Empty Cage and the events use; what
+            // differs is the kind, the count and the enchantment they apply.
+            case Effects.RelicEffects.DollysMirror:
+                return BeginDeckSelection(state, DeckSelection.Duplicate, 0, returnTo: returnTo)
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+
+            case Effects.RelicEffects.GnarledHammer:
+                // `CardSelectorPrefs(prompt, 0, 3)` -- up to THREE cards, and Sharp at 3
+                // rather than the 2 Self-Help Book applies.
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.Sharp,
+                    count: 3,
+                    enchantAmount: 3,
+                    returnTo: returnTo
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+
+            case Effects.RelicEffects.Kifuda:
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.Adroit,
+                    count: 3,
+                    enchantAmount: 3,
+                    returnTo: returnTo
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+
+            case Effects.RelicEffects.PunchDagger:
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.Momentum,
+                    enchantAmount: 5,
+                    returnTo: returnTo
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
+
+            case Effects.RelicEffects.RoyalStamp:
+                // The game shuffles the eligible cards on Rng.Niche before offering them,
+                // which changes the ORDER of the screen and not what is on it. The
+                // emulator offers the deck in deck order, so the shuffle is not modelled
+                // and no stream draw is spent -- recorded rather than faked, because a
+                // wrong draw on Niche desynchronises far more than a screen's ordering.
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Enchant,
+                    (int)Enchantment.RoyallyApproved,
+                    enchantAmount: 1,
+                    returnTo: returnTo
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
         }
 
         return RunFollowUp.None;
@@ -991,6 +1073,9 @@ public static class RunNonCombatEffects
             DeckSelection.TransformTo => GeneratedData.Cards.Get(card.DefId).Rarity
                 == CardRarity.Basic,
             DeckSelection.Upgrade => RunConstants.IsRunCardUpgradable(card),
+            // Dolly's Mirror excludes only Quest cards; a curse is a legal copy.
+            DeckSelection.Duplicate => GeneratedData.Cards.Get(card.DefId).Type
+                != CardType.Quest,
             // `FromDeckForRemoval` filters on `c.IsRemovable && filter(c)`, so the Eternal
             // check applies to this one too.
             DeckSelection.RemoveUpgradable => RunConstants.IsRunCardUpgradable(card)
@@ -1030,6 +1115,9 @@ public static class RunNonCombatEffects
                             ? state.PendingSelectionEnchantAmount
                             : SelfHelpBookAmount((Enchantment)state.PendingSelectionArg),
                 };
+                break;
+            case DeckSelection.Duplicate:
+                AddCardToDeck(state, card);
                 break;
             case DeckSelection.TransformTo:
                 state.Deck[deckIndex] = new CardInstance(
@@ -1888,7 +1976,7 @@ public static class RunNonCombatEffects
                 GainMaxHp(state, 4);
                 break;
             case DishGoldenFysh:
-                state.Gold += Effects.RelicEffects.ModifyGoldGained(state.Relics, 75);
+                GainGold(state, 75);
                 break;
             case DishSeapunkSalad:
                 AddCardToDeck(state, new CardInstance(NamedCard("FeedingFrenzy"), Upgraded: false));
@@ -2137,6 +2225,28 @@ public static class RunNonCombatEffects
 
             state.Deck[i] = card with { Enchantment = enchantment, EnchantAmount = amount };
         }
+    }
+
+    /// <summary>
+    /// `PlayerCmd.GainGold`. The single place run-side gold is gained, because
+    /// `AfterGoldGained` is a hook and a `Gold +=` cannot dispatch one.
+    ///
+    /// The early return is the game's, and it is load-bearing: the amount is modified
+    /// FIRST and a non-positive result returns before `AfterGoldGained`. Ectoplasm zeroes
+    /// the amount, so an Ectoplasm owner never fires the hook at all -- Dragon Fruit next
+    /// to Ectoplasm gains no max HP, rather than gaining it off gold it did not receive.
+    /// `LoseGold` is a different command and fires nothing.
+    /// </summary>
+    public static void GainGold(RunState state, int amount)
+    {
+        amount = Effects.RelicEffects.ModifyGoldGained(state.Relics, amount);
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        state.Gold += amount;
+        Effects.RelicEffects.ApplyAfterGoldGained(state);
     }
 
     public static void GainMaxHp(RunState state, int amount)

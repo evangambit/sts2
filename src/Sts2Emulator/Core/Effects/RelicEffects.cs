@@ -74,6 +74,53 @@ public static class RelicEffects
     public const int Vambrace = 280;
     public const int VenerableTeaSet = 282;
     public const int AmethystAubergine = 3;
+    // The shared pool's rares.
+    public const int BeatingRemnant = 11;
+    public const int Girya = 100;
+    public const int GamblingChip = 97;
+    // The four Starter relics, one per character. Every run of that character holds one.
+    public const int BoundPhylactery = 30;
+    public const int CrackedCore = 52;
+    public const int DivineRight = 64;
+    public const int RingOfTheSnake = 221;
+    // The shop pool.
+    public const int BeltBuckle = 14;
+    public const int Cauldron = 42;
+    public const int DingyRug = 61;
+    public const int DragonFruit = 66;
+    public const int DollysMirror = 65;
+    public const int LavaLamp = 131;
+    public const int Orrery = 174;
+    public const int WingCharm = 292;
+    public const int GnarledHammer = 103;
+    public const int Kifuda = 125;
+    public const int PunchDagger = 210;
+    public const int RoyalStamp = 224;
+    public const int Bread = 32;
+    public const int BurningSticks = 37;
+    public const int ChemicalX = 46;
+    public const int GhostSeed = 99;
+    public const int MiniatureTent = 154;
+    public const int MysticLighter = 160;
+    public const int RingingTriangle = 219;
+    public const int SlingOfCourage = 241;
+    public const int TheAbacus = 260;
+    public const int Toolbox = 267;
+    public const int UnsettlingLamp = 278;
+    public const int Shovel = 236;
+    public const int Bellows = 13;
+    public const int Chandelier = 44;
+    public const int GamePiece = 98;
+    public const int IceCream = 115;
+    public const int IntimidatingHelmet = 117;
+    public const int PrayerWheel = 204;
+    public const int RainbowRing = 212;
+    public const int SturdyClamp = 254;
+    public const int TheCourier = 262;
+    public const int TungstenRod = 273;
+    public const int UnceasingTop = 276;
+    public const int VexingPuzzlebox = 284;
+    public const int WhiteStar = 291;
     public const int JuzuBracelet = 123;
     public const int Pantograph = 186;
     public const int Planisphere = 198;
@@ -131,6 +178,49 @@ public static class RelicEffects
         }
 
         return amount;
+    }
+
+    /// <summary>
+    /// `DragonFruit.AfterGoldGained`: 1 max HP, through `CreatureCmd.GainMaxHp` -- so it
+    /// HEALS 1 as well as raising the cap.
+    ///
+    /// Once per gain EVENT, not per gold: a hundred from a boss is the same +1 as fifteen
+    /// from a mushroom. And `PlayerCmd.GainGold` returns on `!(amount > 0m)` BEFORE
+    /// reaching the hook, which is why both chokepoints drop out on a zeroed amount --
+    /// Ectoplasm suppresses this relic entirely rather than merely taking the gold.
+    /// </summary>
+    internal static void ApplyAfterGoldGained(Run.RunState state)
+    {
+        if (Has(state.Relics, DragonFruit))
+        {
+            Run.RunNonCombatEffects.GainMaxHp(state, 1);
+        }
+    }
+
+    /// <inheritdoc cref="ApplyAfterGoldGained(Run.RunState)" />
+    internal static void ApplyAfterGoldGained(CombatState state)
+    {
+        if (HasRelic(state, DragonFruit))
+        {
+            CardEffects.GainMaxHp(state, 1);
+        }
+    }
+
+    /// <summary>
+    /// `BoundPhylactery.AfterEnergyResetLate`: Osty is re-summoned at the start of every
+    /// turn EXCEPT the first, whose summon `BeforeCombatStart` already did.
+    ///
+    /// The game picks `AfterEnergyResetLate` deliberately and says why: anything that
+    /// asks whether Osty exists -- Friendship is the one it names -- has to run BEFORE
+    /// the summon, or the relic answers its own question. On a living Osty the summon is
+    /// `GainMaxHp`, so turn after turn it is +1 rather than a fresh pet.
+    /// </summary>
+    internal static void ApplyBoundPhylacteryTurnStart(CombatState state, int turnNumber)
+    {
+        if (turnNumber != 1 && HasRelic(state, BoundPhylactery))
+        {
+            CardEffects.SummonOsty(state, 1);
+        }
     }
 
     /// <summary>
@@ -197,7 +287,55 @@ public static class RelicEffects
         // out for turn one.
         int extraEnergy = state.Relics.Count(relic => MaxEnergyRelics.Contains(relic.DefId));
         state.MaxEnergy += extraEnergy;
+        // NOT through GainEnergy: this is part of turn one's RESET catching up with the
+        // new maximum, not a `PlayerCmd.GainEnergy`, and the reset is a different path
+        // that `NoEnergyGainPower` does not touch.
         state.Energy += extraEnergy;
+
+        // `Girya.AfterRoomEntered(CombatRoom)` -- Strength equal to the lifts spent on it.
+        // Read off the relic INSTANCE's counter, which is why the run has to hand the
+        // counter to the combat rather than just the relic's id.
+        // `SlingOfCourage.AfterRoomEntered(RoomType.Elite)`: 2 Strength on the fight that
+        // room starts. The relic's hook fires before the combat exists, so the room TYPE
+        // has to be handed over rather than looked up.
+        if (state.IsEliteRoom && HasRelic(state, SlingOfCourage))
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 2);
+        }
+
+        // The three Starter relics that open a combat with something. Every run of that
+        // character holds one, so these are the most-exercised relics in the game and
+        // were the last four with nothing behind them.
+        //
+        // `CrackedCore.BeforeSideTurnStart` guards on `TurnNumber <= 1`, so its Lightning
+        // is a combat-start channel and not a per-turn one.
+        if (HasRelic(state, CrackedCore))
+        {
+            CardEffects.ChannelOrb(state, OrbType.Lightning, rng);
+        }
+
+        // `DivineRight.AfterRoomEntered(CombatRoom)`: three Stars, and stars live on the
+        // PlayerCombatState -- so this is three at the top of every fight, not three that
+        // accumulate across the run.
+        if (HasRelic(state, DivineRight))
+        {
+            CardEffects.GainStars(state, 3);
+        }
+
+        // `BoundPhylactery.BeforeCombatStart` summons Osty at `SummonVar(1)` -- one HP,
+        // which is a body to soak one hit rather than a wall.
+        if (HasRelic(state, BoundPhylactery))
+        {
+            CardEffects.SummonOsty(state, 1);
+        }
+
+        RefreshBeltBuckle(state);
+
+        int girya = state.Relics.FirstOrDefault(relic => relic.DefId == Girya).Counter;
+        if (girya > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, girya);
+        }
 
         if (HasRelic(state, PhilosophersStone))
         {
@@ -227,7 +365,7 @@ public static class RelicEffects
 
         if (HasRelic(state, BloodVial))
         {
-            state.PlayerHp = Math.Min(state.PlayerHp + 2, state.PlayerMaxHp);
+            CardEffects.HealPlayer(state, 2);
         }
 
         if (HasRelic(state, Anchor))
@@ -269,7 +407,7 @@ public static class RelicEffects
         if (HasRelic(state, BoomingConch) && state.IsEliteCombat)
         {
             CardEffects.DrawCards(state, 2, rng);
-            state.Energy += 1;
+            CardEffects.GainEnergy(state, 1);
         }
     }
 
@@ -303,12 +441,12 @@ public static class RelicEffects
         {
             if (HasRelic(state, Lantern))
             {
-                state.Energy += 1;
+                CardEffects.GainEnergy(state, 1);
             }
 
             if (HasRelic(state, VenerableTeaSetActive))
             {
-                state.Energy += 2;
+                CardEffects.GainEnergy(state, 2);
             }
 
             if (HasRelic(state, Akabeko))
@@ -352,7 +490,7 @@ public static class RelicEffects
 
         if (CountTowards(state, HappyFlower, period: 3))
         {
-            state.Energy += 1;
+            CardEffects.GainEnergy(state, 1);
         }
 
         if (CountTowards(state, Pendulum, period: 3))
@@ -365,7 +503,7 @@ public static class RelicEffects
         if (turnNumber > 1 && HasRelic(state, ArtOfWar) && state.AttackCardsPlayedThisTurn == 0)
         {
             // AfterEnergyReset: the energy arrives on a turn following one with no Attack.
-            state.Energy += 1;
+            CardEffects.GainEnergy(state, 1);
         }
 
         // Pocketwatch's ModifyHandDraw runs after the tallies are cleared, so the verdict
@@ -386,6 +524,17 @@ public static class RelicEffects
     /// </summary>
     public static int ExtraHandDraw(CombatState state) =>
         state.Relics.Any(relic => relic.DefId == Pocketwatch && relic.Counter > 0) ? 3 : 0;
+
+    /// <summary>
+    /// `RingOfTheSnake.ModifyHandDraw`: `CardsVar(2)` while `TurnNumber > 1` is false, so
+    /// it pays on turn ONE and never again -- Silent opens on seven cards.
+    ///
+    /// It rides the opening hand rather than `ExtraHandDraw` because that is where turn
+    /// one's draw happens: the turn-start path only ever runs from turn two, where this
+    /// relic is already spent.
+    /// </summary>
+    public static int ExtraOpeningHandDraw(CombatState state) =>
+        HasRelic(state, RingOfTheSnake) ? 2 : 0;
 
     /// <summary>
     /// The relics that pay out every Nth card of a type played in one turn. The game holds
@@ -412,7 +561,7 @@ public static class RelicEffects
         // X-cost card or a cost reduction changes the answer — and ignores card type.
         if (HasRelic(state, IvoryTile) && energySpent >= 3)
         {
-            state.Energy += 1;
+            CardEffects.GainEnergy(state, 1);
         }
 
         switch (def.Type)
@@ -448,7 +597,7 @@ public static class RelicEffects
                 // counter is deliberately absent from PerTurnCounters.
                 if (CountTowards(state, Nunchaku, period: 10))
                 {
-                    state.Energy += 1;
+                    CardEffects.GainEnergy(state, 1);
                 }
 
                 break;
@@ -602,6 +751,9 @@ public static class RelicEffects
         // percent of max HP. The relic is spent, not removed, so the counter records it.
         if (state.PlayerHp <= 0 && FiresOncePerCombat(state, LizardTail))
         {
+            // Bare on purpose: this write is INSIDE the hook, and routing it through
+            // HealPlayer would re-enter. Red Skull is re-read a few lines down anyway,
+            // against the revived total.
             state.PlayerHp = Math.Max(1, state.PlayerMaxHp / 2);
         }
 
@@ -757,7 +909,7 @@ public static class RelicEffects
         // Candelabra is turn TWO only -- `TurnNumber == 2`, not "from turn two".
         if (turnNumber == 2 && HasRelic(state, Candelabra))
         {
-            state.Energy += 2;
+            CardEffects.GainEnergy(state, 2);
         }
 
         // `VenerableTeaSet.AfterEnergyReset` pays once, on the first energy reset of the
@@ -765,7 +917,7 @@ public static class RelicEffects
         // the rest site; the existing VenerableTeaSetActive id is that armed marker.
         if (turnNumber == 1 && HasRelic(state, VenerableTeaSetActive))
         {
-            state.Energy += 2;
+            CardEffects.GainEnergy(state, 2);
             state.Relics.RemoveAll(relic => relic.DefId == VenerableTeaSetActive);
         }
 
@@ -849,6 +1001,154 @@ public static class RelicEffects
         HasRelic(state, Vambrace) && !state.VambraceSpent;
 
     /// <summary>
+    /// `ModifyHpLostAfterOsty` from the two relics that reduce or cap HP loss. Both are
+    /// `Late`-ish modifiers on the amount that would actually come off, so they run after
+    /// block has been taken off and before the HP is.
+    /// </summary>
+    internal static int ModifyHpLost(CombatState state, int hpLoss)
+    {
+        // TungstenRod: `Math.Max(0m, amount - 1m)`.
+        if (HasRelic(state, TungstenRod))
+        {
+            hpLoss = Math.Max(0, hpLoss - 1);
+        }
+
+        // BeatingRemnant: `Math.Min(amount, 20 - DamageReceivedThisTurn)` -- a cap on the
+        // TURN's total unblocked damage, not on one hit, and the running total resets at
+        // the owner's side-turn start.
+        if (HasRelic(state, BeatingRemnant))
+        {
+            hpLoss = Math.Max(0, Math.Min(hpLoss, 20 - state.UnblockedDamageThisTurn));
+        }
+
+        return hpLoss;
+    }
+
+    /// <summary>
+    /// `IceCream.ShouldPlayerResetEnergy` returns FALSE from turn two onwards — so energy
+    /// carries over instead of being refilled. Turn one still resets, which is what puts
+    /// the starting energy on the board at all.
+    /// </summary>
+    internal static bool ShouldResetEnergy(CombatState state, int turnNumber) =>
+        turnNumber <= 1 || !HasRelic(state, IceCream);
+
+    /// <summary>
+    /// `SturdyClamp.ShouldClearBlock` returns false for its owner, and
+    /// `AfterPreventingBlockClear` then trims whatever is over ten. So it is not
+    /// Barricade: block survives, but only ten of it.
+    /// </summary>
+    internal static bool KeepsBlockCappedAtTen(CombatState state) => HasRelic(state, SturdyClamp);
+
+    /// <summary>
+    /// `Bellows`, `Chandelier`, `VexingPuzzlebox` — the rest of the turn-start rares.
+    /// </summary>
+    internal static void ApplyStartOfPlayerTurnRares(CombatState state, int turnNumber, Random? rng)
+    {
+        if (turnNumber == 3 && HasRelic(state, Chandelier))
+        {
+            CardEffects.GainEnergy(state, 3);
+        }
+
+        if (turnNumber == 1 && HasRelic(state, Bellows))
+        {
+            // `CardCmd.Upgrade(PileType.Hand.GetPile(owner).Cards)` -- the opening hand,
+            // and only the opening hand.
+            for (int i = 0; i < state.Hand.Count; i++)
+            {
+                state.Hand[i] = state.Hand[i] with { Upgraded = true };
+            }
+        }
+
+        if (turnNumber == 1 && HasRelic(state, VexingPuzzlebox) && rng is not null)
+        {
+            // A card from the character's WHOLE pool, not just the powers -- Creative Ai
+            // filters to Power and this does not.
+            CardEffects.AddRandomPoolCardToHand(state, rng);
+        }
+    }
+
+    /// <summary>
+    /// `GamePiece` (draw after a Power) and `RainbowRing` (one Attack, one Skill and one
+    /// Power in a turn pays Strength and Dexterity, once).
+    /// </summary>
+    internal static void ApplyAfterCardPlayedRares(CombatState state, CardDef def, Random? rng)
+    {
+        if (def.Type == CardType.Power && HasRelic(state, GamePiece) && rng is not null)
+        {
+            CardEffects.DrawCards(state, 1, rng);
+        }
+
+        if (!HasRelic(state, RainbowRing) || state.RainbowRingPaidThisTurn)
+        {
+            return;
+        }
+
+        // `ActivationCountThisTurn < 1` -- once a turn, and the counts are only advanced
+        // while it has not yet paid.
+        switch (def.Type)
+        {
+            case CardType.Attack:
+                state.RainbowRingAttacks++;
+                break;
+            case CardType.Skill:
+                state.RainbowRingSkills++;
+                break;
+            case CardType.Power:
+                state.RainbowRingPowers++;
+                break;
+        }
+
+        if (
+            state.RainbowRingAttacks > 0
+            && state.RainbowRingSkills > 0
+            && state.RainbowRingPowers > 0
+        )
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 1);
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, 1);
+            state.RainbowRingPaidThisTurn = true;
+        }
+    }
+
+    /// <summary>
+    /// `IntimidatingHelmet.BeforeCardPlayed`: 4 unpowered block when the card actually
+    /// COST two or more — `cardPlay.Resources.EnergyValue`, so a cost reduction or a free
+    /// play stops it paying.
+    /// </summary>
+    internal static void ApplyBeforeCardPlayedRares(CombatState state, int energySpent, Random? rng)
+    {
+        if (energySpent >= 2 && HasRelic(state, IntimidatingHelmet))
+        {
+            CardEffects.GainUnpoweredBlock(state, 4, rng);
+        }
+    }
+
+    /// <summary>
+    /// `UnceasingTop.AfterHandEmptied`: draw a card whenever the hand runs out during the
+    /// PLAY phase — not at turn start, and not while a screen is up.
+    /// </summary>
+    internal static void ApplyAfterHandEmptied(CombatState state, Random? rng)
+    {
+        if (state.Hand.Count == 0 && HasRelic(state, UnceasingTop) && rng is not null)
+        {
+            CardEffects.DrawCards(state, 1, rng);
+        }
+    }
+
+    /// <summary>
+    /// `PrayerWheel` and `WhiteStar` each add a whole extra `CardReward` — the Wheel after
+    /// a MONSTER room, the Star after an ELITE, and the Star's three come from the BOSS
+    /// pool rather than the room's own.
+    /// </summary>
+    internal static bool AddsExtraCardReward(Run.RunState state, int roomNodeType) =>
+        (roomNodeType == Run.RunConstants.NodeNormal && Has(state.Relics, PrayerWheel))
+        || (roomNodeType == Run.RunConstants.NodeElite && Has(state.Relics, WhiteStar));
+
+    /// <summary>`TheCourier.ModifyMerchantPrice`: a flat 20% off everything the shop sells.</summary>
+    internal static int ModifyMerchantPrice(Run.RunState state, int price) =>
+        Has(state.Relics, TheCourier) ? (int)(price * 0.8m) : price;
+
+    /// <summary>
     /// `Hook.AfterRoomEntered`, which the game fires from each room's `Enter()` — Combat,
     /// Merchant, Treasure, Event and RestSite, and nothing else.
     /// </summary>
@@ -870,6 +1170,8 @@ public static class RelicEffects
         if (isRestSite && Has(state.Relics, EternalFeather))
         {
             int heal = state.Deck.Count / 5 * 3;
+            // Run-side: `AfterCurrentHpChanged`'s listeners all gate on
+            // `CombatManager.IsInProgress`, so a heal between combats dispatches nothing.
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + heal);
         }
 
@@ -877,6 +1179,204 @@ public static class RelicEffects
         {
             state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 5);
         }
+    }
+
+    /// <summary>
+    /// `Bread.ModifyMaxEnergy`: +1 from turn TWO onwards. Turn one is excluded here and
+    /// then charged 2 at its side-turn start, which is the card's whole shape — a bad
+    /// first turn bought with a better every turn after.
+    /// </summary>
+    internal static int ModifyMaxEnergy(CombatState state, int maxEnergy, int turnNumber) =>
+        turnNumber > 1 && HasRelic(state, Bread) ? maxEnergy + 1 : maxEnergy;
+
+    /// <summary>
+    /// `LavaLamp.TryModifyCardRewardOptionsLate`: every upgradable option on the card
+    /// reward screen is upgraded, if the combat took no UNBLOCKED, blockable damage.
+    /// </summary>
+    /// <remarks>
+    /// Its `AfterDamageReceived` ignores `ValueProp.Unblockable` — so a Burn or a curse's
+    /// self-damage does not spoil it, and only damage the player could have blocked does.
+    /// </remarks>
+    public static bool UpgradesCardRewards(Run.RunState state) =>
+        Has(state.Relics, LavaLamp) && !state.TookUnblockedDamageThisCombat;
+
+    /// <summary>
+    /// `DingyRug.ModifyCardRewardCreationOptions`: the COLOURLESS pool is added to the
+    /// pools a card reward rolls from — added, not replaced, so the character's own cards
+    /// are still on offer.
+    /// </summary>
+    public static bool AddsColourlessToCardRewards(Run.RunState state) =>
+        Has(state.Relics, DingyRug);
+
+    /// <summary>
+    /// `WingCharm.TryModifyCardRewardOptionsLate`: ONE option on the screen, rolled on
+    /// `Rng.Niche` from those that can take it, gains the Swift enchantment.
+    /// </summary>
+    public static bool EnchantsACardReward(Run.RunState state) => Has(state.Relics, WingCharm);
+
+    /// <summary>
+    /// `MysticLighter.ModifyDamageAdditive`: 9 more from a powered attack whose card
+    /// carries ANY enchantment — `cardSource?.Enchantment == null` is the only filter.
+    /// </summary>
+    internal static int EnchantedCardDamageBonus(CombatState state) =>
+        HasRelic(state, MysticLighter) ? 9 : 0;
+
+    /// <summary>`ChemicalX.ModifyXValue`: every X-cost card resolves two higher.</summary>
+    internal static int ModifyXValue(CombatState state, int x) =>
+        HasRelic(state, ChemicalX) ? x + 2 : x;
+
+    /// <summary>
+    /// `RingingTriangle.ShouldFlush` returns false on turn ONE, so the opening hand is
+    /// retained whole rather than discarded.
+    /// </summary>
+    internal static bool SkipsHandFlush(CombatState state, int turnNumber) =>
+        turnNumber <= 1 && HasRelic(state, RingingTriangle);
+
+    /// <summary>
+    /// `MiniatureTent.ShouldDisableRemainingRestSiteOptions` returns false — so taking one
+    /// rest option leaves the others available instead of ending the visit.
+    /// </summary>
+    public static bool KeepsRestSiteOpen(Run.RunState state) => Has(state.Relics, MiniatureTent);
+
+    /// <summary>`TheAbacus.AfterShuffle`: 6 unpowered block every time the pile is shuffled.</summary>
+    internal static void ApplyAfterShuffle(CombatState state, Random? rng)
+    {
+        if (HasRelic(state, TheAbacus))
+        {
+            CardEffects.GainUnpoweredBlock(state, 6, rng);
+        }
+    }
+
+    /// <summary>
+    /// `BurningSticks.AfterCardExhausted`: the first SKILL exhausted each combat is copied
+    /// back into hand. Once per combat, and Skills only.
+    /// </summary>
+    internal static void ApplyBurningSticks(CombatState state, CardInstance card)
+    {
+        if (
+            state.BurningSticksUsed
+            || !HasRelic(state, BurningSticks)
+            || GeneratedData.Cards.Get(card.DefId).Type != CardType.Skill
+        )
+        {
+            return;
+        }
+
+        state.BurningSticksUsed = true;
+        if (state.Hand.Count < CardEffects.MaxCardsInHand)
+        {
+            state.Hand.Add(card with { FreeThisTurn = false });
+        }
+    }
+
+    /// <summary>
+    /// `BeltBuckle`: Dexterity 2 while the owner holds NO potions, applied and removed as
+    /// the belt fills and empties rather than checked once.
+    /// </summary>
+    /// <remarks>
+    /// Re-evaluated at every point the game hooks — combat start, and after a potion is
+    /// procured, used or discarded — because the whole design is that it toggles. A
+    /// once-at-combat-start reading would give the Dexterity to a player who then drinks
+    /// their way out of it, and withhold it from one who empties their belt mid-fight.
+    /// </remarks>
+    internal static void RefreshBeltBuckle(CombatState state)
+    {
+        if (!HasRelic(state, BeltBuckle))
+        {
+            return;
+        }
+
+        bool shouldHold = !state.PotionSlots.Any(slot => slot != 0);
+        if (shouldHold == state.BeltBuckleApplied)
+        {
+            return;
+        }
+
+        BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, shouldHold ? 2 : -2);
+        state.BeltBuckleApplied = shouldHold;
+    }
+
+    /// <summary>
+    /// `GhostSeed.AfterCardEnteredCombat`: every BASIC Strike or Defend gains Ethereal.
+    /// </summary>
+    /// <remarks>
+    /// The tag stand-in is the same one `Card.IsStrikeOrDefend` uses, and here the caveat
+    /// does not bite: the filter is `Rarity == Basic` AND tagged, and among Basic cards
+    /// the entry slug and the tag agree for every character.
+    /// </remarks>
+    internal static bool MakesBasicsEthereal(CombatState state) => HasRelic(state, GhostSeed);
+
+    /// <summary>
+    /// `GamblingChip.AfterPlayerTurnStart` on turn one: a discard screen with no upper
+    /// bound, and the draw comes after.
+    /// </summary>
+    /// <summary>
+    /// `Toolbox.BeforeHandDraw` on turn one: three distinct COLOURLESS cards offered, one
+    /// taken into hand. A choose-a-card screen, not a random grant.
+    /// </summary>
+    internal static bool OpensToolboxScreen(CombatState state, int turnNumber) =>
+        turnNumber <= 1 && HasRelic(state, Toolbox);
+
+    internal static bool OpensGamblingChipScreen(CombatState state, int turnNumber) =>
+        turnNumber <= 1 && state.Hand.Count > 0 && HasRelic(state, GamblingChip);
+
+    /// <summary>
+    /// `UnsettlingLamp`: the FIRST card of a combat that lands a debuff on an enemy has
+    /// its debuffs doubled — all of them, for that one card.
+    /// </summary>
+    /// <remarks>
+    /// The game latches in `BeforePowerAmountChanged` on the first qualifying application
+    /// and unlatches in `AfterCardPlayed` for that same card, so a card applying three
+    /// debuffs gets all three doubled and the next card gets none. Modelled with a
+    /// per-combat spent flag plus a per-card latch for the same reason.
+    ///
+    /// The game also excludes debuffs whose source is a TEMPORARY power already doubled
+    /// (`HasDoubledTemporaryPowerSource`), which stops the internally-applied Strength of
+    /// a TemporaryStrengthPower being doubled twice. The emulator applies those two as one
+    /// pair through `ApplyTemporaryStrengthDownTo`, so the double lands once either way.
+    /// </remarks>
+    internal static int ModifyEnemyDebuffMagnitude(CombatState state, BuffId id, int magnitude)
+    {
+        if (magnitude == 0 || state.UnsettlingLampSpent || !HasRelic(state, UnsettlingLamp))
+        {
+            return magnitude;
+        }
+
+        // `power.GetTypeForAmount(amount) != PowerType.Debuff` -- the SIGN decides for a
+        // power that reads both ways. Strength down is a negative magnitude and is very
+        // much a debuff; Weak and Vulnerable are positive ones. Reading only positives
+        // doubled Malaise's Weak and left its Strength loss alone, which is half a card.
+        bool isDebuff = id == BuffId.Strength ? magnitude < 0 : magnitude > 0;
+        if (!isDebuff)
+        {
+            return magnitude;
+        }
+
+        state.UnsettlingLampCard = true;
+        return magnitude * 2;
+    }
+
+    /// <summary>
+    /// `AfterCardPlayed` on the latched card: the doubling is finished for the combat.
+    /// </summary>
+    internal static void FinishUnsettlingLampCard(CombatState state)
+    {
+        if (state.UnsettlingLampCard)
+        {
+            state.UnsettlingLampCard = false;
+            state.UnsettlingLampSpent = true;
+        }
+    }
+
+    /// <summary>
+    /// `Girya.AfterRoomEntered(CombatRoom)`: Strength equal to the number of times it has
+    /// been LIFTED, at the start of every combat. Zero lifts is zero Strength, so a Girya
+    /// nobody rested with does nothing at all.
+    /// </summary>
+    public static int GiryaStrength(Run.RunState state)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == Girya);
+        return index < 0 ? 0 : state.Relics[index].Counter;
     }
 
     /// <summary>
@@ -897,10 +1397,13 @@ public static class RelicEffects
     /// except the boss of the final act — there is no reward screen to add it to when the
     /// run is over.
     /// </summary>
+    /// <remarks>
+    /// Returns the RAW 15. The reward's gold is claimed through `RunNonCombatEffects.GainGold`
+    /// like any other, and that applies `ModifyGoldGained` -- applying it here too would pay
+    /// Bowler Hat twice on this one relic.
+    /// </remarks>
     public static int ExtraCombatRewardGold(Run.RunState state, bool isFinalActBoss) =>
-        !isFinalActBoss && Has(state.Relics, AmethystAubergine)
-            ? ModifyGoldGained(state.Relics, 15)
-            : 0;
+        !isFinalActBoss && Has(state.Relics, AmethystAubergine) ? 15 : 0;
 
     /// <summary>
     /// `JuzuBracelet.ModifyUnknownMapPointRoomTypes`: a "?" can never be a Monster room.

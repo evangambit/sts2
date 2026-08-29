@@ -2412,7 +2412,29 @@ no game running:
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in.
 
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
-  **127/296**, and 19 read. The run-side hooks it exposes are `ApplyAfterRoomEntered`
+  **171/296**, and 63 read. The shared pool's commons, uncommons and rares are all
+  modelled, the **whole 22-relic Shop pool is done** (E214, E216), and so are **all four
+  Starter relics** — one per character, held by every run of that character (E219).
+  Two resources now have single chokepoints, and the second was found by looking for the
+  first one's shape: gold through `RunNonCombatEffects.GainGold` / `CardEffects.GainGold`
+  (E216) and stars through `CardEffects.GainStars` (E220). Neither is written by a bare
+  `+=` any more; anything that has to REACT to a gain rather than resize it hangs off
+  there. **When a resource has an `After<X>Gained` hook, a `+=` cannot dispatch it.**
+  Block and energy have since been swept too (E221, E222). Block already had its
+  chokepoint and needed one bypass closed; energy has no gain hook at all but does have a
+  one-implementer MODIFIER chain, so it got a chokepoint in order to be zeroed rather than
+  to dispatch. All four are pinned by `BlockChokepointTests`, which greps `Core/` and
+  fails when a resource grows a second writer — the fixes are one-line calls and nothing
+  else stops the next bare `+=` being written. HP finished the sweep (E223, E224): 16 of
+  19 in-combat HP changes did not dispatch, and combat heals now go through
+  `CardEffects.HealPlayer` beside `LoseHp`. **The scope came from what the hook does NOT
+  fire on** — `SetMaxHp` does not dispatch, so the two max-HP clamps stay bare on purpose;
+  the listeners all gate on `CombatManager.IsInProgress`, so the ~35 run-side HP writes
+  were never in scope; and Sandpit's `Kill(force: true)` blocks death prevention, so
+  Lizard Tail correctly does not save you. Each of the four exceptions carries the comment
+  that says why. Remaining listeners not yet modelled: `NecroMasteryPower` (Osty's HP loss
+  reflected at every enemy) and `OrbitPower` on `AfterEnergySpent`, both Necrobinder/Regent
+  and blocked on those card pools. The run-side hooks it exposes are `ApplyAfterRoomEntered`
   (rest site or came-from-a-"?"), `ApplyBeforeBossCombat`, `ExtraCombatRewardGold` and
   `ForbidsUnknownMonsterRooms` — four seams rather than one, because the five relics that
   looked like "room entered" turned out to be four different hooks. The

@@ -406,7 +406,13 @@ public static class CombatFactory
 
         RelicEffects.ApplyBeforeOpeningHand(state, rng);
 
-        int handDraw = ApplyTurnOneDrawPileReorder(state.DrawPile, 5);
+        // Five, plus Ring of the Snake's two -- passed into the reorder rather than
+        // added after it, because the reorder is what decides WHICH cards the opening
+        // hand takes and it has to know how many that is.
+        int handDraw = ApplyTurnOneDrawPileReorder(
+            state.DrawPile,
+            5 + RelicEffects.ExtraOpeningHandDraw(state)
+        );
 
         for (int i = 0; i < handDraw && state.DrawPile.Count > 0; i++)
         {
@@ -415,6 +421,37 @@ public static class CombatFactory
             // than what it is printed at.
             state.Hand.Add(CardEffects.RollSlitherCost(state, state.DrawPile[0], rng));
             state.RemoveFromDrawPileAt(0);
+        }
+
+        // Bellows and Vexing Puzzlebox are `AfterPlayerTurnStart` on turn ONE, which is
+        // after the opening hand has been dealt -- so they cannot ride the ordinary
+        // turn-start seam, which only runs from turn two.
+        RelicEffects.ApplyStartOfPlayerTurnRares(state, 1, rng);
+
+        // `Toolbox.BeforeHandDraw` on turn one -- BEFORE the Gambling Chip screen, because
+        // the game's hook is a hand-draw one and the Chip's is a turn-start one, and a
+        // card the Toolbox added is a card the Chip may pitch.
+        if (RelicEffects.OpensToolboxScreen(state, 1))
+        {
+            CardEffects.OpenToolboxSelection(state, rng);
+        }
+
+        // `GamblingChip.AfterPlayerTurnStart` on turn one. Raised last of the turn-one
+        // hooks so Bellows has already upgraded the hand and the Puzzlebox has added its
+        // card -- both are things the player would want to see before choosing what to
+        // pitch, and the game's ordering gives them the same way.
+        // Only one screen can be up at a time, and Toolbox's is raised first -- so the
+        // Chip's is OWED rather than raised, and follows once the Toolbox pick is made.
+        if (RelicEffects.OpensGamblingChipScreen(state, 1))
+        {
+            if (state.PendingSelection is null)
+            {
+                CombatEngine.OpenGamblingChipScreenForCombatStart(state);
+            }
+            else
+            {
+                state.GamblingChipOwed = true;
+            }
         }
 
         RelicEffects.ApplyCombatStart(state, rng);

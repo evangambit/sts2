@@ -114,6 +114,10 @@ READ: dict[str, tuple[str, str]] = {
         "d4f233f5adf2",
         "TWO vars: FocusPower(4m) +1, and BiasedCognitionPower(1m) which drains a Focus every turn",
     ),
+    "BlackHole": (
+        "21c730e6ad53",
+        "applies BlackHolePower 3/4; the POWER hits all enemies Unpowered on stars gained",
+    ),
     "Buffer": (
         "6d70e0ecc365",
         "PowerVar<BufferPower>(1m) +1; each charge zeroes one instance of HP loss",
@@ -135,6 +139,18 @@ READ: dict[str, tuple[str, str]] = {
         "53673a33b554",
         "ModifyCardPlayCount +1 while the turn's first-in-series plays are under Amount; upgrade removes Ethereal",
     ),
+    "ExpectAFight": (
+        "722db1388dbf",
+        "gains 1 energy per Attack in hand, THEN NoEnergyGainPower on itself",
+    ),
+    "Feed": (
+        "9a10f38d7248",
+        "GainMaxHp heals as well as raising the cap; gated on ShouldOwnerDeathTriggerFatal",
+    ),
+    "FeelNoPain": (
+        "c6a7a56768d2",
+        "CreatureCmd.GainBlock(..., Unpowered) -- the command, so Juggernaut sees it",
+    ),
     "FlakCannon": (
         "5dea026eae0b",
         "exhausts every Status outside the exhaust pile FIRST, then hits once per status at rolled targets",
@@ -142,6 +158,10 @@ READ: dict[str, tuple[str, str]] = {
     "GeneticAlgorithm": (
         "9c7cc2b93b94",
         "BlockVar(CurrentBlock) starts at 1 and rises by IntVar(Increase, 3m) per play, on the card AND its DeckVersion",
+    ),
+    "HandOfGreed": (
+        "6d55f411d5c9",
+        "same Fatal gate as Feed -- Minion AND Reattach, not Minion alone",
     ),
     "HelixDrill": (
         "0cf3cb9ebaea",
@@ -190,6 +210,10 @@ READ: dict[str, tuple[str, str]] = {
         "the Glass orb on play is the WHOLE upgrade; the power channels one at each energy reset",
     ),
     "Supercritical": ("f347dfeb9219", "EnergyVar(4) +2, Exhaust"),
+    "TheHunt": (
+        "f5fda73d95f0",
+        "extra CardReward of 3 from the room's own pool, behind the Fatal gate",
+    ),
     "TrashToTreasure": (
         "5176cb66ae7c",
         "a generated Status channels Amount RANDOM orbs on Rng.CombatOrbGeneration",

@@ -99,6 +99,19 @@ public enum CardSelectionKind
     /// the same question, asked about the top of the draw pile instead.
     /// </summary>
     DiscardToHand = 13,
+
+    /// <summary>
+    /// Gambling Chip: discard ANY number of cards from hand on turn one, then draw that
+    /// many. The screen reopens after every pick and can be declined at any point.
+    /// </summary>
+    /// <remarks>
+    /// The first selection with no upper bound. `CardSelectorPrefs(prompt, 0, 999999999)`
+    /// is min zero and max effectively-unlimited, where every other repeated screen so far
+    /// has spent a fixed <see cref="PendingCardSelection.Amount" />. The draw is deferred
+    /// to whichever answer CLOSES the screen, because the count is not known until then —
+    /// `CardCmd.DiscardAndDraw(list, list.Count)` takes the whole list at once.
+    /// </remarks>
+    DiscardAnyThenDraw = 14,
 }
 
 /// <summary>

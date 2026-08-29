@@ -317,6 +317,22 @@ public enum BuffId
     /// the emulator granted the Focus without it.
     /// </summary>
     BiasedCognition,
+
+    /// <summary>
+    /// <c>BlackHolePower.AfterStarsGained</c>: damage to every enemy each time the player
+    /// GAINS stars -- Unpowered, so Strength does not raise it. Appended, like every other
+    /// member: <c>CombatObservation</c> writes <c>(int)buff.Id</c>, so an insertion
+    /// renumbers everything after it.
+    /// </summary>
+    BlackHole,
+
+    /// <summary>
+    /// <c>NoEnergyGainPower.ModifyEnergyGain</c> returns 0: the owner gains no energy for
+    /// the rest of the turn. The only implementer of the energy-modifier chain, and Expect
+    /// A Fight's entire cost -- the card was granting its energy and never applying it.
+    /// Removed <c>AfterSideTurnEnd</c>, so it lasts the turn it was played and no longer.
+    /// </summary>
+    NoEnergyGain,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

@@ -155,6 +155,173 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "BoundPhylactery": (
+        "1974cb754224",
+        "Osty at 1 HP on BeforeCombatStart, then AfterEnergyResetLate every turn but 1",
+    ),
+    "Cauldron": (
+        "347be997cb85",
+        "RewardsCmd.OfferCustom over FIVE potion rewards -- five screens, not five potions",
+    ),
+    "CrackedCore": (
+        "ed1f64e1fb2a",
+        "one Lightning, TurnNumber <= 1 -- a combat-start channel, not a per-turn one",
+    ),
+    "DingyRug": (
+        "55c82644d092",
+        "colourless pool CONCATENATED onto the character pool, not swapped for it",
+    ),
+    "DivineRight": (
+        "45a08da82257",
+        "3 Stars per CombatRoom entered; stars are per-combat, so 3 every fight",
+    ),
+    "DollysMirror": (
+        "a4e8e0269cc0",
+        "FromDeckGeneric filtered to c.Type != Quest, then RunState.CloneCard into the deck",
+    ),
+    "DragonFruit": (
+        "cc169ada2578",
+        "AfterGoldGained -> GainMaxHp(1), which HEALS 1 too; per gain event, not per gold",
+    ),
+    "GnarledHammer": (
+        "4cc92a15551a",
+        "CardSelectorPrefs(prompt, 0, 3) then Sharp at 3 -- its own amount, not Self-Help Book's 2",
+    ),
+    "Kifuda": (
+        "743acbcfa22c",
+        "up to 3 cards enchanted Adroit 3; Adroit blocks its amount on play, any card type",
+    ),
+    "LavaLamp": (
+        "ff2048c78530",
+        "upgrade flag read ONCE for the whole screen; gated on unblocked damage taken",
+    ),
+    "Orrery": (
+        "8e30d4ed2a03",
+        "five whole CardReward screens via OfferCustom, not five cards on one screen",
+    ),
+    "PunchDagger": (
+        "820601153a7c",
+        "one ATTACK enchanted Momentum 5; Momentum accumulates on play and pays what it has banked",
+    ),
+    "RedSkull": (
+        "ae0375b0d602",
+        "re-asks on every CURRENT-hp change and REMOVES the 3 when healed back over half",
+    ),
+    "RingOfTheSnake": (
+        "6bf562b9a37f",
+        "ModifyHandDraw +2 while TurnNumber is 1 -- the OPENING hand, not turn-start",
+    ),
+    "RoyalStamp": (
+        "b3d522ada300",
+        "one Attack or Skill enchanted RoyallyApproved, whose OnEnchant adds Innate AND Retain",
+    ),
+    "BeltBuckle": (
+        "5e49a1df2ee2",
+        "Dexterity 2 while the belt is EMPTY, applied and REMOVED as potions come and go",
+    ),
+    "Bread": (
+        "8fb48b3c1227",
+        "ModifyMaxEnergy +1 from turn two, and LoseEnergy(2) at turn one's side-turn start",
+    ),
+    "BurningSticks": (
+        "fa843fb29415",
+        "the first SKILL exhausted each combat is cloned back into hand",
+    ),
+    "ChemicalX": ("fd59024bb334", "ModifyXValue +2 on every X-cost card"),
+    "GhostSeed": (
+        "47df9c72ce0a",
+        "every BASIC card tagged Strike or Defend gains Ethereal",
+    ),
+    "MiniatureTent": (
+        "146a42576172",
+        "ShouldDisableRemainingRestSiteOptions returns false, so one option does not end the visit",
+    ),
+    "MysticLighter": (
+        "12bd29d1afac",
+        "9 more damage from a powered attack whose card carries ANY enchantment",
+    ),
+    "RingingTriangle": (
+        "b900ec558dcd",
+        "ShouldFlush is false on turn ONE, so the opening hand is kept whole",
+    ),
+    "SlingOfCourage": (
+        "198e914c8f58",
+        "AfterRoomEntered(RoomType.Elite) applies StrengthPower(2)",
+    ),
+    "TheAbacus": (
+        "4f2984365e33",
+        "AfterShuffle gains BlockVar(6, Unpowered), every shuffle",
+    ),
+    "GamblingChip": (
+        "d45aa622fe97",
+        "AfterPlayerTurnStart on turn 1: a min-0 max-unbounded discard screen, then DiscardAndDraw of the whole list",
+    ),
+    "Toolbox": (
+        "b4af222a7789",
+        "3 DISTINCT colourless cards, choose 1 to hand, at combat start",
+    ),
+    "UnsettlingLamp": (
+        "273f5adb0eba",
+        "the first card each combat to land a debuff on an enemy has ALL its debuffs doubled; the latch is per CARD",
+    ),
+    "Girya": (
+        "172ad3bb2bdb",
+        "TryModifyRestSiteOptions offers LIFT while TimesLifted < 3; AfterRoomEntered(CombatRoom) applies that much Strength",
+    ),
+    "Shovel": (
+        "c2680c695562",
+        "TryModifyRestSiteOptions offers DIG unconditionally; it pulls the next relic from the FRONT of the bag",
+    ),
+    "BeatingRemnant": (
+        "0071ec697a57",
+        "caps the TURN's total unblocked damage at 20, not one hit; the running total resets at side-turn start",
+    ),
+    "Bellows": (
+        "720fc94e1c7f",
+        "AfterPlayerTurnStart on turn 1 upgrades every card in the OPENING hand",
+    ),
+    "Chandelier": (
+        "057b30d9f8f4",
+        "AfterSideTurnStart on TurnNumber == 3 exactly, EnergyVar(3)",
+    ),
+    "GamePiece": ("9d01bc3a78a2", "AfterCardPlayed on a POWER draws CardsVar(1)"),
+    "IceCream": (
+        "37fe63ac1cd9",
+        "ShouldPlayerResetEnergy is false from turn two on, so unspent energy CARRIES",
+    ),
+    "IntimidatingHelmet": (
+        "78a6f3b85a41",
+        "BeforeCardPlayed with Resources.EnergyValue >= 2 gains BlockVar(4, Unpowered)",
+    ),
+    "PrayerWheel": (
+        "f0d485d1704e",
+        "TryModifyRewards adds a whole extra CardReward of three after a MONSTER room",
+    ),
+    "RainbowRing": (
+        "4d48d3922c06",
+        "one Attack, one Skill and one Power in a turn pays 1 Strength and 1 Dexterity, ONCE",
+    ),
+    "SturdyClamp": (
+        "d7d32c98d21c",
+        "ShouldClearBlock false, then AfterPreventingBlockClear trims anything over 10",
+    ),
+    "TheCourier": (
+        "09d0dd9f1a48",
+        "ModifyMerchantPrice times (1 - 20/100), and it refills merchant entries",
+    ),
+    "TungstenRod": ("42898f97e3a9", "ModifyHpLostAfterOsty is Math.Max(0, amount - 1)"),
+    "UnceasingTop": (
+        "122c6a203064",
+        "AfterHandEmptied draws one, during the PLAY phase only",
+    ),
+    "VexingPuzzlebox": (
+        "8f845e1b070f",
+        "AfterPlayerTurnStart on turn 1 adds a card from the WHOLE pool, free for the turn",
+    ),
+    "WhiteStar": (
+        "c8f0af5c2f10",
+        "TryModifyRewards adds an extra CardReward after an ELITE, drawn from the BOSS pool",
+    ),
     "AmethystAubergine": (
         "3da23ab46ccb",
         "TryModifyRewards adds GoldVar(15) after any combat room except the final act's boss",
@@ -227,6 +394,10 @@ READ: dict[str, tuple[str, str]] = {
     "Vambrace": (
         "661865f6a216",
         "the FIRST card block of a combat is doubled; it latches only once an amount above zero lands",
+    ),
+    "WingCharm": (
+        "4cb68d06f63c",
+        "Swift on one option; Powers-only, so a screen with no Power gets nothing",
     ),
 }
 

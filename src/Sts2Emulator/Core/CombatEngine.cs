@@ -109,6 +109,7 @@ public static class CombatEngine
         // subtracts its own cost, which is zero -- so the count excludes the drill itself
         // either way, and this runs before the card resolves.
         state.EnergySpentThisTurn += energyToSpend;
+        Effects.RelicEffects.ApplyBeforeCardPlayedRares(state, energyToSpend, rng);
         bool feralReturn =
             def.Type == CardType.Attack
             && energyToSpend == 0
@@ -369,6 +370,10 @@ public static class CombatEngine
 
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
+        Effects.RelicEffects.ApplyAfterCardPlayedRares(state, def, rng);
+        // The Lamp's latch closes when the card that claimed it finishes resolving.
+        Effects.RelicEffects.FinishUnsettlingLampCard(state);
+        Effects.RelicEffects.ApplyAfterHandEmptied(state, rng);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         bool playerDead = PlayerIsDead(state);
@@ -508,14 +513,27 @@ public static class CombatEngine
         }
 
         // Move hand to discard, exhausting ethereal cards unless a retain-hand effect is active.
+        // `RingingTriangle.ShouldFlush` is false on turn one, so the whole opening hand
+        // is kept rather than discarded -- a stronger thing than RetainHand, which the
+        // loop below already honours, because it is not spent.
         int retainHand = BuffSystem.Get(state.PlayerBuffs, BuffId.RetainHand);
+        if (Effects.RelicEffects.SkipsHandFlush(state, state.Turn + 1))
+        {
+            retainHand = Math.Max(retainHand, 1);
+        }
         var nextHand = new List<CardInstance>();
         foreach (var card in state.Hand)
         {
             var def = GeneratedData.Cards.Get(card.DefId);
             // Three cards drop Ethereal when upgraded, not one: this was `def.Id == 159`,
             // which is Echo Form, and said nothing about Apparition or Void Form.
-            if (card.IsEthereal())
+            // `GhostSeed.AfterCardEnteredCombat` gives Ethereal to every BASIC Strike or
+            // Defend. Read here rather than baked onto the instance because the relic
+            // grants the KEYWORD, and a keyword the relic gave is one it takes back if the
+            // relic ever leaves.
+            bool ghostSeeded =
+                Effects.RelicEffects.MakesBasicsEthereal(state) && IsBasicStrikeOrDefend(card);
+            if (card.IsEthereal() || ghostSeeded)
             {
                 Effects.CardEffects.ExhaustCard(state, card, causedByEthereal: true, rng: rng);
                 continue;
@@ -536,6 +554,7 @@ public static class CombatEngine
                     0,
                     state.PlayerHp - BuffSystem.CapHpLoss(6, state.PlayerBuffs)
                 );
+                Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
             }
 
             // Hand Trick's Sly lasts a single TURN, so a card that survives into the
@@ -667,6 +686,9 @@ public static class CombatEngine
                 BuffSystem.Apply(enemy.Buffs, BuffId.Sandpit, -1);
                 if (BuffSystem.Get(enemy.Buffs, BuffId.Sandpit) == 0)
                 {
+                    // `CreatureCmd.Kill(creature, force: true)`, and `force` is
+                    // documented as blocking death prevention -- so no hook, and Lizard
+                    // Tail and Fairy in a Bottle do not save the player from a Sandpit.
                     state.PlayerHp = 0;
                     return new StepResult(Terminal: true, PlayerWon: false, Reward: -1f);
                 }
@@ -764,13 +786,25 @@ public static class CombatEngine
         // poison-on-draw lasts the turn it was played and no longer.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.CorrosiveWave);
 
+        // `NoEnergyGainPower.AfterSideTurnEnd` -- the same shape: Expect A Fight's lockout
+        // lasts the turn it was played and no longer.
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.NoEnergyGain);
+
         // ── Start of next player turn ─────────────────────────────────────────
         state.Turn++;
         state.PlayerTurn = true;
-        state.Energy = EffectiveMaxEnergy(state);
+        // `IceCream.ShouldPlayerResetEnergy` is false from turn two on, so the energy
+        // carries instead of refilling.
+        if (Effects.RelicEffects.ShouldResetEnergy(state, state.Turn + 1))
+        {
+            state.Energy = EffectiveMaxEnergyForTurn(state, state.Turn + 1);
+        }
         state.PlayerHpLostThisTurn = 0;
         state.CardsPlayedThisTurn = 0;
         state.ShivsPlayedThisTurn = 0;
+
+        // After the energy reset, which is where the game puts it and says why.
+        Effects.RelicEffects.ApplyBoundPhylacteryTurnStart(state, state.Turn + 1);
 
         Effects.CardEffects.TriggerAllOrbAfterTurnStartPassives(state, rng);
 
@@ -785,6 +819,10 @@ public static class CombatEngine
         if (playerPoison > 0)
         {
             state.PlayerHp -= BuffSystem.CapHpLoss(playerPoison, state.PlayerBuffs);
+            // Poison is a route to under-half like any other, and it is the one that
+            // ticks with no card played -- so without this Red Skull could stay unarmed
+            // through a whole turn it should have been active for.
+            Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Poison, -1);
             if (PlayerIsDead(state))
             {
@@ -808,7 +846,13 @@ public static class CombatEngine
         // was the thing that saved the block. Barricade does NOT decrement, which is the
         // whole difference between the two and why they cannot share an id.
         int blur = BuffSystem.Get(state.PlayerBuffs, BuffId.Blur);
-        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Barricade) == 0 && blur == 0)
+        // Sturdy Clamp keeps the block and then trims it to ten -- not Barricade, which
+        // keeps all of it.
+        if (Effects.RelicEffects.KeepsBlockCappedAtTen(state))
+        {
+            state.PlayerBlock = Math.Min(state.PlayerBlock, 10);
+        }
+        else if (BuffSystem.Get(state.PlayerBuffs, BuffId.Barricade) == 0 && blur == 0)
         {
             state.PlayerBlock = 0;
         }
@@ -829,6 +873,8 @@ public static class CombatEngine
         }
 
         Effects.RelicEffects.ApplyStartOfPlayerTurnShared(state, state.Turn + 1, rng);
+        Effects.RelicEffects.ApplyStartOfPlayerTurnRares(state, state.Turn + 1, rng);
+        Effects.RelicEffects.RefreshBeltBuckle(state);
 
         int coolant = BuffSystem.Get(state.PlayerBuffs, BuffId.Coolant);
         if (coolant > 0)
@@ -895,7 +941,7 @@ public static class CombatEngine
         int nextTurnEnergy = BuffSystem.Get(state.PlayerBuffs, BuffId.NextTurnEnergy);
         if (nextTurnEnergy > 0)
         {
-            state.Energy += nextTurnEnergy;
+            Effects.CardEffects.GainEnergy(state, nextTurnEnergy);
             BuffSystem.Remove(state.PlayerBuffs, BuffId.NextTurnEnergy);
         }
 
@@ -969,6 +1015,11 @@ public static class CombatEngine
         state.CardsExhaustedThisTurn = 0;
         state.StatusCardsDrawnThisTurn = 0;
         state.EnergySpentThisTurn = 0;
+        state.UnblockedDamageThisTurn = 0;
+        state.RainbowRingAttacks = 0;
+        state.RainbowRingSkills = 0;
+        state.RainbowRingPowers = 0;
+        state.RainbowRingPaidThisTurn = false;
 
         ReturnQueuedCardsToHandBeforeDraw(state);
         DeliverQueuedCardCopiesBeforeDraw(state);
@@ -1082,6 +1133,7 @@ public static class CombatEngine
         // `ReptileTrinket.AfterPotionUsed`, and it is AFTER: a potion that grants Strength
         // of its own has already landed, so the two stack rather than one replacing it.
         Effects.RelicEffects.ApplyAfterPotionUsed(state);
+        Effects.RelicEffects.RefreshBeltBuckle(state);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
 
         return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
@@ -1119,6 +1171,8 @@ public static class CombatEngine
 
         state.PotionSlots[slot] = 0;
         state.PlayerHp = Math.Max((int)(state.PlayerMaxHp * 0.3m), 1);
+        // Thirty percent is under half, so the revive is exactly when Red Skull arms.
+        Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
         return false;
     }
 
@@ -1165,6 +1219,13 @@ public static class CombatEngine
         return sloth > 0 && state.CardsPlayedThisTurn >= sloth;
     }
 
+    /// <summary>
+    /// `ModifyMaxEnergy` from the relics that change it per TURN rather than per combat.
+    /// Bread is the only one; the flat +1 relics are folded into MaxEnergy at combat start.
+    /// </summary>
+    private static int EffectiveMaxEnergyForTurn(CombatState state, int turnNumber) =>
+        Effects.RelicEffects.ModifyMaxEnergy(state, EffectiveMaxEnergy(state), turnNumber);
+
     private static int EffectiveMaxEnergy(CombatState state)
     {
         // WasteAwayPower.ModifyMaxEnergy subtracts its amount, so every turn starts short.
@@ -1193,7 +1254,7 @@ public static class CombatEngine
         switch (card.Enchantment)
         {
             case Enchantment.Sown when !card.EnchantSpent:
-                state.Energy += card.EnchantAmount;
+                Effects.CardEffects.GainEnergy(state, card.EnchantAmount);
                 state.PlayedCardEnchantSpent = true;
                 break;
             case Enchantment.Swift when !card.EnchantSpent:
@@ -1208,6 +1269,17 @@ public static class CombatEngine
             case Enchantment.Corrupted:
                 // Unblockable, unpowered, and every play -- not once.
                 Effects.CardEffects.DealDamageToPlayer(state, 2);
+                break;
+            case Enchantment.Adroit:
+                // `RecalculateValues` sets a BlockVar from the amount, so the block IS the
+                // amount -- and unlike Nimble it is not restricted to Skills.
+                Effects.CardEffects.GainBlock(state, card.EnchantAmount, rng);
+                break;
+            case Enchantment.Momentum:
+                // `OnPlay` adds the amount to a running bonus the CARD carries. The damage
+                // is read before this runs, which is why the first play of a freshly
+                // enchanted card gets nothing.
+                state.PlayedCardBonusDamage += card.EnchantAmount;
                 break;
             case Enchantment.Inky:
                 // Inky.OnPlay applies Weak 1 to what the card hit. It is the only modelled
@@ -1429,7 +1501,14 @@ public static class CombatEngine
         {
             // Declining answers the whole screen: the game's minimum is zero, not "at
             // least one per reopen", so keeping nothing ends it rather than asking again.
+            var declined = selection.Kind;
             state.PendingSelection = null;
+            if (declined == CardSelectionKind.DiscardAnyThenDraw)
+            {
+                CloseGamblingChipScreen(state, rng);
+                return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
+            }
+
             return ResumeOwedEndTurn(state, rng);
         }
 
@@ -1488,6 +1567,22 @@ public static class CombatEngine
                     var card = state.DrawPile[index];
                     state.RemoveFromDrawPileAt(index);
                     state.Hand.Add(card);
+                }
+
+                break;
+
+            case CardSelectionKind.DiscardAnyThenDraw:
+                if (index < state.Hand.Count)
+                {
+                    var pitched = state.Hand[index];
+                    state.Hand.RemoveAt(index);
+                    Effects.CardEffects.DiscardMovedCards(state, [pitched]);
+                    state.GamblingChipDiscarded++;
+                }
+
+                if (!OpenGamblingChipScreen(state))
+                {
+                    CloseGamblingChipScreen(state, rng);
                 }
 
                 break;
@@ -1621,6 +1716,14 @@ public static class CombatEngine
                 return ResumeOwedEndTurn(state, rng);
         }
 
+        // A screen that was owed while another stood follows it. Toolbox's pick is the one
+        // case: its screen is up at combat start where the Chip's would otherwise be.
+        if (state.PendingSelection is null && state.GamblingChipOwed)
+        {
+            state.GamblingChipOwed = false;
+            OpenGamblingChipScreen(state);
+        }
+
         return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
     }
 
@@ -1679,7 +1782,7 @@ public static class CombatEngine
             // rather than after them.
             if (Effects.RelicEffects.Has(state.Relics, Effects.RelicEffects.GremlinHorn))
             {
-                state.Energy++;
+                Effects.CardEffects.GainEnergy(state, 1);
                 Effects.CardEffects.DrawCards(state, 1, rng);
             }
 
@@ -1856,6 +1959,18 @@ public static class CombatEngine
     /// It heals 25 rather than to full, which is what separates this from the Fogmog
     /// eye's revive — a segment that comes back is not a fresh one.
     /// </remarks>
+    /// <summary>
+    /// `ReattachPower.AreAllOtherSegmentsDead`, inverted. Read by the reattach itself and
+    /// by `CardEffects.TriggersFatal`, which is the same question asked from the player's
+    /// side: a Decimillipede is only really dead when its last segment is.
+    /// </summary>
+    internal static bool AnyOtherSegmentAlive(CombatState state, EnemyState enemy) =>
+        state.Enemies.Any(other =>
+            !ReferenceEquals(other, enemy)
+            && BuffSystem.Get(other.Buffs, BuffId.Reattach) > 0
+            && (other.Hp > 0 || BuffSystem.Get(other.Buffs, BuffId.Reviving) > 0)
+        );
+
     private static bool TryReattachSegment(CombatState state, EnemyState enemy)
     {
         if (BuffSystem.Get(enemy.Buffs, BuffId.Reattach) <= 0)
@@ -1869,12 +1984,7 @@ public static class CombatEngine
         }
 
         // The last one standing stays down, and takes the rest of the creature with it.
-        bool anyOtherAlive = state.Enemies.Any(other =>
-            !ReferenceEquals(other, enemy)
-            && BuffSystem.Get(other.Buffs, BuffId.Reattach) > 0
-            && (other.Hp > 0 || BuffSystem.Get(other.Buffs, BuffId.Reviving) > 0)
-        );
-        if (!anyOtherAlive)
+        if (!AnyOtherSegmentAlive(state, enemy))
         {
             return false;
         }
@@ -2315,6 +2425,45 @@ public static class CombatEngine
     /// `!card.ShouldRetainThisTurn` — a card that will survive the flush anyway is not
     /// worth spending a pick on and the game does not offer it.
     /// </summary>
+    /// <summary>Combat setup's entry to the same screen.</summary>
+    internal static void OpenGamblingChipScreenForCombatStart(CombatState state) =>
+        OpenGamblingChipScreen(state);
+
+    /// <summary>
+    /// Raises Gambling Chip's screen if there is anything left to offer, and reports
+    /// whether it did. Reopened after every pick, because the count has no upper bound.
+    /// </summary>
+    private static bool OpenGamblingChipScreen(CombatState state)
+    {
+        if (state.Hand.Count == 0)
+        {
+            return false;
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.DiscardAnyThenDraw,
+            Candidates = [.. Enumerable.Range(0, state.Hand.Count)],
+            SourceCardDefId = 0,
+            Skippable = true,
+        };
+        return true;
+    }
+
+    /// <summary>
+    /// `CardCmd.DiscardAndDraw(list, list.Count)` — the draw is for as many as were
+    /// pitched, and it happens once, when the screen closes.
+    /// </summary>
+    private static void CloseGamblingChipScreen(CombatState state, Random rng)
+    {
+        int drawn = state.GamblingChipDiscarded;
+        state.GamblingChipDiscarded = 0;
+        if (drawn > 0)
+        {
+            Effects.CardEffects.DrawCards(state, drawn, rng);
+        }
+    }
+
     private static bool OpenRetainSelection(CombatState state)
     {
         int picks = BuffSystem.Get(state.PlayerBuffs, BuffId.WellLaidPlans);
@@ -2364,6 +2513,21 @@ public static class CombatEngine
         state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
         state.StormBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Storm);
         state.SubroutineBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Subroutine);
+    }
+
+    /// <summary>
+    /// `GhostSeed.CanAffect`: Basic rarity AND tagged Strike or Defend. The entry-slug
+    /// stand-in for the tag is exact within Basic rarity, which is the only rarity this
+    /// asks about — the caveat `Card.IsStrikeOrDefend` carries is about cards ABOVE Basic.
+    /// </summary>
+    private static bool IsBasicStrikeOrDefend(CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return def.Rarity == CardRarity.Basic
+            && (
+                def.Entry.StartsWith("STRIKE_", StringComparison.Ordinal)
+                || def.Entry.StartsWith("DEFEND_", StringComparison.Ordinal)
+            );
     }
 
     private static void RemoveFirstMatchingCard(List<CardInstance> pile, CardInstance card)
@@ -2535,7 +2699,7 @@ public static class CombatEngine
 
             if (state.SubroutineBeforePlay > 0)
             {
-                state.Energy += state.SubroutineBeforePlay;
+                Effects.CardEffects.GainEnergy(state, state.SubroutineBeforePlay);
             }
 
             int galvanic = state

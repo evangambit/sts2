@@ -31,6 +31,16 @@ public enum DeckSelection
     /// nothing at all where a plain removal would offer everything.
     /// </remarks>
     RemoveUpgradable,
+
+    /// <summary>
+    /// Dolly's Mirror: the chosen card is COPIED into the deck, not changed.
+    /// </summary>
+    /// <remarks>
+    /// `CardSelectCmd.FromDeckGeneric` with `c.Type != CardType.Quest` — a wider filter
+    /// than any other selection here, because duplicating a curse is a legal thing to want
+    /// and only Quest cards are excluded.
+    /// </remarks>
+    Duplicate,
 }
 
 /// <summary>One act's generated rooms, as <c>ActModel._rooms</c> holds them.</summary>
@@ -124,6 +134,41 @@ public sealed class RunState
     /// is what proved it moves at all.
     /// </remarks>
     public int MaxPotionSlots = 2;
+
+    /// <summary>
+    /// Extra `CardReward`s owed by Prayer Wheel or White Star. Counted rather than
+    /// generated here because the reward SCREEN is a phase the run steps through, and the
+    /// emulator offers one card reward at a time.
+    /// </summary>
+    /// <remarks>
+    /// The count is honoured by the card-reward phase; what is NOT modelled is White
+    /// Star's pool switch — its three should come from the BOSS pool and come from the
+    /// room's own here. Recorded rather than guessed: the boss card pool is a separate
+    /// generator and wiring it through the reward phase is its own change.
+    /// </remarks>
+    public int ExtraCardRewardsOwed;
+
+    /// <summary>
+    /// Rest options already taken on THIS visit, as a bitmask of action ids. Only ever
+    /// more than one bit with Miniature Tent, which keeps the screen open.
+    /// </summary>
+    public int RestOptionsTaken;
+
+    /// <summary>
+    /// Whether the last combat dealt the player any UNBLOCKED, blockable damage — Lava
+    /// Lamp's condition. Unblockable damage is excluded, so a Burn does not spoil it.
+    /// </summary>
+    public bool TookUnblockedDamageThisCombat;
+
+    /// <summary>
+    /// Which card-reward option carries an enchantment, and which one. Wing Charm is the
+    /// only source; -1 is "none". The enchantment rides on the OPTION rather than on the
+    /// card that reaches the deck, because the game enchants the reward the player sees.
+    /// </summary>
+    public int RewardEnchantIndex = -1;
+
+    /// <inheritdoc cref="RewardEnchantIndex" />
+    public Enchantment RewardEnchantment;
     public int CurrentNodeType;
     public int[] NeowOptions = new int[3];
     public int[] RewardCards = new int[3];

@@ -273,7 +273,7 @@ public static class CardEffects
 
             case CL.Volley: // X-cost, 10/14 damage X times to random enemies
             {
-                int x = state.Energy;
+                int x = RelicEffects.ModifyXValue(state, state.Energy);
                 state.Energy = 0;
                 DealDamageToRandomEnemiesMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
                 break;
@@ -372,10 +372,12 @@ public static class CardEffects
                 var feedTarget = FirstEnemy(state);
                 if (feedTarget != null)
                 {
+                    bool feedFatal = TriggersFatal(state, feedTarget);
                     DealDamageToEnemy(state, feedTarget, Dmg(state, def, upgraded, card));
-                    if (feedTarget.Hp <= 0)
+                    if (feedFatal && feedTarget.Hp <= 0)
                     {
-                        state.PlayerMaxHp += upgraded ? 4 : 3;
+                        // `CreatureCmd.GainMaxHp`, which heals as well as raising the cap.
+                        GainMaxHp(state, upgraded ? 4 : 3);
                     }
                 }
                 break;
@@ -533,7 +535,7 @@ public static class CardEffects
 
             case IC.Whirlwind: // X-cost, 5/8 dmg × (energy spent) to ALL enemies
             {
-                int x = state.Energy;
+                int x = RelicEffects.ModifyXValue(state, state.Energy);
                 state.Energy = 0;
                 DealDamageToAllMultiHit(state, Dmg(state, def, upgraded, card), x);
                 break;
@@ -584,7 +586,7 @@ public static class CardEffects
 
             case IC.Bloodletting: // 0-cost, lose 3 HP + gain 2/3 energy
                 LoseHp(state, 3);
-                state.Energy += upgraded ? 3 : 2;
+                GainEnergy(state, upgraded ? 3 : 2);
                 break;
 
             case IC.BurningPact: // 1-cost, exhaust a chosen card, then draw 2/3
@@ -649,7 +651,11 @@ public static class CardEffects
                 int attackCount = state.Hand.Count(card =>
                     GeneratedData.Cards.Get(card.DefId).Type == CardType.Attack
                 );
-                state.Energy += attackCount;
+                GainEnergy(state, attackCount);
+                // ...and then `NoEnergyGainPower` on yourself, which is the card's entire
+                // COST and was missing: it was a free burst of energy with no downside.
+                // Applied AFTER its own gain, so the card pays itself first.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoEnergyGain, 1);
                 break;
             }
 
@@ -661,7 +667,7 @@ public static class CardEffects
             case IC.ForgottenRitual: // 1-cost, gain 3/4 energy only if a card exhausted this turn
                 if (state.CardsExhaustedThisTurn > 0)
                 {
-                    state.Energy += upgraded ? 4 : 3;
+                    GainEnergy(state, upgraded ? 4 : 3);
                 }
 
                 break;
@@ -684,7 +690,7 @@ public static class CardEffects
                 break;
 
             case IC.NotYet: // 2-cost, heal 10/13 HP
-                state.PlayerHp = Math.Min(state.PlayerHp + (upgraded ? 13 : 10), state.PlayerMaxHp);
+                HealPlayer(state, upgraded ? 13 : 10);
                 break;
 
             case IC.OneTwoPunch: // 1-cost, the next 1/2 Attack cards are played twice this turn
@@ -693,7 +699,7 @@ public static class CardEffects
 
             case IC.Offering: // 0-cost, lose 6 HP + gain 2 energy + draw 3/5
                 LoseHp(state, 6);
-                state.Energy += 2;
+                GainEnergy(state, 2);
                 DrawCards(state, upgraded ? 5 : 3, rng);
                 break;
 
@@ -716,7 +722,7 @@ public static class CardEffects
                 if (state.Hand.Count == 0)
                 {
                     DrawCards(state, upgraded ? 3 : 2, rng);
-                    state.Energy += upgraded ? 3 : 2;
+                    GainEnergy(state, upgraded ? 3 : 2);
                 }
                 break;
 
@@ -928,24 +934,18 @@ public static class CardEffects
                 if (target != null)
                 {
                     int hpBefore = target.Hp;
+                    bool greedFatal = TriggersFatal(state, target);
                     DealDamageToEnemy(state, target, upgraded ? 25 : 20);
-                    if (
-                        target.Hp <= 0
-                        && hpBefore > 0
-                        && !BuffSystem.Has(target.Buffs, BuffId.Minion)
-                    )
+                    if (target.Hp <= 0 && hpBefore > 0 && greedFatal)
                     {
-                        state.PlayerGold += RelicEffects.ModifyGoldGained(
-                            state.Relics,
-                            upgraded ? 25 : 20
-                        );
+                        GainGold(state, upgraded ? 25 : 20);
                     }
                 }
                 break;
             }
 
             case CL.BelieveInYou: // 0-cost multiplayer ally energy; self in single-player
-                state.Energy += upgraded ? 3 : 2;
+                GainEnergy(state, upgraded ? 3 : 2);
                 break;
 
             case CL.HuddleUp: // 1-cost multiplayer team draw; self in single-player
@@ -978,7 +978,7 @@ public static class CardEffects
                 break;
 
             case CL.Production: // 0-cost, gain 2/3 energy, exhaust
-                state.Energy += upgraded ? 3 : 2;
+                GainEnergy(state, upgraded ? 3 : 2);
                 break;
 
             case CL.Purity: // 0-cost, exhaust up to 3/5 CHOSEN cards from hand
@@ -1106,7 +1106,7 @@ public static class CardEffects
                 break;
 
             case SI.Adrenaline: // 0-cost, gain 1/2 energy and draw 2, exhaust
-                state.Energy += upgraded ? 2 : 1;
+                GainEnergy(state, upgraded ? 2 : 1);
                 DrawCards(state, 2, rng);
                 break;
 
@@ -1525,7 +1525,7 @@ public static class CardEffects
                 // which the emulator ignored entirely. And the Strength loss is a plain
                 // `StrengthPower(-powerAmount)`: PERMANENT, not the temporary one that is
                 // handed back at end of turn.
-                int x = state.Energy + (upgraded ? 1 : 0);
+                int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
                 ApplyEnemyDebuff(state, BuffId.Strength, -x, rng);
                 ApplyEnemyDebuff(state, BuffId.Weak, x, rng);
                 state.Energy = 0;
@@ -1741,7 +1741,7 @@ public static class CardEffects
 
             case SI.Skewer: // X-cost, 8/11 damage X times
             {
-                int x = state.Energy;
+                int x = RelicEffects.ModifyXValue(state, state.Energy);
                 state.Energy = 0;
                 DealDamageMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
                 break;
@@ -1810,7 +1810,7 @@ public static class CardEffects
                 break;
 
             case SI.Tactician: // 3-cost, gain 1/2 energy
-                state.Energy += upgraded ? 2 : 1;
+                GainEnergy(state, upgraded ? 2 : 1);
                 break;
 
             case SI.TheHunt: // 1-cost, 10/15 damage; a KILL earns an extra card reward
@@ -1822,8 +1822,9 @@ public static class CardEffects
                 var quarry = FirstEnemy(state);
                 if (quarry != null)
                 {
+                    bool huntFatal = TriggersFatal(state, quarry);
                     DealDamageToEnemy(state, quarry, Dmg(state, def, upgraded, card));
-                    if (quarry.Hp <= 0)
+                    if (huntFatal && quarry.Hp <= 0)
                     {
                         state.ExtraCardRewards++;
                         BuffSystem.Apply(state.PlayerBuffs, BuffId.TheHunt, 1);
@@ -2459,7 +2460,7 @@ public static class CardEffects
         if (state.DrawnCardsSinceAutomationProc >= 10)
         {
             state.DrawnCardsSinceAutomationProc = 0;
-            state.Energy += automation;
+            GainEnergy(state, automation);
         }
     }
 
@@ -2527,6 +2528,7 @@ public static class CardEffects
 
     public static void ShuffleDiscardIntoDraw(CombatState state, Random rng)
     {
+        RelicEffects.ApplyAfterShuffle(state, rng);
         int count = state.DiscardPile.Count + state.DrawPile.Count;
         if (_shuffleCards is null || _shuffleCards.Length < count)
         {
@@ -2599,15 +2601,24 @@ public static class CardEffects
         state.ExhaustPile.Add(card with { FreeThisTurn = false });
         state.CardsExhaustedThisTurn++;
         RelicEffects.ApplyAfterCardExhausted(state, causedByEthereal, rng);
+        RelicEffects.ApplyBurningSticks(state, card);
         if (card.DefId == IC.DrumOfBattle)
         {
-            state.Energy += card.Upgraded ? 3 : 2;
+            GainEnergy(state, card.Upgraded ? 3 : 2);
         }
 
+        // `FeelNoPainPower.AfterCardExhausted` is
+        // `CreatureCmd.GainBlock(Owner, Amount, ValueProp.Unpowered, null)` -- the ordinary
+        // command, so everything hung off a block gain applies to it. This was the one
+        // place block was added by a bare `+=`, and it was wrong in BOTH directions: it
+        // ran the amount through `IncomingBlock`, so Dexterity raised it and Frail cut it
+        // where Unpowered says neither touches it; and it skipped Shadowmeld's doubling,
+        // Unmovable's, and Juggernaut -- Feel No Pain into Juggernaut being a deck people
+        // actually build.
         int fnp = BuffSystem.Get(state.PlayerBuffs, BuffId.FeelNoPain);
         if (fnp > 0)
         {
-            state.PlayerBlock += BuffSystem.IncomingBlock(fnp, state.PlayerBuffs);
+            GainUnpoweredBlock(state, fnp, rng);
         }
 
         int de = BuffSystem.Get(state.PlayerBuffs, BuffId.DarkEmbrace);
@@ -2640,7 +2651,7 @@ public static class CardEffects
         amount = BuffSystem.CapIncomingDamage(amount, state.PlayerBuffs);
         int absorbed = Math.Min(state.PlayerBlock, amount);
         state.PlayerBlock -= absorbed;
-        int hpLoss = amount - absorbed;
+        int hpLoss = RelicEffects.ModifyHpLost(state, amount - absorbed);
         if (hpLoss > 0)
         {
             int buffer = BuffSystem.Get(state.PlayerBuffs, BuffId.Buffer);
@@ -2660,6 +2671,9 @@ public static class CardEffects
 
             state.PlayerHp -= hpLoss;
             state.PlayerHpLostThisTurn += hpLoss;
+            state.TookUnblockedDamage = true;
+            // Beating Remnant measures its 20-per-turn cap against what actually landed.
+            state.UnblockedDamageThisTurn += hpLoss;
             // Hook.AfterDamageReceived does not care who dealt the damage, so a card that
             // hits its own owner arms Centennial Puzzle and Self-Forming Clay too.
             RelicEffects.ApplyAfterUnblockedDamageReceived(state);
@@ -3454,6 +3468,126 @@ public static class CardEffects
         return effective;
     }
 
+    /// <summary>
+    /// `cardPlay.Target.Powers.All(p => p.ShouldOwnerDeathTriggerFatal())` -- the gate on
+    /// every "if this kills" payout. Two powers answer false: `MinionPower` always, and
+    /// `ReattachPower` while any other Decimillipede segment still stands.
+    ///
+    /// Read BEFORE the attack, as the game reads it, which is why every caller snapshots
+    /// it rather than asking after the damage: for a segment the answer changes the moment
+    /// the board does.
+    /// </summary>
+    private static bool TriggersFatal(CombatState state, EnemyState target) =>
+        !BuffSystem.Has(target.Buffs, BuffId.Minion)
+        && !(
+            BuffSystem.Get(target.Buffs, BuffId.Reattach) > 0
+            && CombatEngine.AnyOtherSegmentAlive(state, target)
+        );
+
+    /// <summary>
+    /// `PlayerCmd.GainStars`. Stars were gained by a bare `Stars +=` at five places and
+    /// the game gains them at one, which is exactly the shape the gold chokepoint was
+    /// built to fix: `AfterStarsGained` is a hook, and `+=` cannot dispatch one.
+    ///
+    /// `BlackHolePower` is its only listener, and it fires per GAIN rather than per star.
+    /// Spending stars is `LoseStars`, a different command, and dispatches nothing.
+    /// </summary>
+    public static void GainStars(CombatState state, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        state.Stars += amount;
+
+        int blackHole = BuffSystem.Get(state.PlayerBuffs, BuffId.BlackHole);
+        if (blackHole > 0)
+        {
+            // `CreatureCmd.Damage(..., ValueProp.Unpowered, ...)`, so Strength stays out
+            // of it -- and `HittableEnemies`, so a dead one is not hit again.
+            foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToList())
+            {
+                DealUnpoweredDamageToEnemy(state, enemy, blackHole);
+            }
+        }
+    }
+
+    /// <summary>
+    /// `PlayerCmd.GainEnergy`. Energy has no `AfterEnergyGained` hook -- unlike gold and
+    /// stars, nothing REACTS to a gain -- but it does have a modifier chain, and that
+    /// chain has exactly one implementer: `NoEnergyGainPower` returns 0 for the owner.
+    ///
+    /// So the chokepoint exists to be zeroed, not to dispatch. The `amount <= 0` guard is
+    /// the game's, and it sits BEFORE the modify, so a zero gain never consults anything.
+    /// </summary>
+    public static void GainEnergy(CombatState state, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        if (BuffSystem.Get(state.PlayerBuffs, BuffId.NoEnergyGain) > 0)
+        {
+            return;
+        }
+
+        state.Energy += amount;
+    }
+
+    /// <summary>
+    /// `PlayerCmd.GainGold`, combat side. See the run-side twin in `RunNonCombatEffects`
+    /// for why the modify-then-return-then-hook order matters.
+    /// </summary>
+    public static void GainGold(CombatState state, int amount)
+    {
+        amount = RelicEffects.ModifyGoldGained(state.Relics, amount);
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        state.PlayerGold += amount;
+        RelicEffects.ApplyAfterGoldGained(state);
+    }
+
+    /// <summary>
+    /// `CreatureCmd.Heal`. Every heal in combat comes through here so that
+    /// `ApplyAfterPlayerHpChanged` runs -- which is Red Skull's whole mechanism, since it
+    /// hands its Strength BACK the moment a heal carries the player back over half.
+    ///
+    /// The hook is on CURRENT HP only. `CreatureCmd.SetMaxHp` does not dispatch it, so a
+    /// change to the maximum alone does not re-ask the question even though it moves the
+    /// threshold -- see the two clamp sites that deliberately stay bare.
+    /// </summary>
+    public static void HealPlayer(CombatState state, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        int before = state.PlayerHp;
+        state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + amount);
+        if (state.PlayerHp != before)
+        {
+            RelicEffects.ApplyAfterPlayerHpChanged(state);
+        }
+    }
+
+    /// <summary>
+    /// `CreatureCmd.GainMaxHp`: the cap rises AND the player is healed by the same amount.
+    /// Raising the cap alone is a different, worse effect -- it hands the player a number
+    /// they have to go and earn back at a rest site.
+    /// </summary>
+    public static void GainMaxHp(CombatState state, int amount)
+    {
+        state.PlayerMaxHp += amount;
+        // The `Heal(creature, num)` half of the command, so this dispatches like any heal.
+        HealPlayer(state, amount);
+    }
+
     // Deals unblockable, unpowered HP loss to the player and triggers Rupture.
     public static void LoseHp(CombatState state, int amount)
     {
@@ -3483,6 +3617,14 @@ public static class CardEffects
         }
 
         TriggerInfernoAfterPlayerSelfDamage(state, hpBefore - state.PlayerHp);
+
+        // Every route that changes current HP dispatches `AfterCurrentHpChanged`, and
+        // self-damage is a route: Offering and Hemokinesis can put the player under half
+        // and arm Red Skull, and can kill outright and reach Lizard Tail.
+        if (state.PlayerHp != hpBefore)
+        {
+            RelicEffects.ApplyAfterPlayerHpChanged(state);
+        }
     }
 
     public static void ChannelOrb(CombatState state, OrbType type, Random? rng = null)
@@ -3577,7 +3719,7 @@ public static class CardEffects
             case OrbType.Plasma:
                 // `PassiveVal => 1m` with no ModifyOrbValue: Plasma is the one orb Focus
                 // does not touch, at either end.
-                state.Energy += 1;
+                GainEnergy(state, 1);
                 break;
             case OrbType.Glass:
             {
@@ -3620,6 +3762,62 @@ public static class CardEffects
                 TriggerOrbPassive(state, i, rng);
             }
         }
+    }
+
+    /// <summary>
+    /// `CardFactory.GetDistinctForCombat` over the character's WHOLE unlocked pool, free
+    /// for the turn, into hand — Vexing Puzzlebox's card. Unlike Creative Ai's it is not
+    /// filtered to Powers.
+    /// </summary>
+    /// <remarks>
+    /// Rolled on the card-generation stream, which is the same one Creative Ai and White
+    /// Noise use. The pool here is the IRONCLAD one, because the run engine is Ironclad
+    /// only; a character-selectable run would need this to follow the character.
+    /// </remarks>
+    /// <summary>
+    /// Toolbox's screen: three DISTINCT colourless cards, one of which joins the hand.
+    /// Rolled on the card-generation stream, as `CardFactory.GetDistinctForCombat` is.
+    /// </summary>
+    internal static void OpenToolboxSelection(CombatState state, Random rng)
+    {
+        var pool = GeneratedData.CardPools.Colorless;
+        if (pool.Length == 0)
+        {
+            return;
+        }
+
+        var stream = state.CardGenerationRng ?? rng;
+        var offer = new List<int>();
+        // "Distinct" is the game's word and it means no duplicates on the screen, not
+        // three tries that might collide.
+        for (int guard = 0; offer.Count < 3 && guard < 64; guard++)
+        {
+            int id = pool[stream.Next(pool.Length)];
+            if (!offer.Contains(id))
+            {
+                offer.Add(id);
+            }
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.GeneratedCardToHand,
+            Candidates = [.. Enumerable.Range(0, offer.Count)],
+            SourceCardDefId = RelicEffects.Toolbox,
+            GeneratedCandidates = offer,
+        };
+    }
+
+    internal static void AddRandomPoolCardToHand(CombatState state, Random rng)
+    {
+        var pool = GeneratedData.CardPools.Ironclad;
+        if (pool.Length == 0 || state.Hand.Count >= MaxCardsInHand)
+        {
+            return;
+        }
+
+        int id = pool[(state.CardGenerationRng ?? rng).Next(pool.Length)];
+        state.Hand.Add(new CardInstance(id, false, FreeThisTurn: true));
     }
 
     public static void AddRandomDefectPowerCardsToHand(CombatState state, int count, Random rng)
@@ -3924,7 +4122,7 @@ public static class CardEffects
                 return true;
             case "Tempest":
             {
-                int x = state.Energy + (upgraded ? 1 : 0);
+                int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
                 state.Energy = 0;
                 for (int i = 0; i < x; i++)
                 {
@@ -3935,7 +4133,7 @@ public static class CardEffects
             }
             case "MultiCast":
             {
-                int x = state.Energy + (upgraded ? 1 : 0);
+                int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
                 state.Energy = 0;
                 for (int i = 0; i < x; i++)
                 {
@@ -3976,7 +4174,7 @@ public static class CardEffects
                     DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
                     if (hpBefore > 0 && target.Hp == 0)
                     {
-                        state.Energy += 3;
+                        GainEnergy(state, 3);
                     }
                 }
 
@@ -3986,7 +4184,7 @@ public static class CardEffects
                 // `EnergyVar(2)` +1, and then a VOID into the discard pile. The Void is
                 // the card's whole cost -- an unplayable, Ethereal status that clogs the
                 // next shuffle -- and the emulator handed out the energy for free.
-                state.Energy += upgraded ? 3 : 2;
+                GainEnergy(state, upgraded ? 3 : 2);
                 AddGeneratedStatusToDiscard(state, 10040, rng);
                 return true;
             case "DoubleEnergy":
@@ -4198,10 +4396,10 @@ public static class CardEffects
 
                 return true;
             case "EnergySurge":
-                state.Energy += upgraded ? 3 : 2;
+                GainEnergy(state, upgraded ? 3 : 2);
                 return true;
             case "Supercritical":
-                state.Energy += upgraded ? 6 : 4;
+                GainEnergy(state, upgraded ? 6 : 4);
                 return true;
             case "Skim":
                 DrawCards(state, upgraded ? 4 : 3, rng);
@@ -4459,16 +4657,16 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 4 : 3, rng);
                 return true;
             case "BorrowedTime":
-                state.Energy += upgraded ? 6 : 4;
+                GainEnergy(state, upgraded ? 6 : 4);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
                 return true;
             case "Neurosurge":
-                state.Energy += upgraded ? 4 : 3;
+                GainEnergy(state, upgraded ? 4 : 3);
                 DrawCards(state, 2, rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
                 return true;
             case "Wisp":
-                state.Energy += 1;
+                GainEnergy(state, 1);
                 return true;
             case "DrainPower":
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -4558,7 +4756,7 @@ public static class CardEffects
                 return true;
             case "Transfigure":
                 TransformRandomCardInHand(state, rng);
-                state.Energy += 1;
+                GainEnergy(state, 1);
                 return true;
             case "Unleash":
                 DealDamage(state, 6 + state.OstyMaxHp / Math.Max(1, upgraded ? 3 : 4));
@@ -4711,7 +4909,7 @@ public static class CardEffects
                 return true;
             case "GatherLight":
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                state.Stars += 1;
+                GainStars(state, 1);
                 return true;
             case "Glitterstream":
                 GainBlock(state, upgraded ? 13 : 11, rng);
@@ -4726,7 +4924,7 @@ public static class CardEffects
                 if (state.Stars >= 4)
                 {
                     state.Stars -= 4;
-                    state.Energy += 4;
+                    GainEnergy(state, 4);
                 }
 
                 return true;
@@ -4753,7 +4951,7 @@ public static class CardEffects
                     DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
                     if (hpBefore > 0 && target.Hp == 0)
                     {
-                        state.Stars += 5;
+                        GainStars(state, 5);
                     }
                 }
 
@@ -4789,11 +4987,11 @@ public static class CardEffects
                 return true;
             case "ShiningStrike":
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                state.Stars += 2;
+                GainStars(state, 2);
                 return true;
             case "SolarStrike":
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                state.Stars += upgraded ? 2 : 1;
+                GainStars(state, upgraded ? 2 : 1);
                 return true;
             case "Stardust":
             {
@@ -4886,7 +5084,7 @@ public static class CardEffects
                 GainBlock(state, upgraded ? 10 : 8, rng);
                 ApplyEnemyDebuff(state, BuffId.Weak, 2, rng);
                 ApplyEnemyDebuff(state, BuffId.Vulnerable, 2, rng);
-                state.Energy += 2;
+                GainEnergy(state, 2);
                 DrawCards(state, 3, rng);
                 return true;
             case "MinionStrike":
@@ -4968,10 +5166,10 @@ public static class CardEffects
             case "Luminesce":
             case "Supercritical":
             case "Wisp":
-                state.Energy += upgraded ? 2 : 1;
+                GainEnergy(state, upgraded ? 2 : 1);
                 break;
             case "BorrowedTime":
-                state.Energy += upgraded ? 3 : 2;
+                GainEnergy(state, upgraded ? 3 : 2);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
                 break;
             case "Acrobatics":
@@ -4982,7 +5180,7 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.ShivDamage, upgraded ? 6 : 4);
                 break;
             case "Adrenaline":
-                state.Energy += upgraded ? 2 : 1;
+                GainEnergy(state, upgraded ? 2 : 1);
                 DrawCards(state, 2, rng);
                 break;
             case "Afterimage":
@@ -5027,7 +5225,7 @@ public static class CardEffects
             case "BigBang":
             case "BrightestFlame":
             case "Fuel":
-                state.Energy += upgraded ? 3 : 2;
+                GainEnergy(state, upgraded ? 3 : 2);
                 DrawCards(state, upgraded ? 3 : 2, rng);
                 break;
             case "BladeDance":
@@ -5053,7 +5251,7 @@ public static class CardEffects
             case "TheSmith":
             case "UpMySleeve":
                 DrawCards(state, 1, rng);
-                state.Energy += upgraded ? 1 : 0;
+                GainEnergy(state, upgraded ? 1 : 0);
                 break;
             case "BouncingFlask":
                 ApplyEnemyDebuff(state, BuffId.Poison, upgraded ? 12 : 9, rng);
@@ -5166,7 +5364,7 @@ public static class CardEffects
                 DealUnpoweredDamageToAll(state, upgraded ? 37 : 29);
                 break;
             case "DoubleEnergy":
-                state.Energy += Math.Max(0, state.Energy);
+                GainEnergy(state, Math.Max(0, state.Energy));
                 break;
             case "EnfeeblingTouch":
             case "Haze":
@@ -5269,7 +5467,7 @@ public static class CardEffects
                 UpgradeFirstCardInHand(state);
                 break;
             case "RoyalGamble":
-                state.Energy += upgraded ? 10 : 9;
+                GainEnergy(state, upgraded ? 10 : 9);
                 break;
             case "Scavenge":
                 ExhaustRandomCardFromHand(state, rng);
@@ -5294,7 +5492,7 @@ public static class CardEffects
                 break;
             case "Tactician":
             case "Turbo":
-                state.Energy += upgraded ? 3 : 2;
+                GainEnergy(state, upgraded ? 3 : 2);
                 break;
             case "Tempest":
                 DealUnpoweredDamageToAll(state, state.Energy * (upgraded ? 6 : 4));
@@ -5338,6 +5536,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
                 break;
             case "BlackHole":
+                // Was falling through to a Strength body it has nothing to do with. The
+                // card applies `BlackHolePower` at 3/4, and the POWER is what fires: it
+                // hits every enemy for its amount each time the player gains stars.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.BlackHole, upgraded ? 4 : 3);
+                break;
             case "CallOfTheVoid":
             case "ConsumingShadow":
             case "Countdown":
@@ -5413,7 +5616,7 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, upgraded ? 2 : 1);
                 break;
             case "Wish":
-                state.PlayerGold += RelicEffects.ModifyGoldGained(state.Relics, upgraded ? 30 : 25);
+                GainGold(state, upgraded ? 30 : 25);
                 break;
             case "WraithForm":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, upgraded ? 3 : 2);
@@ -5490,6 +5693,15 @@ public static class CardEffects
             damage += card.EnchantAmount;
         }
 
+        // Momentum.EnchantDamageAdditive pays the bonus the card has ACCUMULATED. It rides
+        // on BonusDamage, the field Rampage's growth already uses -- both are "damage this
+        // copy has permanently gained" -- but it is added HERE rather than at a call site,
+        // because Momentum can be on any Attack and Rampage is one card.
+        if (card.Enchantment == Enchantment.Momentum)
+        {
+            damage += card.BonusDamage;
+        }
+
         // Inky.EnchantDamageAdditive pays its own `DamageVar(1m)` rather than the amount
         // it was applied at -- the enchantment declares `ShowAmount => false` because its
         // numbers are vars on itself. So an Inky Shiv is 5, and would still be 5 if
@@ -5507,6 +5719,12 @@ public static class CardEffects
         }
 
         damage += RelicEffects.CardDamageBonus(state, def, upgraded);
+        // `MysticLighter.ModifyDamageAdditive`: 9 more from a powered attack played off an
+        // ENCHANTED card, whatever the enchantment is.
+        if (card.Enchantment != Enchantment.None && def.Type == CardType.Attack)
+        {
+            damage += RelicEffects.EnchantedCardDamageBonus(state);
+        }
         damage *= RelicEffects.CardDamageMultiplier(state, def);
 
         return damage;
@@ -5798,7 +6016,7 @@ public static class CardEffects
         }
     }
 
-    private static void SummonOsty(CombatState state, int amount)
+    internal static void SummonOsty(CombatState state, int amount)
     {
         if (amount <= 0)
         {
@@ -6059,7 +6277,7 @@ public static class CardEffects
                 break;
             }
             case OrbType.Plasma:
-                state.Energy += 2;
+                GainEnergy(state, 2);
                 break;
             case OrbType.Glass:
             {
@@ -6142,6 +6360,10 @@ public static class CardEffects
             state.PlayerHp - BuffSystem.CapIncomingDamage(thorns, state.PlayerBuffs)
         );
         state.PlayerHpLostThisTurn += Math.Max(0, hpBeforeThorns - state.PlayerHp);
+        if (state.PlayerHp != hpBeforeThorns)
+        {
+            RelicEffects.ApplyAfterPlayerHpChanged(state);
+        }
     }
 
     private static void ApplyEnemyDebuff(CombatState state, BuffId id, int magnitude, Random rng)
@@ -6167,6 +6389,11 @@ public static class CardEffects
         {
             return;
         }
+
+        // `UnsettlingLamp.ModifyPowerAmountGivenMultiplicative` doubles the debuffs of the
+        // first card each combat to land one. Applied here, at the single point every
+        // card-driven enemy debuff goes through, rather than at the call sites.
+        magnitude = RelicEffects.ModifyEnemyDebuffMagnitude(state, id, magnitude);
 
         int before = BuffSystem.Get(target.Buffs, id);
         BuffSystem.Apply(target.Buffs, id, magnitude);
@@ -6613,7 +6840,7 @@ public static class CardEffects
                 DealUnpoweredDamageToAll(state, Math.Max(0, (upgraded ? 9 : 6) + focus));
                 break;
             case "Fusion":
-                state.Energy += upgraded ? 2 : 1;
+                GainEnergy(state, upgraded ? 2 : 1);
                 break;
         }
     }
