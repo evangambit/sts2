@@ -475,6 +475,13 @@ public sealed class CombatState
     public int OstyAttacksThisTurn;
 
     /// <summary>
+    /// The sum of `StarsModifiedEntry.Amount` over the POSITIVE entries this turn -- stars
+    /// GAINED, not stars held. Radiate hits that many times, so spending them does not
+    /// reduce it and starting the turn with a pile does not raise it.
+    /// </summary>
+    public int StarsGainedThisTurn;
+
+    /// <summary>
     /// `CardModel.LastStarsSpent` for the play in flight. Stardust reads the stars it SPENT
     /// as its hit count, and by the time its effect runs the counter is already zero --
     /// `SpendResources` takes them before `OnPlay`.

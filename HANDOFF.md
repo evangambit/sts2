@@ -321,9 +321,25 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
     while `debug_add_card` generates one, and a card that ends the turn so there is
     no settled state to snapshot.
 
-  What is left: 28 Regent cards are captured but unread — the same shape the
-  Necrobinder's 45 were in before their reading pass, and worth expecting a similar
-  yield from.
+  **The Regent pool has since had its READING pass too: all 27 captured-but-unread
+  cards are read, tested and in the READ ledger.** 13 of 27 diverged (E339-E344),
+  on cards whose captures had all passed — close to the Necrobinder's 21-of-45, so
+  two pools now agree that **roughly one unread card in two is wrong whatever the
+  captures say.**
+
+  The Regent's failures had a distinctive shape. Nine of the thirteen are a card
+  handing out something from the wrong POOL or aiming at the wrong number of
+  targets, which are exactly the two things a capture against ONE enemy with a
+  green pile count cannot see:
+
+  - "Add a random card" is what a wrong body looks like when nobody has read the
+    card. Bundle of Joy, Manifest Authority, Heirloom Hammer and Crash Landing each
+    do something quite different, and all four were random-card placeholders (E341).
+  - Meteor Shower, Seven Stars and Radiate are all-enemies attacks that were hitting
+    one (E343). That is now nine cards across three pools found this way.
+  - Bombardment's Exhaust is the POINT — it auto-plays itself out of the exhaust
+    pile every turn — and reading it turned up the same defect in Howl From Beyond's
+    helper, which duplicates the card it replays (E339).
 
   **The DEFECT pool has now had its first capture pass too: 88 cards, 86 captured
   (two of those parked) and the last two unreachable — Scavenge raises a selection
@@ -1396,7 +1412,7 @@ when the real number is 552.
 | Silent      |    88 |          88 |     46 |
 | Defect      |    88 |          88 |     88 |
 | Necrobinder |    88 |          88 |     88 |
-| Regent      |    88 |          88 |     60 |
+| Regent      |    88 |          88 |     88 |
 | Event       |    27 |          27 |      1 |
 | Token       |    14 |          11 |      1 |
 | Curse       |    18 |           3 |      1 |
@@ -2566,7 +2582,8 @@ no game running:
   The number worth watching is `tested but unread`: cards that LOOK covered, which is
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in. That
   burn-down is now the main line of work — **30 left**, down from 194. Ironclad, the
-  Defect and the Necrobinder are finished; what remains is the Silent's tail. The rate
+  Defect, the Necrobinder and the Regent are finished; what remains is the Silent's
+  tail. The rate
   has held all the way through: Ironclad's first batch found two divergences in eighteen
   cards, and the Necrobinder's 45 unread cards found twenty-one. Budget roughly one
   divergence per two to nine cards depending on how much the pool has been captured, and

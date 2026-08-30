@@ -567,6 +567,18 @@ public static class CombatEngine
         }
 
         IncrementPlayedCardTypeCounters(state, def);
+
+        // `MakeItSo.AfterCardPlayedLate`: playing a SKILL counts the Skills played this
+        // turn, and on every third one every Make It So NOT already in hand comes back to
+        // it. It reads `CardPlaysFinished`, so THIS play is in the count -- hence below
+        // the increment rather than beside the Right Hand Hand hook further up, where the
+        // counter is still one short and the card would come back on the second, fifth and
+        // eighth Skill instead.
+        if (def.Type == CardType.Skill && state.SkillCardsPlayedThisTurn % 3 == 0)
+        {
+            Effects.CardEffects.ReturnMakeItSosToHand(state);
+        }
+
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterCardPlayedRares(state, def, rng);
         // The Lamp's latch closes when the card that claimed it finishes resolving.
@@ -1297,6 +1309,7 @@ public static class CombatEngine
         state.ExtraCardsDrawnThisTurn = 0;
         state.DoomAppliedThisTurn = false;
         state.OstyAttacksThisTurn = 0;
+        state.StarsGainedThisTurn = 0;
         Effects.CardEffects.ClearPlayedThisTurn(state);
         state.AttackOrSkillCardsPlayedThisTurn = 0;
         // Carried over before the reset: Pale Blue Dot reads LAST turn's plays.
@@ -1520,6 +1533,9 @@ public static class CombatEngine
             Effects.CardEffects.ApplyPoisonToAllEnemies(state, noxiousFumes, rng);
         }
 
+        // `Bombardment.AfterAutoPrePlayPhaseEnteredEarly` -- EARLY, so ahead of Mayhem's
+        // hook, which is the plain `AfterAutoPrePlayPhaseEntered`.
+        AutoPlayBombardmentsFromExhaust(state, rng);
         AutoPlayMayhemCards(state, rng);
         AutoPlayHowlsFromExhaust(state, rng);
 
@@ -2172,6 +2188,29 @@ public static class CombatEngine
                 if (index < state.Hand.Count)
                 {
                     state.Hand[index] = state.Hand[index] with { SlyThisTurn = true };
+                }
+
+                break;
+
+            case CardSelectionKind.CloneColorlessInHand:
+                // `selection.CreateClone()` into hand -- the WHOLE card, upgrade and
+                // enchantment included, and the original stays where it was. Combat-local
+                // state does not travel: a copy made free for the turn is a copy of the
+                // card, not of the discount.
+                if (index < state.Hand.Count && state.Hand.Count < Effects.CardEffects.MaxCardsInHand)
+                {
+                    var original = state.Hand[index];
+                    state.Hand.Add(
+                        original with
+                        {
+                            FreeThisTurn = false,
+                            FreeUntilPlayed = false,
+                            RetainThisTurn = false,
+                            SlyThisTurn = false,
+                            PlayedThisTurn = false,
+                        }
+                    );
+                    Effects.CardEffects.NoteGeneratedCard(state);
                 }
 
                 break;
@@ -3045,6 +3084,38 @@ public static class CombatEngine
         }
     }
 
+    /// <summary>
+    /// `Bombardment.AfterAutoPrePlayPhaseEnteredEarly` auto-plays the card whenever it is
+    /// sitting in the owner's EXHAUST pile as the turn's play phase opens. So the card is
+    /// 18 damage once and then 18 damage every turn for the rest of the combat, for free --
+    /// exhausting it is the point rather than the cost. The emulator had a plain attack.
+    /// </summary>
+    /// <remarks>
+    /// Howl From Beyond's shape with a different phase: Howl is
+    /// `AfterAutoPostPlayPhaseEntered`, at the END of the play phase.
+    /// </remarks>
+    private static void AutoPlayBombardmentsFromExhaust(CombatState state, Random rng)
+    {
+        foreach (
+            var card in state
+                .ExhaustPile.Where(c => GeneratedData.Cards.Get(c.DefId).Name == "Bombardment")
+                .ToList()
+        )
+        {
+            if (NoPrimaryEnemyLeft(state))
+            {
+                return;
+            }
+
+            // `CardCmd.AutoPlay` MOVES the card: out of the exhaust pile, into Play, then
+            // to its result pile -- which for an Exhaust card is the exhaust pile again.
+            // Leaving it in place while auto-playing it adds a second copy every turn, so
+            // the pile grows and next turn plays two.
+            RemoveFirstMatchingCard(state.ExhaustPile, card);
+            AutoPlay(state, card, rng);
+        }
+    }
+
     private static void AutoPlayMayhemCards(CombatState state, Random rng)
     {
         int mayhem = BuffSystem.Get(state.PlayerBuffs, BuffId.MayhemPower);
@@ -3547,6 +3618,9 @@ public static class CombatEngine
     private static bool ShouldPlaceOnDrawPileAfterPlay(CombatState state, CardDef def)
     {
         int nostalgia = BuffSystem.Get(state.PlayerBuffs, BuffId.Nostalgia);
+        // 429 is ShiningStrike, which returns itself to the TOP of the draw pile. Its own
+        // `!Keywords.Contains(Exhaust)` guard needs no code: this branch sits after the
+        // exhaust one, so a Shining Strike that has been given Exhaust never reaches it.
         return def.Id == 429
             || nostalgia > state.AttackOrSkillCardsPlayedThisTurn
                 && (def.Type == CardType.Attack || def.Type == CardType.Skill);

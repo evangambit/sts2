@@ -2438,7 +2438,7 @@ public static class CardEffects
                 break;
             }
 
-            var card = state.DrawPile[0];
+            var card = GrowKinglyCardOnDraw(state.DrawPile[0]);
             state.RemoveFromDrawPileAt(0);
             state.CardsDrawnThisCombat++;
             if (!fromHandDraw)
@@ -2473,6 +2473,30 @@ public static class CardEffects
             DrawForPagestorm(state, card, rng);
         }
     }
+
+    /// <summary>
+    /// The two Regent cards whose `AfterCardDrawn` fires on THEMSELVES and changes the copy
+    /// for good: Kingly Kick gets one cheaper every time it is drawn
+    /// (`EnergyCost.AddThisCombat(-1)`), and Kingly Punch gains `IntVar("Increase", 4)`
+    /// damage, 6 upgraded. Both were plain attacks in the emulator, and Kingly Punch's
+    /// growth had been guessed as the cards played this combat.
+    /// </summary>
+    /// <remarks>
+    /// Per COPY, which is why it rides on the CardInstance rather than on the player: a
+    /// deck with two Kingly Kicks has them at different prices, and the one that keeps
+    /// getting reshuffled and redrawn is the cheap one. Applied as the card leaves the draw
+    /// pile, so the copy that lands in hand is already the grown one.
+    /// </remarks>
+    private static CardInstance GrowKinglyCardOnDraw(CardInstance card) =>
+        GeneratedData.Cards.Get(card.DefId).Name switch
+        {
+            "KinglyKick" => card with { CostBump = card.CostBump - 1 },
+            "KinglyPunch" => card with
+            {
+                BonusDamage = card.BonusDamage + (card.Upgraded ? 6 : 4),
+            },
+            _ => card,
+        };
 
     /// <summary>
     /// Slither's cost: <c>Rng.CombatEnergyCosts.NextInt(4)</c>, so 0..3, re-rolled every
@@ -2703,24 +2727,68 @@ public static class CardEffects
     /// Spectrum Shift's cards: that many DISTINCT colourless cards into hand, rolled on the
     /// card-generation stream -- `CardFactory.GetDistinctForCombat` over the Colorless pool.
     /// </summary>
-    internal static void AddColorlessCardsToHand(CombatState state, int count, Random rng)
+    /// <summary>
+    /// `CardFactory.GetDistinctForCombat(player, ColorlessCardPool, count, CombatCardGeneration)`
+    /// -- `FilterForCombat(cards).TakeRandom(count, rng)`, and `TakeRandom` is
+    /// `UnstableShuffle(rng).Take(count)`.
+    /// </summary>
+    /// <remarks>
+    /// A SHUFFLE of the whole filtered pool, then the first `count`. The emulator drew ids
+    /// at random and rejected duplicates, which is a different draw pattern on the same
+    /// stream: for three cards out of a pool of sixty-four it takes three rolls where the
+    /// game takes sixty-three, so every later roll in the combat lands somewhere else. The
+    /// duplicate-rejection loop also had a guard of 64 tries, so a pool smaller than the
+    /// ask could silently return short.
+    ///
+    /// `CombatGenerationPool` is `FilterForCombat`; `OpenColorlessOffer` used the RAW pool
+    /// and so could offer cards the game excludes from combat generation.
+    /// </remarks>
+    private static List<int> DistinctColorlessForCombat(
+        CombatState state,
+        int count,
+        Random rng
+    )
     {
         var pool = CombatGenerationPool(GeneratedData.CardPools.Colorless);
-        if (pool.Count == 0)
+        if (pool.Count == 0 || count <= 0)
         {
-            return;
+            return [];
         }
 
-        var stream = state.CardGenerationRng ?? rng;
-        var taken = new List<int>();
-        for (int guard = 0; taken.Count < count && guard < 64; guard++)
+        var stream = CardGenerationRng(state, rng);
+        for (int i = pool.Count - 1; i > 0; i--)
         {
-            int id = pool[stream.Next(pool.Count)];
-            if (!taken.Contains(id))
+            int j = stream.Next(i + 1);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
+        }
+
+        return pool.Take(count).ToList();
+    }
+
+    /// <summary>
+    /// `CardModel.VisualCardPool.IsColorless` -- membership of the Colourless pool, which
+    /// Heirloom Hammer filters the hand by. The RAW pool, not the combat-generation subset:
+    /// the question is what the card IS, not whether it could be rolled.
+    /// </summary>
+    private static bool IsColorlessCard(int defId) =>
+        GeneratedData.CardPools.Colorless.IndexOf(defId) >= 0;
+
+    internal static void AddColorlessCardsToHand(
+        CombatState state,
+        int count,
+        Random rng,
+        bool upgraded = false
+    )
+    {
+        foreach (int id in DistinctColorlessForCombat(state, count, rng))
+        {
+            if (state.Hand.Count >= MaxCardsInHand)
             {
-                taken.Add(id);
-                AddGeneratedCardToHand(state, id);
+                return;
             }
+
+            state.Hand.Add(new CardInstance(id, upgraded));
+            NoteGeneratedCard(state);
         }
     }
 
@@ -4215,6 +4283,8 @@ public static class CardEffects
         }
 
         state.Stars += amount;
+        // `StarsModifiedEntry` with a positive Amount, which Radiate counts over the turn.
+        state.StarsGainedThisTurn += amount;
 
         int blackHole = BuffSystem.Get(state.PlayerBuffs, BuffId.BlackHole);
         if (blackHole > 0)
@@ -4569,21 +4639,10 @@ public static class CardEffects
         bool upgraded
     )
     {
-        var pool = GeneratedData.CardPools.Colorless;
-        if (pool.Length == 0)
+        var offer = DistinctColorlessForCombat(state, 3, rng);
+        if (offer.Count == 0)
         {
             return;
-        }
-
-        var stream = state.CardGenerationRng ?? rng;
-        var offer = new List<int>();
-        for (int guard = 0; offer.Count < 3 && guard < 64; guard++)
-        {
-            int id = pool[stream.Next(pool.Length)];
-            if (!offer.Contains(id))
-            {
-                offer.Add(id);
-            }
         }
 
         state.PendingSelection = new PendingCardSelection
@@ -6203,7 +6262,12 @@ public static class CardEffects
             case "StrikeRegent":
             case "Bombardment":
             case "Devastate":
+                DealDamage(state, Dmg(state, def, upgraded, card));
+                return true;
             case "KinglyKick":
+                // 27/35 at one target. Its `AfterCardDrawn` is the whole card -- it gets a
+                // point cheaper every time this copy is drawn -- and lives in
+                // GrowKinglyCardOnDraw, so the arm itself is a plain attack.
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 return true;
             case "Bulwark":
@@ -6255,7 +6319,6 @@ public static class CardEffects
             case "Comet":
             case "FallingStar":
             case "GammaBlast":
-            case "MeteorShower":
                 {
                     var target = FirstEnemy(state);
                     if (target != null)
@@ -6271,6 +6334,14 @@ public static class CardEffects
 
                     return true;
                 }
+            case "MeteorShower":
+                // `TargetingAllOpponents` for 14 upgrading by 7, and Weak 2 and Vulnerable 2
+                // to `HittableEnemies` -- all three at everyone. It shared Comet's and
+                // Gamma Blast's single-target body, which is right for those two.
+                DealDamageToAll(state, Dmg(state, def, upgraded, card));
+                ApplyAllEnemyDebuff(state, BuffId.Weak, 2, rng);
+                ApplyAllEnemyDebuff(state, BuffId.Vulnerable, 2, rng);
+                return true;
             case "BeatIntoShape":
                 {
                     // 5/7 damage, then a Forge of CalculationBase 5/7 plus CalculationExtra 5/7
@@ -6294,9 +6365,20 @@ public static class CardEffects
                 AddGeneratedCardToHand(state, ST.Debris);
                 return true;
             case "CrashLanding":
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                AddRandomRegentCardsToHand(state, 2, rng);
-                return true;
+                {
+                    // 21 damage upgrading by 5 at ALL opponents, then DEBRIS to FILL THE HAND
+                    // -- `MaxCardsInHand - hand.Count` of them, counted after the attack and
+                    // before any of them lands. The emulator hit one enemy and added two random
+                    // REGENT cards: the drawback is the whole cost of a one-energy 21-to-all.
+                    DealDamageToAll(state, Dmg(state, def, upgraded, card));
+                    int room = MaxCardsInHand - state.Hand.Count;
+                    for (int i = 0; i < room; i++)
+                    {
+                        AddGeneratedCardToHand(state, ST.Debris);
+                    }
+
+                    return true;
+                }
             case "CrushUnder":
                 // 7/8 at ALL enemies, then a StrengthLoss of 1/2 on all of them --
                 // `PowerCmd.Apply<CrushUnderPower>(enemies, ...)`, a TemporaryStrengthPower
@@ -6369,14 +6451,36 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 3 : 2);
                 return true;
             case "HeirloomHammer":
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                AddRandomRegentCardsToHand(state, upgraded ? 2 : 1, rng);
-                return true;
+                {
+                    // 20 damage upgrading by 5, then a COLOURLESS card CHOSEN from hand is
+                    // CLONED into hand -- `CardSelectCmd.FromHand` filtered to
+                    // `c.VisualCardPool.IsColorless`, `RepeatVar(1)` copies, and the upgrade
+                    // buys damage rather than a second copy. The emulator added one or two
+                    // RANDOM REGENT cards, so it neither asked nor copied.
+                    DealDamage(state, Dmg(state, def, upgraded, card));
+                    var colorless = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
+                    {
+                        if (IsColorlessCard(state.Hand[i].DefId))
+                        {
+                            colorless.Add(i);
+                        }
+                    }
+
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.CloneColorlessInHand,
+                        colorless,
+                        def.Id,
+                        autoPick: 0
+                    );
+                    return true;
+                }
             case "KinglyPunch":
-                DealDamage(
-                    state,
-                    Dmg(state, def, upgraded, card) + state.CardsPlayedThisCombat * (upgraded ? 6 : 4)
-                );
+                // 8/10 printed, plus whatever this COPY has grown by from being drawn --
+                // see GrowKinglyCardOnDraw. The emulator scaled it by the cards played this
+                // combat, which is a player-wide counter on a per-copy effect.
+                DealDamage(state, Dmg(state, def, upgraded, card) + card.BonusDamage);
                 return true;
             case "KnockoutBlow":
                 {
@@ -6406,11 +6510,18 @@ public static class CardEffects
                 );
                 return true;
             case "MakeItSo":
+                // 6 damage upgrading by 3. The card is its `AfterCardPlayedLate`: every
+                // THIRD Skill the owner plays in a turn pulls it back to hand, from
+                // wherever it is not already in hand. That lives in CombatEngine beside the
+                // other post-play hooks; the arm is a plain attack.
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 return true;
             case "ManifestAuthority":
+                // Block 7 upgrading by 1, then ONE distinct COLOURLESS card into hand --
+                // upgraded if Manifest Authority was, which is the only thing its upgrade
+                // buys besides the point of block. The emulator added a random REGENT card.
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                AddRandomRegentCardsToHand(state, 1, rng);
+                AddColorlessCardsToHand(state, 1, rng, upgraded);
                 return true;
             case "Patter":
                 GainBlock(state, Blk(def, upgraded, card), rng);
@@ -6431,12 +6542,29 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.PillarOfCreation, upgraded ? 4 : 3);
                 return true;
             case "Radiate":
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), Math.Max(1, state.Stars), rng);
+                // 3 damage upgrading by 1, at ALL opponents, hit once per STAR GAINED this
+                // turn -- the sum of the positive `StarsModifiedEntry` amounts, not the
+                // stars currently held. So spending them does not reduce it, starting the
+                // turn with a pile does not raise it, and with no gains at all it deals
+                // NOTHING: there is no floor of one. The emulator hit one enemy,
+                // `Math.Max(1, state.Stars)` times.
+                DealDamageToAllMultiHit(
+                    state,
+                    Dmg(state, def, upgraded, card),
+                    state.StarsGainedThisTurn
+                );
                 return true;
             case "SevenStars":
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), 7, rng);
+                // Seven damage, `WithHitCount(7)`, at ALL opponents -- seven stars to play
+                // and the upgrade buys a point of ENERGY, not damage or hits. The emulator
+                // put all seven hits on one enemy.
+                DealDamageToAllMultiHit(state, Dmg(state, def, upgraded, card), 7);
                 return true;
             case "ShiningStrike":
+                // 8 damage upgrading by 3, two stars, and then it puts ITSELF back on TOP
+                // of the draw pile -- unless something has given it Exhaust. That last part
+                // is in `CombatEngine.ShouldPlaceOnDrawPileAfterPlay`, which the play path
+                // reaches only after the exhaust branch, so the Exhaust guard falls out.
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 GainStars(state, 2);
                 return true;
@@ -6849,9 +6977,15 @@ public static class CardEffects
                 // taking a random class card instead.
                 OpenColorlessOffer(state, def.Id, rng, upgraded);
                 break;
-            case "BundleOfJoy":
             case "Dirge":
                 AddRandomClassCardToHand(state, rng, upgraded);
+                break;
+            case "BundleOfJoy":
+                // `CardsVar(3)` upgrading by 1 DISTINCT cards from the COLOURLESS pool into
+                // hand. It was taking ONE card from the character's own class pool, and
+                // passing `upgraded` into the helper's `freeThisTurn` parameter -- so an
+                // upgraded Bundle of Joy made its single wrong card free as well.
+                AddColorlessCardsToHand(state, upgraded ? 4 : 3, rng);
                 break;
             case "Largesse":
                 // Largesse: MultiplayerOnly and `TargetType.AnyAlly`, so a solo run can
@@ -6859,7 +6993,7 @@ public static class CardEffects
                 // would do: one distinct colourless card into the ALLY's hand, upgraded if
                 // Largesse was. Written out rather than left as a random class card, so the
                 // next reader is not told a lie about a card they cannot reach.
-                AddColorlessCardsToHand(state, 1, rng);
+                AddColorlessCardsToHand(state, 1, rng, upgraded);
                 break;
             case "Distraction":
             case "GlimpseBeyond":
@@ -8210,6 +8344,32 @@ public static class CardEffects
             var returning = state.DiscardPile[i];
             state.DiscardPile.RemoveAt(i);
             state.Hand.Add(returning);
+        }
+    }
+
+    /// <summary>
+    /// `MakeItSo.AfterCardPlayedLate`: every copy that is NOT already in hand returns to it
+    /// -- `base.Pile.Type != PileType.Hand`, so draw pile and exhaust pile count too, not
+    /// just the discard.
+    /// </summary>
+    internal static void ReturnMakeItSosToHand(CombatState state)
+    {
+        foreach (var pile in new[] { state.DrawPile, state.DiscardPile, state.ExhaustPile })
+        {
+            for (int i = pile.Count - 1; i >= 0; i--)
+            {
+                if (
+                    GeneratedData.Cards.Get(pile[i].DefId).Name != "MakeItSo"
+                    || state.Hand.Count >= MaxCardsInHand
+                )
+                {
+                    continue;
+                }
+
+                var returning = pile[i];
+                pile.RemoveAt(i);
+                state.Hand.Add(returning with { FreeThisTurn = false });
+            }
         }
     }
 

@@ -409,7 +409,13 @@ def render_test(
     # character's whole mechanic, and a capture that does not rebuild it checks the
     # assertions below against a board the game never had.
     if (before_stars := player.get("stars")) is not None:
-        lines.append(f"        fight.State.Stars = {before_stars};")
+        # Through GainStars, not by assigning the field. `debug_set_stars` calls
+        # `PlayerCmd.SetStars`, which routes an increase through `GainStars` -- so the
+        # game recorded a positive `StarsModifiedEntry` for the staged amount, on the turn
+        # the card was played. Radiate hits once per star GAINED this turn, so a fixture
+        # that assigns the field rebuilds the counter and not the history, and the capture
+        # reads as nine hits' worth of damage from a card that gained nothing.
+        lines.append(f"        CardEffects.GainStars(fight.State, {before_stars});")
 
     if "hand_index" not in fixture:
         raise UnsupportedCaptureError(

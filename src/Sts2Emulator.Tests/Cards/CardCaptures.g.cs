@@ -84,7 +84,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -174,7 +174,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(IC.AscendersBane), Card(532), Card(474), Card(179), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -233,7 +233,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(474), Card(474), Card(133), Card(532), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -472,7 +472,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -564,7 +564,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -592,7 +592,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(474), Card(133), Card(474), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -764,7 +764,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -1009,7 +1009,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -1037,7 +1037,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -1189,7 +1189,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -1250,7 +1250,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -1370,7 +1370,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -1431,7 +1431,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -1459,7 +1459,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -1553,7 +1553,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -1650,7 +1650,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -1747,7 +1747,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -1806,7 +1806,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(IC.AscendersBane), Card(532), Card(474), Card(179), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -1867,7 +1867,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(474), Card(474), Card(133), Card(532), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -1895,7 +1895,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -2202,7 +2202,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -2386,7 +2386,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -2624,7 +2624,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(IC.AscendersBane), Card(532), Card(179), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -2839,7 +2839,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -3315,7 +3315,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(532), Card(133), Card(133), Card(IC.AscendersBane), Card(474), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -3438,7 +3438,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(532), Card(133), Card(133), Card(474), Card(474), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -3500,7 +3500,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(474), Card(474), Card(532), Card(IC.AscendersBane), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -3530,7 +3530,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(532), Card(474), Card(133), Card(133), Card(133), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -3558,7 +3558,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(532), Card(IC.AscendersBane), Card(179), Card(474), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -3717,7 +3717,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(474), Card(133), Card(532), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -3746,7 +3746,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -3894,7 +3894,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -3987,7 +3987,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4078,7 +4078,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4107,7 +4107,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4193,7 +4193,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4352,7 +4352,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4571,7 +4571,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4599,7 +4599,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4627,7 +4627,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4655,7 +4655,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4844,7 +4844,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4905,7 +4905,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4933,7 +4933,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -4991,7 +4991,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -5266,7 +5266,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -5295,7 +5295,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -5475,7 +5475,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -5658,7 +5658,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(IC.AscendersBane), Card(532), Card(474), Card(179), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -5811,7 +5811,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(474), Card(474), Card(133), Card(532), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -5840,7 +5840,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(474), Card(133), Card(474), Card(133), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -5899,7 +5899,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -5958,7 +5958,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(IC.AscendersBane), Card(532), Card(179), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -6048,7 +6048,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -6217,7 +6217,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -6398,7 +6398,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -6670,7 +6670,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -6699,7 +6699,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -6790,7 +6790,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -6912,7 +6912,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -6940,7 +6940,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -7121,7 +7121,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(133), Card(474), Card(179), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -7181,7 +7181,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -7336,7 +7336,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -7666,7 +7666,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -7754,7 +7754,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -7878,7 +7878,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(532), Card(133), Card(474), Card(179), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -8027,7 +8027,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(IC.AscendersBane), Card(532), Card(474), Card(179), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -8210,7 +8210,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -8298,7 +8298,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(179), Card(133), Card(IC.AscendersBane), Card(474), Card(133), Card(532))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -8452,7 +8452,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -8582,7 +8582,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(133), Card(IC.AscendersBane), Card(532), Card(179), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -8673,7 +8673,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(532), Card(474), Card(133), Card(133), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -8702,7 +8702,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -8947,7 +8947,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(532), Card(133), Card(133), Card(IC.AscendersBane), Card(474), Card(474))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 
@@ -9215,7 +9215,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 3;
+        CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
 
@@ -9305,7 +9305,7 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(532), Card(474), Card(133), Card(133), Card(133))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
-        fight.State.Stars = 9;
+        CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
 

@@ -877,9 +877,10 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 Card coverage is now the finished part rather than the open one. What is left, in the order
 the evidence argues for:
 
-1. **Read the Regent's 28 captured-but-unread cards**, and the Silent's remainder. This is
-   the pass the Necrobinder just had, and it found twenty-one defects on cards whose
-   captures were all green — so the expected yield is known, not hoped for.
+1. **Read the Silent's remaining 30 captured-but-unread cards.** The Necrobinder's pass
+   found 21 defects in 45, the Regent's 13 in 27 — two pools agreeing that roughly one
+   unread card in two is wrong however green its capture. The Silent's are the last of
+   them; after that every implemented card in the game has been read against the source.
 2. **Relics are the next layer with no equivalent pass.** 171 of 296 are modelled and only
    64 have been read against the source; the other 107 are wired up and were never compared
    to anything. `audit_relics.py` is the burn-down. Events are one layer out again, with one

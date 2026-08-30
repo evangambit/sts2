@@ -102,6 +102,87 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "Bombardment": (
+        "4812ad4c0628",
+        "18/24 and Exhaust -- then it AUTO-PLAYS itself out of the exhaust pile every turn, free; the emulator had a plain attack.",
+    ),
+    "BundleOfJoy": (
+        "aa58ce3623a7",
+        "3/4 DISTINCT COLOURLESS cards to hand; took one CLASS card, and passed `upgraded` as the helper's freeThisTurn.",
+    ),
+    "CelestialMight": (
+        "77af22877a73",
+        "6 damage x 3 hits, upgrade buys a fourth hit; correct.",
+    ),
+    "CloakOfStars": ("130140808bb3", "One star, block 7/10; correct."),
+    "Comet": (
+        "3de607e4cc3d",
+        "Five stars, 33/44 and Weak 3 / Vulnerable 3 on the target; correct.",
+    ),
+    "CrashLanding": (
+        "8f58ee6bf3d1",
+        "21/26 to ALL, then DEBRIS to fill the hand; hit one enemy and added two random Regent cards.",
+    ),
+    "DefendRegent": ("d40144965470", "Block 5/8; correct."),
+    "Devastate": ("ece5da4b7c01", "Four stars, 30/40 at one target; correct."),
+    "FallingStar": (
+        "6267cbb69b6f",
+        "Two stars, 8/12 and Weak 1 / Vulnerable 1 on the target; correct.",
+    ),
+    "GammaBlast": (
+        "9173ab013a4e",
+        "Three stars, 13/18 and Weak 2 / Vulnerable 2 on the target; correct.",
+    ),
+    "GatherLight": (
+        "c418e5303e31",
+        "Block 8/11 and one star, which does not upgrade; correct.",
+    ),
+    "Glitterstream": ("cd7d9fae505f", "Block 11/13 now and 5/7 next turn; correct."),
+    "GuidingStar": ("d1448fe49231", "Two stars, 12/13 and draw 2/3; correct."),
+    "Hegemony": ("42f780feac9d", "15/18 and 2/3 energy next turn; correct."),
+    "HeirloomHammer": (
+        "36a79abe237c",
+        "20/25, then a CHOSEN COLOURLESS card in hand is CLONED; added one or two random Regent cards.",
+    ),
+    "KinglyKick": (
+        "b833b122a5e5",
+        "27/35, and this COPY gets one cheaper every time it is DRAWN; the draw hook was missing.",
+    ),
+    "KinglyPunch": (
+        "26ddc0642133",
+        "8/10 plus 4/6 for every time this COPY has been DRAWN; scaled by cards played this combat.",
+    ),
+    "KnockoutBlow": (
+        "eec4c6801bc5",
+        "30/38 and five stars only if the target died; correct.",
+    ),
+    "MakeItSo": (
+        "284022a49f46",
+        "6/9, and every THIRD Skill played in a turn pulls it back to hand from any pile; the hook was missing.",
+    ),
+    "ManifestAuthority": (
+        "24a410c8d36c",
+        "Block 7/8 and one distinct COLOURLESS card, upgraded if it was; added a random Regent card.",
+    ),
+    "MeteorShower": (
+        "6a15861e75ba",
+        "14/21 and Weak 2 / Vulnerable 2 to ALL; shared Comet's single-target body.",
+    ),
+    "Patter": ("8e9cf9adf8db", "Block 8/10 and Vigor 2/3; correct."),
+    "Radiate": (
+        "a125ab4a980a",
+        "3/4 at ALL, once per star GAINED this turn and no floor; hit one enemy `max(1, stars held)` times.",
+    ),
+    "SevenStars": (
+        "2a4f98261c55",
+        "7 damage x 7 hits at ALL, upgrade buys energy; put all seven hits on one enemy.",
+    ),
+    "ShiningStrike": (
+        "a2337cf4f55e",
+        "8/11, two stars, back on TOP of the draw pile; correct -- the Exhaust guard falls out of the play path's ordering.",
+    ),
+    "SolarStrike": ("cdceabd16bd6", "9/10 and 1/2 stars; correct."),
+    "StrikeRegent": ("de7665516307", "6/9 at one target; correct."),
     "Afterlife": (
         "3c50500e8694",
         "Summon 6/9 and nothing else; a dead duplicate arm drew cards.",

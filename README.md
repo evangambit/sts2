@@ -99,7 +99,7 @@ semantics rather than re-created in Python.
 | Silent        |    88 |          88 |                46 |
 | Defect        |    88 |          88 |                88 |
 | Necrobinder   |    88 |          88 |                88 |
-| The Regent    |    88 |          88 |                60 |
+| The Regent    |    88 |          88 |                88 |
 | Colourless    |    64 |          64 |                64 |
 | Event / Token |    41 |          38 |                 2 |
 | Curse/Status  |    30 |          13 |                 3 |

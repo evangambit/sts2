@@ -181,6 +181,17 @@ public enum CardSelectionKind
     /// Decisions, Decisions: a playable SKILL chosen from hand is AUTO-PLAYED three times.
     /// </summary>
     AutoPlaySkillThrice = 23,
+
+    /// <summary>
+    /// Heirloom Hammer: a COLOURLESS card chosen from hand is CLONED into hand, and the
+    /// original stays where it is. The filter lives in the candidate list, as Hand Trick's
+    /// does.
+    /// </summary>
+    /// <remarks>
+    /// The second selection that does not move the card it picks, after Nightmare's — the
+    /// answer is "which card do I want another of", not "which card do I give up".
+    /// </remarks>
+    CloneColorlessInHand = 24,
 }
 
 /// <summary>

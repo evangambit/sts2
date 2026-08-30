@@ -189,6 +189,7 @@ public static class StateCloning
             ExtraCardsDrawnThisTurn = combat.ExtraCardsDrawnThisTurn,
             DoomAppliedThisTurn = combat.DoomAppliedThisTurn,
             OstyAttacksThisTurn = combat.OstyAttacksThisTurn,
+            StarsGainedThisTurn = combat.StarsGainedThisTurn,
             PlayedCardStarsSpent = combat.PlayedCardStarsSpent,
             VoidFormCardsPlayedThisTurn = combat.VoidFormCardsPlayedThisTurn,
             EndTurnAfterPlay = combat.EndTurnAfterPlay,
