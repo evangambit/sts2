@@ -627,6 +627,19 @@ public enum BuffId
     /// for every card its owner GENERATES. The same hook Arsenal pays Strength from.
     /// </summary>
     PillarOfCreation,
+
+    /// <summary>
+    /// <c>ReflectPower.AfterDamageReceived</c>: a POWERED attack on its owner whose damage
+    /// was BLOCKED sends that blocked amount back at the dealer as Unpowered damage. It
+    /// decrements at its owner's side-turn START, so a Reflect covers the enemies' turn and
+    /// is gone by the player's next one.
+    /// </summary>
+    Reflect,
+
+    /// <summary>
+    /// <c>RoyaltiesPower.AfterCombatEnd</c>: this much extra GOLD as its own reward row.
+    /// </summary>
+    Royalties,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

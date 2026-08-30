@@ -222,6 +222,14 @@ public static class RunRewardGenerator
             state.ActiveCombat.StolenBackGold = 0;
         }
 
+        // `RoyaltiesPower.AfterCombatEnd` adds a GoldReward the same way, so it is another
+        // row rather than more gold on the fight's own.
+        if (state.ActiveCombat?.RoyaltiesGold > 0)
+        {
+            state.PendingGoldRewards.Add(state.ActiveCombat.RoyaltiesGold);
+            state.ActiveCombat.RoyaltiesGold = 0;
+        }
+
         // The Hunt's kill adds a whole extra CardReward to the room. `CardReward` does not
         // roll its cards in the constructor -- `Populate()` does, when the screen is built
         // -- so the extra offer's three cards come off the rewards stream here with the

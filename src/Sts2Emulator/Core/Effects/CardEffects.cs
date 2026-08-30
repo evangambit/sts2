@@ -5844,15 +5844,14 @@ public static class CardEffects
             case "DefendRegent":
             case "CloakOfStars":
             case "ParticleWall":
-            case "Reflect":
-                // Cosmic Indifference and I Am Invincible have their own cases now; what
-                // is left here is block, plus Reflect's Thorns.
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                if (def.Name == "Reflect")
-                {
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Thorns, 1);
-                }
-
+                return true;
+            case "Reflect":
+                // Reflect: three stars for 15/20 block and one stack of ReflectPower, which
+                // sends BLOCKED damage back at whoever dealt it. The emulator granted Thorns
+                // 1 -- a flat point per hit, where this pays what the block actually stopped.
+                GainBlock(state, Blk(def, upgraded, card), rng);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Reflect, 1);
                 return true;
             case "CelestialMight":
                 DealDamageMultiHit(state, Dmg(state, def, upgraded, card), upgraded ? 4 : 3, rng);
@@ -6401,12 +6400,18 @@ public static class CardEffects
                 Forge(state, upgraded ? 5 : 3);
                 ApplyEnemyDebuff(state, BuffId.Conqueror, 1, rng);
                 break;
+            case "Resonance":
+                // Resonance: three stars for +1/+2 Strength to the PLAYER and -1 to every
+                // living enemy -- the enemy side is a flat 1 and does not upgrade. The
+                // emulator gave the player's half only.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
+                ApplyAllEnemyDebuff(state, BuffId.Strength, -1, rng);
+                break;
             case "Deathbringer":
             case "Eidolon":
             case "FeedingFrenzy":
             case "NoEscape":
             case "Oblivion":
-            case "Resonance":
             case "SharedFate":
             case "Synchronize":
             case "Terraforming":
@@ -6659,6 +6664,13 @@ public static class CardEffects
                 // Neutron Aegis: five stars for `PowerVar<PlatingPower>(8)` upgrading by 3.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 11 : 8);
                 break;
+            case "Royalties":
+                // Royalties: `GoldVar(30)` upgrading by 10. The power adds that much GOLD as
+                // its own reward row when the combat ends -- the Heist's shape. The emulator
+                // gave Strength.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Royalties, upgraded ? 40 : 30);
+                state.RoyaltiesGold += upgraded ? 40 : 30;
+                break;
             case "PaleBlueDot":
                 // Pale Blue Dot: CardsVar 1 upgrading by 1, behind a threshold of five --
                 // the power draws that many more only when the player finished five or more
@@ -6692,7 +6704,6 @@ public static class CardEffects
             case "NecroMastery":
             case "Neurosurge":
             case "ReaperForm":
-            case "Royalties":
             case "SerpentForm":
             case "Sneaky":
             case "SpectrumShift":

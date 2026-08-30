@@ -94,6 +94,7 @@ public static class StateCloning
             MaxEnergy = combat.MaxEnergy,
             PlayerGold = combat.PlayerGold,
             StolenBackGold = combat.StolenBackGold,
+            RoyaltiesGold = combat.RoyaltiesGold,
             FatGremlinEscaped = combat.FatGremlinEscaped,
             MercGoldWasStolen = combat.MercGoldWasStolen,
             Hand = [.. combat.Hand],

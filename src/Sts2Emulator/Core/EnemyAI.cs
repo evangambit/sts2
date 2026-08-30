@@ -4094,6 +4094,7 @@ public static class EnemyAI
         }
 
         ApplyPlayerThorns(enemy, state);
+        ApplyPlayerReflect(enemy, state, damage - unblocked);
         ApplyPlayerFlameBarrier(enemy, state);
         return unblocked > 0;
     }
@@ -4145,6 +4146,25 @@ public static class EnemyAI
         {
             BuffSystem.Apply(enemy.Buffs, BuffId.Strength, suck * hitCount);
         }
+    }
+
+    /// <summary>
+    /// `ReflectPower.AfterDamageReceived`: a POWERED attack whose damage was BLOCKED sends
+    /// `result.BlockedDamage` back at the dealer as Unpowered damage. Not Thorns -- Thorns
+    /// is a flat point per hit whatever happened, and this pays exactly what the block
+    /// stopped, so a fully-absorbed 20 comes back as 20 and an unblocked one as nothing.
+    /// </summary>
+    private static void ApplyPlayerReflect(EnemyState enemy, CombatState state, int blocked)
+    {
+        if (blocked <= 0 || BuffSystem.Get(state.PlayerBuffs, BuffId.Reflect) <= 0)
+        {
+            return;
+        }
+
+        int spikes = BuffSystem.CapIncomingDamage(blocked, enemy.Buffs);
+        int absorbed = Math.Min(enemy.Block, spikes);
+        enemy.Block -= absorbed;
+        enemy.Hp = Math.Max(0, enemy.Hp - (spikes - absorbed));
     }
 
     private static void ApplyPlayerThorns(EnemyState enemy, CombatState state)

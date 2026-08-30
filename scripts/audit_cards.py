@@ -925,9 +925,17 @@ READ: dict[str, tuple[str, str]] = {
         "439879250eda",
         "Forge 9/13 and an energy next turn",
     ),
+    "Reflect": (
+        "b0ac9b14efc7",
+        "3 stars for 15/20 block and ReflectPower 1 -- BLOCKED damage goes back at the dealer",
+    ),
     "Rend": (
         "02ee2f05ba1a",
         "15/18 plus 5/8 per NON-TEMPORARY debuff on the target; the upgrade raises both",
+    ),
+    "Resonance": (
+        "1f212e7a33e2",
+        "3 stars: +1/+2 Strength to the player and a flat -1 to every enemy",
     ),
     "Restlessness": (
         "afe77c487409",
@@ -940,6 +948,10 @@ READ: dict[str, tuple[str, str]] = {
     "RoyalGamble": (
         "2a67a322d546",
         "5 stars for NINE stars, and it Exhausts; upgrade adds Retain",
+    ),
+    "Royalties": (
+        "43f3b31cb28c",
+        "GoldVar 30/40 as its own reward row at combat end",
     ),
     "Rupture": (
         "165723b123ef",

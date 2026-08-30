@@ -30,6 +30,13 @@ public sealed class CombatState
     /// </remarks>
     public int StolenBackGold;
 
+    /// <summary>
+    /// `RoyaltiesPower.AfterCombatEnd` calls `AddExtraReward(new GoldReward(Amount))`. Its
+    /// own row like the Heist's, and carried here for the same reason: a combat cannot
+    /// reach the reward generator.
+    /// </summary>
+    public int RoyaltiesGold;
+
     /// <summary>A Fat Gremlin left the fight under its own steam rather than dying.</summary>
     /// <remarks>
     /// The emulator ends its escape by setting <c>Hp = 0</c>, which makes it

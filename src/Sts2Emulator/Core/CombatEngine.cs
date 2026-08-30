@@ -1280,6 +1280,13 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Doom, neurosurge);
         }
 
+        // `ReflectPower.AfterSideTurnStart` DECREMENTS at its owner's turn start, so a
+        // Reflect covers the enemies' turn and is gone by the player's next one.
+        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Reflect) > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Reflect, -1);
+        }
+
         // `GenesisPower.AfterEnergyReset`: stars every turn, and this one does NOT remove
         // itself.
         int genesis = BuffSystem.Get(state.PlayerBuffs, BuffId.Genesis);
