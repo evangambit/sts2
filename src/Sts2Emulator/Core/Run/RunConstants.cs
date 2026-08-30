@@ -493,6 +493,11 @@ public static class RunConstants
     public const int RelicLeesWaffle = 135;
     public const int RelicLostCoffer = 140;
     public const int RelicMango = 144;
+    // The two Hungry For Mushrooms relics. Both are `HasUponPickupEffect`; neither has any
+    // combat behaviour modelled yet (they are in the 125 the emulator does not model), but
+    // the pickup half is the event's whole payload and belongs with the relic.
+    public const int RelicBigMushroom = 16;
+    public const int RelicFragrantMushroom = 91;
     public const int RelicLargeCapsule = 129;
     public const int RelicLavaRock = 132;
     public const int RelicNeowsBones = 161;

@@ -201,6 +201,50 @@ public class EventCaptures
         Assert.Equal(RunPhase.RelicReward, engine.State.Phase);
     }
     /// <summary>
+    /// Bugslayer, 'Learn Extermination Technique' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void Bugslayer_Option0()
+    {
+        var engine = Open(RunConstants.EventBugslayer);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false), (178, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// Bugslayer, 'Learn Squash Technique' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void Bugslayer_Option1()
+    {
+        var engine = Open(RunConstants.EventBugslayer);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false), (459, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
     /// ByrdonisNest, 'Eat the Egg' -- captured from v0.107.1 (build 23811903).
     /// </summary>
     [Fact]
@@ -533,6 +577,50 @@ public class EventCaptures
         Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
     }
     /// <summary>
+    /// HungryForMushrooms, 'Big Mushroom' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void HungryForMushrooms_Option0()
+    {
+        var engine = Open(RunConstants.EventHungryForMushrooms);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 84, 100, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36, 16]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// HungryForMushrooms, 'Fragrant Mushroom' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void HungryForMushrooms_Option1()
+    {
+        var engine = Open(RunConstants.EventHungryForMushrooms);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 49, 80, 99,
+            [(472, false), (472, false), (472, false), (472, true), (472, false), (131, false), (131, false), (131, true), (131, false), (30, false), (10001, false)],
+            [36, 91]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
     /// JungleMazeAdventure, 'Solo Quest' -- captured from v0.107.1 (build 23811903).
     /// </summary>
     [Fact]
@@ -571,6 +659,50 @@ public class EventCaptures
         Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
 
         AssertPlayer(engine, 64, 80, 150,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// LostWisp, 'Capture the Wisp' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void LostWisp_Option0()
+    {
+        var engine = Open(RunConstants.EventLostWisp);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false), (10026, false)],
+            [36, 141]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// LostWisp, 'Search the Nearby Area' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void LostWisp_Option1()
+    {
+        var engine = Open(RunConstants.EventLostWisp);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 169,
             [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
             [36]);
         Assert.Equal(RunPhase.Event, engine.State.Phase);

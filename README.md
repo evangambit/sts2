@@ -144,9 +144,10 @@ wrong, whatever its capture says.** The Silent's already-worked-over tail ran 4 
 is what a second pass over the same pool is worth.
 
 This is not yet a full game emulator. Exact Neow/shop/reward/event odds, the 125 unmodelled
-relics, and expanded trace parity are still future work. The nearest gaps with nothing
-behind them: 49 event-pool relics that are wired up and unread, and the event pool itself,
-which has one test to its name.
+relics, and expanded trace parity are still future work. The nearest gaps: 49 event-pool relics that are
+wired up and unread, and events — which have plenty of tests (58 modelled, 118 live
+fixtures, ~300 test methods and their own coverage gate) but no READING ledger, so nothing
+records that any of them was compared to its source.
 
 ## Requirements
 

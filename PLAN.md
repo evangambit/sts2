@@ -877,9 +877,13 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 Card coverage is now the finished part rather than the open one. What is left, in the order
 the evidence argues for:
 
-1. **Events**, which are the last layer with nothing behind them: one test to the whole
-   pool's name, and the 49 event-pool relics are unread for the same reason — both need
-   the event walked first. Cards and reachable relics are now fully read, and the relic
+1. **Events and their relics** — the last layer without a reading pass. Events are NOT
+   untested (58 modelled, 118 live fixtures, ~300 test methods, a bidirectional coverage
+   gate, plus mask/gating/RNG sweeps); what they have never had is a digest-keyed record
+   that anyone compared one to its decompiled source, which is exactly the state the
+   Silent's already-tested tail was in before its pass. Eighteen of the 58 have neither a
+   fixture nor a dedicated test, and the 49 event-pool relics are unread — those can be
+   read today, since reading is source-vs-emulator and needs no reachability. The relic
    pass suggests what to expect: at 3 defects in 58, **the failures stop being in the
    items and start being in what is shared between them** — a hand-kept list, a mechanic
    modelled twice, a hook that predates a character.

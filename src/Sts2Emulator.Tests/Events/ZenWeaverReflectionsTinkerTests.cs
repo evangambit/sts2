@@ -17,6 +17,9 @@ namespace Sts2Emulator.Tests;
 /// upgrades or clones the whole deck; Tinker Time offered three options on a page the
 /// model gives ONE, and builds a card over three pages.
 /// </remarks>
+[CoversEvent("ZenWeaver")]
+[CoversEvent("Reflections")]
+[CoversEvent("TinkerTime")]
 public class ZenWeaverReflectionsTinkerTests
 {
     private static RunEngine At(int eventId, string seed = "NXV45HW43K")

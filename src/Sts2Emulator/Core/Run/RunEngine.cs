@@ -3471,14 +3471,23 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventBugslayer:
+                // Both options ADD A NAMED CARD to the deck and nothing else --
+                // `AddAndPreview<Exterminate>` and `AddAndPreview<Squash>`. There is no
+                // gold, no HP cost and no card reward anywhere in the model; the emulator
+                // had 75 gold and an upgraded random card, which is a different event.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(75));
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunNonCombatEffects.NamedCard("Exterminate"), false)
+                    );
                 }
                 else if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 8);
-                    AddEventRewardCard(upgraded: true);
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunNonCombatEffects.NamedCard("Squash"), false)
+                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3589,13 +3598,35 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventLostWisp:
+                // Claim takes the LOST WISP relic and a DECAY curse with it; Search is
+                // `GoldVar(60)` and nothing else. The emulator healed as if at a rest site
+                // and handed out an upgraded random card -- neither option, and no curse.
                 if (action == 0)
                 {
-                    HealPlayer(RestHealAmount());
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunNonCombatEffects.NamedCard("Decay"), false)
+                    );
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunNonCombatEffects.NamedRelic("LostWisp")
+                    );
                 }
                 else if (action == 1)
                 {
-                    AddEventRewardCard(upgraded: true);
+                    // `GoldVar(60)` with `Gold.BaseValue += Rng.NextInt(-15, 16)`, rolled
+                    // in the model when the options are generated -- so the option TEXT
+                    // already names the jittered figure, and a live capture paid 70.
+                    //
+                    // Off the EVENT'S OWN stream, the way Sunken Statue and Luminous Choir
+                    // roll theirs. `EventGoldAmount` applies the same +/-15 from
+                    // `Rng.UpFront`, which is a different sequence: it paid 72 against the
+                    // game's 70. That helper is shared by several other events and is worth
+                    // re-reading for the same reason.
+                    RunNonCombatEffects.GainGold(
+                        State,
+                        60 + RunNonCombatEffects.EventStream(State, "LOST_WISP").NextInt(-15, 16)
+                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3758,16 +3789,27 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventHungryForMushrooms:
+                // Two RelicOptions: BIG MUSHROOM outright, or FRAGRANT MUSHROOM with
+                // `.ThatDoesDamage(15m)` on the option. The emulator gave max HP and a
+                // potion. Neither relic does anything yet -- both are in the 125 the
+                // emulator does not model -- but granting the right one puts the run's
+                // relic list where the game puts it, which is what an event owes.
+                // The HP swing belongs to the RELICS, not to the event: both are
+                // `HasUponPickupEffect`, so it lands through `ApplyRelicPickup` and would
+                // land the same way if the relic arrived by any other route. The option's
+                // `.ThatDoesDamage(15m)` is the label, not the effect.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.GainMaxHp(State, 7);
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunNonCombatEffects.NamedRelic("BigMushroom")
+                    );
                 }
                 else if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 9);
-                    RunRewardGenerator.AddPotion(
+                    RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
+                        RunNonCombatEffects.NamedRelic("FragrantMushroom")
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
