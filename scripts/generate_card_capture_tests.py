@@ -207,6 +207,13 @@ def test_name(fixture: dict[str, Any]) -> str:
     # not the other has to be captured against both. Without this they collide.
     if encounter := fixture.get("encounter"):
         parts.append(encounter)
+    # And so is the CHARACTER: the same card played by the Ironclad and by the Necrobinder
+    # are different boards, and Prolong has been captured as both. Read it off the state
+    # the game reported rather than the capture's own `character` field, which older
+    # fixtures do not carry at all.
+    who = (fixture["before"].get("player") or {}).get("character")
+    if who:
+        parts.append(who.removeprefix("The ").replace(" ", ""))
     return "_".join(parts) + "_MatchesLiveCapture"
 
 

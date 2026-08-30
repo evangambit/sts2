@@ -377,6 +377,18 @@ public enum BuffId
     /// scoped by card TYPE -- so an Ethereal Attack consumes this, not FreeAttackPower.
     /// </summary>
     Veilpiercer,
+
+    /// <summary>
+    /// <c>HangPower</c>, a DEBUFF on an enemy: it multiplies damage aimed at its owner by
+    /// its own AMOUNT, but only when the card doing the damage is Hang itself. Hang tops
+    /// it up by <c>Math.Max(2, amount)</c> AFTER dealing its damage, so the counter runs
+    /// 2, 4, 8, 16 and each Hang lands at the previous stack's multiple.
+    ///
+    /// The card-source gate is why this cannot live in <c>BuffSystem.IncomingDamage</c>
+    /// with Tracking and Double Damage: that function cannot see what card is attacking,
+    /// and every other attack must be left alone.
+    /// </summary>
+    Hang,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

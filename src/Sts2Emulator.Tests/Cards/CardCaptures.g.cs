@@ -12,7 +12,7 @@ namespace Sts2Emulator.Tests;
 public class CardCaptureTests
 {
     [Fact]
-    public void Afterlife_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Afterlife_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Afterlife --encounter ByrdonisElite --seed ABCDEF.
@@ -41,7 +41,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Anger_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void Anger_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Anger --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -70,7 +70,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void AshenStrike_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void AshenStrike_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card AshenStrike --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -99,7 +99,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Backstab_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Backstab_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Backstab --encounter ByrdonisElite --seed ABCDEF.
@@ -124,7 +124,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void BansheesCry_Base_ByrdonisElite_MatchesLiveCapture()
+    public void BansheesCry_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card BansheesCry --encounter ByrdonisElite --seed ABCDEF.
@@ -153,7 +153,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Bash_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void Bash_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Bash --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -183,7 +183,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void BeatDown_Base_ByrdonisElite_MatchesLiveCapture()
+    public void BeatDown_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card BeatDown --encounter ByrdonisElite --seed ABCDEF.
@@ -208,7 +208,36 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Bludgeon_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Beckon_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Beckon --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(ST.Beckon), Card(132), Card(132), Card(473), Card(473), Card(132))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void Bludgeon_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Bludgeon --encounter ByrdonisElite --seed ABCDEF.
@@ -233,7 +262,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void BodySlam_Base_Sharp_CorpseSlugsWeak_MatchesLiveCapture()
+    public void BodySlam_Base_Sharp_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card BodySlam --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -262,7 +291,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Bodyguard_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Bodyguard_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Bodyguard --encounter ByrdonisElite --seed ABCDEF.
@@ -291,7 +320,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Bolas_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Bolas_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Bolas --encounter ByrdonisElite --seed ABCDEF.
@@ -316,7 +345,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void BoneShards_Base_ByrdonisElite_MatchesLiveCapture()
+    public void BoneShards_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card BoneShards --encounter ByrdonisElite --seed ABCDEF.
@@ -344,7 +373,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Breakthrough_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Breakthrough_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Breakthrough --encounter ByrdonisElite --seed ABCDEF.
@@ -369,7 +398,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Bury_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Bury_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Bury --encounter ByrdonisElite --seed ABCDEF.
@@ -398,7 +427,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Cinder_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Cinder_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Cinder --encounter ByrdonisElite --seed ABCDEF.
@@ -423,7 +452,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void DeadlyPoison_Base_ByrdonisElite_MatchesLiveCapture()
+    public void DeadlyPoison_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card DeadlyPoison --encounter ByrdonisElite --seed ABCDEF.
@@ -449,7 +478,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Defile_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Defile_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Defile --encounter ByrdonisElite --seed ABCDEF.
@@ -478,7 +507,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Dirge_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Dirge_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Dirge --encounter ByrdonisElite --seed ABCDEF.
@@ -507,7 +536,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Dismantle_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Dismantle_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Dismantle --encounter ByrdonisElite --seed ABCDEF.
@@ -532,7 +561,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Expose_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Expose_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Expose --encounter ByrdonisElite --seed ABCDEF.
@@ -558,7 +587,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void FanOfKnives_Base_ByrdonisElite_MatchesLiveCapture()
+    public void FanOfKnives_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card FanOfKnives --encounter ByrdonisElite --seed ABCDEF.
@@ -584,7 +613,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Fetch_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Fetch_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Fetch --encounter ByrdonisElite --seed ABCDEF.
@@ -613,7 +642,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void FiendFire_Base_ByrdonisElite_MatchesLiveCapture()
+    public void FiendFire_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card FiendFire --encounter ByrdonisElite --seed ABCDEF.
@@ -638,7 +667,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Finesse_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Finesse_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Finesse --encounter ByrdonisElite --seed ABCDEF.
@@ -663,7 +692,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void FlashOfSteel_Base_ByrdonisElite_MatchesLiveCapture()
+    public void FlashOfSteel_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card FlashOfSteel --encounter ByrdonisElite --seed ABCDEF.
@@ -688,7 +717,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Flatten_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Flatten_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Flatten --encounter ByrdonisElite --seed ABCDEF.
@@ -717,7 +746,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Flechettes_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Flechettes_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Flechettes --encounter ByrdonisElite --seed ABCDEF.
@@ -742,7 +771,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void GoldAxe_Base_ByrdonisElite_MatchesLiveCapture()
+    public void GoldAxe_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card GoldAxe --encounter ByrdonisElite --seed ABCDEF.
@@ -767,7 +796,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Graveblast_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Graveblast_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Graveblast --encounter ByrdonisElite --seed ABCDEF.
@@ -796,7 +825,37 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Hemokinesis_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Hang_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Hang --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(236), Card(132), Card(IC.AscendersBane), Card(473), Card(524), Card(132))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(49), Card(473), Card(473), Card(132), Card(473), Card(132))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(80, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(2, fight.EnemyBuffAmount(BuffId.Hang, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void Hemokinesis_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Hemokinesis --encounter ByrdonisElite --seed ABCDEF.
@@ -821,7 +880,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void HighFive_Base_ByrdonisElite_MatchesLiveCapture()
+    public void HighFive_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card HighFive --encounter ByrdonisElite --seed ABCDEF.
@@ -851,7 +910,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void IronWave_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void IronWave_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card IronWave --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -880,7 +939,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Juggernaut_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void Juggernaut_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Juggernaut --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -910,7 +969,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Juggernaut_Upgraded_CorpseSlugsWeak_MatchesLiveCapture()
+    public void Juggernaut_Upgraded_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Juggernaut --upgraded --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -940,7 +999,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void LegionOfBone_Base_ByrdonisElite_MatchesLiveCapture()
+    public void LegionOfBone_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card LegionOfBone --encounter ByrdonisElite --seed ABCDEF.
@@ -969,7 +1028,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void MindBlast_Base_ByrdonisElite_MatchesLiveCapture()
+    public void MindBlast_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card MindBlast --encounter ByrdonisElite --seed ABCDEF.
@@ -994,7 +1053,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void MoltenFist_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void MoltenFist_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card MoltenFist --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -1023,7 +1082,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void MoltenFist_Upgraded_CorpseSlugsWeak_MatchesLiveCapture()
+    public void MoltenFist_Upgraded_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card MoltenFist --upgraded --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -1052,7 +1111,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void MoltenFist_Base_Vulnerable_CorpseSlugsWeak_MatchesLiveCapture()
+    public void MoltenFist_Base_Vulnerable_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card MoltenFist --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -1082,7 +1141,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Neutralize_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Neutralize_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Neutralize --encounter ByrdonisElite --seed ABCDEF.
@@ -1108,7 +1167,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Omnislice_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Omnislice_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Omnislice --encounter ByrdonisElite --seed ABCDEF.
@@ -1133,7 +1192,37 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void PerfectedStrike_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void Patter_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Patter --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(347), Card(49), Card(132), Card(473), Card(132), Card(473))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(8, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(2, fight.PlayerBuffAmount(BuffId.Vigor));
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void PerfectedStrike_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card PerfectedStrike --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -1162,7 +1251,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void PoisonedStab_Base_ByrdonisElite_MatchesLiveCapture()
+    public void PoisonedStab_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card PoisonedStab --encounter ByrdonisElite --seed ABCDEF.
@@ -1188,7 +1277,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Poke_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Poke_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Poke --encounter ByrdonisElite --seed ABCDEF.
@@ -1217,7 +1306,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Pounce_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Pounce_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Pounce --encounter ByrdonisElite --seed ABCDEF.
@@ -1243,7 +1332,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Prolong_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Prolong_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Prolong --encounter ByrdonisElite --seed ABCDEF.
@@ -1268,7 +1357,36 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Protector_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Prolong_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Prolong --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(CL.Prolong), Card(132), Card(132), Card(473), Card(473), Card(132))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(9, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Empty(fight.State.DiscardPile);
+        Assert.Single(fight.State.ExhaustPile);
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void Protector_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Protector --encounter ByrdonisElite --seed ABCDEF.
@@ -1297,7 +1415,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void PullFromBelow_Base_ByrdonisElite_MatchesLiveCapture()
+    public void PullFromBelow_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card PullFromBelow --encounter ByrdonisElite --seed ABCDEF.
@@ -1326,7 +1444,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Rampage_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Rampage_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Rampage --encounter ByrdonisElite --seed ABCDEF.
@@ -1351,15 +1469,15 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Rattle_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Rattle_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Rattle --encounter ByrdonisElite --seed ABCDEF.
         // Every number below is the game's, not the emulator's.
-        var fight = Fight.Hand(Card(382), Card(132), Card(473), Card(524), Card(132), Card(132))
+        var fight = Fight.Hand(Card(382), Card(49), Card(132), Card(473), Card(132), Card(473))
             .PlayerHp(52, 66)
             .Energy(9)
-            .Draw(Card(132), Card(49), Card(473), Card(473), Card(473), Card(IC.AscendersBane))
+            .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
             .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
@@ -1380,7 +1498,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Reap_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Reap_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Reap --encounter ByrdonisElite --seed ABCDEF.
@@ -1409,7 +1527,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Rend_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Rend_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Rend --encounter ByrdonisElite --seed ABCDEF.
@@ -1434,7 +1552,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void RightHandHand_Base_ByrdonisElite_MatchesLiveCapture()
+    public void RightHandHand_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card RightHandHand --encounter ByrdonisElite --seed ABCDEF.
@@ -1463,7 +1581,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Scourge_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Scourge_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Scourge --encounter ByrdonisElite --seed ABCDEF.
@@ -1493,7 +1611,36 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void SecondWind_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void Scrape_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Scrape --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(410), Card(132), Card(132), Card(473), Card(473), Card(132))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(2, fight.State.DrawPile.Count);
+        Assert.Equal(5, fight.State.DiscardPile.Count);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(83, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void SecondWind_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card SecondWind --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -1522,7 +1669,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Shockwave_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Shockwave_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Shockwave --encounter ByrdonisElite --seed ABCDEF.
@@ -1549,7 +1696,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void SicEm_Base_ByrdonisElite_MatchesLiveCapture()
+    public void SicEm_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card SicEm --encounter ByrdonisElite --seed ABCDEF.
@@ -1579,7 +1726,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Skewer_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Skewer_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Skewer --encounter ByrdonisElite --seed ABCDEF.
@@ -1604,7 +1751,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Slice_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Slice_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Slice --encounter ByrdonisElite --seed ABCDEF.
@@ -1629,7 +1776,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Sow_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Sow_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Sow --encounter ByrdonisElite --seed ABCDEF.
@@ -1658,7 +1805,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void SporeMind_Base_ByrdonisElite_MatchesLiveCapture()
+    public void SporeMind_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card SporeMind --encounter ByrdonisElite --seed ABCDEF.
@@ -1687,7 +1834,37 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Squeeze_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Squash_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Squash --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(459), Card(132), Card(IC.AscendersBane), Card(473), Card(524), Card(132))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(49), Card(473), Card(473), Card(132), Card(473), Card(132))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(80, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(2, fight.EnemyBuffAmount(BuffId.Vulnerable, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void Squeeze_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Squeeze --encounter ByrdonisElite --seed ABCDEF.
@@ -1716,7 +1893,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Strangle_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Strangle_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Strangle --encounter ByrdonisElite --seed ABCDEF.
@@ -1742,7 +1919,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void StrikeIronclad_Base_Cruelty_Vulnerable_CorpseSlugsWeak_MatchesLiveCapture()
+    public void StrikeIronclad_Base_Cruelty_Vulnerable_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card StrikeIronclad --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -1774,7 +1951,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void SuckerPunch_Base_ByrdonisElite_MatchesLiveCapture()
+    public void SuckerPunch_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card SuckerPunch --encounter ByrdonisElite --seed ABCDEF.
@@ -1800,7 +1977,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void SweepingGaze_Base_ByrdonisElite_MatchesLiveCapture()
+    public void SweepingGaze_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card SweepingGaze --encounter ByrdonisElite --seed ABCDEF.
@@ -1829,7 +2006,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Thrash_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Thrash_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Thrash --encounter ByrdonisElite --seed ABCDEF.
@@ -1854,7 +2031,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Thunderclap_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void Thunderclap_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Thunderclap --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -1885,7 +2062,37 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void UltimateStrike_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Tremble_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Tremble --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(IC.Tremble), Card(49), Card(132), Card(473), Card(524), Card(132))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(473), Card(132), Card(473), Card(132), Card(IC.AscendersBane), Card(473))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Empty(fight.State.DiscardPile);
+        Assert.Single(fight.State.ExhaustPile);
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(3, fight.EnemyBuffAmount(BuffId.Vulnerable, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void UltimateStrike_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card UltimateStrike --encounter ByrdonisElite --seed ABCDEF.
@@ -1910,7 +2117,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Undeath_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Undeath_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Undeath --encounter ByrdonisElite --seed ABCDEF.
@@ -1939,7 +2146,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Unleash_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Unleash_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Unleash --encounter ByrdonisElite --seed ABCDEF.
@@ -1968,7 +2175,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Uppercut_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Uppercut_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Uppercut --encounter ByrdonisElite --seed ABCDEF.
@@ -1995,7 +2202,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Uppercut_Base_CorpseSlugsWeak_MatchesLiveCapture()
+    public void Uppercut_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Uppercut --encounter CorpseSlugsWeak --seed ABCDEF.
@@ -2026,7 +2233,7 @@ public class CardCaptureTests
     }
 
     [Fact]
-    public void Veilpiercer_Base_ByrdonisElite_MatchesLiveCapture()
+    public void Veilpiercer_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
         // scripts/capture_card.py --card Veilpiercer --encounter ByrdonisElite --seed ABCDEF.
@@ -2049,6 +2256,35 @@ public class CardCaptureTests
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Veilpiercer));
         Assert.Equal(80, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void Venerate_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Venerate --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(532), Card(49), Card(132), Card(473), Card(132), Card(473))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
         Assert.Equal(1, fight.State.OstyHp);

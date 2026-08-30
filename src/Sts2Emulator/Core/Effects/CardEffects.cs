@@ -5177,9 +5177,24 @@ public static class CardEffects
                 );
                 return true;
             case "Hang":
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                ApplyEnemyDebuff(state, BuffId.Constrict, 2, rng);
+            {
+                // The stacks are read BEFORE the top-up, so the first Hang lands at 1x and
+                // applies 2; the second lands at 2x and takes it to 4. The emulator applied
+                // Constrict instead -- a different power with a different effect.
+                var hung = FirstEnemy(state);
+                int stacks = hung != null ? BuffSystem.Get(hung.Buffs, BuffId.Hang) : 0;
+
+                // Pre-multiplied rather than folded into IncomingDamage: the game's
+                // multiplier is gated on `cardSource is Hang`, and that function attacks
+                // with no idea which card it is holding. The pipeline ends in a single
+                // `(int)dmg`, so multiplying the base is the same arithmetic.
+                DealDamage(state, Dmg(state, def, upgraded, card) * Math.Max(1, stacks));
+
+                // `Math.Max(2, amount)`, clamped so the counter cannot pass 999999999.
+                int add = Math.Min(Math.Max(2, stacks), Math.Max(0, 999999999 - stacks));
+                ApplyEnemyDebuff(state, BuffId.Hang, add, rng);
                 return true;
+            }
             case "Invoke":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 3 : 2);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.CrimsonMantleBlock, upgraded ? 3 : 2);

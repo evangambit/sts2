@@ -1,6 +1,6 @@
 {
   "_comment": "Captured from the live game by scripts/capture_card.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "card": "Rattle",
+  "card": "Venerate",
   "upgraded": false,
   "encounter": "ByrdonisElite",
   "seed": "ABCDEF",
@@ -36,13 +36,13 @@
       "hand": [
         {
           "index": 0,
-          "id": "RATTLE",
-          "name": "Rattle",
-          "type": "Attack",
+          "id": "VENERATE",
+          "name": "Venerate",
+          "type": "Skill",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "AnyEnemy",
+          "target_type": "Self",
           "is_upgraded": false
         },
         {
@@ -238,7 +238,7 @@
       {
         "entity_id": "BYRDONIS_0",
         "name": "Byrdonis",
-        "hp": 83,
+        "hp": 90,
         "max_hp": 90,
         "block": 0,
         "intents": [
@@ -281,7 +281,7 @@
   "before_piles": {
     "hand_ordered": [
       {
-        "id": "RATTLE",
+        "id": "VENERATE",
         "is_upgraded": false
       },
       {
@@ -385,7 +385,7 @@
     ],
     "discard_pile_ordered": [
       {
-        "id": "RATTLE",
+        "id": "VENERATE",
         "is_upgraded": false
       }
     ],

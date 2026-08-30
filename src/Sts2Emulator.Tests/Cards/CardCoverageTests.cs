@@ -115,7 +115,6 @@ public class CardCoverageTests
         "Guards",
         "GuidingStar",
         "HammerTime",
-        "Hang",
         "Haunt",
         "HeavenlyDrill",
         "Hegemony",

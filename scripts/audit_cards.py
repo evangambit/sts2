@@ -443,6 +443,10 @@ READ: dict[str, tuple[str, str]] = {
         "6d55f411d5c9",
         "same Fatal gate as Feed -- Minion AND Reattach, not Minion alone",
     ),
+    "Hang": (
+        "002b9c9c5d72",
+        "10/13 damage, then HangPower max(2, existing) -- a doubling damage multiplier for Hang only",
+    ),
     "Havoc": (
         "5046a8d1658e",
         "AutoPlayFromDrawPile top 1 with forceExhaust",
