@@ -934,7 +934,7 @@ public static class CardEffects
                 // OnUpgrade raises the PER-HIT damage, not the base. The card is
                 // MultiplayerOnly and singleplayer has no allies, so the multiplier is
                 // always zero and an upgraded Gang Up still hits for 5.
-                DealDamage(state, 5);
+                DealDamage(state, DmgFrom(state, 5, def, card));
                 break;
 
             case CL.GoldAxe: // 1-cost, damage equals cards played this combat
@@ -1607,7 +1607,7 @@ public static class CardEffects
                 // turn; OnUpgrade raises the PER-DISCARD damage, not the base. The
                 // discard counter is not modelled, so this is the zero-discard case —
                 // the old 8/12 was wrong even there.
-                DealDamage(state, 9);
+                DealDamage(state, DmgFrom(state, 9, def, card));
                 break;
 
             case SI.Mirage: // 1/0-cost, block equal to all the Poison on the board
@@ -5844,7 +5844,9 @@ public static class CardEffects
             case "Snap":
             case "Squeeze":
             case "SweepingGaze":
-            case "TimesUp":
+                // TimesUp was here too, with a flat 8/12. It has a real body in
+                // ApplyNecrobinderCard, which runs first and returns -- so this label was
+                // dead, and a dead duplicate is how a card gets "fixed" in the wrong place.
                 DealDamage(state, upgraded ? 12 : 8);
                 break;
             case "Murder":
@@ -5856,8 +5858,10 @@ public static class CardEffects
             case "HighFive":
             case "Protector":
             case "SicEm":
-            case "SoulStorm":
-            case "Unleash":
+                // SoulStorm and Unleash were here too, both with guessed flat numbers.
+                // Both have real bodies in ApplyNecrobinderCard, which runs first and
+                // returns -- so these labels were dead, and a dead duplicate is how a
+                // card ends up "fixed" in the copy nothing reaches.
                 AddRandomClassCardToHand(state, rng, freeThisTurn: true);
                 DealDamage(state, upgraded ? 10 : 7);
                 break;

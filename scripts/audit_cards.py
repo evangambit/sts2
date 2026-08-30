@@ -367,6 +367,10 @@ READ: dict[str, tuple[str, str]] = {
         "c12475a629c3",
         "5/6 x2, Strength 3/4 to self and 1 to the TARGET -- a buff, not a debuff",
     ),
+    "Fisticuffs": (
+        "d81463205aa6",
+        "block equals the damage that LANDED plus overkill, not the printed number",
+    ),
     "FlakCannon": (
         "5dea026eae0b",
         "exhausts every Status outside the exhaust pile FIRST, then hits once per status at rolled targets",
@@ -378,6 +382,10 @@ READ: dict[str, tuple[str, str]] = {
     "ForgottenRitual": (
         "7d1014df5741",
         "3/4 energy, and only if a card was exhausted this turn",
+    ),
+    "GangUp": (
+        "b3b1683dd737",
+        "MultiplayerOnly; 5 + 5/7 per ALLY hit on the target this turn, so 5 flat in singleplayer",
     ),
     "GeneticAlgorithm": (
         "9c7cc2b93b94",
@@ -406,6 +414,10 @@ READ: dict[str, tuple[str, str]] = {
     "Hemokinesis": (
         "a26ba01b34ce",
         "2 HP unblockable first, then 15/20",
+    ),
+    "HiddenGem": (
+        "5a945d8a60b5",
+        "Replay 2/3 onto a random draw-pile card on CombatCardSelection; skips Unplayable, Status, Curse and anything already replaying",
     ),
     "HowlFromBeyond": (
         "b16c87857714",

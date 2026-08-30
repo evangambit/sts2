@@ -155,4 +155,23 @@ public class CalculatedDamageTests
         conflagration.Play(0);
         Assert.Equal(200 - 4 * 2, conflagration.Enemy0.Hp);
     }
+
+    /// <summary>
+    /// Gang Up and Memento Mori were missed by the first pass over the calculated-damage
+    /// cards, so they were still handing a literal to `DealDamage`. Both are
+    /// `CalculatedDamageVar` attacks and take the bonus like any other.
+    /// </summary>
+    [Fact]
+    public void SharpRaisesGangUpAndMementoMori()
+    {
+        var gangUp = Fight.Hand(Sharp(CL.GangUp)).Energy(3).Enemy(hp: 200);
+        gangUp.Play(0);
+        // 5 base (no allies in singleplayer, so the multiplier is zero) plus Sharp's 5.
+        Assert.Equal(200 - 10, gangUp.Enemy0.Hp);
+
+        var memento = Fight.Hand(Sharp(SI.MementoMori)).Energy(3).Enemy(hp: 200);
+        memento.Play(0);
+        // 9 base (no cards discarded this turn) plus Sharp's 5.
+        Assert.Equal(200 - 14, memento.Enemy0.Hp);
+    }
 }
