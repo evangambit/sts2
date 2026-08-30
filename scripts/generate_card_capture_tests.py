@@ -90,6 +90,16 @@ def buff_ids() -> set[str]:
     return set(re.findall(r"^\s*(\w+),", body, re.MULTILINE))
 
 
+# Powers whose reported amount is a `DisplayAmount` override rather than `Amount`, so the
+# number in the capture is not the number the name suggests.
+#
+# `OutbreakPower.DisplayAmount => timesPoisoned` -- the mod reports the progress towards
+# the next burst, which is 0 the moment the card is played, while the power's own Amount is
+# the 11 damage it will deal. The emulator keeps those two apart as `Outbreak` and
+# `OutbreakCounter`, and it is the COUNTER the capture is looking at.
+DISPLAY_AMOUNT_BUFFS = {"OUTBREAK_POWER": "OutbreakCounter"}
+
+
 def buff_constant(live_id: str, buffs: set[str]) -> str:
     """Map a live power entry id (``VULNERABLE_POWER``) onto ``BuffId.Vulnerable``.
 
@@ -97,6 +107,11 @@ def buff_constant(live_id: str, buffs: set[str]) -> str:
         UnsupportedCaptureError: if no BuffId corresponds to the live power.
 
     """
+    if (override := DISPLAY_AMOUNT_BUFFS.get(live_id)) is not None:
+        if override not in buffs:
+            raise UnsupportedCaptureError(f"BuffId.{override} is gone; check {live_id}")
+        return f"BuffId.{override}"
+
     wanted = normalize(live_id)
     by_norm = {normalize(name): name for name in buffs}
     for candidate in (wanted, wanted.removesuffix("power")):

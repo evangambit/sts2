@@ -18,7 +18,7 @@ public class BootSequenceTests
     [InlineData(true, 13)]
     public void BlocksForFree(bool upgraded, int block)
     {
-        var fight = Fight.Hand(Card(BootSequence, upgraded)).Energy(0);
+        var fight = DefectFight.Hand(Card(BootSequence, upgraded)).Energy(0);
         fight.Play();
         Assert.Equal(block, fight.State.PlayerBlock);
     }
@@ -41,7 +41,7 @@ public class BulkUpTests
     [InlineData(true, 3)]
     public void TakesOneSlotAndGivesBoth(bool upgraded, int amount)
     {
-        var fight = Fight.Hand(Card(BulkUp, upgraded)).Energy(2);
+        var fight = DefectFight.Hand(Card(BulkUp, upgraded)).Energy(2);
 
         fight.Play();
 
@@ -54,7 +54,7 @@ public class BulkUpTests
     [Fact]
     public void AFullRingDropsItsNewestOrb()
     {
-        var fight = Fight.Hand(Card(BulkUp)).Energy(2);
+        var fight = DefectFight.Hand(Card(BulkUp)).Energy(2);
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
         CardEffects.ChannelOrb(fight.State, OrbType.Dark);
@@ -74,7 +74,7 @@ public class CapacitorTests
     [InlineData(true, 6)]
     public void AddsSlots(bool upgraded, int capacity)
     {
-        var fight = Fight.Hand(Card(Capacitor, upgraded)).Energy(1);
+        var fight = DefectFight.Hand(Card(Capacitor, upgraded)).Energy(1);
         fight.Play();
         Assert.Equal(capacity, fight.State.OrbCapacity);
     }
@@ -97,7 +97,7 @@ public class ChaosTests
     [InlineData(true, 2)]
     public void ChannelsThatMany(bool upgraded, int count)
     {
-        var fight = Fight.Hand(Card(Chaos, upgraded)).Energy(1).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Chaos, upgraded)).Energy(1).Enemy(hp: 200);
         fight.Play();
         Assert.Equal(count, fight.State.Orbs.Count);
     }
@@ -108,7 +108,7 @@ public class ChaosTests
         var seen = new HashSet<OrbType>();
         for (int seed = 0; seed < 40; seed++)
         {
-            var fight = Fight.Hand(Card(Chaos)).Energy(1).Enemy(hp: 200);
+            var fight = DefectFight.Hand(Card(Chaos)).Energy(1).Enemy(hp: 200);
             fight.State.OrbGenerationRng = new CountingRandom(seed);
             fight.Play();
             seen.UnionWith(fight.State.Orbs.Select(o => o.Type));
@@ -122,7 +122,7 @@ public class ChaosTests
     [Fact]
     public void ItDrawsFromTheOrbStream()
     {
-        var fight = Fight.Hand(Card(Chaos)).Energy(1).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Chaos)).Energy(1).Enemy(hp: 200);
         int before = fight.State.OrbGenerationRng!.CallCount;
 
         fight.Play();
@@ -138,7 +138,7 @@ public class ChillTests
     [Fact]
     public void OneFrostPerLivingEnemy()
     {
-        var fight = Fight.Hand(Card(Chill)).Energy(0).Enemy(hp: 60);
+        var fight = DefectFight.Hand(Card(Chill)).Energy(0).Enemy(hp: 60);
         fight.Enemy(hp: 60);
         fight.State.OrbCapacity = 5;
 
@@ -152,7 +152,7 @@ public class ChillTests
     [InlineData(true, false)]
     public void TheUpgradeRemovesExhaust(bool upgraded, bool exhausts)
     {
-        var fight = Fight.Hand(Card(Chill, upgraded)).Energy(0).Enemy(hp: 60);
+        var fight = DefectFight.Hand(Card(Chill, upgraded)).Energy(0).Enemy(hp: 60);
         fight.Play();
         Assert.Equal(exhausts, fight.State.ExhaustPile.Any(c => c.DefId == Chill));
     }
@@ -168,7 +168,7 @@ public class CompactTests
     [InlineData(true, 7)]
     public void BlocksAndTransformsStatuses(bool upgraded, int block)
     {
-        var fight = Fight.Hand(Card(Compact, upgraded), Card(ST.Dazed)).Energy(1);
+        var fight = DefectFight.Hand(Card(Compact, upgraded), Card(ST.Dazed)).Energy(1);
 
         fight.Play();
 
@@ -190,7 +190,7 @@ public class DarknessTests
     [InlineData(true, 18)]
     public void ChannelsThenTriggersEveryDarkOrb(bool upgraded, int banked)
     {
-        var fight = Fight.Hand(Card(Darkness, upgraded)).Energy(1).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Darkness, upgraded)).Energy(1).Enemy(hp: 200);
 
         fight.Play();
 
@@ -205,7 +205,7 @@ public class DoubleEnergyTests
     [Fact]
     public void ItDoublesWhatIsLeft()
     {
-        var fight = Fight.Hand(Card(DoubleEnergy)).Energy(5);
+        var fight = DefectFight.Hand(Card(DoubleEnergy)).Energy(5);
         fight.Play();
         // Five, minus the one it cost, doubled.
         Assert.Equal(8, fight.State.Energy);
@@ -221,7 +221,7 @@ public class EnergySurgeTests
     [InlineData(true, 3)]
     public void GivesEnergy(bool upgraded, int energy)
     {
-        var fight = Fight.Hand(Card(EnergySurge, upgraded)).Energy(1);
+        var fight = DefectFight.Hand(Card(EnergySurge, upgraded)).Energy(1);
         fight.Play();
         Assert.Equal(energy, fight.State.Energy);
     }
@@ -238,7 +238,7 @@ public class FeralTests
     [Fact]
     public void AZeroCostAttackComesBack()
     {
-        var fight = Fight.Hand(Card(Feral), Card(SI.Slice), Card(SI.Slice)).Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Feral), Card(SI.Slice), Card(SI.Slice)).Energy(3).Enemy(hp: 200);
         fight.Play();
 
         fight.Play(fight.State.Hand.FindIndex(c => c.DefId == SI.Slice));
@@ -259,7 +259,7 @@ public class FightThroughTests
     [InlineData(true, 17)]
     public void BlocksAndAddsTwoWounds(bool upgraded, int block)
     {
-        var fight = Fight.Hand(Card(FightThrough, upgraded)).Energy(1);
+        var fight = DefectFight.Hand(Card(FightThrough, upgraded)).Energy(1);
         fight.Play();
         Assert.Equal(block, fight.State.PlayerBlock);
         Assert.Equal(2, fight.State.DiscardPile.Count(c => c.DefId == ST.Wound));
@@ -279,7 +279,7 @@ public class FtlTests
     [InlineData(true, 6)]
     public void HitsAndDrawsWhileTheTurnIsYoung(bool upgraded, int damage)
     {
-        var fight = Fight.Hand(Card(Ftl, upgraded)).Energy(0).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Ftl, upgraded)).Energy(0).Enemy(hp: 200);
         fight.State.DrawPile.Clear();
         fight.State.DrawPile.Add(new CardInstance(SI.Backstab, false));
 
@@ -292,7 +292,7 @@ public class FtlTests
     [Fact]
     public void PastTheLimitItJustHits()
     {
-        var fight = Fight.Hand(Card(Ftl)).Energy(0).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Ftl)).Energy(0).Enemy(hp: 200);
         fight.State.CardPlaysThisTurn = 3;
         fight.State.DrawPile.Clear();
         fight.State.DrawPile.Add(new CardInstance(SI.Backstab, false));
@@ -312,7 +312,7 @@ public class FusionTests
     [InlineData(true, false)]
     public void ChannelsPlasmaAndTheUpgradeRemovesExhaust(bool upgraded, bool exhausts)
     {
-        var fight = Fight.Hand(Card(Fusion, upgraded)).Energy(1);
+        var fight = DefectFight.Hand(Card(Fusion, upgraded)).Energy(1);
         fight.Play();
         Assert.Equal([OrbType.Plasma], fight.State.Orbs.Select(o => o.Type));
         Assert.Equal(exhausts, fight.State.ExhaustPile.Any(c => c.DefId == Fusion));
@@ -328,7 +328,7 @@ public class GlacierTests
     [InlineData(true, 9)]
     public void BlocksAndChannelsTwoFrost(bool upgraded, int block)
     {
-        var fight = Fight.Hand(Card(Glacier, upgraded)).Energy(2);
+        var fight = DefectFight.Hand(Card(Glacier, upgraded)).Energy(2);
         fight.Play();
         Assert.Equal(block, fight.State.PlayerBlock);
         Assert.Equal([OrbType.Frost, OrbType.Frost], fight.State.Orbs.Select(o => o.Type));
@@ -344,7 +344,7 @@ public class GlassworkTests
     [InlineData(true, 8)]
     public void BlocksAndChannelsGlass(bool upgraded, int block)
     {
-        var fight = Fight.Hand(Card(Glasswork, upgraded)).Energy(1);
+        var fight = DefectFight.Hand(Card(Glasswork, upgraded)).Energy(1);
         fight.Play();
         Assert.Equal(block, fight.State.PlayerBlock);
         Assert.Equal([OrbType.Glass], fight.State.Orbs.Select(o => o.Type));
@@ -364,7 +364,7 @@ public class HailstormTests
     [InlineData(true, 8)]
     public void HitsEveryEnemyWhileAFrostOrbIsHeld(bool upgraded, int damage)
     {
-        var fight = Fight.Hand(Card(Hailstorm, upgraded)).Energy(1).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Hailstorm, upgraded)).Energy(1).Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         fight.Play();
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
@@ -378,7 +378,7 @@ public class HailstormTests
     [Fact]
     public void WithNoFrostOrbItDoesNothing()
     {
-        var fight = Fight.Hand(Card(Hailstorm)).Energy(1).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Hailstorm)).Energy(1).Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         fight.Play();
         CardEffects.ChannelOrb(fight.State, OrbType.Dark);
@@ -406,7 +406,7 @@ public class IterationTests
     [InlineData(true, 3)]
     public void TheFirstStatusDrawnDrawsMore(bool upgraded, int extra)
     {
-        var fight = Fight.Hand(Card(Iteration, upgraded)).Energy(1);
+        var fight = DefectFight.Hand(Card(Iteration, upgraded)).Energy(1);
         fight.Play();
         fight.State.DrawPile.Clear();
         fight.State.DrawPile.Add(new CardInstance(ST.Dazed, false));
@@ -424,7 +424,7 @@ public class IterationTests
     [Fact]
     public void OnlyTheFirstStatusOfTheTurnPaysOut()
     {
-        var fight = Fight.Hand(Card(Iteration)).Energy(1);
+        var fight = DefectFight.Hand(Card(Iteration)).Energy(1);
         fight.Play();
         fight.State.DrawPile.Clear();
         for (int i = 0; i < 3; i++)
@@ -448,7 +448,7 @@ public class IterationTests
     [Fact]
     public void ANonStatusDrawPaysNothing()
     {
-        var fight = Fight.Hand(Card(Iteration)).Energy(1);
+        var fight = DefectFight.Hand(Card(Iteration)).Energy(1);
         fight.Play();
         fight.State.DrawPile.Clear();
         for (int i = 0; i < 6; i++)
@@ -472,7 +472,7 @@ public class LoopTests
     [InlineData(true, 2)]
     public void TheFrontOrbFiresAtTurnStart(bool upgraded, int times)
     {
-        var fight = Fight.Hand(Card(Loop, upgraded)).Energy(1).Enemy(hp: 400);
+        var fight = DefectFight.Hand(Card(Loop, upgraded)).Energy(1).Enemy(hp: 400);
         fight.State.PlayerHp = 999;
         fight.Play();
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
@@ -494,7 +494,7 @@ public class NullTests
     [InlineData(true, 13, 3)]
     public void HitsWeakensAndChannelsDark(bool upgraded, int damage, int weak)
     {
-        var fight = Fight.Hand(Card(Null, upgraded)).Energy(2).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Null, upgraded)).Energy(2).Enemy(hp: 200);
         fight.Play();
         Assert.Equal(200 - damage, fight.Enemy0.Hp);
         Assert.Equal(weak, fight.EnemyBuffAmount(BuffId.Weak));
@@ -511,7 +511,7 @@ public class OverclockTests
     [InlineData(true, 3)]
     public void DrawsAndBurns(bool upgraded, int cards)
     {
-        var fight = Fight.Hand(Card(Overclock, upgraded)).Energy(0);
+        var fight = DefectFight.Hand(Card(Overclock, upgraded)).Energy(0);
         fight.State.DrawPile.Clear();
         for (int i = 0; i < 6; i++)
         {
@@ -535,7 +535,7 @@ public class RefractTests
     [InlineData(true, 12)]
     public void HitsTwiceThenChannelsTwoGlass(bool upgraded, int damage)
     {
-        var fight = Fight.Hand(Card(Refract, upgraded)).Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Refract, upgraded)).Energy(3).Enemy(hp: 200);
 
         fight.Play();
 
@@ -562,7 +562,7 @@ public class RocketPunchTests
     [InlineData(true, 14, 2)]
     public void HitsAndDraws(bool upgraded, int damage, int cards)
     {
-        var fight = Fight.Hand(Card(RocketPunch, upgraded)).Energy(2).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(RocketPunch, upgraded)).Energy(2).Enemy(hp: 200);
         fight.State.DrawPile.Clear();
         for (int i = 0; i < 4; i++)
         {
@@ -578,7 +578,7 @@ public class RocketPunchTests
     [Fact]
     public void AGeneratedStatusMakesItFree()
     {
-        var fight = Fight.Hand(Card(GunkUp), Card(RocketPunch)).Energy(9).Enemy(hp: 400);
+        var fight = DefectFight.Hand(Card(GunkUp), Card(RocketPunch)).Energy(9).Enemy(hp: 400);
         fight.State.DrawPile.Clear();
         fight.State.DrawPile.Add(new CardInstance(SI.Backstab, false));
 
@@ -618,7 +618,7 @@ public class ScavengeTests
     [Fact]
     public void TheChosenCardIsTheOneExhausted()
     {
-        var fight = Fight.Hand(Card(Scavenge), Card(SI.Backstab), Card(SI.Slice)).Energy(1);
+        var fight = DefectFight.Hand(Card(Scavenge), Card(SI.Backstab), Card(SI.Slice)).Energy(1);
         fight.Play();
 
         fight.Choose(1); // the Slice, not the leftmost card
@@ -638,7 +638,7 @@ public class ScrapeTests
     [InlineData(true, 10, 5)]
     public void HitsThenKeepsOnlyTheFreeCards(bool upgraded, int damage, int drawn)
     {
-        var fight = Fight.Hand(Card(Scrape, upgraded)).Energy(1).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Scrape, upgraded)).Energy(1).Enemy(hp: 200);
         fight.State.DrawPile.Clear();
         for (int i = 0; i < drawn; i++)
         {
@@ -655,7 +655,7 @@ public class ScrapeTests
     [Fact]
     public void ACostlyDrawIsDiscarded()
     {
-        var fight = Fight.Hand(Card(Scrape)).Energy(1).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Scrape)).Energy(1).Enemy(hp: 200);
         fight.State.DrawPile.Clear();
         for (int i = 0; i < 4; i++)
         {
@@ -678,7 +678,7 @@ public class ShadowShieldTests
     [InlineData(true, 15)]
     public void BlocksAndChannelsDark(bool upgraded, int block)
     {
-        var fight = Fight.Hand(Card(ShadowShield, upgraded)).Energy(2);
+        var fight = DefectFight.Hand(Card(ShadowShield, upgraded)).Energy(2);
         fight.Play();
         Assert.Equal(block, fight.State.PlayerBlock);
         Assert.Equal([OrbType.Dark], fight.State.Orbs.Select(o => o.Type));
@@ -694,7 +694,7 @@ public class SkimTests
     [InlineData(true, 4)]
     public void Draws(bool upgraded, int cards)
     {
-        var fight = Fight.Hand(Card(Skim, upgraded)).Energy(1);
+        var fight = DefectFight.Hand(Card(Skim, upgraded)).Energy(1);
         fight.State.DrawPile.Clear();
         for (int i = 0; i < 6; i++)
         {
@@ -717,7 +717,7 @@ public class SmokestackTests
     [InlineData(true, 7)]
     public void AGeneratedStatusHitsEveryEnemy(bool upgraded, int damage)
     {
-        var fight = Fight.Hand(Card(Smokestack, upgraded), Card(GunkUp)).Energy(9).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Smokestack, upgraded), Card(GunkUp)).Energy(9).Enemy(hp: 200);
         fight.Enemy(hp: 200);
         fight.Play();
 
@@ -740,7 +740,7 @@ public class StormTests
     [Fact]
     public void ItDoesNotTriggerOnItself()
     {
-        var fight = Fight.Hand(Card(Storm), Card(Capacitor)).Energy(3);
+        var fight = DefectFight.Hand(Card(Storm), Card(Capacitor)).Energy(3);
         fight.Play();
         Assert.Empty(fight.State.Orbs);
 
@@ -753,7 +753,7 @@ public class StormTests
     [Fact]
     public void ASecondCopyPaysTheOldAmount()
     {
-        var fight = Fight.Hand(Card(Storm), Card(Storm)).Energy(3);
+        var fight = DefectFight.Hand(Card(Storm), Card(Storm)).Energy(3);
         fight.Play();
 
         fight.Play();
@@ -772,7 +772,7 @@ public class SubroutineTests
     [Fact]
     public void ItDoesNotTriggerOnItself()
     {
-        var fight = Fight.Hand(Card(Subroutine), Card(Capacitor)).Energy(3);
+        var fight = DefectFight.Hand(Card(Subroutine), Card(Capacitor)).Energy(3);
 
         fight.Play();
         Assert.Equal(2, fight.State.Energy);
@@ -793,12 +793,12 @@ public class SunderTests
     [InlineData(true, 32)]
     public void HitsAndRefundsOnAKill(bool upgraded, int damage)
     {
-        var fight = Fight.Hand(Card(Sunder, upgraded)).Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Sunder, upgraded)).Energy(3).Enemy(hp: 200);
         fight.Play();
         Assert.Equal(200 - damage, fight.Enemy0.Hp);
         Assert.Equal(0, fight.State.Energy);
 
-        var kill = Fight.Hand(Card(Sunder, upgraded)).Energy(3).Enemy(hp: 5);
+        var kill = DefectFight.Hand(Card(Sunder, upgraded)).Energy(3).Enemy(hp: 5);
         kill.Play();
         Assert.Equal(3, kill.State.Energy);
     }
@@ -822,7 +822,7 @@ public class SynchronizeTests
     [InlineData(3, 6)]
     public void TwoFocusPerDistinctOrbType(int types, int focus)
     {
-        var fight = Fight.Hand(Card(Synchronize)).Energy(1);
+        var fight = DefectFight.Hand(Card(Synchronize)).Energy(1);
         fight.State.OrbCapacity = 6;
         var kinds = new[] { OrbType.Lightning, OrbType.Frost, OrbType.Dark };
         for (int i = 0; i < types; i++)
@@ -839,7 +839,7 @@ public class SynchronizeTests
     [Fact]
     public void ThreeOrbsOfOneTypeAreStillOneType()
     {
-        var fight = Fight.Hand(Card(Synchronize)).Energy(1);
+        var fight = DefectFight.Hand(Card(Synchronize)).Energy(1);
         for (int i = 0; i < 3; i++)
         {
             CardEffects.ChannelOrb(fight.State, OrbType.Frost);
@@ -853,7 +853,7 @@ public class SynchronizeTests
     [Fact]
     public void TheFocusIsTemporary()
     {
-        var fight = Fight.Hand(Card(Synchronize)).Energy(1).Enemy(hp: 60);
+        var fight = DefectFight.Hand(Card(Synchronize)).Energy(1).Enemy(hp: 60);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
         fight.Play();
@@ -876,7 +876,7 @@ public class SynthesisTests
     [InlineData(true, 20)]
     public void HitsThenTheNextPowerIsFree(bool upgraded, int damage)
     {
-        var fight = Fight.Hand(Card(Synthesis, upgraded), Card(Capacitor)).Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Synthesis, upgraded), Card(Capacitor)).Energy(3).Enemy(hp: 200);
 
         fight.Play();
         Assert.Equal(200 - damage, fight.Enemy0.Hp);
@@ -893,7 +893,7 @@ public class SynthesisTests
     [Fact]
     public void ItDoesNotDiscountAnAttack()
     {
-        var fight = Fight.Hand(Card(Synthesis), Card(SI.StrikeSilent)).Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand(Card(Synthesis), Card(SI.StrikeSilent)).Energy(3).Enemy(hp: 200);
         fight.Play();
 
         int before = fight.State.Energy;
@@ -912,7 +912,7 @@ public class TempestTests
     [InlineData(true, 4)]
     public void ChannelsOnePerEnergySpent(bool upgraded, int orbs)
     {
-        var fight = Fight.Hand(Card(Tempest, upgraded)).Energy(3);
+        var fight = DefectFight.Hand(Card(Tempest, upgraded)).Energy(3);
         fight.State.OrbCapacity = 6;
 
         fight.Play();
@@ -935,7 +935,7 @@ public class TeslaCoilTests
     [InlineData(true, 4, 2)]
     public void HitsThenFiresEveryLightningOrb(bool upgraded, int damage, int times)
     {
-        var fight = Fight.Hand(Card(TeslaCoil, upgraded)).Energy(0).Enemy(hp: 400);
+        var fight = DefectFight.Hand(Card(TeslaCoil, upgraded)).Energy(0).Enemy(hp: 400);
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
@@ -950,7 +950,7 @@ public class TeslaCoilTests
     [Fact]
     public void TheOrbsAreNotSpent()
     {
-        var fight = Fight.Hand(Card(TeslaCoil)).Energy(0).Enemy(hp: 400);
+        var fight = DefectFight.Hand(Card(TeslaCoil)).Energy(0).Enemy(hp: 400);
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
 
         fight.Play();
@@ -962,7 +962,7 @@ public class TeslaCoilTests
     [Fact]
     public void WithNoLightningOrbItIsJustTheDamage()
     {
-        var fight = Fight.Hand(Card(TeslaCoil)).Energy(0).Enemy(hp: 400);
+        var fight = DefectFight.Hand(Card(TeslaCoil)).Energy(0).Enemy(hp: 400);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
 
         fight.Play();
@@ -981,7 +981,7 @@ public class ThunderTests
     [InlineData(true, 8)]
     public void ALightningEvokeHitsHarder(bool upgraded, int extra)
     {
-        var fight = Fight.Hand(Card(Thunder, upgraded)).Energy(1).Enemy(hp: 400);
+        var fight = DefectFight.Hand(Card(Thunder, upgraded)).Energy(1).Enemy(hp: 400);
         fight.Play();
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
 
@@ -998,7 +998,7 @@ public class WhiteNoiseTests
     [Fact]
     public void AddsAFreePowerCardToHand()
     {
-        var fight = Fight.Hand(Card(WhiteNoise)).Energy(1);
+        var fight = DefectFight.Hand(Card(WhiteNoise)).Energy(1);
 
         fight.Play();
 

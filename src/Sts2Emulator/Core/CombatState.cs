@@ -123,7 +123,21 @@ public sealed class CombatState
 
     // Defect-style orb queue.
     public List<OrbState> Orbs = [];
-    public int OrbCapacity = 3;
+
+    /// <summary>
+    /// `OrbQueue.Capacity`. Zero for everyone but the Defect: `BaseOrbSlotCount` is a
+    /// CharacterModel property and only <c>Defect.cs</c> overrides it, to 3. This used to
+    /// default to 3 for every combat, which handed the Ironclad the Defect's whole queue.
+    /// </summary>
+    public int OrbCapacity;
+
+    /// <summary>
+    /// `Character.BaseOrbSlotCount`, which `OrbCmd.Channel` reads to decide whether a
+    /// slotless character should be GIVEN a slot: a character with none of their own gets
+    /// one the first time they channel, and a Defect whose slots have been taken to zero
+    /// does not.
+    /// </summary>
+    public int BaseOrbSlots;
 
     // Necrobinder pet state.
     public int OstyHp;

@@ -4065,6 +4065,15 @@ public static class CardEffects
 
     public static void ChannelOrb(CombatState state, OrbType type, Random? rng = null)
     {
+        // `OrbCmd.Channel`: a character with no orb slots OF THEIR OWN is given one the
+        // first time they channel -- which is why an Ironclad handed a Defect card can use
+        // it at all. A Defect whose slots have been taken to zero is NOT given one, which
+        // is what the BaseOrbSlots half of the test is for.
+        if (state.OrbCapacity == 0 && state.BaseOrbSlots == 0)
+        {
+            state.OrbCapacity = 1;
+        }
+
         if (state.OrbCapacity <= 0)
         {
             return;
@@ -5348,7 +5357,10 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 6 : 4);
                 return true;
             case "CallOfTheVoid":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, 1);
+                // CardsVar 1; the upgrade adds Innate, not a second card. The power puts
+                // that many pool cards into HAND every turn, each granted Ethereal -- the
+                // emulator was giving a one-shot extra draw next turn.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.CallOfTheVoid, 1);
                 return true;
             case "Countdown":
                 // PowerVar 6 upgrading by 3, and CountdownPower Dooms one RANDOM enemy for
@@ -5357,7 +5369,10 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Countdown, upgraded ? 9 : 6);
                 return true;
             case "DanseMacabre":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, 2);
+                // PowerVar 4 upgrading by 2 -- block per card played at a RESOLVED cost of
+                // 2 or more, which is what the second var (EnergyVar 2) is. The emulator
+                // read that 2 as energy next turn.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.DanseMacabre, upgraded ? 6 : 4);
                 return true;
             case "Debilitate":
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -5472,6 +5487,12 @@ public static class CardEffects
                 SummonOsty(state, upgraded ? 8 : 6);
                 return true;
             case "Haunt":
+                // HpLossVar 6 upgrading by 2: HauntPower deals that much Unblockable,
+                // Unpowered damage to a random enemy whenever a SOUL is played. It had no
+                // damage and no block of its own, so the ApplyBaseDamageAndBlock arm it
+                // shared did nothing at all.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Haunt, upgraded ? 8 : 6);
+                return true;
             case "ReanimatePower":
                 ApplyBaseDamageAndBlock(def, upgraded, state, card, rng);
                 return true;
@@ -6927,6 +6948,24 @@ public static class CardEffects
         {
             state.Hand.Add(new CardInstance(defId, false));
         }
+    }
+
+    /// <summary>
+    /// Call of the Void's card: one from the character's own combat pool, granted ETHEREAL,
+    /// into hand. Rolled on the card-generation stream, as `GetDistinctForCombat` is.
+    /// </summary>
+    internal static void AddEtherealPoolCardToHand(CombatState state, Random rng)
+    {
+        var pool = CombatGenerationPool(GeneratedData.CardPools.Necrobinder);
+        if (pool.Count == 0 || state.Hand.Count >= MaxCardsInHand)
+        {
+            return;
+        }
+
+        var stream = state.CardGenerationRng ?? rng;
+        state.Hand.Add(
+            new CardInstance(pool[stream.Next(pool.Count)], false) { EtherealForCombat = true }
+        );
     }
 
     private static void AddSoulToHand(CombatState state)

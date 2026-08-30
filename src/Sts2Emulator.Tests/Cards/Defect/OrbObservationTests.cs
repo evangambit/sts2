@@ -48,7 +48,7 @@ public class OrbObservationTests
     [Fact]
     public void CapacityIsReported()
     {
-        var fight = Fight.Hand().Energy(3);
+        var fight = DefectFight.Hand().Energy(3);
 
         Assert.Equal(3, Observe(fight.State)[CombatObservation.OrbCapacityOffset]);
 
@@ -63,7 +63,7 @@ public class OrbObservationTests
     [Fact]
     public void AnEmptySlotIsZeroAndALightningOrbIsNot()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         var empty = Observe(fight.State);
         Assert.Equal(0, empty[CombatObservation.OrbOffset]);
 
@@ -79,7 +79,7 @@ public class OrbObservationTests
     [Fact]
     public void TheRingIsWrittenInOrder()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
         CardEffects.ChannelOrb(fight.State, OrbType.Dark);
         CardEffects.ChannelOrb(fight.State, OrbType.Plasma);
@@ -101,7 +101,7 @@ public class OrbObservationTests
     [Fact]
     public void TheValuesCarryFocus()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
 
         var plain = Observe(fight.State);
@@ -123,7 +123,7 @@ public class OrbObservationTests
     [Fact]
     public void PlasmaIsUnmovedByFocus()
     {
-        var fight = Fight.Hand().Energy(3);
+        var fight = DefectFight.Hand().Energy(3);
         BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Focus, 5);
         CardEffects.ChannelOrb(fight.State, OrbType.Plasma);
 
@@ -140,7 +140,7 @@ public class OrbObservationTests
     [Fact]
     public void DarksBankedTotalIsVisibleAndGrows()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Dark);
         Assert.Equal(6, Observe(fight.State)[CombatObservation.OrbOffset + 2]);
@@ -154,7 +154,7 @@ public class OrbObservationTests
     [Fact]
     public void GlassRemainingChargeIsVisibleAndDecays()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 400);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 400);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Glass);
 
@@ -173,7 +173,7 @@ public class OrbObservationTests
     [Fact]
     public void EvokingClearsTheSlot()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
 

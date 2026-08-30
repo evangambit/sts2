@@ -27,7 +27,7 @@ public class LightningOrbTests
     [Fact]
     public void ThePassiveHitsForThreeAtTheEndOfTheTurn()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
 
@@ -39,7 +39,7 @@ public class LightningOrbTests
     [Fact]
     public void TheEvokeHitsForEight()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
 
         CardEffects.EvokeNextOrb(fight.State, new Random(0));
@@ -52,7 +52,7 @@ public class LightningOrbTests
     [Fact]
     public void FocusRaisesThePassiveAndTheEvoke()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Focus, 2);
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
 
@@ -72,7 +72,7 @@ public class LightningOrbTests
         bool everySeedHitTheSame = true;
         for (int seed = 0; seed < 8; seed++)
         {
-            var fight = Fight.Encounter(CombatFactory.ActOneEncounter.Bowlbugs, seed: seed);
+            var fight = DefectFight.Encounter(CombatFactory.ActOneEncounter.Bowlbugs, seed: seed);
             var before = fight.State.Enemies.Select(e => e.Hp).ToList();
             for (int i = 0; i < 3; i++)
             {
@@ -102,7 +102,7 @@ public class FrostOrbTests
         // the start of the next one, so reading it off `PlayerBlock` after `EndTurn` sees
         // zero however the orb behaved. Barricade holds it still, and the dummy enemy has
         // no moves to spend it on.
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Barricade, 1);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
@@ -115,7 +115,7 @@ public class FrostOrbTests
     [Fact]
     public void TheEvokeBlocksFive()
     {
-        var fight = Fight.Hand().Energy(3);
+        var fight = DefectFight.Hand().Energy(3);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
 
         CardEffects.EvokeNextOrb(fight.State, new Random(0));
@@ -127,7 +127,7 @@ public class FrostOrbTests
     [Fact]
     public void DexterityDoesNotRaiseItButFocusDoes()
     {
-        var fight = Fight.Hand().Energy(3);
+        var fight = DefectFight.Hand().Energy(3);
         BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Dexterity, 5);
         BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Focus, 2);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
@@ -152,7 +152,7 @@ public class DarkOrbTests
     [Fact]
     public void ItStartsAtSixAndBanksSixPerTurn()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Dark);
         Assert.Equal(6, fight.State.Orbs[0].EvokeValue);
@@ -168,7 +168,7 @@ public class DarkOrbTests
     [Fact]
     public void FocusRaisesWhatItBanksAndNotWhatItStartsWith()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Focus, 3);
         CardEffects.ChannelOrb(fight.State, OrbType.Dark);
@@ -184,7 +184,7 @@ public class DarkOrbTests
     [Fact]
     public void TheEvokeHitsTheWeakestEnemy()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.Enemy(hp: 30);
         fight.Enemy(hp: 100);
         CardEffects.ChannelOrb(fight.State, OrbType.Dark);
@@ -204,7 +204,7 @@ public class PlasmaOrbTests
     [Fact]
     public void ItPaysEnergyAtTheStartOfTheTurn()
     {
-        var fight = Fight.Hand().Energy(3);
+        var fight = DefectFight.Hand().Energy(3);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Plasma);
 
@@ -217,7 +217,7 @@ public class PlasmaOrbTests
     [Fact]
     public void TheEvokeGivesTwo()
     {
-        var fight = Fight.Hand().Energy(3);
+        var fight = DefectFight.Hand().Energy(3);
         CardEffects.ChannelOrb(fight.State, OrbType.Plasma);
 
         CardEffects.EvokeNextOrb(fight.State, new Random(0));
@@ -228,7 +228,7 @@ public class PlasmaOrbTests
     [Fact]
     public void FocusDoesNotTouchIt()
     {
-        var fight = Fight.Hand().Energy(3);
+        var fight = DefectFight.Hand().Energy(3);
         BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Focus, 5);
         CardEffects.ChannelOrb(fight.State, OrbType.Plasma);
 
@@ -253,7 +253,7 @@ public class GlassOrbTests
     [Fact]
     public void ThePassiveHitsEveryEnemyAndDecays()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Glass);
@@ -272,7 +272,7 @@ public class GlassOrbTests
     [Fact]
     public void TheEvokeIsTwiceTheCurrentValue()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Glass);
@@ -291,7 +291,7 @@ public class GlassOrbTests
     [Fact]
     public void AWornOutOrbDoesNothing()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Glass);
         for (int i = 0; i < 4; i++)
@@ -313,7 +313,7 @@ public class GlassOrbTests
     [Fact]
     public void FocusIsAddedToTheDecayedValue()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         fight.State.PlayerHp = 999;
         CardEffects.ChannelOrb(fight.State, OrbType.Glass);
         BuffSystem.Apply(fight.State.PlayerBuffs, BuffId.Focus, 2);
@@ -333,7 +333,7 @@ public class OrbChannelTests
     [Fact]
     public void ChannellingIntoAFullRingEvokesTheOldest()
     {
-        var fight = Fight.Hand().Energy(3).Enemy(hp: 200);
+        var fight = DefectFight.Hand().Energy(3).Enemy(hp: 200);
         Assert.Equal(3, fight.State.OrbCapacity);
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);
         CardEffects.ChannelOrb(fight.State, OrbType.Frost);
@@ -352,7 +352,7 @@ public class OrbChannelTests
     [Fact]
     public void WithNoSlotsNothingIsChannelled()
     {
-        var fight = Fight.Hand().Energy(3);
+        var fight = DefectFight.Hand().Energy(3);
         fight.State.OrbCapacity = 0;
 
         CardEffects.ChannelOrb(fight.State, OrbType.Lightning);

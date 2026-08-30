@@ -1,6 +1,6 @@
 {
   "_comment": "Captured from the live game by scripts/capture_card.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "card": "Smokestack",
+  "card": "Haunt",
   "upgraded": false,
   "encounter": "ByrdonisElite",
   "seed": "ABCDEF",
@@ -36,8 +36,8 @@
       "hand": [
         {
           "index": 0,
-          "id": "SMOKESTACK",
-          "name": "Smokestack",
+          "id": "HAUNT",
+          "name": "Haunt",
           "type": "Power",
           "cost": "1",
           "can_play": true,
@@ -47,19 +47,19 @@
         },
         {
           "index": 1,
-          "id": "DEFEND_NECROBINDER",
-          "name": "Defend",
-          "type": "Skill",
+          "id": "STRIKE_NECROBINDER",
+          "name": "Strike",
+          "type": "Attack",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "Self",
+          "target_type": "AnyEnemy",
           "is_upgraded": false
         },
         {
           "index": 2,
-          "id": "BODYGUARD",
-          "name": "Bodyguard",
+          "id": "DEFEND_NECROBINDER",
+          "name": "Defend",
           "type": "Skill",
           "cost": "1",
           "can_play": true,
@@ -69,6 +69,17 @@
         },
         {
           "index": 3,
+          "id": "STRIKE_NECROBINDER",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "AnyEnemy",
+          "is_upgraded": false
+        },
+        {
+          "index": 4,
           "id": "DEFEND_NECROBINDER",
           "name": "Defend",
           "type": "Skill",
@@ -79,25 +90,14 @@
           "is_upgraded": false
         },
         {
-          "index": 4,
-          "id": "STRIKE_NECROBINDER",
-          "name": "Strike",
-          "type": "Attack",
-          "cost": "1",
-          "can_play": true,
-          "unplayable_reason": null,
-          "target_type": "AnyEnemy",
-          "is_upgraded": false
-        },
-        {
           "index": 5,
-          "id": "STRIKE_NECROBINDER",
-          "name": "Strike",
-          "type": "Attack",
+          "id": "BODYGUARD",
+          "name": "Bodyguard",
+          "type": "Skill",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "AnyEnemy",
+          "target_type": "Self",
           "is_upgraded": false
         }
       ],
@@ -173,19 +173,19 @@
       "hand": [
         {
           "index": 0,
-          "id": "DEFEND_NECROBINDER",
-          "name": "Defend",
-          "type": "Skill",
+          "id": "STRIKE_NECROBINDER",
+          "name": "Strike",
+          "type": "Attack",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "Self",
+          "target_type": "AnyEnemy",
           "is_upgraded": false
         },
         {
           "index": 1,
-          "id": "BODYGUARD",
-          "name": "Bodyguard",
+          "id": "DEFEND_NECROBINDER",
+          "name": "Defend",
           "type": "Skill",
           "cost": "1",
           "can_play": true,
@@ -195,6 +195,17 @@
         },
         {
           "index": 2,
+          "id": "STRIKE_NECROBINDER",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "AnyEnemy",
+          "is_upgraded": false
+        },
+        {
+          "index": 3,
           "id": "DEFEND_NECROBINDER",
           "name": "Defend",
           "type": "Skill",
@@ -205,33 +216,22 @@
           "is_upgraded": false
         },
         {
-          "index": 3,
-          "id": "STRIKE_NECROBINDER",
-          "name": "Strike",
-          "type": "Attack",
-          "cost": "1",
-          "can_play": true,
-          "unplayable_reason": null,
-          "target_type": "AnyEnemy",
-          "is_upgraded": false
-        },
-        {
           "index": 4,
-          "id": "STRIKE_NECROBINDER",
-          "name": "Strike",
-          "type": "Attack",
+          "id": "BODYGUARD",
+          "name": "Bodyguard",
+          "type": "Skill",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "AnyEnemy",
+          "target_type": "Self",
           "is_upgraded": false
         }
       ],
       "status": [
         {
-          "id": "SMOKESTACK_POWER",
-          "name": "Smokestack",
-          "amount": 5,
+          "id": "HAUNT_POWER",
+          "name": "Haunt",
+          "amount": 6,
           "type": "Buff"
         }
       ]
@@ -288,7 +288,19 @@
   "before_piles": {
     "hand_ordered": [
       {
-        "id": "SMOKESTACK",
+        "id": "HAUNT",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_NECROBINDER",
         "is_upgraded": false
       },
       {
@@ -298,27 +310,11 @@
       {
         "id": "BODYGUARD",
         "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_NECROBINDER",
-        "is_upgraded": false
       }
     ],
     "draw_pile_ordered": [
       {
-        "id": "DEFEND_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_NECROBINDER",
+        "id": "UNLEASH",
         "is_upgraded": false
       },
       {
@@ -330,11 +326,15 @@
         "is_upgraded": false
       },
       {
-        "id": "UNLEASH",
+        "id": "STRIKE_NECROBINDER",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_NECROBINDER",
+        "id": "DEFEND_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_NECROBINDER",
         "is_upgraded": false
       }
     ],
@@ -344,33 +344,29 @@
   "after_piles": {
     "hand_ordered": [
       {
+        "id": "STRIKE_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
         "id": "DEFEND_NECROBINDER",
         "is_upgraded": false
       },
       {
         "id": "BODYGUARD",
         "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_NECROBINDER",
-        "is_upgraded": false
       }
     ],
     "draw_pile_ordered": [
       {
-        "id": "DEFEND_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_NECROBINDER",
+        "id": "UNLEASH",
         "is_upgraded": false
       },
       {
@@ -382,11 +378,15 @@
         "is_upgraded": false
       },
       {
-        "id": "UNLEASH",
+        "id": "STRIKE_NECROBINDER",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_NECROBINDER",
+        "id": "DEFEND_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_NECROBINDER",
         "is_upgraded": false
       }
     ],

@@ -286,6 +286,11 @@ public readonly record struct CardInstance(
     // Skill its owner plays. Unlike Hand Trick's grant this one is permanent for the
     // combat, so it rides on the copy through the piles rather than expiring with the turn.
     bool SlyForCombat = false,
+    // `CardCmd.ApplyKeyword(card, CardKeyword.Ethereal)`, which Call of the Void's power
+    // does to each card it generates. Ethereal is otherwise a keyword on the DEFINITION,
+    // so this is the per-copy half of the same question, and it rides on the copy through
+    // the piles the way SlyForCombat does.
+    bool EtherealForCombat = false,
     // `CardModel.GiveSingleTurnRetain()`, which Well-Laid Plans' power hands to the cards
     // its owner picks just before the hand is flushed. Single-turn like Hand Trick's Sly:
     // it survives one flush and is cleared as the card lands in the next hand.
@@ -366,6 +371,11 @@ public static class CardInstanceExtensions
     /// </summary>
     public static bool IsEthereal(this CardInstance card)
     {
+        if (card.EtherealForCombat)
+        {
+            return true;
+        }
+
         var def = GeneratedData.Cards.Get(card.DefId);
         return def.Ethereal && !(card.Upgraded && def.EtherealRemovedWhenUpgraded);
     }

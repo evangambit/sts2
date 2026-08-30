@@ -242,6 +242,10 @@ READ: dict[str, tuple[str, str]] = {
         "3542b791859e",
         "CalamityPower 1; the upgrade cuts the cost",
     ),
+    "CallOfTheVoid": (
+        "c6daf526d7c9",
+        "CallOfTheVoidPower 1: a pool card into HAND every turn, granted ETHEREAL; upgrade adds Innate",
+    ),
     "Catastrophe": (
         "d68da1dfdebf",
         "2/3 cards auto-played, each a StableShuffle pick off Rng.Shuffle, preferring playable",
@@ -294,6 +298,10 @@ READ: dict[str, tuple[str, str]] = {
     "Cruelty": (
         "fb996cba1975",
         "CrueltyPower 25, upgrading by another 25",
+    ),
+    "DanseMacabre": (
+        "ec6739a160d1",
+        "DanseMacabrePower 4/6: block per card played at a RESOLVED cost of 2 or more",
     ),
     "DarkEmbrace": (
         "26b6580c09cd",
@@ -462,6 +470,10 @@ READ: dict[str, tuple[str, str]] = {
     "Hang": (
         "002b9c9c5d72",
         "10/13 damage, then HangPower max(2, existing) -- a doubling damage multiplier for Hang only",
+    ),
+    "Haunt": (
+        "3736a06e888d",
+        "HauntPower 6/8: Unblockable Unpowered damage to a random enemy when a SOUL is played",
     ),
     "Havoc": (
         "5046a8d1658e",
@@ -844,7 +856,7 @@ READ: dict[str, tuple[str, str]] = {
     "Supercritical": ("f347dfeb9219", "EnergyVar(4) +2, Exhaust"),
     "SpiritOfAsh": (
         "cd5ba635948b",
-        ""BlockOnExhaust" 4/5, gained when an ETHEREAL card is PLAYED -- not on exhaust",
+        "a BlockOnExhaust var of 4/5, gained when an ETHEREAL card is PLAYED -- not on exhaust",
     ),
     "Spite": (
         "fec43030abca",

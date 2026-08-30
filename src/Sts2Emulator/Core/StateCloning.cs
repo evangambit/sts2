@@ -111,6 +111,7 @@ public static class StateCloning
             AutoPlayQueue = [.. combat.AutoPlayQueue],
             Orbs = [.. combat.Orbs],
             OrbCapacity = combat.OrbCapacity,
+            BaseOrbSlots = combat.BaseOrbSlots,
             OstyHp = combat.OstyHp,
             OstyMaxHp = combat.OstyMaxHp,
             Stars = combat.Stars,

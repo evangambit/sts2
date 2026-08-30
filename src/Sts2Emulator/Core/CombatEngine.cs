@@ -161,6 +161,15 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FreePowerPower, -1);
         }
 
+        // `DanseMacabrePower.BeforeCardPlayed`: a card whose RESOLVED cost is 2 or more
+        // gains its amount in Unpowered block. Resolved, so a card the player got for free
+        // pays nothing -- `effectiveCost`, not the printed one.
+        int danseMacabre = BuffSystem.Get(state.PlayerBuffs, BuffId.DanseMacabre);
+        if (danseMacabre > 0 && effectiveCost >= 2)
+        {
+            Effects.CardEffects.GainBlock(state, danseMacabre, rng);
+        }
+
         // `SpiritOfAshPower.BeforeCardPlayed`: an ETHEREAL card played gains its amount in
         // Unpowered block. Its var is called BlockOnExhaust and the hook has nothing to do
         // with exhausting.
@@ -431,6 +440,22 @@ public static class CombatEngine
         if (devourLife > 0 && card.DefId == 446) // Soul
         {
             Effects.CardEffects.SummonOsty(state, devourLife);
+        }
+
+        // `HauntPower.AfterCardPlayed`, the same Soul trigger: Unblockable and Unpowered
+        // damage to one random enemy, on the CombatTargets stream.
+        int haunt = BuffSystem.Get(state.PlayerBuffs, BuffId.Haunt);
+        if (haunt > 0 && card.DefId == 446) // Soul
+        {
+            var hauntTarget = Effects.CardEffects.RandomLivingEnemy(state, rng);
+            if (hauntTarget != null)
+            {
+                Effects.CardEffects.DealUnblockableUnpoweredDamageToEnemy(
+                    state,
+                    hauntTarget,
+                    haunt
+                );
+            }
         }
 
         IncrementPlayedCardTypeCounters(state, def);
@@ -1144,6 +1169,16 @@ public static class CombatEngine
                 BuffSystem.Apply(doomed.Buffs, BuffId.Doom, countdown);
                 Effects.CardEffects.ApplyPowerDoomRiders(state, doomed, countdown);
             }
+        }
+
+        // `CallOfTheVoidPower.BeforeHandDraw`: cards from the character's OWN pool, each
+        // granted Ethereal, straight into hand. The pool filter is the ordinary combat one
+        // -- `GetUnlockedCards` drops Basic and Ancient, and `GetDistinctForCombat` runs
+        // FilterForCombat over what it is handed.
+        int callOfTheVoid = BuffSystem.Get(state.PlayerBuffs, BuffId.CallOfTheVoid);
+        for (int i = 0; i < callOfTheVoid; i++)
+        {
+            Effects.CardEffects.AddEtherealPoolCardToHand(state, rng);
         }
 
         // `SentryModePower.BeforeHandDraw` -- BEFORE the hand is drawn, so the Gazes are

@@ -468,6 +468,25 @@ public enum BuffId
     /// exhausting at all.
     /// </summary>
     SpiritOfAsh,
+
+    /// <summary>
+    /// <c>CallOfTheVoidPower.BeforeHandDraw</c>: puts this many cards from the character's
+    /// own pool into HAND at the start of every turn, each granted ETHEREAL.
+    /// </summary>
+    CallOfTheVoid,
+
+    /// <summary>
+    /// <c>DanseMacabrePower.BeforeCardPlayed</c>: gain this much Unpowered block whenever
+    /// its owner plays a card whose RESOLVED cost is 2 or more. Resolved, so a card made
+    /// free does not pay.
+    /// </summary>
+    DanseMacabre,
+
+    /// <summary>
+    /// <c>HauntPower.AfterCardPlayed</c>: playing a SOUL deals this much Unblockable,
+    /// Unpowered damage to one random enemy.
+    /// </summary>
+    Haunt,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);
