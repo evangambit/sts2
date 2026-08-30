@@ -45,4 +45,38 @@ public class JackpotTests
 
         Assert.Equal(3, generationRng.CallCount);
     }
+
+    /// <summary>
+    /// `GetForCombat` applies `FilterForCombat` to whatever it is handed, so the zero-cost
+    /// filter composes with it: no Basic, Ancient or Event cards, and nothing declaring
+    /// `CanBeGeneratedInCombat => false`. The pool used to be the raw character list
+    /// filtered only by cost.
+    /// </summary>
+    [Fact]
+    public void ThePoolExcludesWhatFilterForCombatDrops()
+    {
+        var seen = new HashSet<int>();
+        for (int seed = 0; seed < 200; seed++)
+        {
+            var fight = Fight.Hand(Card(CL.Jackpot)).Energy(3).Enemy(hp: 300);
+            fight.State.CardGenerationRng = new CountingRandom(seed);
+            fight.Play();
+            foreach (var c in fight.State.Hand)
+            {
+                seen.Add(c.DefId);
+            }
+        }
+
+        Assert.NotEmpty(seen);
+        Assert.All(
+            seen,
+            id =>
+            {
+                var d = GeneratedData.Cards.Get(id);
+                Assert.NotEqual(CardRarity.Ancient, d.Rarity);
+                Assert.NotEqual(CardRarity.Event, d.Rarity);
+                Assert.True(d.CanBeGeneratedInCombat, $"{d.Name} refuses combat generation");
+            }
+        );
+    }
 }

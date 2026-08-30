@@ -3124,8 +3124,11 @@ public static class CardEffects
     /// </summary>
     private static void AddZeroCostCardsToHand(CombatState state, int count, bool upgraded)
     {
-        var pool = GeneratedData
-            .CardPools.Ironclad.ToArray()
+        // `GetForCombat` runs `FilterForCombat` over whatever it is handed, so the
+        // zero-cost filter composes with it rather than replacing it: Ancient, Event and
+        // Basic cards and anything declaring `CanBeGeneratedInCombat => false` are out,
+        // and this used to reach all of them.
+        var pool = CombatGenerationPool(GeneratedData.CardPools.Ironclad)
             .Where(id =>
             {
                 var d = GeneratedData.Cards.Get(id);
@@ -5317,8 +5320,15 @@ public static class CardEffects
                 DealDamageToRandomEnemiesMultiHit(state, Dmg(state, def, upgraded, card), 2, rng);
                 return true;
             case "Intercept":
+                // MultiplayerOnly. The block is real; the Intangible was invented, and it
+                // is one of the strongest effects in the game -- every hit reduced to 1 --
+                // handed out by a 1-cost common.
+                //
+                // What the card actually applies is `CoveredPower` on its TARGET, which
+                // marks an ally and gives the APPLIER an InterceptPower that soaks the
+                // hits aimed at them. Alone, the target is the player, so covering
+                // yourself redirects your damage to yourself: nothing. Block and no more.
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
                 return true;
             case "Lift":
             case "Rally":

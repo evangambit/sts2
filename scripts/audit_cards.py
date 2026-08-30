@@ -456,9 +456,21 @@ READ: dict[str, tuple[str, str]] = {
         "5b400a015a56",
         "plain StrengthPower 2/3, applied immediately",
     ),
+    "Intercept": (
+        "796edd2d43e6",
+        "MultiplayerOnly; 9/13 block and CoveredPower on an ALLY -- nothing at all alone",
+    ),
     "IronWave": (
         "5ae0af44ddee",
         "BLOCK first then damage, 5/7 each",
+    ),
+    "JackOfAllTrades": (
+        "477ef04667d0",
+        "1/2 distinct colourless cards excluding itself, on CombatCardGeneration",
+    ),
+    "Jackpot": (
+        "68f80173c2da",
+        "25/30 then 3 ZERO-COST character cards via GetForCombat, upgraded if the card is",
     ),
     "Juggernaut": (
         "38b6caecf3ef",
