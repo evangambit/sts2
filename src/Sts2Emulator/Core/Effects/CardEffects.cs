@@ -1602,12 +1602,21 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.MasterPlanner, 1);
                 break;
 
-            case SI.MementoMori: // 1-cost, 9 damage + 4/5 per card discarded this turn
+            case SI.MementoMori: // 1-cost, 9/11 damage + 4/5 per card discarded this turn
                 // CalculationBaseVar(9m) with ExtraDamageVar(4m) per card discarded this
-                // turn; OnUpgrade raises the PER-DISCARD damage, not the base. The
-                // discard counter is not modelled, so this is the zero-discard case —
-                // the old 8/12 was wrong even there.
-                DealDamage(state, DmgFrom(state, 9, def, card));
+                // turn. OnUpgrade raises BOTH -- `CalculationBase.UpgradeValueBy(2m)` and
+                // `ExtraDamage.UpgradeValueBy(1m)` -- so the base is 11 upgraded, not the
+                // flat 9 this used to deal. An earlier comment here claimed the upgrade
+                // left the base alone, which is what kept the 9 in place.
+                //
+                // The multiplier is still the zero-discard case. It counts
+                // `CardDiscardedEntry` rows for this turn, and the emulator has no
+                // discard counter: `DiscardPile.Add` happens at eleven sites with no
+                // chokepoint. Memento Mori is the ONLY thing in the game that reads that
+                // count, so the counter is not built for it here -- but it is the one
+                // piece missing, and anything else that starts counting discards should
+                // build it rather than repeat this.
+                DealDamage(state, DmgFrom(state, upgraded ? 11 : 9, def, card));
                 break;
 
             case SI.Mirage: // 1/0-cost, block equal to all the Poison on the board
@@ -6112,7 +6121,7 @@ public static class CardEffects
                     * (up ? 3 : 2),
             CL.MindBlast => state.DrawPile.Count,
             CL.GoldAxe => state.CardsPlayedThisCombat,
-            SI.MementoMori => 9,
+            SI.MementoMori => card.Upgraded ? 11 : 9,
             SI.PreciseCut => Math.Max(0, (up ? 16 : 13) - 2 * state.Hand.Count),
             SI.Murder => MurderDamage(state, up),
             _ => null,

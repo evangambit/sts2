@@ -423,6 +423,10 @@ READ: dict[str, tuple[str, str]] = {
         "b16c87857714",
         "16/21 to all, and AfterAutoPostPlayPhaseEntered replays it from EXHAUST every turn",
     ),
+    "HuddleUp": (
+        "4f3af10da7dc",
+        "MultiplayerOnly; CardsVar(2) drawn by EACH living ally, so 2/3 for the player alone",
+    ),
     "Hyperbeam": (
         "9f924a47ae24",
         "PowerVar<FocusPower>(3m) is NOT upgraded -- only the damage is; the Focus is spent, not gained",
@@ -431,6 +435,10 @@ READ: dict[str, tuple[str, str]] = {
     "Ignition": (
         "8f6b9df8dc23",
         "MultiplayerOnly; channels Plasma on the TARGET ally, which is the player alone",
+    ),
+    "Impatience": (
+        "0d4f7a2af561",
+        "draw 2/3, and only when the hand holds NO Attack",
     ),
     "Impervious": (
         "359bc2d2f386",
@@ -472,6 +480,10 @@ READ: dict[str, tuple[str, str]] = {
     "Mangle": (
         "9f81ad699e06",
         "15/20 then ManglePower 10/15 -- a TemporaryStrengthPower, so it lapses",
+    ),
+    "MementoMori": (
+        "23dd9431e144",
+        "9 + 4 per card discarded this turn; OnUpgrade raises BOTH -- base +2 and per-discard +1",
     ),
     "MoltenFist": (
         "74f5009156a4",
