@@ -12,10 +12,15 @@ It reads `audit_cards.READ`, so a card drops off `--list` the moment it is recor
 """
 
 import sys, re, pathlib, collections
+
 sys.path.insert(0, "scripts")
 import audit_cards as A
 
-gen, pend, impl = set(A.generated_names()), set(A.pending_names()), set(A.implemented_names())
+gen, pend, impl = (
+    set(A.generated_names()),
+    set(A.pending_names()),
+    set(A.implemented_names()),
+)
 unread = sorted(n for n in gen if n in impl and n not in pend and n not in A.READ)
 pools = {}
 for f in pathlib.Path("decompiled/MegaCrit.Sts2.Core.Models.CardPools").glob("*.cs"):
@@ -27,18 +32,34 @@ if sys.argv[1:] and sys.argv[1] == "--list":
     c = collections.Counter(pools.get(n, "<none>") for n in unread)
     if not want:
         print(f"tested but unread: {len(unread)}")
-        for k, v in c.most_common(): print(f"  {k:12} {v}")
+        for k, v in c.most_common():
+            print(f"  {k:12} {v}")
     else:
         sel = [n for n in unread if pools.get(n) == want]
-        print(f"{want} ({len(sel)}):"); print("\n".join(sel))
+        print(f"{want} ({len(sel)}):")
+        print("\n".join(sel))
     raise SystemExit
 
-CE = pathlib.Path("src/Sts2Emulator/Core/Effects/CardEffects.cs").read_text().split("\n")
+CE = (
+    pathlib.Path("src/Sts2Emulator/Core/Effects/CardEffects.cs").read_text().split("\n")
+)
 for name in sys.argv[1:]:
     src = pathlib.Path(f"decompiled/MegaCrit.Sts2.Core.Models.Cards/{name}.cs")
-    print("=" * 78); print(f"### {name}")
-    SKIP = ("using", "namespace", "///", "public sealed class", "ArgumentNullException",
-            "HoverTip", "TriggerAnim", "WithHitFx", "Flash()", "SfxCmd", "PreviewCardPileAdd(")
+    print("=" * 78)
+    print(f"### {name}")
+    SKIP = (
+        "using",
+        "namespace",
+        "///",
+        "public sealed class",
+        "ArgumentNullException",
+        "HoverTip",
+        "TriggerAnim",
+        "WithHitFx",
+        "Flash()",
+        "SfxCmd",
+        "PreviewCardPileAdd(",
+    )
     # Indentation is PRESERVED. An earlier version stripped it, and Second Wind's block
     # gain then read as sitting outside its foreach when it is inside -- per card exhausted
     # rather than once. Nesting is exactly what these comparisons turn on, so braces stay
@@ -48,15 +69,21 @@ for name in sys.argv[1:]:
         if not l.strip() or any(k in l for k in SKIP):
             continue
         body.append(l.replace("\t", "    "))
-    print("--- SOURCE"); print("\n".join(body))
+    print("--- SOURCE")
+    print("\n".join(body))
     print("--- EMULATOR")
-    hits = [i for i, l in enumerate(CE)
-            if re.search(rf'case (IC|SI|CL|ST|NB|RG)\.{name}:|case "{name}":', l)]
+    hits = [
+        i
+        for i, l in enumerate(CE)
+        if re.search(rf'case (IC|SI|CL|ST|NB|RG)\.{name}:|case "{name}":', l)
+    ]
     for h in hits:
         j = h
         while j < len(CE) and j < h + 30:
             print(f"{j+1}: {CE[j]}")
-            if re.match(r"\s*(break|return)\b", CE[j]) and j > h: break
+            if re.match(r"\s*(break|return)\b", CE[j]) and j > h:
+                break
             j += 1
         print("    ---")
-    if not hits: print("    (no case found)")
+    if not hits:
+        print("    (no case found)")

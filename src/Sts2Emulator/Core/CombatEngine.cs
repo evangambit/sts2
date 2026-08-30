@@ -378,6 +378,13 @@ public static class CombatEngine
             }
         }
 
+        // `CardPlayFinishedEntry.WasEthereal` -- counted when the play FINISHES, which is
+        // here and not up with the Veilpiercer decrement, so a card cannot count itself.
+        if (IsEtherealForPowers(state, card))
+        {
+            state.EtherealCardPlaysThisCombat++;
+        }
+
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterCardPlayedRares(state, def, rng);

@@ -5185,10 +5185,15 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.CrimsonMantleBlock, upgraded ? 3 : 2);
                 return true;
             case "PullFromBelow":
+                // CalculationBase 0 + CalculationExtra 1 per Ethereal card PLAYED this
+                // combat -- `CardPlayFinishedEntry.WasEthereal`, not cards Ethereal
+                // exhausted at end of turn, and with no floor of one. Played first in a
+                // combat it deals NOTHING, which is what the live capture recorded: the
+                // emulator hit for 5.
                 DealDamageMultiHit(
                     state,
                     Dmg(state, def, upgraded, card),
-                    Math.Max(1, state.EtherealExhaustCount),
+                    state.EtherealCardPlaysThisCombat,
                     rng
                 );
                 return true;

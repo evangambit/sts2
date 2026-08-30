@@ -74,7 +74,9 @@ def main() -> None:
     args = parser.parse_args()
 
     dead = dead_labels()
-    print(f"{len(dead)} card case(s) sit behind an earlier switch and cannot be reached")
+    print(
+        f"{len(dead)} card case(s) sit behind an earlier switch and cannot be reached"
+    )
     if not dead:
         return
 

@@ -410,7 +410,9 @@ def capture(
 
 def ordered_piles(state: dict[str, Any]) -> dict[str, Any]:
     player = state.get("player") or {}
-    return {name: player.get(name) for name in PILE_KEYS if player.get(name) is not None}
+    return {
+        name: player.get(name) for name in PILE_KEYS if player.get(name) is not None
+    }
 
 
 def default_out(

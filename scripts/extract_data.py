@@ -320,7 +320,14 @@ def extract_cards() -> str:
         # the extractor never emits reads exactly like a card that does not have it.
         flags = [
             f"{keyword}: true"
-            for keyword in ("Ethereal", "Exhaust", "Unplayable", "Retain", "Sly", "Eternal")
+            for keyword in (
+                "Ethereal",
+                "Exhaust",
+                "Unplayable",
+                "Retain",
+                "Sly",
+                "Eternal",
+            )
             if has_canonical_keyword(text, keyword)
         ]
         # Innate needs precise attribution, unlike the flags above: 9 cards declare

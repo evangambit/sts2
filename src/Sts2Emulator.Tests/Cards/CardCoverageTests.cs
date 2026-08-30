@@ -165,7 +165,6 @@ public class CardCoverageTests
         "Prophesize",
         "Protector",
         "PullAggro",
-        "PullFromBelow",
         "Putrefy",
         "Quasar",
         "Radiate",

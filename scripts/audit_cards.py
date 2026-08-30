@@ -665,6 +665,10 @@ READ: dict[str, tuple[str, str]] = {
         "37cb66906f00",
         "Strength AND Dexterity, 1 each, both upgrading by 1",
     ),
+    "PullFromBelow": (
+        "930364783206",
+        "hit count = Ethereal cards PLAYED this combat; base 0, no floor",
+    ),
     "Purity": (
         "80e66546919d",
         "exhaust up to 3/5 CHOSEN cards -- CardSelectorPrefs minimum is ZERO, so it can be declined",

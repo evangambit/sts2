@@ -345,12 +345,13 @@ def render_test(
                 f"fight.EnemyBuffAmount({constant}, {index}));",
             )
 
-
     after_allies = after.get("allies") or []
     after_osty = next((a for a in after_allies if a.get("name") == "Osty"), None)
     if after_osty is not None:
         lines.append(f"        Assert.Equal({after_osty['hp']}, fight.State.OstyHp);")
-        lines.append(f"        Assert.Equal({after_osty['max_hp']}, fight.State.OstyMaxHp);")
+        lines.append(
+            f"        Assert.Equal({after_osty['max_hp']}, fight.State.OstyMaxHp);"
+        )
     elif before_allies:
         # It was there and is not any more, which the emulator records as zero HP rather
         # than by removing anything.

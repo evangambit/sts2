@@ -398,6 +398,14 @@ public sealed class CombatState
     public int CardsExhaustedThisTurn;
     public int LightningOrbsChanneledThisCombat;
     public int EtherealExhaustCount; // number of cards exhausted by Ethereal this turn (Dark Embrace)
+
+    /// <summary>
+    /// `CardPlayFinishedEntry.WasEthereal` counted over the whole combat history: how many
+    /// Ethereal cards the player has FINISHED playing. Pull From Below's hit count.
+    /// Distinct from <see cref="EtherealExhaustCount" />, which counts cards Ethereal
+    /// EXHAUSTED at end of turn and resets every turn.
+    /// </summary>
+    public int EtherealCardPlaysThisCombat;
     public int UnblockedDamageHitCount; // times player took unblocked damage this combat (TearAsunder)
     public int TargetEnemyIndex = -1; // -1 = auto (first living enemy), >=0 = specific index
 
