@@ -692,6 +692,16 @@ public static class CombatEngine
 
         Effects.CardEffects.KillDoomedEnemiesForTurnEnd(state);
 
+        // `DoomPower.BeforeSideTurnEnd` kills its owner when `CurrentHp <= Amount`, and the
+        // owner can be the PLAYER -- Neurosurge Dooms you every turn. The emulator only
+        // ever looked at enemies.
+        int playerDoom = BuffSystem.Get(state.PlayerBuffs, BuffId.Doom);
+        if (playerDoom > 0 && state.PlayerHp <= playerDoom)
+        {
+            state.PlayerHp = 0;
+            return new StepResult(Terminal: true, PlayerWon: false, Reward: -1f);
+        }
+
         // `OblivionPower.AfterSideTurnEnd` removes itself when the PLAYER's side turn ends
         // -- not its owner's, which is the enemy's. Removed after the Doom it spent the
         // turn stacking has been paid, so the last card played still counts.
@@ -1160,6 +1170,14 @@ public static class CombatEngine
         if (creativeAi > 0)
         {
             Effects.CardEffects.AddRandomDefectPowerCardsToHand(state, creativeAi, rng);
+        }
+
+        // `NeurosurgePower.AfterSideTurnStart`: Dooms its owner -- the PLAYER -- for its
+        // amount, every turn.
+        int neurosurge = BuffSystem.Get(state.PlayerBuffs, BuffId.Neurosurge);
+        if (neurosurge > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Doom, neurosurge);
         }
 
         // `SummonNextTurnPower.AfterPlayerTurnStart`: summons for its amount and then

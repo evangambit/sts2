@@ -5182,8 +5182,11 @@ public static class CardEffects
                 return true;
             }
             case "Putrefy":
-                ApplyAllEnemyDebuff(state, BuffId.Weak, upgraded ? 2 : 1, rng);
-                ApplyAllEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 2 : 1, rng);
+                // One "Power" var at 2, upgrading by 1, spent on BOTH debuffs -- and on
+                // `cardPlay.Target`, not on everyone. The emulator had it at 1/2 and aimed
+                // at the whole room.
+                ApplyEnemyDebuff(state, BuffId.Weak, upgraded ? 3 : 2, rng);
+                ApplyEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 3 : 2, rng);
                 return true;
             case "Parse":
                 DrawCards(state, upgraded ? 4 : 3, rng);
@@ -5193,9 +5196,12 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
                 return true;
             case "Neurosurge":
+                // EnergyVar 3 upgrading by 1, CardsVar 2, and NeurosurgePower 3 -- a DEBUFF
+                // on YOURSELF that Dooms you for 3 at the start of every turn. The emulator
+                // granted NoBlock, which is a different kind of bad.
                 GainEnergy(state, upgraded ? 4 : 3);
                 DrawCards(state, 2, rng);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Neurosurge, 3);
                 return true;
             case "Wisp":
                 GainEnergy(state, 1);

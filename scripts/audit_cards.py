@@ -653,6 +653,10 @@ READ: dict[str, tuple[str, str]] = {
         "19c48697bb9d",
         "10/14 then up to 2/3 CHOSEN discard cards, minimum ZERO, capped by hand room",
     ),
+    "Neurosurge": (
+        "547ae627a131",
+        "3/4 energy and 2 cards, and NeurosurgePower 3 on YOURSELF -- it Dooms you every turn",
+    ),
     "NoEscape": (
         "71a015232024",
         "Doom 10/15 plus 5 per FULL ten already on the target",
@@ -748,6 +752,10 @@ READ: dict[str, tuple[str, str]] = {
     "Purity": (
         "80e66546919d",
         "exhaust up to 3/5 CHOSEN cards -- CardSelectorPrefs minimum is ZERO, so it can be declined",
+    ),
+    "Putrefy": (
+        "d072ff556580",
+        "one Power var of 2/3 spent on BOTH Weak and Vulnerable, on the TARGET only",
     ),
     "Pyre": (
         "06ccde0bb08d",

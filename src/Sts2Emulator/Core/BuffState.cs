@@ -515,6 +515,13 @@ public enum BuffId
     /// start of the next player turn and then removes itself.
     /// </summary>
     SummonNextTurn,
+
+    /// <summary>
+    /// <c>NeurosurgePower.AfterSideTurnStart</c>, a DEBUFF the card puts on its own owner:
+    /// it Dooms the PLAYER for this much at the start of every player turn. Doom kills its
+    /// owner when their HP is at or below it, and the player is not exempt.
+    /// </summary>
+    Neurosurge,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);
