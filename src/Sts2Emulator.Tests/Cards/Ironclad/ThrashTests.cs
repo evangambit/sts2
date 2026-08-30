@@ -84,4 +84,45 @@ public class ThrashTests
         var played = fight.State.DiscardPile.Single(c => c.DefId == IC.Thrash);
         Assert.Equal(0, played.BonusDamage);
     }
+
+    /// <summary>
+    /// Measured against the running game, not read: fed a Body Slam with ten block on the
+    /// board, the game's Thrash went from "Deal 4 damage twice" to "Deal 14 damage twice".
+    /// It absorbs the CALCULATED value, so a printed-damage reading grows it by nothing.
+    /// </summary>
+    [Fact]
+    public void ItAbsorbsACalculatedCardsComputedValue()
+    {
+        var fight = Fight
+            .Hand(new CardInstance(IC.Thrash, false), new CardInstance(IC.BodySlam, false))
+            .Energy(3)
+            .Enemy(hp: 300);
+        fight.State.PlayerBlock = 10;
+
+        fight.Play(0);
+
+        var grown = fight.State.DiscardPile.Single(c => c.DefId == IC.Thrash);
+        Assert.Equal(10, grown.BonusDamage);
+    }
+
+    /// <summary>And the growth is what the next play hits for: 4 printed + 10 absorbed.</summary>
+    [Fact]
+    public void TheAbsorbedCalculationShowsOnTheNextPlay()
+    {
+        var fight = Fight
+            .Hand(new CardInstance(IC.Thrash, false), new CardInstance(IC.BodySlam, false))
+            .Energy(9)
+            .Enemy(hp: 400);
+        fight.State.PlayerBlock = 10;
+        fight.Play(0);
+        int afterFirst = fight.Enemy0.Hp;
+
+        var grown = fight.State.DiscardPile.Single(c => c.DefId == IC.Thrash);
+        fight.State.DiscardPile.Remove(grown);
+        fight.State.Hand.Add(grown);
+        fight.State.Energy = 3;
+        fight.Play(fight.State.Hand.Count - 1);
+
+        Assert.Equal(2 * 14, afterFirst - fight.Enemy0.Hp);
+    }
 }

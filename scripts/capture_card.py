@@ -273,15 +273,26 @@ def play_card(
 
 
 def _card_count(state: dict[str, Any]) -> int:
-    """Cards in the piles a capture records -- hand, draw, discard and exhaust."""
-    piles = ordered_piles(state)
-    return sum(len(piles.get(name) or []) for name in PILE_KEYS)
+    """Cards in every combat pile, counted from the SUMMARY rather than the ordered lists.
+
+    The ordered lists are a fork addition and a pile can be missing from them -- the
+    exhaust one was, for a while, so a Second Wind that exhausted four cards looked like
+    four cards vanishing and the settle wait never finished. The summary counts come from
+    the game's own piles and are the thing to trust for "has everything landed yet".
+    """
+    player = state.get("player") or {}
+    return (
+        len(player.get("hand") or [])
+        + int(player.get("draw_pile_count") or 0)
+        + int(player.get("discard_pile_count") or 0)
+        + int(player.get("exhaust_pile_count") or 0)
+    )
 
 
 def wait_for_play_to_settle(
     base_url: str,
     card_count_before: int,
-    timeout: float = 10.0,
+    timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Wait until the played card has LEFT the play pile, then snapshot.
 
@@ -294,6 +305,11 @@ def wait_for_play_to_settle(
 
     The card played leaves the recorded piles one short until it arrives somewhere, so
     waiting for the count to come back is waiting for the play to finish.
+
+    The timeout is generous because the slowest cards are exactly the ones that need
+    this: Second Wind exhausts a whole hand one card at a time, and ten seconds was not
+    enough for it. A refusal here is safe -- it declines to write a fixture rather than
+    writing a wrong one -- but a refusal on a card that would have settled is a nuisance.
     """
     deadline = time.monotonic() + timeout
     latest = trace_real_game.wait_for_state(base_url, 0.5)

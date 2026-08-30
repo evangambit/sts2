@@ -6013,17 +6013,54 @@ public static class CardEffects
     /// </summary>
     /// <remarks>
     /// The game reads `CalculatedDamage` if the card has one, else `Damage`, else
-    /// `OstyDamage`, and runs the result through `Hook.ModifyDamage` with the EATEN card as
-    /// the source -- so the meal's own enchantments count and the eater's do not. `Dmg`
-    /// is that same set of per-card modifiers.
+    /// `OstyDamage`, and runs the result through `Hook.ModifyDamage` with the EATEN card
+    /// as the source -- so the meal's own enchantments count and the eater's do not.
     ///
-    /// The calculated-damage cards are the gap: their number lives inside the switch here
-    /// rather than in a var that can be evaluated out of context, so eating a Body Slam
-    /// contributes its PRINTED zero instead of the player's block. Recorded rather than
-    /// guessed at, since a wrong number is worse than a low one.
+    /// This was left as a stated gap and then measured: a live capture fed Thrash a Body
+    /// Slam with ten block on the board and Thrash went from "Deal 4 damage twice" to
+    /// "Deal 14 damage twice". It absorbs the CALCULATED value, so a printed-damage
+    /// reading would have grown it by nothing at all.
     /// </remarks>
-    private static int EatenAttackDamage(CombatState state, CardInstance eaten) =>
-        Dmg(state, GeneratedData.Cards.Get(eaten.DefId), eaten.Upgraded, eaten);
+    private static int EatenAttackDamage(CombatState state, CardInstance eaten)
+    {
+        var def = GeneratedData.Cards.Get(eaten.DefId);
+        int? calculated = CalculatedAttackDamage(state, def, eaten);
+        return calculated is { } value
+            ? DmgFrom(state, value, def, eaten)
+            : Dmg(state, def, eaten.Upgraded, eaten);
+    }
+
+    /// <summary>
+    /// The base of a `CalculatedDamageVar`, for the cards that have one, before any
+    /// enchantment or relic bonus. Null for a card whose damage is simply printed.
+    /// </summary>
+    /// <remarks>
+    /// These formulas also appear in the cards' own `case` bodies. That duplication is
+    /// deliberate and narrow: the play path computes the value with the target in hand
+    /// and this one has to answer for a card being EATEN, out of any play context. Where
+    /// a formula reads the target it cannot be answered here at all, and those return
+    /// null and fall back to the printed number -- Bully off the target's Vulnerable is
+    /// the case that matters, and Thrash eating one is rare enough to leave low rather
+    /// than guess.
+    /// </remarks>
+    private static int? CalculatedAttackDamage(CombatState state, CardDef def, CardInstance card)
+    {
+        bool up = card.Upgraded;
+        return def.Id switch
+        {
+            IC.BodySlam => state.PlayerBlock,
+            IC.AshenStrike => 6 + state.ExhaustPile.Count * (up ? 4 : 3),
+            IC.PerfectedStrike => 6
+                + (CountStrikeCards(state) + (def.Name.Contains("Strike") ? 1 : 0))
+                    * (up ? 3 : 2),
+            CL.MindBlast => state.DrawPile.Count,
+            CL.GoldAxe => state.CardsPlayedThisCombat,
+            SI.MementoMori => 9,
+            SI.PreciseCut => Math.Max(0, (up ? 16 : 13) - 2 * state.Hand.Count),
+            SI.Murder => MurderDamage(state, up),
+            _ => null,
+        };
+    }
 
     private static void UpgradeFirstCardInHand(CombatState state)
     {
