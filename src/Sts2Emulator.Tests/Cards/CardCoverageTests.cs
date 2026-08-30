@@ -192,7 +192,6 @@ public class CardCoverageTests
         "SharedFate",
         "ShiningStrike",
         "Shroud",
-        "SleightOfFlesh",
         "Snap",
         "SolarStrike",
         "Soul",

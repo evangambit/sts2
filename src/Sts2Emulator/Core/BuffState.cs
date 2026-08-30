@@ -389,6 +389,13 @@ public enum BuffId
     /// and every other attack must be left alone.
     /// </summary>
     Hang,
+
+    /// <summary>
+    /// <c>SleightOfFleshPower.AfterPowerAmountChanged</c>: whenever the player lands a
+    /// non-temporary DEBUFF on an enemy, that enemy takes this much Unpowered damage.
+    /// A debuff engine, not a stat.
+    /// </summary>
+    SleightOfFlesh,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

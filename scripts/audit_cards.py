@@ -773,6 +773,10 @@ READ: dict[str, tuple[str, str]] = {
         "2e4678debc04",
         "HasEnergyCostX; 8/11 damage X times at one target",
     ),
+    "SleightOfFlesh": (
+        "76e743eaa827",
+        "PowerVar 9/13; the power deals its amount Unpowered per DEBUFF the player lands on an enemy",
+    ),
     "Slimed": (
         "066f790a162e",
         "Exhaust, and it DRAWS 1 on play -- not a do-nothing status",

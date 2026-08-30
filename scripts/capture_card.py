@@ -265,11 +265,56 @@ def play_card(
         target = living[min(target_index, len(living) - 1)]
         payload["target"] = target.get("entity_id")
 
+    # A Power card is CONSUMED by its own play -- it becomes a power on the creature and
+    # lands in no pile at all -- so the pile count it leaves behind is one short for good.
+    hand = (state.get("player") or {}).get("hand") or []
+    played = next((c for c in hand if c.get("index") == index), None)
+    consumed = (played or {}).get("type") == "Power"
+
     result = trace_real_game.post_action(base_url, payload)
     if result.get("status") != "ok":
         raise RuntimeError(f"play_card failed: {result}")
 
-    return wait_for_play_to_settle(base_url, card_count_before=_card_count(state))
+    return wait_for_play_to_settle(
+        base_url,
+        card_count_before=_card_count(state),
+        consumed=consumed,
+    )
+
+
+def _settle_key(state: dict[str, Any]) -> str:
+    """What has to stop moving before a consumed card counts as settled.
+
+    Everything a capture asserts on, so a state that matches its predecessor here is one
+    the fixture can be written from.
+    """
+    player = state.get("player") or {}
+    return json.dumps(
+        {
+            "player": {
+                k: player.get(k)
+                for k in (
+                    "hp",
+                    "block",
+                    "energy",
+                    "draw_pile_count",
+                    "discard_pile_count",
+                    "exhaust_pile_count",
+                    "status",
+                )
+            },
+            "hand": [c.get("id") for c in (player.get("hand") or [])],
+            "enemies": [
+                (e.get("hp"), e.get("block"), e.get("status"))
+                for e in (state.get("enemies") or [])
+            ],
+            "allies": [
+                (a.get("hp"), a.get("max_hp"), a.get("status"))
+                for a in (state.get("allies") or [])
+            ],
+        },
+        sort_keys=True,
+    )
 
 
 def _card_count(state: dict[str, Any]) -> int:
@@ -292,6 +337,7 @@ def _card_count(state: dict[str, Any]) -> int:
 def wait_for_play_to_settle(
     base_url: str,
     card_count_before: int,
+    consumed: bool = False,
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Wait until the played card has LEFT the play pile, then snapshot.
@@ -311,11 +357,22 @@ def wait_for_play_to_settle(
     enough for it. A refusal here is safe -- it declines to write a fixture rather than
     writing a wrong one -- but a refusal on a card that would have settled is a nuisance.
     """
+    target = card_count_before - 1 if consumed else card_count_before
     deadline = time.monotonic() + timeout
     latest = trace_real_game.wait_for_state(base_url, 0.5)
     while time.monotonic() < deadline:
-        if _card_count(latest) >= card_count_before:
-            return latest
+        if _card_count(latest) >= target:
+            if not consumed:
+                return latest
+            # A consumed card's count comes back the instant it leaves hand, which is
+            # BEFORE its effect resolves -- the count cannot say when a Power has
+            # finished. Wait for the board to stop moving instead.
+            time.sleep(0.5)
+            again = start_real_game_run.get_state(base_url)
+            if _settle_key(again) == _settle_key(latest):
+                return again
+            latest = again
+            continue
         time.sleep(0.25)
         latest = start_real_game_run.get_state(base_url)
 

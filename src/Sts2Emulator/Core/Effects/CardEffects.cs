@@ -5303,6 +5303,10 @@ public static class CardEffects
             case "ReaperForm":
             case "SentryMode":
             case "SleightOfFlesh":
+                // PowerVar 9, upgrading by 4. It had been sharing High Five's Osty-attack
+                // body, which is a different card entirely.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.SleightOfFlesh, upgraded ? 13 : 9);
+                return true;
             case "SpiritOfAsh":
             case "Pagestorm":
             case "NoEscape":
@@ -7192,6 +7196,7 @@ public static class CardEffects
         int before = BuffSystem.Get(target.Buffs, id);
         BuffSystem.Apply(target.Buffs, id, magnitude);
         DrawForVicious(state, id, before, BuffSystem.Get(target.Buffs, id), rng);
+        DamageForSleightOfFlesh(state, target, id, magnitude);
         if (id == BuffId.Poison && magnitude > 0)
         {
             CountPoisonForOutbreak(state);
@@ -7270,6 +7275,58 @@ public static class CardEffects
         {
             ApplyEnemyDebuffToTarget(state, enemy, id, magnitude, rng);
         }
+    }
+
+    /// <summary>
+    /// `SleightOfFleshPower.AfterPowerAmountChanged`: a non-zero, non-temporary DEBUFF
+    /// landing on an ENEMY and applied by the player deals the power's amount in Unpowered
+    /// damage to that enemy.
+    /// </summary>
+    /// <remarks>
+    /// Placed at the single point every card-driven enemy debuff goes through, for the
+    /// same reason the Unsettling Lamp's doubling is: a hook on "the player applied a
+    /// debuff" cannot be spelled at the call sites without missing some of them.
+    ///
+    /// The debuff test is the GENERATED `IsBuff` flag rather than `BuffSystem.IsDebuff`,
+    /// which is a hand-written eleven-name list serving Artifact and does not know about
+    /// Hang, Sic Em, Strangle or most of the rest. That list may well be too narrow for
+    /// Artifact too, but widening it is a change to a different power's behaviour and
+    /// belongs in its own reading.
+    /// </remarks>
+    private static void DamageForSleightOfFlesh(
+        CombatState state,
+        EnemyState target,
+        BuffId id,
+        int magnitude
+    )
+    {
+        int amount = BuffSystem.Get(state.PlayerBuffs, BuffId.SleightOfFlesh);
+        if (amount <= 0 || magnitude == 0 || !IsEnemyDebuff(id))
+        {
+            return;
+        }
+
+        DealUnpoweredDamageToEnemy(state, target, amount);
+    }
+
+    /// <summary>
+    /// Whether a power is a DEBUFF, from the generated `IsBuff` flag -- `BuffId.Weak` is
+    /// `WeakPower`. Ids with no power behind them are the emulator's own counters
+    /// (NextTurnEnergy, ShivDamage, OutbreakCounter) and are not debuffs on anyone.
+    /// `ITemporaryPower` is excluded because the game excludes it by name.
+    /// </summary>
+    private static bool IsEnemyDebuff(BuffId id)
+    {
+        if (
+            id is BuffId.TemporaryStrength or BuffId.TemporaryDexterity or BuffId.TemporaryFocus
+            or BuffId.Illusion
+        )
+        {
+            return false;
+        }
+
+        int? powerId = GeneratedData.Powers.FindId($"{id}Power");
+        return powerId is int found && !GeneratedData.Powers.Get(found).IsBuff;
     }
 
     private static void DrawForVicious(
