@@ -257,6 +257,34 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   source reading, so a capture that happens to agree is all that stands behind
   them. `uv run python scripts/card_pair.py --list Necrobinder` is the worklist.
 
+  **The Regent pool has now had its first pass too: 88 cards, 79 captured (three
+  of those parked as un-rebuildable) and the rest read from source.** It found 28
+  divergences, E296 to E323, and BOTH of the character's mechanics were missing
+  rather than merely wrong:
+
+  - **Star cost.** Twenty-one cards cost stars and the emulator charged none of
+    them. `CanonicalStarCost` is now in the generated data, `HasEnoughResourcesFor`
+    refuses a play that cannot pay, and the play records what it spent — Stardust
+    reads that back, because SpendResources empties the counter before OnPlay.
+  - **Forge and the Sovereign Blade.** Ten cards forge. The blade is a Token the
+    forge hands out, hits for ten plus everything forged into that copy, and reads
+    SeekingEdge (hits all) and Parry (block after the attack).
+
+  Three tooling lessons worth more than the cards:
+
+  - A capture could not see a power the emulator INVENTED, because it asserted only
+    the powers the game reported. `Fight.PlayerPowersAre` compares the whole set now
+    and caught two cards the moment it existed (E297).
+  - Drawing into a full hand STOPS; the emulator discarded the overflow, on every
+    draw effect in the game (E320).
+  - `blocked/` holds the three captures that cannot be rebuilt, each for a different
+    reason: an enemy power with no BuffId, a card whose damage counts generations
+    while `debug_add_card` generates one, and a card that ends the turn so there is
+    no settled state to snapshot.
+
+  What is left: 28 Regent cards are captured but unread, the same shape as the
+  Necrobinder's 46. Only the DEFECT pool has never had a card verified.
+
   Two more shapes a capture cannot express, both learned the hard way and both now
   refused by the generator rather than mis-generated: a capture where an enemy DIES
   (the game renumbers the survivors into the dead one's id, so nothing lines up —
@@ -1304,7 +1332,7 @@ when the real number is 552.
 | Silent      |    88 |          88 |     46 |
 | Defect      |    88 |          87 |      0 |
 | Necrobinder |    88 |          88 |     42 |
-| Regent      |    88 |          88 |      0 |
+| Regent      |    88 |          88 |     60 |
 | Event       |    27 |          27 |      1 |
 | Token       |    14 |          11 |      1 |
 | Curse       |    18 |           3 |      1 |
@@ -1313,15 +1341,15 @@ when the real number is 552.
 (Ironclad's counts differ by pool vs id class — the pool excludes a few cards the class
 carries, and vice versa; it is tested end to end either way.)
 
-TWO whole characters have never had a card verified — the Defect and the Regent. The
-Necrobinder has now had its first pass and it turned up 36 divergences in 88 cards, which
-is a far higher rate than any pool before it and is what a never-checked character looks
-like. Every batch written so far turned up real defects, and the per-character routines
-have had far less scrutiny than `Apply` did, so expect the same yield from the other two.
+ONE whole character has never had a card verified: the DEFECT. The Necrobinder turned up
+36 divergences in 88 cards and the Regent 28 in 88 — far higher rates than any pool before
+them, and what a never-checked character looks like. Every batch written so far turned up
+real defects, and the per-character routines have had far less scrutiny than `Apply` did,
+so expect the same yield from the Defect.
 
-The Necrobinder's 42 "tested" are the cards with a dedicated suite; the other 46 are
-captured but untested-and-unread, which means a live capture that happened to agree is the
-whole of the evidence for them.
+The "tested" counts are cards with a dedicated suite. The Necrobinder's other 46 and the
+Regent's other 28 are captured but untested-and-unread, which means a live capture that
+happened to agree is the whole of the evidence for them.
 
 Ironclad and Colourless are both fully covered, and **Ironclad has no approximations
 left** — Rampage's per-copy growth, Battle Trance's NoDrawPower and Howl From Beyond's
