@@ -236,6 +236,17 @@ public static class CombatEngine
             def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.Burst) > 0
                 ? 1
                 : 0;
+        // `EchoFormPower.ModifyCardPlayCount` is settled at the same moment Burst's is --
+        // when the play is SET UP, before the card resolves -- so Echo Form does not double
+        // ITSELF. Read after the resolution it doubled the card that applied it, which is
+        // exactly the mistake the comment above was written about.
+        //
+        // The game's count is `CardPlaysStarted ... HappenedThisTurn` NOT counting the play
+        // being set up, which is what CardPlaysThisTurn holds here: it is bumped after the
+        // card resolves.
+        int echoFormPlays =
+            state.CardPlaysThisTurn < BuffSystem.Get(state.PlayerBuffs, BuffId.EchoForm) ? 1 : 0;
+
         int serpentFormBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.SerpentForm);
 
         // `MonologuePower.BeforeCardPlayed` records the power's amount for THIS card, and
@@ -265,8 +276,7 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Burst, -1);
         }
 
-        int extraPlays =
-            state.CardPlaysThisTurn < BuffSystem.Get(state.PlayerBuffs, BuffId.EchoForm) ? 1 : 0;
+        int extraPlays = echoFormPlays;
 
         // Spiral.EnchantPlayCount(original) => original + Times, and Times is 1.
         extraPlays += card.EnchantedWith(Enchantment.Spiral);

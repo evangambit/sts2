@@ -164,6 +164,14 @@ BUFF_ALIASES = {
     "FLEX_POTION_POWER": "TemporaryStrength",
     "SHACKLING_POTION_POWER": "TemporaryStrength",
     "REPTILE_TRINKET_POWER": "TemporaryStrength",
+    # The same shape one stat over: `: TemporaryFocusPower` and `: TemporaryDexterityPower`
+    # subclasses, which the emulator models as their base power too.
+    "FOCUSED_STRIKE_POWER": "TemporaryFocus",
+    "HOTFIX_POWER": "TemporaryFocus",
+    "SYNCHRONIZE_POWER": "TemporaryFocus",
+    "SPEED_POTION_POWER": "TemporaryDexterity",
+    "HELICAL_DART_POWER": "TemporaryDexterity",
+    "ANTICIPATE_POWER": "TemporaryDexterity",
 }
 
 

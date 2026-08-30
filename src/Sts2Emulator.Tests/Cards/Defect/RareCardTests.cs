@@ -179,20 +179,55 @@ public class EchoFormTests
 {
     private const int EchoForm = 159;
 
-    /// <summary>The first card each turn plays twice; the upgrade removes Ethereal.</summary>
+    /// <summary>
+    /// The first card each turn plays twice — and playing ECHO FORM is that card, so nothing
+    /// doubles on the turn it lands.
+    /// </summary>
+    /// <remarks>
+    /// `EchoFormPower.ModifyCardPlayCount` counts `CardPlaysStarted` this turn and adds a
+    /// play only while that count is under its Amount. The count is settled when the play is
+    /// SET UP, the same moment Burst's is, so two things follow: Echo Form does not double
+    /// ITSELF, because its power does not exist yet; and the next card sees a count of one
+    /// and gets nothing either.
+    ///
+    /// This test used to assert that the card after Echo Form played twice, which is what
+    /// the emulator did when it read the count AFTER the card resolved — and reading it
+    /// there also made Echo Form apply ITSELF twice, which is how a live capture found it.
+    /// </remarks>
     [Fact]
-    public void TheFirstCardOfATurnPlaysTwice()
+    public void NothingDoublesOnTheTurnEchoFormLands()
     {
-        var fight = Fight
+        var fight = DefectFight
             .Hand(Card(EchoForm), Card(SI.Slice), Card(SI.Slice))
             .Energy(9)
             .Enemy(hp: 400);
+
         fight.Play();
+        Assert.Equal(1, BuffSystem.Get(fight.State.PlayerBuffs, BuffId.EchoForm));
+
+        fight.Play();
+        Assert.Equal(400 - 6, fight.Enemy0.Hp);
 
         fight.Play();
         Assert.Equal(400 - 12, fight.Enemy0.Hp);
+    }
 
+    /// <summary>Next turn the first card really does play twice.</summary>
+    [Fact]
+    public void TheFirstCardOfTheNextTurnPlaysTwice()
+    {
+        var fight = DefectFight.Hand(Card(EchoForm)).Energy(9).Enemy(hp: 400);
         fight.Play();
+        fight.EndTurn();
+
+        fight.State.Energy = 9;
+        fight.State.Hand.Add(Card(SI.Slice));
+        fight.State.Hand.Add(Card(SI.Slice));
+
+        fight.Play(fight.State.Hand.Count - 2);
+        Assert.Equal(400 - 12, fight.Enemy0.Hp);
+
+        fight.Play(fight.State.Hand.Count - 1);
         Assert.Equal(400 - 12 - 6, fight.Enemy0.Hp);
     }
 }
