@@ -288,7 +288,12 @@ def extract_cards() -> str:
 
         if "CardModel" not in text:
             continue
-        if name in ("DeprecatedCard", "Modded"):
+        # `Modded` was excluded here from the initial commit with no reason given, and it
+        # is unconditionally in DefectCardPool between Meteor Strike and Momentum Strike --
+        # so the emulator's Defect pool was 87 cards where the game has 88, and the card
+        # could never be offered, generated or played. A live capture of it refused to
+        # generate because the id map had never heard of it.
+        if name == "DeprecatedCard":
             continue
 
         ctor = CARD_CTOR.search(text)

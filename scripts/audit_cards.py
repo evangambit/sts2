@@ -777,6 +777,10 @@ READ: dict[str, tuple[str, str]] = {
         "adbf0809685f",
         "damage equals the draw pile size, Innate; the upgrade cuts the cost",
     ),
+    "Modded": (
+        "1910ca9b66bf",
+        "one orb SLOT, draw 1/2, and the played COPY costs one more for the combat",
+    ),
     "MoltenFist": (
         "74f5009156a4",
         "10/14, then reapplies the target's CURRENT Vulnerable if it survives",

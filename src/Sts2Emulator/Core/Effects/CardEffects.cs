@@ -4808,6 +4808,18 @@ public static class CardEffects
             case "Capacitor":
                 state.OrbCapacity = Math.Min(10, state.OrbCapacity + (upgraded ? 3 : 2));
                 return true;
+            case "Modded":
+                // Modded: one orb SLOT, draw CardsVar 1 (upgrading by 1), and
+                // `EnergyCost.AddThisCombat(1)` -- on the CARD, so this copy costs one more
+                // every time it is played, exactly as Frantic Escape does.
+                //
+                // The card was missing from the emulator's data entirely: `extract_data.py`
+                // had skipped it since the initial commit, so the Defect pool was 87 cards
+                // where the game has 88 and this one could never be offered or played.
+                state.OrbCapacity = Math.Min(10, state.OrbCapacity + 1);
+                DrawCards(state, upgraded ? 2 : 1, rng);
+                state.PlayedCardCostBump++;
+                return true;
             case "Defragment":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, upgraded ? 2 : 1);
                 return true;
