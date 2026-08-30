@@ -352,6 +352,10 @@ def extract_cards() -> str:
         # that answer and it had drifted by two entries in opposite directions.
         if "CanBeGeneratedInCombat => false" in text:
             flags.append("CanBeGeneratedInCombat: false")
+        # CardTag.OstyAttack -- the Necrobinder's pet attacks. Squeeze's damage counts how
+        # many of them the deck holds, so the tag has to be data rather than a comment.
+        if "CardTag.OstyAttack" in text:
+            flags.append("OstyAttack: true")
         # CardModel.MaxUpgradeLevel. The base is 1; the cards that override it all
         # override it to 0, which is what IsUpgradable reads to refuse an upgrade.
         if "MaxUpgradeLevel => 0" in text:

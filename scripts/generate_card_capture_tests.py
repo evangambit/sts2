@@ -273,6 +273,23 @@ def render_test(
         lines.append(f"            .Enemy({', '.join(args)})")
 
     lines[-1] += ";"
+
+    # Osty, when the capture was taken by a Necrobinder. The pet is the character's whole
+    # mechanic and the mod reported nothing about it until now, so a capture that has it
+    # must rebuild it or the assertions below are checked against an empty board.
+    before_allies = before.get("allies") or []
+    if len(before_allies) > 1:
+        raise UnsupportedCaptureError(
+            "more than one ally in the capture; the emulator models Osty alone",
+        )
+    for ally in before_allies:
+        if ally.get("name") != "Osty":
+            raise UnsupportedCaptureError(f"unmodelled ally {ally.get('name')!r}")
+        lines += [
+            f"        fight.State.OstyHp = {ally['hp']};",
+            f"        fight.State.OstyMaxHp = {ally['max_hp']};",
+        ]
+
     if "hand_index" not in fixture:
         raise UnsupportedCaptureError(
             "capture predates hand_index; re-capture so the played card is unambiguous",
@@ -328,6 +345,16 @@ def render_test(
                 f"fight.EnemyBuffAmount({constant}, {index}));",
             )
 
+
+    after_allies = after.get("allies") or []
+    after_osty = next((a for a in after_allies if a.get("name") == "Osty"), None)
+    if after_osty is not None:
+        lines.append(f"        Assert.Equal({after_osty['hp']}, fight.State.OstyHp);")
+        lines.append(f"        Assert.Equal({after_osty['max_hp']}, fight.State.OstyMaxHp);")
+    elif before_allies:
+        # It was there and is not any more, which the emulator records as zero HP rather
+        # than by removing anything.
+        lines.append("        Assert.Equal(0, fight.State.OstyHp);")
 
     lines.append("    }")
     return "\n".join(lines)

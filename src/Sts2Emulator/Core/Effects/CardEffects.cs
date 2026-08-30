@@ -5182,19 +5182,37 @@ public static class CardEffects
                 GainEnergy(state, 1);
                 return true;
             case "Unleash":
+                // `CalculationBaseVar(6)` + 1 per point of Osty's CURRENT hp -- not max,
+                // and not divided by anything. OnUpgrade raises the base by 3.
                 DealDamage(
                     state,
-                    DmgFrom(state, 6 + state.OstyMaxHp / Math.Max(1, upgraded ? 3 : 4), def, card)
+                    DmgFrom(state, (upgraded ? 9 : 6) + OstyHpForDamage(state), def, card)
                 );
                 return true;
             case "Squeeze":
+                // `CalculationBaseVar(25)` + `ExtraDamageVar(5)` per OTHER card tagged
+                // CardTag.OstyAttack in AllCards; OnUpgrade raises the base by 5 and the
+                // per-card by 1. The emulator read Osty's MAX HP, which is a different
+                // number entirely -- measured against the game it dealt 10 where the card
+                // dealt 30.
                 DealDamage(
                     state,
-                    DmgFrom(state, 5 + state.OstyMaxHp * (upgraded ? 6 : 5), def, card)
+                    DmgFrom(
+                        state,
+                        (upgraded ? 30 : 25) + CountOtherOstyAttacks(state) * (upgraded ? 6 : 5),
+                        def,
+                        card
+                    )
                 );
                 return true;
             case "Protector":
-                DealDamage(state, DmgFrom(state, (upgraded ? 5 : 0) + state.OstyMaxHp, def, card));
+                // `CalculationBaseVar(10)` + 1 per point of Osty's MAX hp, and OnUpgrade
+                // raises the base by 5 and cuts the cost. The base was 0 here, so with a
+                // one-HP Osty the card dealt 1 where the game dealt 11.
+                DealDamage(
+                    state,
+                    DmgFrom(state, (upgraded ? 15 : 10) + OstyMaxHpForDamage(state), def, card)
+                );
                 return true;
             case "Calcify":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 6 : 4);
@@ -6530,6 +6548,45 @@ public static class CardEffects
         {
             state.DiscardPile.Add(card with { FreeThisTurn = false });
         }
+    }
+
+    /// <summary>Osty's max HP as a damage input, which is ZERO when it is not alive.</summary>
+    /// <remarks>
+    /// The multipliers read `(osty != null &amp;&amp; osty.IsAlive) ? osty.MaxHp : 0`, so a
+    /// dead pet contributes nothing rather than whatever its max happened to be.
+    /// </remarks>
+    private static int OstyMaxHpForDamage(CombatState state) =>
+        state.OstyHp > 0 ? state.OstyMaxHp : 0;
+
+    /// <summary>Osty's CURRENT HP as a damage input, which Unleash reads instead of max.</summary>
+    private static int OstyHpForDamage(CombatState state) => Math.Max(0, state.OstyHp);
+
+    /// <summary>
+    /// Cards tagged `CardTag.OstyAttack` in the combat's piles -- what Squeeze counts.
+    /// </summary>
+    /// <remarks>
+    /// The game counts them across `AllCards`, which includes the PlayPile, and excludes
+    /// the card being played with `c != card2`. The played card has already left the
+    /// emulator's piles by the time this runs, so no subtraction is needed -- and a SECOND
+    /// copy of Squeeze in the deck does count, which is why this cannot filter by id.
+    /// </remarks>
+    private static int CountOtherOstyAttacks(CombatState state)
+    {
+        int count = 0;
+        foreach (
+            var pile in new[] { state.Hand, state.DrawPile, state.DiscardPile, state.ExhaustPile }
+        )
+        {
+            foreach (var c in pile)
+            {
+                if (GeneratedData.Cards.Get(c.DefId).OstyAttack)
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
     }
 
     internal static void SummonOsty(CombatState state, int amount)

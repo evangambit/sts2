@@ -338,6 +338,7 @@ def capture(
     powers: list[str],
     enchantment: str | None = None,
     enchant_amount: float = 1.0,
+    character: str = "IRONCLAD",
 ) -> dict[str, Any]:
     if not reuse_run:
         wait_for_menu_options(base_url)
@@ -345,7 +346,7 @@ def capture(
         start_real_game_run.start_seeded_run(
             base_url,
             seed,
-            "IRONCLAD",
+            character,
             abandon_existing=False,
             ascension=ascension,
         )
@@ -418,6 +419,7 @@ def default_out(
     encounter: str,
     powers: list[str],
     enchantment: str | None = None,
+    character: str = "IRONCLAD",
 ) -> Path:
     suffix = "-upgraded" if upgraded else ""
     # Staged powers change what the capture proves, so they belong in the filename --
@@ -429,7 +431,10 @@ def default_out(
         else ""
     )
     enchanted = f"-{enchantment.lower()}" if enchantment else ""
-    return FIXTURES / f"{card}{suffix}{staged}{enchanted}-{encounter}.json"
+    # The character is part of what a capture proves: the same card played by a
+    # Necrobinder has Osty on the board and by an Ironclad does not.
+    who = "" if character.upper() == "IRONCLAD" else f"-{character.lower()}"
+    return FIXTURES / f"{card}{suffix}{staged}{enchanted}{who}-{encounter}.json"
 
 
 def main() -> None:
@@ -451,6 +456,16 @@ def main() -> None:
         help="amount for --enchantment (ignored by enchantments that read their own vars)",
     )
     parser.add_argument("--encounter", default=DEFAULT_ENCOUNTER)
+    parser.add_argument(
+        "--character",
+        default="IRONCLAD",
+        help=(
+            "character to start the run as. A card belonging to another character can be "
+            "staged into an Ironclad run with debug_add_card, but it will not have that "
+            "character's CONTEXT -- a Necrobinder card that reads Osty needs a Necrobinder "
+            "run, because Osty comes from the starter relic."
+        ),
+    )
     parser.add_argument("--seed", default=DEFAULT_SEED)
     parser.add_argument("--ascension", type=int, default=8)
     parser.add_argument(
@@ -494,6 +509,7 @@ def main() -> None:
         args.power,
         enchantment=args.enchantment,
         enchant_amount=args.enchant_amount,
+        character=args.character,
     )
 
     out = args.out or default_out(
@@ -502,6 +518,7 @@ def main() -> None:
         args.encounter,
         args.power,
         args.enchantment,
+        args.character,
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8")

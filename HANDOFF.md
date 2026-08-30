@@ -234,6 +234,13 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   game's stream position, so the totals agree while the distribution does not.
   Capture randomly-targeted cards against a single enemy or not at all.
 
+  `--character NECROBINDER` starts the run as that character, which matters for any
+  card reading Osty: staging one into an Ironclad run gives it no pet to read. The
+  first five Necrobinder captures found three divergences (E258), so that pool is
+  worth capturing rather than only reading — it has never been verified against
+  anything, and the run engine still hardcodes Ironclad so the emulator cannot
+  reach it end to end.
+
   Two more shapes a capture cannot express, both learned the hard way and both now
   refused by the generator rather than mis-generated: a capture where an enemy DIES
   (the game renumbers the survivors into the dead one's id, so nothing lines up —

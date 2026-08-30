@@ -70,6 +70,21 @@ def summarize_state(state: dict[str, Any]) -> dict[str, Any]:
             },
         )
 
+    # The player's side of the board. Osty is the only occupant today, and without this a
+    # Necrobinder capture cannot see the character's central mechanic at all -- the mod
+    # reports it, and a summary that drops it is the same blindness one layer up.
+    allies = [
+        {
+            "entity_id": ally.get("entity_id"),
+            "name": ally.get("name"),
+            "hp": ally.get("hp"),
+            "max_hp": ally.get("max_hp"),
+            "block": ally.get("block"),
+            "status": normalize_status(ally.get("status") or []),
+        }
+        for ally in battle.get("allies") or []
+    ]
+
     hand = [
         {
             "index": card.get("index"),
@@ -112,6 +127,7 @@ def summarize_state(state: dict[str, Any]) -> dict[str, Any]:
             else None
         ),
         "enemies": enemies,
+        "allies": allies,
         "menu_screen": state.get("menu_screen"),
         "menu_options": state.get("options"),
     }

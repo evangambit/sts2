@@ -105,6 +105,10 @@ public readonly record struct CardDef(
     // in-combat generator -- Feed and The Hunt among them -- and `FilterForCombat` drops
     // them alongside the Basic, Ancient and Event rarities.
     bool CanBeGeneratedInCombat = true,
+    // `CardTag.OstyAttack`. Thirteen Necrobinder cards carry it, and Squeeze's damage
+    // COUNTS them -- so it is a number the emulator has to be able to derive rather than
+    // a label. Generated for the reason every other hand-kept list in here was deleted.
+    bool OstyAttack = false,
     // CardModel.IsUpgradable is CurrentUpgradeLevel < MaxUpgradeLevel, and 38 cards
     // override MaxUpgradeLevel to zero -- every curse and status. This is that override,
     // read from the source rather than restated: the hand-kept list of ids it replaces
