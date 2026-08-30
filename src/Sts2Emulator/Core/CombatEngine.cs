@@ -132,8 +132,11 @@ public static class CombatEngine
         }
 
         state.Energy -= energyToSpend;
-        // `SpendResources` takes the stars AFTER the energy.
+        // `SpendResources` takes the stars AFTER the energy, and records what it took --
+        // an X-star card reads that back, because by the time its effect runs the counter
+        // is already zero.
         state.Stars = Math.Max(0, state.Stars - starsToSpend);
+        state.PlayedCardStarsSpent = starsToSpend;
 
         // `Hook.AfterStarsSpent`, dispatched from `CardModel.SpendStars` and from nowhere
         // else -- paying a card's star COST is the only thing that counts as spending, so
@@ -1348,6 +1351,13 @@ public static class CombatEngine
             Effects.CardEffects.Forge(state, furnace);
         }
 
+        // `SpectrumShiftPower.BeforeHandDraw`: distinct COLOURLESS cards into hand.
+        int spectrumShift = BuffSystem.Get(state.PlayerBuffs, BuffId.SpectrumShift);
+        if (spectrumShift > 0)
+        {
+            Effects.CardEffects.AddColorlessCardsToHand(state, spectrumShift, rng);
+        }
+
         // `CallOfTheVoidPower.BeforeHandDraw`: cards from the character's OWN pool, each
         // granted Ethereal, straight into hand. The pool filter is the ordinary combat one
         // -- `GetUnlockedCards` drops Basic and Ancient, and `GetDistinctForCombat` runs
@@ -1382,6 +1392,8 @@ public static class CombatEngine
                             ? BuffSystem.Get(state.PlayerBuffs, BuffId.PaleBlueDot)
                             : 0
                     )
+                    // `TyrannyPower.ModifyHandDraw`, the half of that card that pays.
+                    + BuffSystem.Get(state.PlayerBuffs, BuffId.Tyranny)
                     // `DemesnePower.ModifyHandDraw`, the other half of a power that also
                     // raises max energy -- both every turn, not once.
                     + BuffSystem.Get(state.PlayerBuffs, BuffId.Demesne)
@@ -1396,6 +1408,16 @@ public static class CombatEngine
             Effects.CardEffects.DrawCards(state, nextTurnDraw, rng);
             BuffSystem.Remove(state.PlayerBuffs, BuffId.NextTurnDraw);
         }
+        // `TyrannyPower.AfterPlayerTurnStart`: EXHAUST that many cards CHOSEN from hand --
+        // `CardSelectorPrefs(prompt, Amount)`, whose single count sets min and max alike, so
+        // the exhaust is compulsory and the CHOICE is the player's. The half of that card
+        // that costs, and it lands after the draw the other half paid for.
+        int tyranny = BuffSystem.Get(state.PlayerBuffs, BuffId.Tyranny);
+        if (tyranny > 0 && state.Hand.Count > 0)
+        {
+            Effects.CardEffects.OpenExhaustFromHandSelection(state, tyranny);
+        }
+
         // `ToolsOfTheTradePower` is two hooks. `ModifyHandDraw` adds its amount to the
         // hand draw, and `AfterPlayerTurnStart` raises a DISCARD SELECTION for that many
         // cards -- `CardSelectCmd.FromHandForDiscard` with a `CardSelectorPrefs(prompt,

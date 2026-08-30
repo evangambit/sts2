@@ -449,6 +449,20 @@ public sealed class CombatState
     /// reset that clears the current one.
     /// </summary>
     public int CardPlaysLastTurn;
+
+    /// <summary>
+    /// `CardModel.LastStarsSpent` for the play in flight. Stardust reads the stars it SPENT
+    /// as its hit count, and by the time its effect runs the counter is already zero --
+    /// `SpendResources` takes them before `OnPlay`.
+    /// </summary>
+    public int PlayedCardStarsSpent;
+
+    /// <summary>
+    /// `CardGeneratedEntry` count for this player over the whole combat, which Supermassive
+    /// spends as its damage scale. Counted at `NoteGeneratedCard`, the same chokepoint
+    /// Arsenal and Pillar of Creation pay from.
+    /// </summary>
+    public int CardsGeneratedThisCombat;
     public int UnblockedDamageHitCount; // times player took unblocked damage this combat (TearAsunder)
     public int TargetEnemyIndex = -1; // -1 = auto (first living enemy), >=0 = specific index
 

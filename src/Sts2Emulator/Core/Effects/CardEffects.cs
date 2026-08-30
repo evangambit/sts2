@@ -2548,6 +2548,9 @@ public static class CardEffects
             return;
         }
 
+        // `CardGeneratedEntry`, which Supermassive counts over the whole combat.
+        state.CardsGeneratedThisCombat += count;
+
         int arsenal = BuffSystem.Get(state.PlayerBuffs, BuffId.Arsenal);
         if (arsenal > 0)
         {
@@ -2587,6 +2590,21 @@ public static class CardEffects
         if (!anyLive)
         {
             AddGeneratedCardToHand(state, SovereignBladeId);
+
+            // `SwordSagePower.AfterCardEnteredCombat` gives a blade its replays as it
+            // arrives, so one forged later is not short of them.
+            int sage = BuffSystem.Get(state.PlayerBuffs, BuffId.SwordSage);
+            if (sage > 0 && state.Hand.Count > 0)
+            {
+                int last = state.Hand.Count - 1;
+                if (state.Hand[last].DefId == SovereignBladeId)
+                {
+                    state.Hand[last] = state.Hand[last] with
+                    {
+                        ReplayCount = state.Hand[last].ReplayCount + sage,
+                    };
+                }
+            }
         }
 
         foreach (
@@ -2632,6 +2650,71 @@ public static class CardEffects
             CardSelectionKind.DrawPileToHand,
             pile,
             sourceCardDefId: 204, // ForegoneConclusion
+            autoPick: 0,
+            amount: amount
+        );
+    }
+
+    /// <summary>
+    /// `SwordSagePower.AfterPowerAmountChanged`: every Sovereign Blade the player holds
+    /// gains that many REPLAYS, which is `CardInstance.ReplayCount` here -- the same field
+    /// Hidden Gem's Replay rides on.
+    /// </summary>
+    internal static void GiveSovereignBladesReplays(CombatState state, int replays)
+    {
+        foreach (
+            var pile in new[] { state.Hand, state.DrawPile, state.DiscardPile, state.ExhaustPile }
+        )
+        {
+            for (int i = 0; i < pile.Count; i++)
+            {
+                if (pile[i].DefId == SovereignBladeId)
+                {
+                    pile[i] = pile[i] with { ReplayCount = pile[i].ReplayCount + replays };
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Spectrum Shift's cards: that many DISTINCT colourless cards into hand, rolled on the
+    /// card-generation stream -- `CardFactory.GetDistinctForCombat` over the Colorless pool.
+    /// </summary>
+    internal static void AddColorlessCardsToHand(CombatState state, int count, Random rng)
+    {
+        var pool = CombatGenerationPool(GeneratedData.CardPools.Colorless);
+        if (pool.Count == 0)
+        {
+            return;
+        }
+
+        var stream = state.CardGenerationRng ?? rng;
+        var taken = new List<int>();
+        for (int guard = 0; taken.Count < count && guard < 64; guard++)
+        {
+            int id = pool[stream.Next(pool.Count)];
+            if (!taken.Contains(id))
+            {
+                taken.Add(id);
+                AddGeneratedCardToHand(state, id);
+            }
+        }
+    }
+
+    /// <summary>Tyranny's screen: that many cards CHOSEN from hand are exhausted.</summary>
+    internal static void OpenExhaustFromHandSelection(CombatState state, int amount)
+    {
+        var hand = new List<int>();
+        for (int i = 0; i < state.Hand.Count; i++)
+        {
+            hand.Add(i);
+        }
+
+        OpenCardSelection(
+            state,
+            CardSelectionKind.ExhaustFromHandRepeated,
+            hand,
+            sourceCardDefId: 520, // Tyranny
             autoPick: 0,
             amount: amount
         );
@@ -6017,12 +6100,17 @@ public static class CardEffects
                 GainStars(state, upgraded ? 2 : 1);
                 return true;
             case "Stardust":
-            {
-                int x = state.Stars;
-                state.Stars = 0;
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
+                // `HasStarCostX` with `WithHitCount(ResolveStarXValue())` at RANDOM
+                // opponents: 5/7 damage once per star SPENT. The stars are gone by the time
+                // this runs -- SpendResources takes them before OnPlay -- so it reads what
+                // the play spent rather than what is left, which was zero.
+                DealDamageToRandomEnemiesMultiHit(
+                    state,
+                    Dmg(state, def, upgraded, card),
+                    state.PlayedCardStarsSpent,
+                    rng
+                );
                 return true;
-            }
         }
 
         return false;
@@ -6407,6 +6495,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
                 ApplyAllEnemyDebuff(state, BuffId.Strength, -1, rng);
                 break;
+            case "Terraforming":
+                // Terraforming: `PowerVar<VigorPower>(6)` upgrading by 2 -- Vigor, not
+                // Strength. Vigor is spent by the next attack; Strength is not.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Vigor, upgraded ? 8 : 6);
+                break;
             case "Deathbringer":
             case "Eidolon":
             case "FeedingFrenzy":
@@ -6414,7 +6507,6 @@ public static class CardEffects
             case "Oblivion":
             case "SharedFate":
             case "Synchronize":
-            case "Terraforming":
             case "Voltaic":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
                 break;
@@ -6664,6 +6756,22 @@ public static class CardEffects
                 // Neutron Aegis: five stars for `PowerVar<PlatingPower>(8)` upgrading by 3.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 11 : 8);
                 break;
+            case "SpectrumShift":
+                // Spectrum Shift: CardsVar 1, and the upgrade is a discount. The power puts
+                // that many distinct COLOURLESS cards into hand every turn.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.SpectrumShift, 1);
+                break;
+            case "SwordSage":
+                // Sword Sage: one stack, and every SOVEREIGN BLADE gains that many REPLAYS
+                // -- applied to the blades already held and to any that arrive later.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.SwordSage, 1);
+                GiveSovereignBladesReplays(state, 1);
+                break;
+            case "Tyranny":
+                // Tyranny: one stack, and the upgrade adds Innate. Draw one more every turn
+                // and EXHAUST one CHOSEN card from hand at the start of it.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Tyranny, 1);
+                break;
             case "Royalties":
                 // Royalties: `GoldVar(30)` upgrading by 10. The power adds that much GOLD as
                 // its own reward row when the combat ends -- the Heist's shape. The emulator
@@ -6706,16 +6814,13 @@ public static class CardEffects
             case "ReaperForm":
             case "SerpentForm":
             case "Sneaky":
-            case "SpectrumShift":
             case "Speedster":
             case "SpiritOfAsh":
             case "Subroutine":
-            case "SwordSage":
             case "TheSealedThrone":
             case "Thunder":
             case "Tracking":
             case "TrashToTreasure":
-            case "Tyranny":
             case "VoidForm":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
                 break;
@@ -6813,8 +6918,21 @@ public static class CardEffects
                 // place.
                 DealDamage(state, upgraded ? 12 : 8);
                 break;
-            case "Murder":
             case "Supermassive":
+                // Supermassive: CalculationBase 5 plus ExtraDamage 3 for each card the
+                // player has GENERATED this combat -- `CardGeneratedEntry.Creator == owner`,
+                // counted over the whole fight. It had been in a flat 25/35 body.
+                DealDamage(
+                    state,
+                    DmgFrom(
+                        state,
+                        5 + (upgraded ? 4 : 3) * state.CardsGeneratedThisCombat,
+                        def,
+                        card
+                    )
+                );
+                break;
+            case "Murder":
             case "TheScythe":
                 DealDamage(state, upgraded ? 35 : 25);
                 break;

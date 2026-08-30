@@ -1053,6 +1053,10 @@ READ: dict[str, tuple[str, str]] = {
         "739edf0963d8",
         "the Forge token: 10 + all forged damage, once; SeekingEdge hits all, Parry gives block",
     ),
+    "SpectrumShift": (
+        "e943b24eb7db",
+        "SpectrumShiftPower 1: that many DISTINCT colourless cards into hand every turn",
+    ),
     "Spinner": (
         "2e4bbee2ca95",
         "the Glass orb on play is the WHOLE upgrade; the power channels one at each energy reset",
@@ -1077,6 +1081,10 @@ READ: dict[str, tuple[str, str]] = {
     "Stampede": (
         "a9fc2868fdae",
         "StampedePower 1; the upgrade cuts the cost",
+    ),
+    "Stardust": (
+        "3e1566d64563",
+        "HasStarCostX: 5/7 damage at RANDOM enemies once per star SPENT",
     ),
     "Stoke": (
         "43556213b53a",
@@ -1106,9 +1114,17 @@ READ: dict[str, tuple[str, str]] = {
         "7de39cc98838",
         "pulls every Sovereign Blade to HAND, then Forge 8/11",
     ),
+    "Supermassive": (
+        "d5febe1376e7",
+        "5 damage plus 3/4 per card GENERATED this combat",
+    ),
     "SwordBoomerang": (
         "07bb371af7ba",
         "DamageVar(3) x 3/4 at random opponents, re-rolled per hit; the upgrade raises the REPEAT",
+    ),
+    "SwordSage": (
+        "a943db99b1f4",
+        "every SOVEREIGN BLADE gains a REPLAY, including ones that arrive later",
     ),
     "TagTeam": (
         "eac3765d3fcc",
@@ -1125,6 +1141,10 @@ READ: dict[str, tuple[str, str]] = {
     "TearAsunder": (
         "90dc93ac180a",
         "5/7 x (1 + unblocked hits received this COMBAT, not this turn)",
+    ),
+    "Terraforming": (
+        "ff1775948457",
+        "VigorPower 6/8 -- Vigor, which the next attack spends, not Strength",
     ),
     "TheBomb": (
         "181cc426bc25",
@@ -1177,6 +1197,10 @@ READ: dict[str, tuple[str, str]] = {
     "TwinStrike": (
         "d7183e4fde0a",
         "5/7 x2",
+    ),
+    "Tyranny": (
+        "0a9e35d5ee91",
+        "draw one more every turn AND exhaust one CHOSEN hand card at the start of it",
     ),
     "UltimateDefend": (
         "0ed2403c30c8",

@@ -640,6 +640,26 @@ public enum BuffId
     /// <c>RoyaltiesPower.AfterCombatEnd</c>: this much extra GOLD as its own reward row.
     /// </summary>
     Royalties,
+
+    /// <summary>
+    /// <c>SpectrumShiftPower.BeforeHandDraw</c>: this many distinct COLOURLESS cards into
+    /// hand at the start of every turn, rolled on the card-generation stream.
+    /// </summary>
+    SpectrumShift,
+
+    /// <summary>
+    /// <c>SwordSagePower</c>: every SOVEREIGN BLADE the player holds gains this many
+    /// REPLAYS — applied to the blades that exist when it lands and to any that enter
+    /// combat afterwards, and taken back if the power is removed.
+    /// </summary>
+    SwordSage,
+
+    /// <summary>
+    /// <c>TyrannyPower</c>: draw this much more every turn, and EXHAUST that many cards
+    /// CHOSEN from hand at the start of it. The draw is the price and the exhaust is the
+    /// cost, both every turn.
+    /// </summary>
+    Tyranny,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

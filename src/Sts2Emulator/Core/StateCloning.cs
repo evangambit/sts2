@@ -186,6 +186,8 @@ public static class StateCloning
             LethalAttackPlay = combat.LethalAttackPlay,
             SkillCardsPlayedThisTurn = combat.SkillCardsPlayedThisTurn,
             CardPlaysLastTurn = combat.CardPlaysLastTurn,
+            PlayedCardStarsSpent = combat.PlayedCardStarsSpent,
+            CardsGeneratedThisCombat = combat.CardsGeneratedThisCombat,
             UnblockedDamageHitCount = combat.UnblockedDamageHitCount,
             TargetEnemyIndex = combat.TargetEnemyIndex,
             KnownTopCount = combat.KnownTopCount,
