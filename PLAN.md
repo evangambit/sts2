@@ -877,12 +877,12 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 Card coverage is now the finished part rather than the open one. What is left, in the order
 the evidence argues for:
 
-1. **Relics.** The card burn-down is finished — every card with a test suite has been read
-   against the current source — and relics are the same job one layer out, with no
-   equivalent pass behind them. 171 of 296 are modelled and 64 read, so 107 are wired up
-   and have never been compared to anything. `audit_relics.py` is the worklist, and the
-   card passes give the rate to expect: **one item in two that nobody has read is wrong.**
-   Events are a layer out again, with one test to the whole pool's name.
+1. **Events**, which are the last layer with nothing behind them: one test to the whole
+   pool's name, and the 49 event-pool relics are unread for the same reason — both need
+   the event walked first. Cards and reachable relics are now fully read, and the relic
+   pass suggests what to expect: at 3 defects in 58, **the failures stop being in the
+   items and start being in what is shared between them** — a hand-kept list, a mechanic
+   modelled twice, a hook that predates a character.
 2. **The 66 cards still unread**, which are also the 66 still in `Pending` with no tests:
    Curses, Statuses, Tokens, Minions and event cards. Lower value per card than a
    character pool, but Statuses and Curses are what half the game's punishment mechanics

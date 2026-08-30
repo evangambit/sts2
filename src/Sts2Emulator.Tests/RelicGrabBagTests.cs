@@ -303,6 +303,50 @@ public class RelicGrabBagTests
         Assert.DoesNotContain(late.RelicBag.Remaining, id => Name(id) == "Shovel");
     }
 
+    /// <summary>
+    /// EVERY relic that declares the gate, not the fourteen someone transcribed. The list
+    /// used to live in `RelicGrabBag` and had drifted three short — Meal Ticket, Old Coin
+    /// and White Beast Statue kept being offered past floor 41 — so the flag is extracted
+    /// now and this asserts against the extracted set rather than a second copy of it.
+    /// </summary>
+    [Fact]
+    public void EveryRelicDeclaringTheGateIsGoneAfterFloorFortyOne()
+    {
+        var gated = new List<int>();
+        foreach (var def in GeneratedData.Relics.All)
+        {
+            if (def.StopsAfterAct3Chest)
+            {
+                gated.Add(def.Id);
+            }
+        }
+
+        Assert.Equal(17, gated.Count);
+
+        var late = Run().State;
+        late.Floor = 41;
+        RunRewardGenerator.NextRelic(late);
+
+        Assert.Empty(late.RelicBag.Remaining.Intersect(gated));
+    }
+
+    /// <summary>The three the hand-kept list was missing, named so the regression is visible.</summary>
+    [Theory]
+    [InlineData("MealTicket")]
+    [InlineData("OldCoin")]
+    [InlineData("WhiteBeastStatue")]
+    public void TheThreeThatWereMissingAreGatedToo(string name)
+    {
+        int id = GeneratedData.Relics.FindId(name) ?? throw new Xunit.Sdk.XunitException(name);
+        Assert.True(GeneratedData.Relics.Get(id).StopsAfterAct3Chest);
+
+        var late = Run().State;
+        late.Floor = 41;
+        RunRewardGenerator.NextRelic(late);
+
+        Assert.DoesNotContain(late.RelicBag.Remaining, id => Name(id) == name);
+    }
+
     // ── Shops ────────────────────────────────────────────────────────────────
 
     /// <summary>

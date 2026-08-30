@@ -258,30 +258,14 @@ public sealed class RelicGrabBag
                 return false;
             }
 
-            return !ChestRelics.Contains(name) || totalFloor < 41;
+            // `IsAllowed => IsBeforeAct3TreasureChest`, read off the generated data rather
+            // than a list kept here. The list was transcribed from the relics' own
+            // overrides and had drifted to fourteen where the game declares SEVENTEEN --
+            // Meal Ticket, Old Coin and White Beast Statue were missing, so all three kept
+            // being offered past floor 41. There is no moment at which a hand-kept list is
+            // discovered to be short; a generated one is a diff.
+            return !GeneratedData.Relics.Get(relicId).StopsAfterAct3Chest || totalFloor < 41;
         };
-
-    /// <summary>
-    /// The relics whose <c>IsAllowed</c> is <c>IsBeforeAct3TreasureChest</c>, transcribed
-    /// from their own overrides. They stop being offered once the run passes floor 41.
-    /// </summary>
-    private static readonly HashSet<string> ChestRelics =
-    [
-        "AmethystAubergine",
-        "BookOfFiveRings",
-        "BowlerHat",
-        "DragonFruit",
-        "FrozenEgg",
-        "Girya",
-        "JuzuBracelet",
-        "LastingCandy",
-        "LuckyFysh",
-        "MoltenEgg",
-        "Planisphere",
-        "Shovel",
-        "ToxicEgg",
-        "WhiteStar",
-    ];
 
     /// <summary>Every relic still in the bag, for tests and for reporting.</summary>
     public IEnumerable<int> Remaining => _deques.Values.SelectMany(deque => deque);

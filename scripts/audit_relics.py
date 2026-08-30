@@ -155,6 +155,163 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "Akabeko": ("b0c13a3b38d2", "Vigor 8 on turn one; correct."),
+    "Anchor": ("2a4f263578aa", "10 unpowered block at combat start; correct."),
+    "ArtOfWar": (
+        "29b1793f8651",
+        "+1 energy on a turn following one with no Attack played; correct.",
+    ),
+    "BagOfMarbles": (
+        "7c6d92cc4a6d",
+        "Vulnerable 1 to every enemy on turn one; correct.",
+    ),
+    "BagOfPreparation": (
+        "c74af48a9760",
+        "`ModifyHandDraw` +2 on turn one -- the OPENING HAND is seven. It drew its two separately at combat start, so they were not part of the hand draw and the opening-hand size that feeds the Innate reorder was wrong. Ring of the Snake is the same mechanic, modelled the other way.",
+    ),
+    "BloodVial": ("e7b8669ac523", "Heal 2 at the start of turn one; correct."),
+    "BronzeScales": ("ac3489f7b30c", "Thorns 3 on entering a combat room; correct."),
+    "BurningBlood": ("23a82e46abf8", "Heal 6 after a combat victory; correct."),
+    "CaptainsWheel": ("2885bba195bb", "18 unpowered block on turn three; correct."),
+    "CentennialPuzzle": (
+        "2c744f4db876",
+        "Draw 3 the first time unblocked damage lands in a combat; correct.",
+    ),
+    "Circlet": (
+        "01a6de05d3e1",
+        "No effect at all -- the stackable fallback relic. Correct.",
+    ),
+    "CloakClasp": (
+        "f1a3dc72c23f",
+        "1 unpowered block per card left in hand at end of turn; correct.",
+    ),
+    "DataDisk": ("b38e2280c6f1", "Focus 1 at combat start; correct."),
+    "FestivePopper": (
+        "92c5a2092917",
+        "9 unpowered damage to every enemy on turn one; correct.",
+    ),
+    "FrozenEgg": (
+        "1e74f50d3ef8",
+        "Powers added to the deck arrive upgraded, and it stops being offered past floor 41; correct.",
+    ),
+    "Gorget": ("05467b3a5070", "Plating 4 at combat start; correct."),
+    "GremlinHorn": (
+        "f5ec2d8dca70",
+        "+1 energy and draw 1 per enemy death, even one something undoes; correct.",
+    ),
+    "HappyFlower": ("05e599069104", "+1 energy every third turn; correct."),
+    "HornCleat": ("f39c54170c6a", "14 unpowered block on turn two; correct."),
+    "IvoryTile": (
+        "4db0cf8e9749",
+        "+1 energy after a card that spent three or more; correct.",
+    ),
+    "Kunai": (
+        "9f9295a9f568",
+        "Dexterity 1 every third ATTACK in a turn, counter resetting each turn; correct.",
+    ),
+    "Kusarigama": (
+        "0e323b20dea5",
+        "6 unpowered damage to a random enemy every third Attack in a turn; correct.",
+    ),
+    "Lantern": ("83cdb21d95b2", "+1 energy on turn one; correct."),
+    "LeesWaffle": ("76cf5c61a3d7", "+7 max HP and a full heal on pickup; correct."),
+    "LetterOpener": (
+        "c1caf678d705",
+        "5 unpowered damage to EVERY enemy every third Skill in a turn; correct.",
+    ),
+    "LizardTail": (
+        "7ba788ed0e09",
+        "Refuses one death per run and revives at half max HP; correct.",
+    ),
+    "Mango": ("d0df8bc4529b", "+14 max HP on pickup; correct."),
+    "MealTicket": (
+        "03122f3f58c9",
+        "Heal 15 on entering a shop, skipped when dead; correct.",
+    ),
+    "MeatOnTheBone": (
+        "aa0f27f19830",
+        "Heal 12 after a combat victory at half HP or below; correct.",
+    ),
+    "MembershipCard": ("de279e608c8e", "Merchant prices halved; correct."),
+    "MoltenEgg": (
+        "55618e2c31bb",
+        "Attacks added to the deck arrive upgraded; correct.",
+    ),
+    "MummifiedHand": (
+        "848a35f917fc",
+        "After a POWER, one card in hand goes free -- and both of its filters count STARS as well as energy. The emulator read energy only, so a Regent hand of 0-energy star cards read as free and fell to the last-resort branch.",
+    ),
+    "Nunchaku": (
+        "d1255b5ef641",
+        "+1 energy every tenth Attack of the COMBAT, not the turn; correct.",
+    ),
+    "OddlySmoothStone": ("2bee6c42865b", "Dexterity at combat start; correct."),
+    "OldCoin": ("5253274e1dc1", "300 gold on pickup; correct."),
+    "Orichalcum": (
+        "43c5ac425423",
+        "6 unpowered block at end of turn if block was zero -- latched before the other end-of-turn block relics run. Correct.",
+    ),
+    "OrnamentalFan": (
+        "c37a7442a7fb",
+        "4 unpowered block every third Attack in a turn; correct.",
+    ),
+    "ParryingShield": (
+        "cc06d2fdcb59",
+        "6 unpowered damage to a random enemy at end of turn while holding 10+ block, counted AFTER the other end-of-turn block; correct.",
+    ),
+    "Pear": ("2bb38f453822", "+10 max HP on pickup; correct."),
+    "Pendulum": ("bf98b5a115fe", "Draw 1 every third turn; correct."),
+    "Permafrost": (
+        "1ba262dd31e3",
+        "7 unpowered block on the FIRST Power of a combat; correct.",
+    ),
+    "Pocketwatch": (
+        "48de70e5067f",
+        "+3 cards next turn after a turn of more than three card plays; correct.",
+    ),
+    "RedMask": ("4de7f367fd6f", "Weak 1 to every enemy on turn one; correct."),
+    "RegalPillow": (
+        "f7fa9f8f872e",
+        "+15 on top of whatever a rest site was going to heal; correct.",
+    ),
+    "ScreamingFlagon": (
+        "85a74019aeb3",
+        "20 unpowered damage to every enemy at end of turn with an empty hand; correct.",
+    ),
+    "SelfFormingClay": (
+        "3d17d6977f24",
+        "3 block next turn per unblocked hit taken; correct.",
+    ),
+    "Shuriken": ("f733f5640805", "Strength 1 every third Attack in a turn; correct."),
+    "StoneCalendar": (
+        "8bf0617dcf12",
+        "52 unpowered damage to every enemy at the end of turn seven; correct.",
+    ),
+    "StoneCracker": (
+        "71efca6568d1",
+        "Two upgradable cards off the draw pile upgraded before the opening hand; correct.",
+    ),
+    "Strawberry": ("2ab75adc89df", "+7 max HP on pickup; correct."),
+    "TinyMailbox": ("d586a0fa375b", "A card reward at the rest site; correct."),
+    "ToxicEgg": ("008cc2dc69f1", "Skills added to the deck arrive upgraded; correct."),
+    "TuningFork": (
+        "fb5be5f36b07",
+        "7 unpowered block every tenth Skill, the tally wrapping rather than resetting per turn; correct.",
+    ),
+    "Vajra": ("0ffd7a67279d", "Strength at combat start; correct."),
+    "VenerableTeaSet": (
+        "043da6cf06de",
+        "+2 energy on the first energy reset of the combat after a rest; correct.",
+    ),
+    "WarPaint": ("6559622ec777", "Two cards off the deck upgraded on pickup; correct."),
+    "Whetstone": (
+        "8685fefd4317",
+        "Two cards off the deck upgraded on pickup; correct.",
+    ),
+    "WhiteBeastStatue": (
+        "6913a36cd04d",
+        "Forces a potion reward after a combat, and stops being offered past floor 41; correct.",
+    ),
     "BoundPhylactery": (
         "1974cb754224",
         "Osty at 1 HP on BeforeCombatStart, then AfterEnergyResetLate every turn but 1",
@@ -402,6 +559,31 @@ READ: dict[str, tuple[str, str]] = {
 }
 
 
+def unread_names(reachable: bool = False) -> list[str]:
+    """List the modelled-but-unread relics, for `relic_pair.py --list`.
+
+    Exported rather than re-derived, for the reason the digest function is imported rather
+    than copied: two answers to "what is left" that can disagree is how a worklist quietly
+    stops matching the audit it is supposed to burn down.
+    """
+    relics = generated_relics()
+    sources = engine_sources()
+    consts = id_constants(sources, relics)
+    used = used_constants(sources, consts, relics)
+    pools = relic_pools()
+
+    names = []
+    for name in sorted(relics):
+        if reachable and pools.get(name) == "EventRelicPool":
+            continue
+        path = RELICS / f"{name}.cs"
+        if not path.exists() or name not in used:
+            continue
+        if name not in READ:
+            names.append(name)
+    return names
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--relic", default=None, help="audit just this one")
@@ -409,6 +591,11 @@ def main() -> None:
         "--unmodelled",
         action="store_true",
         help="list the unmodelled relics in full",
+    )
+    parser.add_argument(
+        "--unread",
+        action="store_true",
+        help="list the modelled-but-unread relics in full",
     )
     parser.add_argument(
         "--reachable",
@@ -481,10 +668,11 @@ def main() -> None:
         print(
             f"\n{len(unread)} modelled and UNREAD. Wired up, never compared to the source:",
         )
-        for i in range(0, min(len(unread), 24), 5):
+        shown = len(unread) if args.unread else min(len(unread), 24)
+        for i in range(0, shown, 5):
             print("  " + ", ".join(unread[i : i + 5]))
-        if len(unread) > 24:
-            print(f"  ... and {len(unread) - 24} more")
+        if shown < len(unread):
+            print(f"  ... and {len(unread) - shown} more (--unread lists them)")
 
     if declared:
         print(

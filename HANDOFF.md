@@ -2587,7 +2587,26 @@ no game running:
   either — Curses, Statuses, Tokens, Minions and event cards, which is the next
   layer rather than this one.
 
-  The three read passes give a rate worth carrying to relics. The Necrobinder's
+  **Relics have since had their reading pass too, for everything an ordinary run can
+  be handed: 122 of 122 reachable modelled relics are read.** The 49 still unread are
+  all event-pool, which need their event walked first. `scripts/relic_pair.py` is the
+  tool that made it bearable — `card_pair.py` one layer out, except that a relic has
+  no single home, so it greps the whole engine for the id constant and prints each hit
+  with the FUNCTION it sits in, which is most of what a relic reading has to check.
+
+  3 of 58 diverged, an order of magnitude below the never-read card pools. That is the
+  finding: relics are simpler and were written from the same source, so **when the
+  per-item rate falls this low the defects stop being in the items and start being in
+  what is SHARED between them.** None of the three is a wrong number:
+
+  - The chest-relic gate was a hand-kept list of fourteen where the game declares
+    seventeen (E349). Extracted now, as E47 said to do the first time.
+  - Bag of Preparation and Ring of the Snake are the same mechanic modelled two
+    different ways, so one of them had to be wrong (E350).
+  - Mummified Hand predates the Regent and cannot see stars, so a Regent hand read as
+    entirely free (E351).
+
+  The three card read passes give a rate worth carrying to whatever is next. The Necrobinder's
   never-read cards ran 21 defects in 45 and the Regent's 13 in 27, so **one card
   in two that nobody has looked at is wrong** whatever its capture says. The
   Silent's tail ran 4 in 30 — those thirty already had suites from an earlier pass

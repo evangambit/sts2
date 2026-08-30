@@ -399,11 +399,6 @@ public static class RelicEffects
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Thorns, 3);
         }
 
-        if (HasRelic(state, BagOfPreparation))
-        {
-            CardEffects.DrawCards(state, 2, rng);
-        }
-
         if (HasRelic(state, BoomingConch) && state.IsEliteCombat)
         {
             CardEffects.DrawCards(state, 2, rng);
@@ -526,15 +521,27 @@ public static class RelicEffects
         state.Relics.Any(relic => relic.DefId == Pocketwatch && relic.Counter > 0) ? 3 : 0;
 
     /// <summary>
-    /// `RingOfTheSnake.ModifyHandDraw`: `CardsVar(2)` while `TurnNumber > 1` is false, so
-    /// it pays on turn ONE and never again -- Silent opens on seven cards.
+    /// `RingOfTheSnake.ModifyHandDraw` and `BagOfPreparation.ModifyHandDraw`: `CardsVar(2)`
+    /// each while `TurnNumber > 1` is false, so they pay on turn ONE and never again --
+    /// seven cards in the opening hand rather than five.
     ///
-    /// It rides the opening hand rather than `ExtraHandDraw` because that is where turn
-    /// one's draw happens: the turn-start path only ever runs from turn two, where this
-    /// relic is already spent.
+    /// They ride the opening hand rather than `ExtraHandDraw` because that is where turn
+    /// one's draw happens: the turn-start path only ever runs from turn two, where both
+    /// relics are already spent.
     /// </summary>
+    /// <remarks>
+    /// Bag of Preparation used to draw its two through a separate `DrawCards` at COMBAT
+    /// START, which runs after the opening hand is already dealt. Same seven cards, and
+    /// two things wrong with them: the pair were not part of the hand draw, so the hooks
+    /// that fire only on EXTRA draws saw them (Speedster, Death March -- see E329), and the
+    /// opening-hand size feeds `ApplyTurnOneDrawPileReorder`, which is what decides how
+    /// many Innate cards the hand is guaranteed to hold.
+    ///
+    /// The two relics are the SAME mechanic and were modelled two different ways, which is
+    /// the more useful half of the finding: one of them had to be wrong.
+    /// </remarks>
     public static int ExtraOpeningHandDraw(CombatState state) =>
-        HasRelic(state, RingOfTheSnake) ? 2 : 0;
+        (HasRelic(state, RingOfTheSnake) ? 2 : 0) + (HasRelic(state, BagOfPreparation) ? 2 : 0);
 
     /// <summary>
     /// The relics that pay out every Nth card of a type played in one turn. The game holds
@@ -663,8 +670,10 @@ public static class RelicEffects
         }
 
         var all = Enumerable.Range(0, state.Hand.Count).ToList();
-        var printedCosted = all.Where(i => PrintedCost(state.Hand[i]) > 0).ToList();
-        var stillCosts = all.Where(i => CombatEngine.EffectiveCost(state.Hand[i], state) > 0)
+        var printedCosted = all.Where(i => CostsAnything(state.Hand[i])).ToList();
+        var stillCosts = all.Where(i =>
+                CombatEngine.EffectiveCost(state.Hand[i], state) > 0 || HasStarCost(state.Hand[i])
+            )
             .ToList();
 
         var candidates = printedCosted.Intersect(stillCosts).ToList();
@@ -694,6 +703,30 @@ public static class RelicEffects
         int cost = card.CostForCombat == int.MinValue ? def.Cost : card.CostForCombat;
         return card.Upgraded ? cost + def.UpgradeCost : cost;
     }
+
+    /// <summary>
+    /// `card.BaseStarCost > 0` -- the Regent's second resource, which Mummified Hand's
+    /// filters count alongside energy.
+    /// </summary>
+    private static bool HasStarCost(CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return def.HasStarCostX || def.StarCost > 0;
+    }
+
+    /// <summary>
+    /// The game's `EnergyCost.GetWithModifiers(None) > 0 || BaseStarCost > 0`: a card that
+    /// is PRINTED with a price in either resource.
+    /// </summary>
+    /// <remarks>
+    /// The star half was missing, and it is not a Regent-shaped detail so much as a
+    /// Regent-shaped BLIND SPOT: most of the character's cards cost 0 energy and several
+    /// stars, so Mummified Hand read a whole deck as free and fell through to its
+    /// last-resort "anything at all" branch. Both filters are affected, so the pick came
+    /// from the wrong pool AND the card-selection stream was drawn against the wrong size.
+    /// </remarks>
+    private static bool CostsAnything(CardInstance card) =>
+        PrintedCost(card) > 0 || HasStarCost(card);
 
     /// <summary>
     /// Advances a relic's counter and reports whether this was the Nth tick. Absent relic

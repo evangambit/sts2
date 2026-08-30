@@ -111,8 +111,9 @@ All five character pools have been captured card-by-card against the live game. 
 character's own resource is modelled: the Necrobinder's **Osty** pet, the Regent's **stars**
 and **Forge/Sovereign Blade**, and the Defect's **orb queue** and Focus.
 
-Beyond cards: 171 of 296 relics, 111 monsters with their movesets, the event pool, potions,
-shops, rest sites, map routing and Neow.
+Beyond cards: 171 of 296 relics — every one of the 122 an ordinary run can be handed has
+been read against the source — plus 111 monsters with their movesets, the event pool,
+potions, shops, rest sites, map routing and Neow.
 
 ### What is verified, and how
 
@@ -142,10 +143,10 @@ and reading them found 21 of 45 and 13 of 27 — so **one card in two that nobod
 wrong, whatever its capture says.** The Silent's already-worked-over tail ran 4 in 30, which
 is what a second pass over the same pool is worth.
 
-This is not yet a full game emulator. Exact Neow/shop/reward/event odds, the remaining 125
-relics, and expanded trace parity are still future work. Relics are the next layer with no
-reading pass behind them: 171 of 296 are modelled and 64 have been read, so 107 are wired up
-and have never been compared to anything.
+This is not yet a full game emulator. Exact Neow/shop/reward/event odds, the 125 unmodelled
+relics, and expanded trace parity are still future work. The nearest gaps with nothing
+behind them: 49 event-pool relics that are wired up and unread, and the event pool itself,
+which has one test to its name.
 
 ## Requirements
 

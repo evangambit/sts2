@@ -620,6 +620,13 @@ def extract_relics() -> str:
         # item both go through PullNextRelicFromFront with this filter.
         if "IsAllowedInShops => false" in text:
             fields.append("IsAllowedInShops: false")
+        # `IsAllowed => RelicModel.IsBeforeAct3TreasureChest(runState)`: the relic is not
+        # offered once the run passes floor 41. Extracted rather than listed, because the
+        # hand-kept list in RelicGrabBag had drifted by three -- MealTicket, OldCoin and
+        # WhiteBeastStatue -- and a list that is short fails only on the paths that touch
+        # its missing members.
+        if "IsBeforeAct3TreasureChest" in text:
+            fields.append("StopsAfterAct3Chest: true")
         entries.append(f"        new RelicDef({', '.join(fields)}),")
 
     if not entries:
@@ -635,6 +642,9 @@ internal static class Relics
     [
 {lines}
     ];
+
+    /// <summary>Every relic, for audits and for tests that assert over the whole set.</summary>
+    public static ReadOnlySpan<RelicDef> All => _all;
 
     public static RelicDef Get(int id) =>
         Array.Find(_all, r => r.Id == id) is {{ Id: > 0 }} def

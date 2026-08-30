@@ -27,7 +27,13 @@ public readonly record struct RelicDef(
     bool SpawnsPets = false,
     // RelicModel.IsAllowedInShops: five relics are never sold, and every shop pull is
     // filtered on it.
-    bool IsAllowedInShops = true
+    bool IsAllowedInShops = true,
+    // `IsAllowed(runState) => RelicModel.IsBeforeAct3TreasureChest(runState)`, which is
+    // `TotalFloor < 41` solo: the relic stops being offered once the run passes act 3's
+    // treasure chest. Seventeen relics declare it, and it used to be a hand-kept list of
+    // fourteen -- Meal Ticket, Old Coin and White Beast Statue were missing, so the
+    // emulator kept offering them where the game does not.
+    bool StopsAfterAct3Chest = false
 )
 {
     /// <summary>
