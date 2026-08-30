@@ -487,6 +487,21 @@ public enum BuffId
     /// Unpowered damage to one random enemy.
     /// </summary>
     Haunt,
+
+    /// <summary>
+    /// <c>CalcifyPower.ModifyDamageAdditive</c>: adds this much to a POWERED attack whose
+    /// dealer is OSTY. The player's own attacks get nothing.
+    /// </summary>
+    Calcify,
+
+    /// <summary>
+    /// <c>DebilitatePower</c>, a DEBUFF on an enemy that doubles the two multipliers it
+    /// touches: Vulnerable against it goes from 1.5x to 2x
+    /// (<c>amount + (amount - 1)</c>), and Weak on it goes from 0.75x to 0.5x
+    /// (<c>amount - (1 - amount)</c>). The AMOUNT is a duration, not a scale — it
+    /// decrements at its owner's side-turn end and the doubling never varies.
+    /// </summary>
+    Debilitate,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

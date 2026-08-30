@@ -207,7 +207,10 @@ public static class BuffSystem
         dmg += Get(defenderBuffs, BuffId.Tainted);
         if (Get(attackerBuffs, BuffId.Weak) > 0)
         {
-            dmg *= 0.75f;
+            // `DebilitatePower.ModifyWeakMultiplier` is `amount - (1 - amount)` for its
+            // OWNER's attacks, so a debilitated attacker's Weak lands at 0.5 instead of
+            // 0.75. The amount is a duration and does not scale the doubling.
+            dmg *= Get(attackerBuffs, BuffId.Debilitate) > 0 ? 0.5f : 0.75f;
         }
 
         if (Get(attackerBuffs, BuffId.Shrink) != 0)
@@ -218,6 +221,14 @@ public static class BuffSystem
         if (Get(defenderBuffs, BuffId.Vulnerable) > 0)
         {
             float mult = 1.5f + Get(attackerBuffs, BuffId.CrueltyPower) / 100f;
+            // `DebilitatePower.ModifyVulnerableMultiplier` is `amount + (amount - 1)` when
+            // the target is its owner, which doubles the BONUS rather than the multiplier:
+            // 1.5 becomes 2.0, and a Cruelty-raised 1.75 becomes 2.5.
+            if (Get(defenderBuffs, BuffId.Debilitate) > 0)
+            {
+                mult += mult - 1f;
+            }
+
             dmg *= mult;
         }
 

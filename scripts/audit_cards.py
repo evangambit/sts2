@@ -190,6 +190,10 @@ READ: dict[str, tuple[str, str]] = {
         "21c730e6ad53",
         "applies BlackHolePower 3/4; the POWER hits all enemies Unpowered on stars gained",
     ),
+    "BlightStrike": (
+        "173f7411a9a4",
+        "8/10 damage, then Doom for the damage actually dealt -- blocked plus unblocked",
+    ),
     "BloodWall": (
         "da48d5654770",
         "2 HP first, then 16/20 block",
@@ -241,6 +245,10 @@ READ: dict[str, tuple[str, str]] = {
     "Calamity": (
         "3542b791859e",
         "CalamityPower 1; the upgrade cuts the cost",
+    ),
+    "Calcify": (
+        "26fd6e6dc455",
+        "CalcifyPower 4/6 added to OSTYs attacks only -- not the players",
     ),
     "CallOfTheVoid": (
         "c6daf526d7c9",
@@ -318,6 +326,10 @@ READ: dict[str, tuple[str, str]] = {
     "DeadlyPoison": (
         "9d449a094209",
         "Poison 5/7 on the target",
+    ),
+    "Debilitate": (
+        "1309afb34411",
+        "10/12 damage then DebilitatePower 2/3: doubles Vulnerable and Weak, amount is a DURATION",
     ),
     "DefendIronclad": (
         "f44f2ddf1ff3",

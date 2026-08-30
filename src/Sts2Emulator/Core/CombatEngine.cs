@@ -849,6 +849,13 @@ public static class CombatEngine
 
             // `SicEmPower.AfterSideTurnEnd` removes itself the same way.
             BuffSystem.Remove(enemy.Buffs, BuffId.SicEm);
+
+            // `DebilitatePower.AfterSideTurnEnd` DECREMENTS rather than removing, so its
+            // amount really is a turn count.
+            if (BuffSystem.Get(enemy.Buffs, BuffId.Debilitate) > 0)
+            {
+                BuffSystem.Apply(enemy.Buffs, BuffId.Debilitate, -1);
+            }
         }
 
         // Dark Embrace: deferred draw for Ethereal cards exhausted at end of turn.

@@ -3668,7 +3668,20 @@ public static class CardEffects
         }
     }
 
-    private static int DealDamageToEnemy(CombatState state, EnemyState target, int amount)
+    private static int DealDamageToEnemy(CombatState state, EnemyState target, int amount) =>
+        DealDamageToEnemy(state, target, amount, out _);
+
+    /// <summary>
+    /// As above, also handing back `DamageResult.TotalDamage` -- blocked plus unblocked,
+    /// which is a different number from the HP lost that the ordinary return gives. Blight
+    /// Strike Dooms for it.
+    /// </summary>
+    private static int DealDamageToEnemy(
+        CombatState state,
+        EnemyState target,
+        int amount,
+        out int totalDamage
+    )
     {
         TriggerEnemyThorns(state, target);
 
@@ -3695,6 +3708,7 @@ public static class CardEffects
             damage = Math.Min(damage, cap);
         }
 
+        totalDamage = damage;
         int absorbed = Math.Min(target.Block, damage);
         target.Block -= absorbed;
         int hpLoss = damage - absorbed;
@@ -5094,8 +5108,17 @@ public static class CardEffects
                 var target = FirstEnemy(state);
                 if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    ApplyEnemyDebuffToTarget(state, target, BuffId.Doom, 4, rng);
+                    // Doom for the damage actually dealt -- `Results.Sum(r =>
+                    // r.TotalDamage)`, blocked plus unblocked -- and not the flat 4 the
+                    // emulator had. This Doom carries a card source, so unlike Reaper
+                    // Form's it goes through the chokepoint the Unsettling Lamp doubles.
+                    DealDamageToEnemy(
+                        state,
+                        target,
+                        Dmg(state, def, upgraded, card),
+                        out int dealt
+                    );
+                    ApplyEnemyDebuffToTarget(state, target, BuffId.Doom, dealt, rng);
                 }
 
                 return true;
@@ -5354,7 +5377,10 @@ public static class CardEffects
                 );
                 return true;
             case "Calcify":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 6 : 4);
+                // PowerVar 4 upgrading by 2, and CalcifyPower adds that to OSTY's attacks
+                // -- `dealer?.Monster is Osty`. The emulator granted Plating, which is
+                // block on the player.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Calcify, upgraded ? 6 : 4);
                 return true;
             case "CallOfTheVoid":
                 // CardsVar 1; the upgrade adds Innate, not a second card. The power puts
@@ -5375,8 +5401,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.DanseMacabre, upgraded ? 6 : 4);
                 return true;
             case "Debilitate":
+                // 10/12 damage, then DebilitatePower 2/3 on the TARGET -- a debuff that
+                // doubles Vulnerable and Weak against it. The emulator was taking temporary
+                // Strength off instead.
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 3 : 2);
+                ApplyEnemyDebuff(state, BuffId.Debilitate, upgraded ? 3 : 2, rng);
                 return true;
             case "Demesne":
                 // `PowerCmd.Apply<DemesnePower>(..., Cards.BaseValue)` -- one stack, and
@@ -5460,7 +5489,7 @@ public static class CardEffects
                 // besides: OstyDamageVar was not extracted, so BaseDamage was 0.
                 if (state.OstyHp > 0)
                 {
-                    DealDamageToAll(state, Dmg(state, def, upgraded, card));
+                    DealDamageToAll(state, OstyAttackDamage(state, Dmg(state, def, upgraded, card)));
                     ApplyAllEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 3 : 2, rng);
                 }
 
@@ -5471,7 +5500,7 @@ public static class CardEffects
                 {
                     DealDamageToRandomEnemiesMultiHit(
                         state,
-                        Dmg(state, def, upgraded, card),
+                        OstyAttackDamage(state, Dmg(state, def, upgraded, card)),
                         1,
                         rng
                     );
@@ -6904,6 +6933,14 @@ public static class CardEffects
     /// `.FromOsty(...)` makes OSTY the attacker, so the player's Strength should not raise
     /// it -- that is a known gap and a separate one from the summon.
     /// </remarks>
+    /// <summary>
+    /// `CalcifyPower.ModifyDamageAdditive` on an attack whose DEALER is Osty. The player's
+    /// own attacks are not touched, which is why this is a helper at the Osty sites rather
+    /// than a term in `BuffSystem.IncomingDamage`.
+    /// </summary>
+    internal static int OstyAttackDamage(CombatState state, int amount) =>
+        amount + BuffSystem.Get(state.PlayerBuffs, BuffId.Calcify);
+
     private static void DealOstyDamage(CombatState state, int amount)
     {
         if (state.OstyHp <= 0)
@@ -6917,7 +6954,7 @@ public static class CardEffects
             return;
         }
 
-        DealDamageToEnemy(state, target, amount);
+        DealDamageToEnemy(state, target, OstyAttackDamage(state, amount));
 
         int sicEm = BuffSystem.Get(target.Buffs, BuffId.SicEm);
         if (sicEm > 0)
