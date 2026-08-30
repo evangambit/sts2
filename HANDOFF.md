@@ -235,11 +235,27 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   Capture randomly-targeted cards against a single enemy or not at all.
 
   `--character NECROBINDER` starts the run as that character, which matters for any
-  card reading Osty: staging one into an Ironclad run gives it no pet to read. The
-  first five Necrobinder captures found three divergences (E258), so that pool is
-  worth capturing rather than only reading — it has never been verified against
-  anything, and the run engine still hardcodes Ironclad so the emulator cannot
-  reach it end to end.
+  card reading Osty: staging one into an Ironclad run gives it no pet to read.
+
+  **The Necrobinder pool has now had its first pass: 88 cards, 82 captured against
+  the live game and the remaining 6 read from source.** It found 36 divergences,
+  E258 to E295 — by far the highest rate of any pool, which fits a character that
+  had never been checked against anything. The shapes worth carrying forward:
+
+  - A wrong body that grants SOME power passes every test that only asks whether
+    the card is inert. Five Powers each granted a DIFFERENT card's power (E277).
+  - Every card the capture tool could not reach turned out to raise a selection
+    screen, and every one of those was choosing for the player (E295). The tool's
+    silence was the pattern.
+  - Three cards ended a fight the emulator would have left standing, and each time
+    the capture's REFUSAL was the finding rather than a wrong number (E292).
+  - `scripts/audit_shared_card_bodies.py` exists because the same label-stack slip
+    happened four times (E262, E271, E276, E293). Run it after every edit to a
+    stacked switch, before the tests.
+
+  Still unread in the pool: 46 cards are implemented and captured but have no
+  source reading, so a capture that happens to agree is all that stands behind
+  them. `uv run python scripts/card_pair.py --list Necrobinder` is the worklist.
 
   Two more shapes a capture cannot express, both learned the hard way and both now
   refused by the generator rather than mis-generated: a capture where an enemy DIES
@@ -1287,7 +1303,7 @@ when the real number is 552.
 | Colourless  |    64 |          64 |     64 |
 | Silent      |    88 |          88 |     46 |
 | Defect      |    88 |          87 |      0 |
-| Necrobinder |    88 |          88 |      0 |
+| Necrobinder |    88 |          88 |     42 |
 | Regent      |    88 |          88 |      0 |
 | Event       |    27 |          27 |      1 |
 | Token       |    14 |          11 |      1 |
@@ -1297,9 +1313,15 @@ when the real number is 552.
 (Ironclad's counts differ by pool vs id class — the pool excludes a few cards the class
 carries, and vice versa; it is tested end to end either way.)
 
-Three whole characters have never had a card verified. Every batch written so far turned
-up real defects — thirteen across Ironclad alone — and the per-character routines have had
-far less scrutiny than `Apply` did, so expect the yield to be higher there, not lower.
+TWO whole characters have never had a card verified — the Defect and the Regent. The
+Necrobinder has now had its first pass and it turned up 36 divergences in 88 cards, which
+is a far higher rate than any pool before it and is what a never-checked character looks
+like. Every batch written so far turned up real defects, and the per-character routines
+have had far less scrutiny than `Apply` did, so expect the same yield from the other two.
+
+The Necrobinder's 42 "tested" are the cards with a dedicated suite; the other 46 are
+captured but untested-and-unread, which means a live capture that happened to agree is the
+whole of the evidence for them.
 
 Ironclad and Colourless are both fully covered, and **Ironclad has no approximations
 left** — Rampage's per-copy growth, Battle Trance's NoDrawPower and Howl From Beyond's
