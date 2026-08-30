@@ -3849,6 +3849,14 @@ public static class CardEffects
         // unblocked, so an attack into a full shield still Dooms for all of it. This
         // function is the player's POWERED-attack path (the pet's too, and the power
         // counts `dealer.PetOwner`), which is exactly what `props.IsPoweredAttack()` asks.
+        // `MonarchsGazePower.AfterDamageGiven`: a powered attack by its owner takes that
+        // much temporary Strength off whatever it hit.
+        int monarchsGaze = BuffSystem.Get(state.PlayerBuffs, BuffId.MonarchsGaze);
+        if (monarchsGaze > 0 && target.Hp > 0)
+        {
+            ApplyTemporaryStrengthDownTo(target, monarchsGaze);
+        }
+
         int reaperForm = BuffSystem.Get(state.PlayerBuffs, BuffId.ReaperForm);
         if (reaperForm > 0 && damage > 0 && target.Hp > 0)
         {
@@ -6390,6 +6398,12 @@ public static class CardEffects
             case "Voltaic":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
                 break;
+            case "Monologue":
+                // Monologue: a `Power` var of 1, and the upgrade adds Retain. The power
+                // gives that much Strength for every card played and takes ALL of it back
+                // when the turn ends -- the emulator had it retaining the hand.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Monologue, 1);
+                break;
             case "Convergence":
                 // Retain the hand, an energy next turn, and a STAR next turn -- three
                 // powers, of which the emulator applied one.
@@ -6398,7 +6412,6 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.StarNextTurn, upgraded ? 2 : 1);
                 break;
             case "Flanking":
-            case "Monologue":
             case "Shadowmeld":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, upgraded ? 2 : 1);
                 break;
@@ -6631,6 +6644,12 @@ public static class CardEffects
                 // Neutron Aegis: five stars for `PowerVar<PlatingPower>(8)` upgrading by 3.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 11 : 8);
                 break;
+            case "MonarchsGaze":
+                // Monarch's Gaze: a `StrengthLoss` var of 1, and the upgrade is a discount.
+                // The power takes that much temporary Strength off the target of EVERY
+                // powered attack its owner lands.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.MonarchsGaze, 1);
+                break;
             case "HammerTime":
                 // Hammer Time: one stack, and the upgrade is a discount. HammerTimePower
                 // forges for every OTHER player, so in a solo run it does nothing whatever
@@ -6649,7 +6668,6 @@ public static class CardEffects
             case "Friendship":
             case "Lethality":
             case "MasterPlanner":
-            case "MonarchsGaze":
             case "NecroMastery":
             case "Neurosurge":
             case "PaleBlueDot":

@@ -745,6 +745,14 @@ READ: dict[str, tuple[str, str]] = {
         "74f5009156a4",
         "10/14, then reapplies the target's CURRENT Vulnerable if it survives",
     ),
+    "MonarchsGaze": (
+        "1bb8f34631d6",
+        "MonarchsGazePower 1: every powered attack takes that much temp Strength off its target",
+    ),
+    "Monologue": (
+        "d7187ee82305",
+        "MonologuePower: +1 Strength per card played, ALL taken back at the turn end",
+    ),
     "MultiCast": (
         "f22064bd3dad",
         "X-cost; evokes the FRONT orb X times, dequeuing only on the last",

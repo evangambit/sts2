@@ -102,8 +102,6 @@ public class CardCoverageTests
         "MinionSacrifice",
         "MinionStrike",
         "Misery",
-        "MonarchsGaze",
-        "Monologue",
         "NegativePulse",
         "Outmaneuver",
         "PaleBlueDot",

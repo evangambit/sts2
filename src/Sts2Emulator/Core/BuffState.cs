@@ -593,6 +593,27 @@ public enum BuffId
     /// because the game reports it and a capture compares the whole power set.
     /// </summary>
     HammerTime,
+
+    /// <summary>
+    /// <c>MonarchsGazePower.AfterDamageGiven</c>: every POWERED attack its owner lands takes
+    /// this much temporary Strength off the TARGET.
+    /// </summary>
+    MonarchsGaze,
+
+    /// <summary>
+    /// <c>MonologuePower</c>: this much Strength for every card its owner plays, recorded in
+    /// <c>BeforeCardPlayed</c> and paid in <c>AfterCardPlayed</c> so the card that applied
+    /// it does not pay. At the owner's side-turn end the power removes itself and takes
+    /// back everything it gave.
+    /// </summary>
+    Monologue,
+
+    /// <summary>
+    /// What <see cref="Monologue" /> has handed out so far, which is the number the game
+    /// SHOWS for that power (`DisplayAmount => StrengthApplied`) and the amount it takes
+    /// back at the end of the turn. The Outbreak/OutbreakCounter shape again.
+    /// </summary>
+    MonologueApplied,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

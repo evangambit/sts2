@@ -221,6 +221,12 @@ public static class CombatEngine
                 : 0;
         int serpentFormBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.SerpentForm);
 
+        // `MonologuePower.BeforeCardPlayed` records the power's amount for THIS card, and
+        // AfterCardPlayed pays what was recorded. Snapshotted for the same reason Oblivion's
+        // is: the power does not exist yet while the card that applies it is resolving, so
+        // Monologue never pays for its own play.
+        int monologueBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.Monologue);
+
         // `OblivionPower.BeforeCardPlayed` writes the current amount into a per-card
         // dictionary, and AfterCardPlayed spends THAT. Snapshotted here for the same
         // reason Serpent Form is: the power records what it was worth when the play began.
@@ -450,6 +456,15 @@ public static class CombatEngine
             {
                 BuffSystem.Apply(state.Enemies[i].Buffs, BuffId.Doom, oblivionBefore[i]);
             }
+        }
+
+        // `MonologuePower.AfterCardPlayed`: pay the amount recorded before the play, and
+        // remember the running total -- it is both what the game DISPLAYS for the power and
+        // what it takes back at the end of the turn.
+        if (monologueBefore > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, monologueBefore);
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.MonologueApplied, monologueBefore);
         }
 
         // `DevourLifePower.AfterCardPlayed`: the card played being a SOUL summons Osty for
@@ -711,6 +726,17 @@ public static class CombatEngine
         // `BorrowedTimePower.AfterSideTurnEnd` removes itself when the PLAYER's side turn
         // ends, so the tax lands on the turn it was taken out and no later.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.BorrowedTime);
+
+        // `MonologuePower.AfterSideTurnEnd`: the power goes AND the Strength it handed out
+        // goes with it, which is why the running total has to be kept rather than recomputed.
+        int monologueApplied = BuffSystem.Get(state.PlayerBuffs, BuffId.MonologueApplied);
+        if (monologueApplied != 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, -monologueApplied);
+            BuffSystem.Remove(state.PlayerBuffs, BuffId.MonologueApplied);
+        }
+
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.Monologue);
 
         // `IAmInvincible.AfterAutoPostPlayPhaseEntered`: if the card is sitting on TOP of
         // the draw pile as the play phase ends, it plays ITSELF --

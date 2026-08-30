@@ -97,7 +97,21 @@ def buff_ids() -> set[str]:
 # the next burst, which is 0 the moment the card is played, while the power's own Amount is
 # the 11 damage it will deal. The emulator keeps those two apart as `Outbreak` and
 # `OutbreakCounter`, and it is the COUNTER the capture is looking at.
-DISPLAY_AMOUNT_BUFFS = {"OUTBREAK_POWER": "OutbreakCounter"}
+DISPLAY_AMOUNT_BUFFS = {
+    "OUTBREAK_POWER": "OutbreakCounter",
+    # `MonologuePower.DisplayAmount => StrengthApplied` -- the game shows the Strength the
+    # power has handed out so far, not the per-card amount the power actually holds.
+    "MONOLOGUE_POWER": "MonologueApplied",
+}
+
+# Powers whose displayed number is DERIVED rather than stored, so no BuffId holds it and
+# the amount cannot be compared -- only the power's presence. `OrbitPower.DisplayAmount` is
+# `4 - energySpent % 4`, the energy left until the next payout, where the emulator keeps the
+# energy spent (CombatState.OrbitEnergySpent) and the power's own amount is what it grants.
+#
+# Asserting presence and not the number is a real weakening, so it is spelled out here and
+# each entry needs a hand-written test to cover the number instead.
+PRESENCE_ONLY_BUFFS = {"ORBIT_POWER": "Orbit"}
 
 # Powers the emulator names the other way round. Only reorderings and rewordings of the
 # same concept belong here -- a live power with no emulator equivalent must still refuse,
@@ -130,7 +144,7 @@ def buff_constant(live_id: str, buffs: set[str]) -> str:
         UnsupportedCaptureError: if no BuffId corresponds to the live power.
 
     """
-    for table in (DISPLAY_AMOUNT_BUFFS, BUFF_ALIASES):
+    for table in (DISPLAY_AMOUNT_BUFFS, BUFF_ALIASES, PRESENCE_ONLY_BUFFS):
         if (override := table.get(live_id)) is not None:
             if override not in buffs:
                 raise UnsupportedCaptureError(
@@ -397,6 +411,15 @@ def render_test(
         f"fight.PlayerBuffAmount({buff_constant(str(status['id']), buffs)}));"
         for status in after_player.get("status") or []
         if status.get("amount") is not None
+        and str(status["id"]) not in PRESENCE_ONLY_BUFFS
+    )
+    # Presence, for the powers whose displayed number the emulator does not hold.
+    lines.extend(
+        f"        Assert.True(fight.PlayerBuffAmount("
+        f"{buff_constant(str(status['id']), buffs)}) > 0, "
+        f'"the game reported {status["id"]} and the emulator has none");'
+        for status in after_player.get("status") or []
+        if str(status["id"]) in PRESENCE_ONLY_BUFFS
     )
 
     # And nothing ELSE. Asserting only the powers the game reported says nothing about the
