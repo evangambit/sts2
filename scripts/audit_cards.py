@@ -102,6 +102,14 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "Accelerant": (
+        "a8ad0a653203",
+        "AccelerantPower 1/2, which PoisonPower reads to re-trigger itself",
+    ),
+    "Accuracy": (
+        "31148abdaa81",
+        "AccuracyPower 4/6 -- Shiv damage",
+    ),
     "AdaptiveStrike": (
         "5a7e572eee34",
         "a clone of itself with SetThisCombat(0) into the discard",
@@ -109,6 +117,10 @@ READ: dict[str, tuple[str, str]] = {
     "Aggression": (
         "02e647254c95",
         "AggressionPower 1; the upgrade adds the INNATE keyword, not an amount",
+    ),
+    "Alchemize": (
+        "b56e1dbc7bcb",
+        "a random potion on Rng.CombatPotionGeneration; the upgrade cuts the cost",
     ),
     "AllForOne": (
         "078fa2a6ae3b",
@@ -118,6 +130,14 @@ READ: dict[str, tuple[str, str]] = {
         "1f0fb33a1d62",
         "CreateClone() into the discard -- the whole card, enchantment and all",
     ),
+    "Anointed": (
+        "d49185fba0a0",
+        "as many RANDOM rares as the hand has room for, TakeRandom on CombatCardSelection; upgrade adds Retain",
+    ),
+    "Anticipate": (
+        "ab402f9fcd56",
+        "the var is a DexterityPower but the APPLY is AnticipatePower, a temporary one",
+    ),
     "Armaments": (
         "c5f41cadb022",
         "FromHandForUpgrade ASKS; upgraded takes every upgradable card with no choice",
@@ -125,6 +145,14 @@ READ: dict[str, tuple[str, str]] = {
     "AshenStrike": (
         "30f92abca715",
         "6 + 3/4 per card in the exhaust pile, through the ordinary attack command",
+    ),
+    "Automation": (
+        "71f4eb594f70",
+        "AutomationPower at EnergyVar(1); the upgrade cuts the cost",
+    ),
+    "Backstab": (
+        "ff373211f9f9",
+        "11/15, Exhaust AND Innate keywords",
     ),
     "Barricade": (
         "3c6ea5ef5e01",
@@ -137,6 +165,10 @@ READ: dict[str, tuple[str, str]] = {
     "BattleTrance": (
         "28d66a384f64",
         "draw 3/4 then NoDrawPower -- the lockout is half the card",
+    ),
+    "BelieveInYou": (
+        "7c0411593bd4",
+        "MultiplayerOnly: 2/3 energy to an ALLY, which is the player alone in singleplayer",
     ),
     "BiasedCognition": (
         "d4f233f5adf2",
@@ -157,6 +189,10 @@ READ: dict[str, tuple[str, str]] = {
     "Bludgeon": (
         "186334ba9bbd",
         "32 damage upgrading by 10",
+    ),
+    "Blur": (
+        "31bae5b9e5c0",
+        "5/8 block and BlurPower 1 flat; the upgrade raises the BLOCK",
     ),
     "BodySlam": (
         "f9c4feb15911",
@@ -186,6 +222,14 @@ READ: dict[str, tuple[str, str]] = {
         "680b497e0b0c",
         "exhaust a CHOSEN card, THEN draw 2/3 -- the draw must not seed its own candidates",
     ),
+    "Calamity": (
+        "3542b791859e",
+        "CalamityPower 1; the upgrade cuts the cost",
+    ),
+    "Catastrophe": (
+        "d68da1dfdebf",
+        "2/3 cards auto-played, each a StableShuffle pick off Rng.Shuffle, preferring playable",
+    ),
     "Cinder": (
         "029fc97a5586",
         "18/24 then exhaust a random hand card on Rng.CombatCardSelection",
@@ -205,6 +249,14 @@ READ: dict[str, tuple[str, str]] = {
     "Coolant": (
         "5b1ac7befd20",
         "AfterSideTurnStart blocks distinct-orb-types times Amount, unpowered",
+    ),
+    "Coordinate": (
+        "698d0073e2b3",
+        "MultiplayerOnly; CoordinatePower is a TemporaryStrengthPower at 5 upgrading by 3",
+    ),
+    "CorrosiveWave": (
+        "71cb6893f0ca",
+        "CorrosiveWavePower 2/3: poison all enemies per card DRAWN, for one turn",
     ),
     "Corruption": (
         "b0a0fc0db828",
@@ -231,6 +283,10 @@ READ: dict[str, tuple[str, str]] = {
         "f47124de99a9",
         "DarkShacklesPower IS a TemporaryStrengthPower with IsPositive false; 9 upgrading by 6",
     ),
+    "DeadlyPoison": (
+        "9d449a094209",
+        "Poison 5/7 on the target",
+    ),
     "DefendIronclad": (
         "f44f2ddf1ff3",
         "5 block upgrading by 3",
@@ -251,6 +307,10 @@ READ: dict[str, tuple[str, str]] = {
         "8b5e72efd2ac",
         "Vulnerable 1/2 first, then Strength equal to the target's TOTAL Vulnerable",
     ),
+    "DramaticEntrance": (
+        "83c2602f30c7",
+        "11/15 to all enemies; Exhaust AND Innate",
+    ),
     "DrumOfBattle": (
         "ee20d3312b87",
         "draw 2 always; the upgrade raises the ENERGY paid when it is exhausted",
@@ -266,6 +326,14 @@ READ: dict[str, tuple[str, str]] = {
     "ExpectAFight": (
         "722db1388dbf",
         "gains 1 energy per Attack in hand, THEN NoEnergyGainPower on itself",
+    ),
+    "Expose": (
+        "4d739690e03b",
+        "strip block, remove the WHOLE ArtifactPower, then Vulnerable 2/3",
+    ),
+    "FanOfKnives": (
+        "d7e8bd0fc0fb",
+        "FanOfKnivesPower 1 (Single) plus 4/5 Shivs; the power retargets Shiv to AllEnemies",
     ),
     "Feed": (
         "9a10f38d7248",
@@ -417,9 +485,17 @@ READ: dict[str, tuple[str, str]] = {
         "bb4f6f43b2ee",
         "6/9 then draw one at a time while the drawn card is an Attack and the hand has room",
     ),
+    "PoisonedStab": (
+        "2d65de36f7c5",
+        "6/8 then Poison 3/4",
+    ),
     "PommelStrike": (
         "18799fa29bff",
         "9/10 and draw 1/2",
+    ),
+    "Pounce": (
+        "4ee72fbd4d78",
+        "14/20 then FreeSkillPower 1",
     ),
     "PrimalForce": (
         "b118064bae03",
@@ -472,6 +548,10 @@ READ: dict[str, tuple[str, str]] = {
     "SignalBoost": (
         "ad8073ddb8d1",
         "ModifyCardPlayCount +1 for POWER cards, then decrements",
+    ),
+    "Skewer": (
+        "2e4678debc04",
+        "HasEnergyCostX; 8/11 damage X times at one target",
     ),
     "Spinner": (
         "2e4bbee2ca95",

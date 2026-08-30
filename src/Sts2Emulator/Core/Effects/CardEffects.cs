@@ -187,7 +187,7 @@ public static class CardEffects
 
             case CL.Catastrophe: // 2-cost: auto-play 2/3 cards off the draw pile
             {
-                AutoPlayFromDrawPile(state, upgraded ? 3 : 2);
+                AutoPlayFromDrawPile(state, upgraded ? 3 : 2, rng);
                 break;
             }
 
@@ -2287,23 +2287,49 @@ public static class CardEffects
 
     // ── Card-pile helpers ─────────────────────────────────────────────────────
 
+    /// <summary>
+    /// `Anointed`: as many RANDOM Rare cards from the draw pile as the hand has room for.
+    /// </summary>
+    /// <remarks>
+    /// `drawPile.Where(Rare).TakeRandom(count, Rng.CombatCardSelection)`, and `TakeRandom`
+    /// is `UnstableShuffle(rng).Take(count)` -- so the pick is a SHUFFLE of every rare in
+    /// the pile, not a walk from either end. Taking the last ones by index gave a
+    /// different set whenever there were more rares than hand space, and drew nothing
+    /// from the stream at all, which slides every later roll in the combat.
+    ///
+    /// The shuffle runs over the whole rare list even when they all fit, because the game
+    /// shuffles before it takes.
+    /// </remarks>
     private static void DrawRareCards(CombatState state, bool retain, Random rng)
     {
-        var rareIndices = state
-            .DrawPile.Select((c, i) => new { Card = c, Index = i })
+        var rares = state
+            .DrawPile.Select((c, i) => (Card: c, Index: i))
             .Where(x => GeneratedData.Cards.Get(x.Card.DefId).Rarity == CardRarity.Rare)
-            .OrderByDescending(x => x.Index)
             .ToList();
-
-        foreach (var item in rareIndices)
+        if (rares.Count == 0)
         {
-            if (state.Hand.Count >= MaxCardsInHand)
-            {
-                break;
-            }
+            return;
+        }
 
-            state.Hand.Add(item.Card with { Retain = retain });
-            state.RemoveFromDrawPileAt(item.Index);
+        int room = MaxCardsInHand - state.Hand.Count;
+        var selection = CardSelectionRng(state, rng);
+        for (int i = rares.Count - 1; i > 0; i--)
+        {
+            int j = selection.Next(i + 1);
+            (rares[i], rares[j]) = (rares[j], rares[i]);
+        }
+
+        // Removing by index invalidates the ones after it, so take the picks first and
+        // drop them from the pile back-to-front.
+        var taken = rares.Take(Math.Max(0, room)).ToList();
+        foreach (var pick in taken)
+        {
+            state.Hand.Add(pick.Card with { Retain = retain });
+        }
+
+        foreach (int index in taken.Select(x => x.Index).OrderByDescending(i => i))
+        {
+            state.RemoveFromDrawPileAt(index);
         }
     }
 
@@ -3018,19 +3044,44 @@ public static class CardEffects
     /// the pile on the Shuffle stream and takes the front, preferring a playable card and
     /// falling back to any card when every one left is Unplayable.
     /// </summary>
-    private static void AutoPlayFromDrawPile(CombatState state, int count)
+    /// <summary>
+    /// `Catastrophe`: auto-play this many RANDOM cards off the draw pile.
+    /// </summary>
+    /// <remarks>
+    /// The game picks with `StableShuffle(Rng.Shuffle).FirstOrDefault()` once per card,
+    /// preferring the non-Unplayable ones and falling back to the whole pile when every
+    /// card is Unplayable. `StableShuffle` SORTS before it shuffles -- by `ModelId`, which
+    /// is Category then Entry as ordinal strings -- so the result does not depend on pile
+    /// order, and it draws from the SHUFFLE stream.
+    ///
+    /// This took the first playable card by index and touched no stream at all: a
+    /// deterministic pick where the game rolls, and every later shuffle in the combat
+    /// sliding as a result.
+    /// </remarks>
+    private static void AutoPlayFromDrawPile(CombatState state, int count, Random? rng = null)
     {
+        var shuffle = state.ShuffleRng ?? rng ?? new Random(0);
         for (int i = 0; i < count && state.DrawPile.Count > 0; i++)
         {
-            int index = state.DrawPile.FindIndex(c => !GeneratedData.Cards.Get(c.DefId).Unplayable);
-            if (index < 0)
+            var eligible = state
+                .DrawPile.Select((c, idx) => (Card: c, Index: idx))
+                .Where(x => !GeneratedData.Cards.Get(x.Card.DefId).Unplayable)
+                .ToList();
+            if (eligible.Count == 0)
             {
-                index = 0;
+                eligible = [.. state.DrawPile.Select((c, idx) => (Card: c, Index: idx))];
             }
 
-            var card = state.DrawPile[index];
-            state.RemoveFromDrawPileAt(index);
-            state.AutoPlayQueue.Add(card);
+            eligible = [.. eligible.OrderBy(x => GeneratedData.Cards.Get(x.Card.DefId).Entry, StringComparer.Ordinal)];
+            for (int j = eligible.Count - 1; j > 0; j--)
+            {
+                int k = shuffle.Next(j + 1);
+                (eligible[j], eligible[k]) = (eligible[k], eligible[j]);
+            }
+
+            var picked = eligible[0];
+            state.RemoveFromDrawPileAt(picked.Index);
+            state.AutoPlayQueue.Add(picked.Card);
         }
     }
 
