@@ -202,6 +202,11 @@ def test_name(fixture: dict[str, Any]) -> str:
         parts.append("".join(word.capitalize() for word in power.split("_")))
     if enchantment := fixture.get("enchantment"):
         parts.append(enchantment.capitalize())
+    # The encounter is part of what a capture proves too -- the same card against a Corpse
+    # Slug and against Byrdonis are different boards, and a card that can kill the one but
+    # not the other has to be captured against both. Without this they collide.
+    if encounter := fixture.get("encounter"):
+        parts.append(encounter)
     return "_".join(parts) + "_MatchesLiveCapture"
 
 
@@ -296,6 +301,19 @@ def render_test(
         if status.get("amount") is not None
     )
 
+    # A capture where something DIED cannot be rebuilt positionally. The game drops the
+    # dead enemy from its readout AND renumbers the survivors -- a Fiend Fire that killed
+    # the front Corpse Slug reported the survivor as CORPSE_SLUG_0, the id the corpse had
+    # held. The emulator instead leaves the corpse in place so indices stay put, which is
+    # the more useful behaviour and the reason the two cannot be lined up after a kill:
+    # neither position nor entity id survives it.
+    if len(after["enemies"]) != len(before["enemies"]):
+        raise UnsupportedCaptureError(
+            "an enemy died during the capture; the game renumbers the survivors, so the "
+            "after state cannot be matched to the before state. Re-capture against a "
+            "board the card cannot kill.",
+        )
+
     for index, enemy in enumerate(after["enemies"]):
         lines.append(
             f"        Assert.Equal({enemy['hp']}, fight.State.Enemies[{index}].Hp);",
@@ -309,6 +327,7 @@ def render_test(
                 f"        Assert.Equal({int(status['amount'])}, "
                 f"fight.EnemyBuffAmount({constant}, {index}));",
             )
+
 
     lines.append("    }")
     return "\n".join(lines)

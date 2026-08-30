@@ -1,8 +1,8 @@
 {
   "_comment": "Captured from the live game by scripts/capture_card.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "card": "IronWave",
+  "card": "FiendFire",
   "upgraded": false,
-  "encounter": "CorpseSlugsWeak",
+  "encounter": "ByrdonisElite",
   "seed": "ABCDEF",
   "ascension": 8,
   "target_index": 0,
@@ -16,7 +16,7 @@
     "release": "v0.107.1"
   },
   "before": {
-    "state_type": "monster",
+    "state_type": "elite",
     "run": {
       "act": 1,
       "floor": 1,
@@ -36,10 +36,10 @@
       "hand": [
         {
           "index": 0,
-          "id": "IRON_WAVE",
-          "name": "Iron Wave",
+          "id": "FIEND_FIRE",
+          "name": "Fiend Fire",
           "type": "Attack",
-          "cost": "1",
+          "cost": "2",
           "can_play": true,
           "unplayable_reason": null,
           "target_type": "AnyEnemy",
@@ -58,13 +58,13 @@
         },
         {
           "index": 2,
-          "id": "ASCENDERS_BANE",
-          "name": "Ascender's Bane",
-          "type": "Curse",
-          "cost": "0",
-          "can_play": false,
-          "unplayable_reason": "HasUnplayableKeyword",
-          "target_type": "None",
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
           "is_upgraded": false
         },
         {
@@ -91,13 +91,13 @@
         },
         {
           "index": 5,
-          "id": "DEFEND_IRONCLAD",
-          "name": "Defend",
-          "type": "Skill",
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "Self",
+          "target_type": "AnyEnemy",
           "is_upgraded": false
         }
       ],
@@ -110,45 +110,23 @@
     },
     "enemies": [
       {
-        "entity_id": "CORPSE_SLUG_0",
-        "name": "Corpse Slug",
-        "hp": 28,
-        "max_hp": 28,
+        "entity_id": "BYRDONIS_0",
+        "name": "Byrdonis",
+        "hp": 90,
+        "max_hp": 90,
         "block": 0,
         "intents": [
           {
             "type": "Attack",
-            "label": "3x2",
+            "label": "17",
             "title": "Aggressive"
           }
         ],
         "status": [
           {
-            "id": "RAVENOUS_POWER",
-            "name": "Ravenous",
-            "amount": 4,
-            "type": "Buff"
-          }
-        ]
-      },
-      {
-        "entity_id": "CORPSE_SLUG_1",
-        "name": "Corpse Slug",
-        "hp": 27,
-        "max_hp": 27,
-        "block": 0,
-        "intents": [
-          {
-            "type": "Attack",
-            "label": "8",
-            "title": "Aggressive"
-          }
-        ],
-        "status": [
-          {
-            "id": "RAVENOUS_POWER",
-            "name": "Ravenous",
-            "amount": 4,
+            "id": "TERRITORIAL_POWER",
+            "name": "Territorial",
+            "amount": 1,
             "type": "Buff"
           }
         ]
@@ -158,7 +136,7 @@
     "menu_options": null
   },
   "after": {
-    "state_type": "monster",
+    "state_type": "elite",
     "run": {
       "act": 1,
       "floor": 1,
@@ -168,70 +146,14 @@
       "character": "The Ironclad",
       "hp": 64,
       "max_hp": 80,
-      "block": 5,
-      "energy": 8,
+      "block": 0,
+      "energy": 7,
       "max_energy": 3,
       "draw_pile_count": 6,
-      "discard_pile_count": 1,
-      "exhaust_pile_count": 0,
+      "discard_pile_count": 0,
+      "exhaust_pile_count": 6,
       "gold": 99,
-      "hand": [
-        {
-          "index": 0,
-          "id": "DEFEND_IRONCLAD",
-          "name": "Defend",
-          "type": "Skill",
-          "cost": "1",
-          "can_play": true,
-          "unplayable_reason": null,
-          "target_type": "Self",
-          "is_upgraded": false
-        },
-        {
-          "index": 1,
-          "id": "ASCENDERS_BANE",
-          "name": "Ascender's Bane",
-          "type": "Curse",
-          "cost": "0",
-          "can_play": false,
-          "unplayable_reason": "HasUnplayableKeyword",
-          "target_type": "None",
-          "is_upgraded": false
-        },
-        {
-          "index": 2,
-          "id": "STRIKE_IRONCLAD",
-          "name": "Strike",
-          "type": "Attack",
-          "cost": "1",
-          "can_play": true,
-          "unplayable_reason": null,
-          "target_type": "AnyEnemy",
-          "is_upgraded": false
-        },
-        {
-          "index": 3,
-          "id": "BASH",
-          "name": "Bash",
-          "type": "Attack",
-          "cost": "2",
-          "can_play": true,
-          "unplayable_reason": null,
-          "target_type": "AnyEnemy",
-          "is_upgraded": false
-        },
-        {
-          "index": 4,
-          "id": "DEFEND_IRONCLAD",
-          "name": "Defend",
-          "type": "Skill",
-          "cost": "1",
-          "can_play": true,
-          "unplayable_reason": null,
-          "target_type": "Self",
-          "is_upgraded": false
-        }
-      ],
+      "hand": [],
       "status": []
     },
     "battle": {
@@ -241,45 +163,23 @@
     },
     "enemies": [
       {
-        "entity_id": "CORPSE_SLUG_0",
-        "name": "Corpse Slug",
-        "hp": 23,
-        "max_hp": 28,
+        "entity_id": "BYRDONIS_0",
+        "name": "Byrdonis",
+        "hp": 55,
+        "max_hp": 90,
         "block": 0,
         "intents": [
           {
             "type": "Attack",
-            "label": "3x2",
+            "label": "17",
             "title": "Aggressive"
           }
         ],
         "status": [
           {
-            "id": "RAVENOUS_POWER",
-            "name": "Ravenous",
-            "amount": 4,
-            "type": "Buff"
-          }
-        ]
-      },
-      {
-        "entity_id": "CORPSE_SLUG_1",
-        "name": "Corpse Slug",
-        "hp": 27,
-        "max_hp": 27,
-        "block": 0,
-        "intents": [
-          {
-            "type": "Attack",
-            "label": "8",
-            "title": "Aggressive"
-          }
-        ],
-        "status": [
-          {
-            "id": "RAVENOUS_POWER",
-            "name": "Ravenous",
-            "amount": 4,
+            "id": "TERRITORIAL_POWER",
+            "name": "Territorial",
+            "amount": 1,
             "type": "Buff"
           }
         ]
@@ -291,7 +191,7 @@
   "before_piles": {
     "hand_ordered": [
       {
-        "id": "IRON_WAVE",
+        "id": "FIEND_FIRE",
         "is_upgraded": false
       },
       {
@@ -299,7 +199,7 @@
         "is_upgraded": false
       },
       {
-        "id": "ASCENDERS_BANE",
+        "id": "DEFEND_IRONCLAD",
         "is_upgraded": false
       },
       {
@@ -311,20 +211,12 @@
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_IRONCLAD",
+        "id": "STRIKE_IRONCLAD",
         "is_upgraded": false
       }
     ],
     "draw_pile_ordered": [
       {
-        "id": "DEFEND_IRONCLAD",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_IRONCLAD",
-        "is_upgraded": false
-      },
-      {
         "id": "STRIKE_IRONCLAD",
         "is_upgraded": false
       },
@@ -334,6 +226,14 @@
       },
       {
         "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "ASCENDERS_BANE",
         "is_upgraded": false
       },
       {
@@ -345,7 +245,20 @@
     "exhaust_pile_ordered": []
   },
   "after_piles": {
-    "hand_ordered": [
+    "hand_ordered": [],
+    "draw_pile_ordered": [
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
       {
         "id": "DEFEND_IRONCLAD",
         "is_upgraded": false
@@ -357,48 +270,34 @@
       {
         "id": "STRIKE_IRONCLAD",
         "is_upgraded": false
+      }
+    ],
+    "discard_pile_ordered": [],
+    "exhaust_pile_ordered": [
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
       },
       {
         "id": "BASH",
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_IRONCLAD",
+        "id": "STRIKE_IRONCLAD",
+        "is_upgraded": false
+      },
+      {
+        "id": "FIEND_FIRE",
         "is_upgraded": false
       }
-    ],
-    "draw_pile_ordered": [
-      {
-        "id": "DEFEND_IRONCLAD",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_IRONCLAD",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_IRONCLAD",
-        "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_IRONCLAD",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_IRONCLAD",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_IRONCLAD",
-        "is_upgraded": false
-      }
-    ],
-    "discard_pile_ordered": [
-      {
-        "id": "IRON_WAVE",
-        "is_upgraded": false
-      }
-    ],
-    "exhaust_pile_ordered": []
+    ]
   }
 }

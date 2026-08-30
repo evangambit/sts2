@@ -234,6 +234,14 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   game's stream position, so the totals agree while the distribution does not.
   Capture randomly-targeted cards against a single enemy or not at all.
 
+  Two more shapes a capture cannot express, both learned the hard way and both now
+  refused by the generator rather than mis-generated: a capture where an enemy DIES
+  (the game renumbers the survivors into the dead one's id, so nothing lines up —
+  use `--encounter ByrdonisElite` at 90 HP for anything that would kill a Corpse
+  Slug), and two captures of the same card that would collide on test name (the
+  encounter is part of the name now, since the same card against two boards is two
+  facts).
+
 - ✅ **Per-card ground truth from the running game.** `scripts/capture_card.py` stages one
   card (plus powers, plus energy) in a live combat, plays it, and commits the before/after;
   `scripts/generate_card_capture_tests.py` renders those into `Cards/CardCaptures.g.cs`.
