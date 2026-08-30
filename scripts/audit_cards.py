@@ -494,6 +494,10 @@ READ: dict[str, tuple[str, str]] = {
         "79f0cdcae3a0",
         "PlatingPower 4/6",
     ),
+    "Strangle": (
+        "2ae905512994",
+        "8/10 then StranglePower 2/3 -- which the upgrade DOES raise; not Vulnerable",
+    ),
     "StrikeIronclad": (
         "67c1d4a0a5d2",
         "6 damage upgrading by 3",

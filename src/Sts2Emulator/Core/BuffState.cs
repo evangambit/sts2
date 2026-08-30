@@ -348,6 +348,17 @@ public enum BuffId
     /// can be damaged before the power could exist at all.
     /// </summary>
     NecroMastery,
+
+    /// <summary>
+    /// <c>StranglePower</c>, a DEBUFF on an enemy: it takes this much unblockable,
+    /// unpowered damage every time the player plays a card, until its own side turn ends.
+    /// Nothing like the Vulnerable that used to stand in for it.
+    ///
+    /// The game snapshots the amount in <c>BeforeCardPlayed</c> and pays it in
+    /// <c>AfterCardPlayed</c>, which is how a Strangle does not trigger on the very card
+    /// that applied or stacked it.
+    /// </summary>
+    Strangle,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

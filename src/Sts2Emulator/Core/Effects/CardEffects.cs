@@ -1846,13 +1846,15 @@ public static class CardEffects
                 break;
             }
 
-            case SI.Strangle: // 1-cost, 8/10 damage and StranglePower 2
-                // PowerVar<StranglePower>(2m), which OnUpgrade leaves alone — only the
-                // damage upgrades. StranglePower itself is not modelled; Vulnerable 2
-                // stands in for it, so the stand-in must not scale with the upgrade
-                // either.
+            case SI.Strangle: // 1-cost, 8/10 damage and StranglePower 2/3
+                // Vulnerable 2 used to stand in for StranglePower, and the comment here
+                // said the upgrade left the power alone. Both were wrong: the source is
+                // `DynamicVars["StranglePower"].UpgradeValueBy(1m)`, so it scales, and
+                // Strangle is nothing like Vulnerable -- the enemy takes its amount as
+                // UNBLOCKABLE damage every time the player plays a card, until the
+                // enemy's own turn ends.
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                ApplyEnemyDebuff(state, BuffId.Vulnerable, 2, rng);
+                ApplyEnemyDebuff(state, BuffId.Strangle, upgraded ? 3 : 2, rng);
                 break;
 
             case SI.StrikeSilent: // 1-cost, 6/9 damage
@@ -6577,11 +6579,23 @@ public static class CardEffects
         int amount
     ) => DealUnpoweredDamageToEnemy(state, target, amount, triggerThorns: false);
 
+    /// <summary>
+    /// `ValueProp.Unblockable | ValueProp.Unpowered` at one enemy: neither Strength nor
+    /// the target's BLOCK touches it. Unpowered and Unblockable are different props and
+    /// the pair has to be asked for explicitly -- Strangle is both.
+    /// </summary>
+    internal static void DealUnblockableUnpoweredDamageToEnemy(
+        CombatState state,
+        EnemyState target,
+        int amount
+    ) => DealUnpoweredDamageToEnemy(state, target, amount, triggerThorns: false, unblockable: true);
+
     private static void DealUnpoweredDamageToEnemy(
         CombatState? state,
         EnemyState target,
         int amount,
-        bool triggerThorns
+        bool triggerThorns,
+        bool unblockable = false
     )
     {
         if (triggerThorns && state != null)
@@ -6596,7 +6610,7 @@ public static class CardEffects
             damage = Math.Min(damage, cap);
         }
 
-        int absorbed = Math.Min(target.Block, damage);
+        int absorbed = unblockable ? 0 : Math.Min(target.Block, damage);
         target.Block -= absorbed;
         int hpLoss = damage - absorbed;
         int slippery = BuffSystem.Get(target.Buffs, BuffId.Slippery);

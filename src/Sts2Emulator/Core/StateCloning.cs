@@ -115,6 +115,7 @@ public static class StateCloning
             OstyMaxHp = combat.OstyMaxHp,
             Stars = combat.Stars,
             OrbitEnergySpent = combat.OrbitEnergySpent,
+            StrangleBeforePlay = [.. combat.StrangleBeforePlay],
             PotionSlots = (int[])combat.PotionSlots.Clone(),
             MaxPotionSlots = combat.MaxPotionSlots,
             Relics = [.. combat.Relics],

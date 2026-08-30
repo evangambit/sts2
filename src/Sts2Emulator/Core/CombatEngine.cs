@@ -745,6 +745,11 @@ public static class CombatEngine
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, tempStr);
                 BuffSystem.Remove(enemy.Buffs, BuffId.TemporaryStrength);
             }
+
+            // `StranglePower.AfterSideTurnEnd` removes itself when its OWNER's side turn
+            // ends -- the enemy's, here -- so a Strangle taxes the cards played on the
+            // turn it lands and no longer.
+            BuffSystem.Remove(enemy.Buffs, BuffId.Strangle);
         }
 
         // Dark Embrace: deferred draw for Ethereal cards exhausted at end of turn.
@@ -2527,6 +2532,16 @@ public static class CombatEngine
         state.AfterimageBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Afterimage);
         state.StormBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Storm);
         state.SubroutineBeforePlay = BuffSystem.Get(state.PlayerBuffs, BuffId.Subroutine);
+
+        // `StranglePower.BeforeCardPlayed` records its amount against the card about to be
+        // played, and `AfterCardPlayed` pays out what was recorded. Snapshotting is the
+        // whole mechanism: the card that APPLIES a Strangle must not make its target pay
+        // for it, and a card that stacks one pays the old amount rather than the new.
+        state.StrangleBeforePlay.Clear();
+        foreach (var enemy in state.Enemies)
+        {
+            state.StrangleBeforePlay.Add(BuffSystem.Get(enemy.Buffs, BuffId.Strangle));
+        }
     }
 
     /// <summary>
@@ -2691,6 +2706,21 @@ public static class CombatEngine
     )
     {
         Effects.RelicEffects.ApplyAfterCardPlayed(state, def, rng, energySpent);
+
+        // The Strangle payout, from the snapshot taken before this card resolved.
+        // `CreatureCmd.Damage(..., Unblockable | Unpowered)` at the enemy carrying it.
+        for (int i = 0; i < state.Enemies.Count && i < state.StrangleBeforePlay.Count; i++)
+        {
+            int owed = state.StrangleBeforePlay[i];
+            if (owed > 0 && state.Enemies[i].Hp > 0)
+            {
+                Effects.CardEffects.DealUnblockableUnpoweredDamageToEnemy(
+                    state,
+                    state.Enemies[i],
+                    owed
+                );
+            }
+        }
 
         if (def.Type == CardType.Skill)
         {

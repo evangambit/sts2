@@ -139,6 +139,12 @@ public sealed class CombatState
     /// </summary>
     public int OrbitEnergySpent;
 
+    /// <summary>
+    /// Each enemy's Strangle amount as it stood BEFORE the current card resolved, so a
+    /// card that applies or stacks Strangle does not make the enemy pay for itself.
+    /// </summary>
+    public List<int> StrangleBeforePlay = [];
+
     // Potions: slot index → potion def ID, 0 = empty
     public int[] PotionSlots = new int[3];
 
