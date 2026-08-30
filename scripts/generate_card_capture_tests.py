@@ -113,6 +113,35 @@ DISPLAY_AMOUNT_BUFFS = {
 # each entry needs a hand-written test to cover the number instead.
 PRESENCE_ONLY_BUFFS = {"ORBIT_POWER": "Orbit"}
 
+# The Defect's orbs. `ModelId.Entry` is the slugified class name, so DarkOrb reads
+# DARK_ORB.
+ORB_TYPES = {
+    "LIGHTNING_ORB": "Lightning",
+    "FROST_ORB": "Frost",
+    "DARK_ORB": "Dark",
+    "PLASMA_ORB": "Plasma",
+    "GLASS_ORB": "Glass",
+}
+
+# The two orbs that carry a number of their OWN. Everything else about an orb is a pure
+# function of its type and the player's Focus, which the emulator computes rather than
+# stores -- so those orbs' reported passive_val and evoke_val have no field to compare
+# against, and only the type and the position are checked for them.
+ORB_STORED_VALUE = {"DARK_ORB": "evoke_val", "GLASS_ORB": "passive_val"}
+
+
+def orb_literal(orb: dict[str, Any]) -> str:
+    """One `OrbState`, carrying the stored value when the orb has one."""
+    entry = str(orb.get("id"))
+    if (kind := ORB_TYPES.get(entry)) is None:
+        raise UnsupportedCaptureError(f"no OrbType for live orb {entry!r}")
+    if (field := ORB_STORED_VALUE.get(entry)) is None:
+        return f"new OrbState(OrbType.{kind})"
+    value = int(orb.get(field) or 0)
+    arg = "EvokeValue" if field == "evoke_val" else "PassiveValue"
+    return f"new OrbState(OrbType.{kind}, {arg}: {value})"
+
+
 # Powers the emulator names the other way round. Only reorderings and rewordings of the
 # same concept belong here -- a live power with no emulator equivalent must still refuse,
 # because that is how a missing power gets noticed at all.
@@ -353,6 +382,19 @@ def render_test(
             f"        fight.State.OstyMaxHp = {ally['max_hp']};",
         ]
 
+    # The Defect's orbs, staged before the play the way Osty and the stars are. The queue's
+    # CAPACITY comes with them, because a card that channels behaves differently against a
+    # full queue -- and BaseOrbSlots says which character's board this is, since a slotless
+    # character who channels is GIVEN one slot (E279) and a Defect is not.
+    if (orb_slots := player.get("orb_slots")) is not None:
+        lines.append(f"        fight.State.OrbCapacity = {orb_slots};")
+        lines.append(
+            "        fight.State.BaseOrbSlots = "
+            + ("3;" if player.get("character") == "The Defect" else "0;")
+        )
+        for orb in player.get("orbs") or []:
+            lines.append(f"        fight.State.Orbs.Add({orb_literal(orb)});")
+
     # Stars, the Regent's resource. The mod reports the field only for a character whose
     # star counter is always shown, or when there are stars to show, so its absence means
     # zero and staging is skipped. Osty's comment applies here word for word: it is the
@@ -381,6 +423,28 @@ def render_test(
         count_assert(after_player["discard_pile_count"], "fight.State.DiscardPile"),
         count_assert(after_player["exhaust_pile_count"], "fight.State.ExhaustPile"),
     ]
+
+    # The orb queue after the play: what is in it, in order, and how many slots it has.
+    if player.get("orb_slots") is not None or after_player.get("orb_slots") is not None:
+        after_orbs = after_player.get("orbs") or []
+        lines.append(
+            f"        Assert.Equal({after_player.get('orb_slots') or 0}, "
+            "fight.State.OrbCapacity);"
+        )
+        lines.append(count_assert(len(after_orbs), "fight.State.Orbs"))
+        for position, orb in enumerate(after_orbs):
+            entry = str(orb.get("id"))
+            if (kind := ORB_TYPES.get(entry)) is None:
+                raise UnsupportedCaptureError(f"no OrbType for live orb {entry!r}")
+            lines.append(
+                f"        Assert.Equal(OrbType.{kind}, fight.State.Orbs[{position}].Type);"
+            )
+            if (field := ORB_STORED_VALUE.get(entry)) is not None:
+                prop = "EvokeValue" if field == "evoke_val" else "PassiveValue"
+                lines.append(
+                    f"        Assert.Equal({int(orb.get(field) or 0)}, "
+                    f"fight.State.Orbs[{position}].{prop});"
+                )
 
     # Asserted whenever EITHER side of the capture reports stars: a card that spends the
     # last one leaves the field out of the after state, and "the key is gone" has to read

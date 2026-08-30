@@ -358,6 +358,34 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void BigBang_Base_ByrdonisElite_Regent_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card BigBang --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(40), Card(133), Card(474), Card(179), Card(474), Card(IC.AscendersBane))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.Stars = 9;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(10, fight.State.Energy);
+        Assert.Equal(5, fight.State.DrawPile.Count);
+        Assert.Empty(fight.State.DiscardPile);
+        Assert.Single(fight.State.ExhaustPile);
+        Assert.Equal(10, fight.State.Stars);
+        fight.PlayerPowersAre();
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
     public void BlackHole_Base_ByrdonisElite_Regent_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -1378,6 +1406,38 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void DefendDefect_Base_ByrdonisElite_Defect_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card DefendDefect --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(130), Card(130), Card(130), Card(471), Card(471), Card(130))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(471), Card(IC.AscendersBane), Card(130), Card(156), Card(471), Card(545))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OrbCapacity = 3;
+        fight.State.BaseOrbSlots = 3;
+        fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(5, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.OrbCapacity);
+        Assert.Single(fight.State.Orbs);
+        Assert.Equal(OrbType.Lightning, fight.State.Orbs[0].Type);
+        fight.PlayerPowersAre();
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
     public void DefendNecrobinder_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -1731,6 +1791,37 @@ public class CardCaptureTests
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
         Assert.Equal(1, fight.State.OstyHp);
         Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void Dualcast_Base_ByrdonisElite_Defect_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Dualcast --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(156), Card(130), Card(IC.AscendersBane), Card(471), Card(156), Card(130))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(545), Card(471), Card(471), Card(130), Card(471), Card(130))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OrbCapacity = 3;
+        fight.State.BaseOrbSlots = 3;
+        fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.OrbCapacity);
+        Assert.Empty(fight.State.Orbs);
+        fight.PlayerPowersAre();
+        Assert.Equal(74, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
     }
 
     [Fact]
@@ -5814,6 +5905,38 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void StrikeDefect_Base_ByrdonisElite_Defect_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card StrikeDefect --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(471), Card(545), Card(130), Card(471), Card(156), Card(130))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(471), Card(130), Card(471), Card(130), Card(IC.AscendersBane), Card(471))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OrbCapacity = 3;
+        fight.State.BaseOrbSlots = 3;
+        fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.OrbCapacity);
+        Assert.Single(fight.State.Orbs);
+        Assert.Equal(OrbType.Lightning, fight.State.Orbs[0].Type);
+        fight.PlayerPowersAre();
+        Assert.Equal(84, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
     public void StrikeIronclad_Base_Cruelty_Vulnerable_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -6571,6 +6694,39 @@ public class CardCaptureTests
         Assert.Equal(9, fight.State.Stars);
         fight.PlayerPowersAre();
         Assert.Equal(83, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
+    public void Zap_Base_ByrdonisElite_Defect_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Zap --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(545), Card(545), Card(130), Card(471), Card(130), Card(471))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(471), Card(130), Card(471), Card(156), Card(130), Card(IC.AscendersBane))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OrbCapacity = 3;
+        fight.State.BaseOrbSlots = 3;
+        fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.OrbCapacity);
+        Assert.Equal(2, fight.State.Orbs.Count);
+        Assert.Equal(OrbType.Lightning, fight.State.Orbs[0].Type);
+        Assert.Equal(OrbType.Lightning, fight.State.Orbs[1].Type);
+        fight.PlayerPowersAre();
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
     }

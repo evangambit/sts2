@@ -121,6 +121,23 @@ def summarize_state(state: dict[str, Any]) -> dict[str, Any]:
             # same blindness one layer up, and four Regent captures had already been taken
             # and passed before anyone noticed the number was not in them.
             "stars": player.get("stars"),
+            # The Defect's ORBS, reported only when the queue has capacity. Same lesson as
+            # `stars` and `allies` before it, applied BEFORE the first Defect capture rather
+            # than after four of them had passed without the number in them: a summary that
+            # drops a character's central mechanic is the same blindness one layer up.
+            #
+            # `passive_val` and `evoke_val` are the two per-orb numbers the emulator keeps
+            # (a Dark orb accumulates its evoke value, a Glass orb decays its passive one),
+            # so an orb is not fully described by its type alone.
+            "orbs": [
+                {
+                    "id": orb.get("id"),
+                    "passive_val": orb.get("passive_val"),
+                    "evoke_val": orb.get("evoke_val"),
+                }
+                for orb in player.get("orbs") or []
+            ],
+            "orb_slots": player.get("orb_slots"),
             "hand": hand,
             "status": normalize_status(player.get("status") or []),
         },

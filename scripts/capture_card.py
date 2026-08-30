@@ -425,6 +425,21 @@ def capture(
             abandon_existing=False,
             ascension=ascension,
         )
+    else:
+        # `--reuse-run` reuses whatever run is in progress, and that run has a CHARACTER.
+        # Reusing a Regent's run to capture a Defect card produced four fixtures whose
+        # filename said defect and whose player said Regent -- with no orb queue, which is
+        # the whole of what a Defect card needs. Refuse rather than record it.
+        running = ((start_real_game_run.get_state(base_url).get("player") or {})).get(
+            "character"
+        )
+        wanted = character.replace("_", " ").lower()
+        if running is not None and running.removeprefix("The ").lower() != wanted:
+            raise RuntimeError(
+                f"--reuse-run wants a {character} run and the one in progress is "
+                f"{running!r}. Drop --reuse-run to start a fresh one.",
+            )
+
     validate.jump_to_encounter(base_url, encounter)
 
     if powers:
