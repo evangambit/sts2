@@ -6606,20 +6606,26 @@ public static class CardEffects
                 // of EVERY turn. It had been one of thirty labels on a flat Strength body.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Furnace, upgraded ? 7 : 5);
                 break;
+            case "Genesis":
+                // Genesis: `StarsPerTurn` 2, upgrading by 1 -- that many stars at the start
+                // of EVERY turn, and the power does not remove itself.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Genesis, upgraded ? 3 : 2);
+                break;
+            case "NeutronAegis":
+                // Neutron Aegis: five stars for `PowerVar<PlatingPower>(8)` upgrading by 3.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 11 : 8);
+                break;
+            // Everything below still shares the flat Strength body this pool was built with.
+            // Each of these is a card whose real effect has not been read yet; carving one
+            // out means giving it its own case AFTER a `break`, never in front of a label.
             case "Abrasive":
             case "Accelerant":
             case "BulkUp":
             case "Calcify":
             case "Feral":
             case "Friendship":
-            case "Genesis":
             case "HammerTime":
             case "Lethality":
-            case "NeutronAegis":
-                // Five stars for `PowerVar<PlatingPower>(8)` upgrading by 3. The emulator
-                // gave a flat Strength from a shared body.
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 11 : 8);
-                break;
             case "MasterPlanner":
             case "MonarchsGaze":
             case "NecroMastery":

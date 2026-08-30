@@ -73,7 +73,6 @@ public class CardCoverageTests
         "Fuel",
         "GammaBlast",
         "GatherLight",
-        "Genesis",
         "Glimmer",
         "GlimpseBeyond",
         "Glitterstream",

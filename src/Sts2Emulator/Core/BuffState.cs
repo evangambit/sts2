@@ -579,6 +579,13 @@ public enum BuffId
     /// player turn.
     /// </summary>
     Furnace,
+
+    /// <summary>
+    /// <c>GenesisPower.AfterEnergyReset</c>: this many stars at the start of every turn,
+    /// for the rest of the combat. Unlike <see cref="StarNextTurn" /> it does not remove
+    /// itself.
+    /// </summary>
+    Genesis,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

@@ -555,6 +555,10 @@ READ: dict[str, tuple[str, str]] = {
         "b3b1683dd737",
         "MultiplayerOnly; 5 + 5/7 per ALLY hit on the target this turn, so 5 flat in singleplayer",
     ),
+    "Genesis": (
+        "7121a6770ee6",
+        "GenesisPower 2/3: that many stars at the start of EVERY turn, and it does not expire",
+    ),
     "GeneticAlgorithm": (
         "9c7cc2b93b94",
         "BlockVar(CurrentBlock) starts at 1 and rises by IntVar(Increase, 3m) per play, on the card AND its DeckVersion",

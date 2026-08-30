@@ -1214,6 +1214,14 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Doom, neurosurge);
         }
 
+        // `GenesisPower.AfterEnergyReset`: stars every turn, and this one does NOT remove
+        // itself.
+        int genesis = BuffSystem.Get(state.PlayerBuffs, BuffId.Genesis);
+        if (genesis > 0)
+        {
+            Effects.CardEffects.GainStars(state, genesis);
+        }
+
         // `StarNextTurnPower.AfterEnergyReset`: the stars arrive at the turn's reset and the
         // power removes itself, so Convergence pays out exactly once.
         int starNextTurn = BuffSystem.Get(state.PlayerBuffs, BuffId.StarNextTurn);

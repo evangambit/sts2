@@ -24,6 +24,16 @@
 - Native X-cost cards should spend current `state.Energy` inside `CardEffects.Apply` after the played card's printed cost has been handled; generated X-cost cards currently encode cost as 0.
 - Native card effects that retain the remaining hand should apply a player `BuffId` and let `CombatEngine.EndTurn` skip normal discard for non-ethereal cards, then decrement/remove the retain counter at player side turn end.
 - Native card effects that reapply or scale an enemy debuff after dealing damage should keep the pre-damage target reference, verify the target survived, and reuse the relevant debuff hooks.
+- **Giving a card its own body means giving it its own `case`, placed AFTER a `break;` or
+  `return true;` — never immediately in front of another `case` label.** `CardEffects`
+  stacks labels over shared bodies, so a body written under the label you were aiming at is
+  also the body for every label above it. This has gone wrong eight times: Veilpiercer's
+  power reached Defile and Reap, Sleight of Flesh's reached Melancholy and Misery,
+  Eradicate's X-cost reached four basics, and Genesis's stars reached Abrasive. Run
+  `uv run python scripts/audit_shared_card_bodies.py` after every edit to a stacked switch,
+  BEFORE the tests — it names the slip in seconds where a capture only catches the cards
+  that happen to have one. Name the card the body is for in its comment; that is the
+  convention the scan relies on.
 - Native card effects with multiple actions should use explicit card cases when decompiled effect order matters; do not rely on fallback damage/block ordering.
 - Native card effects that move cards from discard to hand should operate after the played card has left hand, clear `FreeThisTurn`, and respect the 10-card hand cap.
 - Native card effects that splash based on the first hit should use the effective first-hit HP-loss plus overkill amount, then apply splash as unpowered damage unless decompiled value props say otherwise.
