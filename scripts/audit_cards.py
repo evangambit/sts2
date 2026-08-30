@@ -142,6 +142,10 @@ READ: dict[str, tuple[str, str]] = {
         "c5f41cadb022",
         "FromHandForUpgrade ASKS; upgraded takes every upgradable card with no choice",
     ),
+    "AscendersBane": (
+        "3a372ec07f97",
+        "Eternal, Unplayable and Ethereal; CanBeGeneratedByModifiers false",
+    ),
     "AshenStrike": (
         "30f92abca715",
         "6 + 3/4 per card in the exhaust pile, through the ordinary attack command",
@@ -295,6 +299,10 @@ READ: dict[str, tuple[str, str]] = {
         "f47124de99a9",
         "DarkShacklesPower IS a TemporaryStrengthPower with IsPositive false; 9 upgrading by 6",
     ),
+    "Dazed": (
+        "6ee276da3954",
+        "Ethereal and Unplayable, MaxUpgradeLevel 0, no OnPlay at all",
+    ),
     "DeadlyPoison": (
         "9d449a094209",
         "Poison 5/7 on the target",
@@ -414,6 +422,10 @@ READ: dict[str, tuple[str, str]] = {
     "GeneticAlgorithm": (
         "9c7cc2b93b94",
         "BlockVar(CurrentBlock) starts at 1 and rises by IntVar(Increase, 3m) per play, on the card AND its DeckVersion",
+    ),
+    "GiantRock": (
+        "5d12e05575b0",
+        "16/20 damage",
     ),
     "GoldAxe": (
         "40b23415dc9f",
@@ -560,6 +572,10 @@ READ: dict[str, tuple[str, str]] = {
     "NecroMastery": (
         "97601e8d4de7",
         "SummonVar(5)+3, then NecroMasteryPower -- not 10/13 and not Strength",
+    ),
+    "NeowsFury": (
+        "19c48697bb9d",
+        "10/14 then up to 2/3 CHOSEN discard cards, minimum ZERO, capped by hand room",
     ),
     "Nostalgia": (
         "7a737716050f",
@@ -717,6 +733,10 @@ READ: dict[str, tuple[str, str]] = {
         "31e3abaee6cc",
         "hits all, then evokes the front orb TWICE per orb held",
     ),
+    "Shiv": (
+        "4c1f1ec8c53f",
+        "4/6 damage, Exhaust; TargetType becomes AllEnemies while the owner holds FanOfKnivesPower",
+    ),
     "Shockwave": (
         "17380b0e2bed",
         "Weak AND Vulnerable at 3/5 to every hittable enemy",
@@ -732,6 +752,10 @@ READ: dict[str, tuple[str, str]] = {
     "Skewer": (
         "2e4678debc04",
         "HasEnergyCostX; 8/11 damage X times at one target",
+    ),
+    "Slimed": (
+        "066f790a162e",
+        "Exhaust, and it DRAWS 1 on play -- not a do-nothing status",
     ),
     "Spinner": (
         "2e4bbee2ca95",

@@ -301,9 +301,31 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, 1);
                 break;
 
-            case AN.NeowsFury: // 1-cost, 10/14 damage + move 2/3 discard cards to hand, exhaust
+            case AN.NeowsFury: // 1-cost, 10/14 damage + up to 2/3 CHOSEN discard cards to hand
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                MoveDiscardCardsToHand(state, upgraded ? 3 : 2);
+                {
+                    // `CardSelectCmd.FromCombatPile(discard, prefs(prompt, 0, num))` -- the
+                    // player picks, the MINIMUM is zero so the screen can be declined, and
+                    // `num` is capped by the room left in hand rather than being the flat
+                    // 2/3. This took the first two cards off the top of the discard pile,
+                    // which on a card whose whole point is choosing what to get back is
+                    // the leftmost-card reading again.
+                    int room = MaxCardsInHand - state.Hand.Count;
+                    int wanted = Math.Min(upgraded ? 3 : 2, Math.Max(0, room));
+                    if (wanted > 0 && state.DiscardPile.Count > 0)
+                    {
+                        OpenCardSelection(
+                            state,
+                            CardSelectionKind.DiscardToHand,
+                            state.DiscardPile.Count,
+                            def.Id,
+                            autoPick: 0,
+                            amount: wanted,
+                            skippable: true
+                        );
+                    }
+                }
+
                 break;
 
             case IC.Dismantle: // 1-cost, 8/10 dmg, hits twice if target is Vulnerable
@@ -3447,6 +3469,23 @@ public static class CardEffects
     }
 
     /// <summary>Reopens the discard screen for its next pick.</summary>
+    /// <summary>Neow's Fury's screen, reopened for each remaining pick.</summary>
+    internal static void ReopenDiscardToHandSelection(
+        CombatState state,
+        int sourceCardDefId,
+        int remaining,
+        bool skippable
+    ) =>
+        OpenCardSelection(
+            state,
+            CardSelectionKind.DiscardToHand,
+            state.DiscardPile.Count,
+            sourceCardDefId,
+            autoPick: 0,
+            amount: remaining,
+            skippable: skippable
+        );
+
     internal static void ReopenDiscardSelection(
         CombatState state,
         int sourceCardDefId,

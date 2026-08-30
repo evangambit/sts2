@@ -1607,6 +1607,23 @@ public static class CombatEngine
                     state.Hand.Add(recovered);
                 }
 
+                // Neow's Fury takes up to 2/3, so the screen reopens until they are spent
+                // or the pile runs out -- and it stays declinable, since its minimum is
+                // zero at every step and not only the first.
+                if (
+                    selection.Amount > 1
+                    && state.DiscardPile.Count > 0
+                    && state.Hand.Count < Effects.CardEffects.MaxCardsInHand
+                )
+                {
+                    Effects.CardEffects.ReopenDiscardToHandSelection(
+                        state,
+                        selection.SourceCardDefId,
+                        selection.Amount - 1,
+                        selection.Skippable
+                    );
+                }
+
                 break;
 
             case CardSelectionKind.MarkHandCardSly:
