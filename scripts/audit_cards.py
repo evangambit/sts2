@@ -601,6 +601,10 @@ READ: dict[str, tuple[str, str]] = {
         "19c48697bb9d",
         "10/14 then up to 2/3 CHOSEN discard cards, minimum ZERO, capped by hand room",
     ),
+    "NoEscape": (
+        "71a015232024",
+        "Doom 10/15 plus 5 per FULL ten already on the target",
+    ),
     "Nostalgia": (
         "7a737716050f",
         "NostalgiaPower 1; the upgrade cuts the cost",
@@ -632,6 +636,10 @@ READ: dict[str, tuple[str, str]] = {
     "PactsEnd": (
         "53815c93c362",
         "17/23 to all, and ONLY when the exhaust pile holds 3+",
+    ),
+    "Pagestorm": (
+        "6cad5c1db797",
+        "PagestormPower 1: drawing an ETHEREAL card draws that many more",
     ),
     "Panache": (
         "d063d1dcfd21",
@@ -713,6 +721,10 @@ READ: dict[str, tuple[str, str]] = {
         "fe99395a9326",
         "hits for its CURRENT damage then raises its own var by 5/9; growth lives on the copy",
     ),
+    "ReaperForm": (
+        "ab8571e643f9",
+        "ReaperFormPower 1: a powered attack Dooms for TotalDamage -- blocked plus unblocked",
+    ),
     "Reboot": (
         "ec209d59f6ad",
         "hand into the draw pile, shuffle, then draw CardsVar(4) +2",
@@ -761,6 +773,10 @@ READ: dict[str, tuple[str, str]] = {
         "0b84fd59f9b3",
         "9/12 then one of THREE draw-pile cards sampled by StableShuffle on CombatCardSelection",
     ),
+    "SentryMode": (
+        "e37e1a42ddc0",
+        "SentryModePower 1: that many Sweeping Gazes into HAND before every hand draw",
+    ),
     "SetupStrike": (
         "e5ed2377e470",
         "7/9 then SetupStrikePower 2/3, which is a TemporaryStrengthPower",
@@ -776,6 +792,10 @@ READ: dict[str, tuple[str, str]] = {
     "Shockwave": (
         "17380b0e2bed",
         "Weak AND Vulnerable at 3/5 to every hittable enemy",
+    ),
+    "Shroud": (
+        "8364a8c12d55",
+        "ShroudPower 2/3: block whenever its owner applies DOOM, not block next turn",
     ),
     "ShrugItOff": (
         "cfb33fefb5a4",

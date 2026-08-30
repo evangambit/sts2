@@ -2443,6 +2443,11 @@ public static class CardEffects
             {
                 state.DiscardPile.Add(card);
             }
+
+            // AFTER the card has landed, not next to DrawForIteration above: the hook is
+            // AfterCardDrawn, and drawing more before this card reaches hand would deal
+            // the extra cards into the wrong place in the order.
+            DrawForPagestorm(state, card, rng);
         }
     }
 
@@ -3701,6 +3706,23 @@ public static class CardEffects
         if (hpLoss > 0)
         {
             EnemyAI.TriggerShriekIfWounded(target);
+        }
+
+        // `ReaperFormPower.AfterDamageGiven`, on `result.TotalDamage` -- blocked plus
+        // unblocked, so an attack into a full shield still Dooms for all of it. This
+        // function is the player's POWERED-attack path (the pet's too, and the power
+        // counts `dealer.PetOwner`), which is exactly what `props.IsPoweredAttack()` asks.
+        int reaperForm = BuffSystem.Get(state.PlayerBuffs, BuffId.ReaperForm);
+        if (reaperForm > 0 && damage > 0 && target.Hp > 0)
+        {
+            // Applied directly rather than through ApplyEnemyDebuffToTarget, which is the
+            // CARD-debuff chokepoint: this Doom is `PowerCmd.Apply<DoomPower>(..., null)`
+            // with no card source, so the Unsettling Lamp must not double it. The two
+            // riders that DO care are called by hand.
+            int doom = damage * reaperForm;
+            BuffSystem.Apply(target.Buffs, BuffId.Doom, doom);
+            DamageForSleightOfFlesh(state, target, BuffId.Doom, doom);
+            BlockForShroud(state, BuffId.Doom, doom, rng: null);
         }
 
         // BurrowedPower.AfterBlockBroken -- checked on every hit, because breaking the
@@ -5178,7 +5200,10 @@ public static class CardEffects
                 ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 2 : 1);
                 return true;
             case "Shroud":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.BlockNextTurn, upgraded ? 3 : 2);
+                // BlockVar(2, Unpowered) upgrading by 1 -- and it is the block per DOOM
+                // applied, not block next turn. ShroudPower gains it every time its owner
+                // Dooms anyone, which is why it pairs with Reaper Form.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Shroud, upgraded ? 3 : 2);
                 return true;
             case "SoulStorm":
                 DealDamageToAll(
@@ -5360,12 +5385,32 @@ public static class CardEffects
                 // the missing thirteen block.
                 GainBlock(state, Blk(def, upgraded, card), rng);
                 return true;
-            case "Misery":
-            case "ReaperForm":
-            case "SentryMode":
-            case "SpiritOfAsh":
             case "Pagestorm":
+                // CardsVar 1; the upgrade is a discount. PagestormPower draws this many
+                // extra whenever an ETHEREAL card is drawn.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Pagestorm, 1);
+                return true;
+            case "ReaperForm":
+                // `PowerCmd.Apply<ReaperFormPower>(..., 1m)`; the upgrade only adds Retain.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.ReaperForm, 1);
+                return true;
+            case "SentryMode":
+                // PowerVar 1; the upgrade is a discount.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.SentryMode, 1);
+                return true;
             case "NoEscape":
+            {
+                // CalculationBase 10 (upgrading by 5) plus CalculationExtra 5 for each
+                // FULL DoomThreshold of 10 already on the target -- `Math.Floor(doom /
+                // 10)`. It had been sitting in High Five's Osty-attack body and applied
+                // nothing at all.
+                var doomed = FirstEnemy(state);
+                int already = doomed != null ? BuffSystem.Get(doomed.Buffs, BuffId.Doom) : 0;
+                ApplyEnemyDebuff(state, BuffId.Doom, (upgraded ? 15 : 10) + 5 * (already / 10), rng);
+                return true;
+            }
+            case "Misery":
+            case "SpiritOfAsh":
             case "Lethality":
             case "HighFive":
                 // `OstyDamageVar(11)` upgrading by 2, at ALL opponents, then Vulnerable
@@ -6847,6 +6892,18 @@ public static class CardEffects
         ExhaustCard(state, card, rng: rng);
     }
 
+    /// <summary>
+    /// `CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, ...)`: a generated card
+    /// goes to hand if there is room, and is dropped if there is not.
+    /// </summary>
+    internal static void AddGeneratedCardToHand(CombatState state, int defId)
+    {
+        if (state.Hand.Count < MaxCardsInHand)
+        {
+            state.Hand.Add(new CardInstance(defId, false));
+        }
+    }
+
     private static void AddSoulToHand(CombatState state)
     {
         if (state.Hand.Count < MaxCardsInHand)
@@ -7254,6 +7311,7 @@ public static class CardEffects
         BuffSystem.Apply(target.Buffs, id, magnitude);
         DrawForVicious(state, id, before, BuffSystem.Get(target.Buffs, id), rng);
         DamageForSleightOfFlesh(state, target, id, magnitude);
+        BlockForShroud(state, id, magnitude, rng);
         if (id == BuffId.Poison && magnitude > 0)
         {
             CountPoisonForOutbreak(state);
@@ -7409,6 +7467,32 @@ public static class CardEffects
                     pile[i] = pile[i] with { CostBump = pile[i].CostBump - 1 };
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// `ShroudPower.AfterPowerAmountChanged`: its owner applying DOOM to anyone gains it
+    /// this much Unpowered block. Applied at the same chokepoint as Sleight of Flesh, and
+    /// for the same reason -- "the player applied Doom" is not a thing the call sites say.
+    /// </summary>
+    private static void BlockForShroud(CombatState state, BuffId id, int magnitude, Random? rng)
+    {
+        int shroud = BuffSystem.Get(state.PlayerBuffs, BuffId.Shroud);
+        if (shroud > 0 && id == BuffId.Doom && magnitude != 0)
+        {
+            GainBlock(state, shroud, rng);
+        }
+    }
+
+    /// <summary>
+    /// `PagestormPower.AfterCardDrawn`: an ETHEREAL card drawn draws this many more.
+    /// </summary>
+    private static void DrawForPagestorm(CombatState state, CardInstance card, Random rng)
+    {
+        int pagestorm = BuffSystem.Get(state.PlayerBuffs, BuffId.Pagestorm);
+        if (pagestorm > 0 && CombatEngine.IsEtherealForPowers(state, card))
+        {
+            DrawCards(state, pagestorm, rng);
         }
     }
 

@@ -1103,6 +1103,15 @@ public static class CombatEngine
             Effects.CardEffects.AddRandomDefectPowerCardsToHand(state, creativeAi, rng);
         }
 
+        // `SentryModePower.BeforeHandDraw` -- BEFORE the hand is drawn, so the Gazes are
+        // at the bottom of the new hand rather than the top, and they count against the
+        // hand cap the draw then runs into.
+        int sentryMode = BuffSystem.Get(state.PlayerBuffs, BuffId.SentryMode);
+        for (int i = 0; i < sentryMode; i++)
+        {
+            Effects.CardEffects.AddGeneratedCardToHand(state, 485); // SweepingGaze
+        }
+
         // Draw five cards -- less MindRot, which is `Math.Max(0, count - Amount)` on the
         // whole draw rather than a per-card effect.
         Effects.CardEffects.DrawCards(

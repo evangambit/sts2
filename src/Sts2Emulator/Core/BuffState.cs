@@ -411,6 +411,31 @@ public enum BuffId
     /// applied it, and it is removed when the player's side turn ends.
     /// </summary>
     Oblivion,
+
+    /// <summary>
+    /// <c>PagestormPower.AfterCardDrawn</c>: drawing an ETHEREAL card draws this many more.
+    /// </summary>
+    Pagestorm,
+
+    /// <summary>
+    /// <c>ReaperFormPower.AfterDamageGiven</c>: a POWERED attack by the player or their pet
+    /// Dooms the target for <c>TotalDamage * Amount</c> — and TotalDamage is blocked plus
+    /// unblocked, so an attack into a full shield still Dooms for all of it.
+    /// </summary>
+    ReaperForm,
+
+    /// <summary>
+    /// <c>SentryModePower.BeforeHandDraw</c>: puts this many Sweeping Gazes into HAND at
+    /// the start of every turn, before the hand is drawn.
+    /// </summary>
+    SentryMode,
+
+    /// <summary>
+    /// <c>ShroudPower.AfterPowerAmountChanged</c>: gain this much Unpowered block whenever
+    /// its owner applies DOOM to anyone. Pairs with <see cref="ReaperForm" />, which turns
+    /// every attack into a Doom.
+    /// </summary>
+    Shroud,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);
