@@ -5073,7 +5073,11 @@ public static class CardEffects
                 ApplyAllEnemyDebuff(state, BuffId.Doom, upgraded ? 11 : 7, rng);
                 return true;
             case "Oblivion":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Doom, upgraded ? 4 : 3);
+                // `PowerCmd.Apply<OblivionPower>(cardPlay.Target, Doom.BaseValue)` -- on
+                // the ENEMY, and it is not Doom itself. The power hands that enemy this
+                // much Doom for every card the player goes on to play this turn. The
+                // emulator gave the PLAYER Doom: wrong target, wrong power.
+                ApplyEnemyDebuff(state, BuffId.Oblivion, upgraded ? 4 : 3, rng);
                 return true;
             case "Scourge":
                 ApplyEnemyDebuff(state, BuffId.Doom, upgraded ? 16 : 13, rng);
@@ -5324,8 +5328,11 @@ public static class CardEffects
                 ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 3 : 2);
                 return true;
             case "Demesne":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, 1);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, 1);
+                // `PowerCmd.Apply<DemesnePower>(..., Cards.BaseValue)` -- one stack, and
+                // the upgrade is a discount, not a bigger stack. DemesnePower is both
+                // ModifyHandDraw and ModifyMaxEnergy, EVERY turn; the emulator granted the
+                // one-shot NextTurn pair, which is a single turn of a permanent effect.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Demesne, 1);
                 return true;
             case "DevourLife":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoxiousFumes, upgraded ? 2 : 1);
@@ -5340,15 +5347,22 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 1 : 2);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, 1);
                 return true;
+            case "SleightOfFlesh":
+                // PowerVar 9, upgrading by 4. Its own case: it had been the fifth of ten
+                // labels stacked over High Five's Osty-attack body, and giving "it" a body
+                // by writing one under that label gave the body to Melancholy, Misery,
+                // Reaper Form and Sentry Mode as well.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.SleightOfFlesh, upgraded ? 13 : 9);
+                return true;
             case "Melancholy":
+                // `GainsBlock`, BlockVar(13) upgrading by 4. It had been sharing High
+                // Five's Osty-attack body, which gains nothing, and a live capture caught
+                // the missing thirteen block.
+                GainBlock(state, Blk(def, upgraded, card), rng);
+                return true;
             case "Misery":
             case "ReaperForm":
             case "SentryMode":
-            case "SleightOfFlesh":
-                // PowerVar 9, upgrading by 4. It had been sharing High Five's Osty-attack
-                // body, which is a different card entirely.
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.SleightOfFlesh, upgraded ? 13 : 9);
-                return true;
             case "SpiritOfAsh":
             case "Pagestorm":
             case "NoEscape":
@@ -5379,14 +5393,15 @@ public static class CardEffects
                 }
 
                 return true;
-            case "Haunt":
             case "LegionOfBone":
                 // Summons for every LIVING player creature, which in a solo run is one --
                 // and the card is MultiplayerOnly, so a solo run only ever sees it through
                 // a debug grant. It has no damage and no block, so the shared
-                // ApplyBaseDamageAndBlock arm it used to sit in did nothing at all.
+                // ApplyBaseDamageAndBlock arm it used to sit in did nothing at all. Its
+                // own case, because Haunt shared that arm and does not share this one.
                 SummonOsty(state, upgraded ? 8 : 6);
                 return true;
+            case "Haunt":
             case "ReanimatePower":
                 ApplyBaseDamageAndBlock(def, upgraded, state, card, rng);
                 return true;
@@ -7369,6 +7384,32 @@ public static class CardEffects
 
         int? powerId = GeneratedData.Powers.FindId($"{id}Power");
         return powerId is int found && !GeneratedData.Powers.Get(found).IsBuff;
+    }
+
+    /// <summary>
+    /// `Melancholy.AfterDeath`: `EnergyCost.AddThisCombat(-Energy.IntValue)` on the CARD,
+    /// so every creature death makes each copy in a combat pile one cheaper, for good.
+    /// </summary>
+    /// <remarks>
+    /// It returns early on `wasRemovalPrevented`, so this is called from the it-really-died
+    /// half of HandleEnemyDeaths and not from the side-effects block above the revives.
+    ///
+    /// Every combat pile, because the hook's own test is `pile.IsCombatPile` -- a
+    /// Melancholy sitting in the draw pile gets cheaper while you are killing things, which
+    /// is the point of the card.
+    /// </remarks>
+    internal static void CheapenMelancholyForDeath(CombatState state)
+    {
+        foreach (var pile in new[] { state.Hand, state.DrawPile, state.DiscardPile, state.ExhaustPile })
+        {
+            for (int i = 0; i < pile.Count; i++)
+            {
+                if (GeneratedData.Cards.Get(pile[i].DefId).Name == "Melancholy")
+                {
+                    pile[i] = pile[i] with { CostBump = pile[i].CostBump - 1 };
+                }
+            }
+        }
     }
 
     private static void DrawForVicious(

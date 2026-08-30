@@ -396,6 +396,21 @@ public enum BuffId
     /// A debuff engine, not a stat.
     /// </summary>
     SleightOfFlesh,
+
+    /// <summary>
+    /// <c>DemesnePower</c>: <c>ModifyHandDraw</c> AND <c>ModifyMaxEnergy</c>, both by its
+    /// amount, for the rest of the combat. The emulator granted a one-shot NextTurnEnergy
+    /// and NextTurnDraw instead -- a single turn of a permanent effect.
+    /// </summary>
+    Demesne,
+
+    /// <summary>
+    /// <c>OblivionPower</c>, a DEBUFF on an enemy: every card its applier plays gives that
+    /// enemy this much Doom. It records the amount in <c>BeforeCardPlayed</c> and pays out
+    /// in <c>AfterCardPlayed</c>, which is how it avoids triggering on the card that
+    /// applied it, and it is removed when the player's side turn ends.
+    /// </summary>
+    Oblivion,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

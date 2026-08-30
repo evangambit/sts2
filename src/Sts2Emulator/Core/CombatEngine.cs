@@ -179,6 +179,15 @@ public static class CombatEngine
                 : 0;
         int serpentFormBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.SerpentForm);
 
+        // `OblivionPower.BeforeCardPlayed` writes the current amount into a per-card
+        // dictionary, and AfterCardPlayed spends THAT. Snapshotted here for the same
+        // reason Serpent Form is: the power records what it was worth when the play began.
+        Span<int> oblivionBefore = stackalloc int[state.Enemies.Count];
+        for (int i = 0; i < state.Enemies.Count; i++)
+        {
+            oblivionBefore[i] = BuffSystem.Get(state.Enemies[i].Buffs, BuffId.Oblivion);
+        }
+
         // Read here, with Burst and Serpent Form, for the same reason all three are:
         // the power records what it was worth when the play STARTED.
         CaptureBeforePlayPowers(state);
@@ -383,6 +392,18 @@ public static class CombatEngine
         if (IsEtherealForPowers(state, card))
         {
             state.EtherealCardPlaysThisCombat++;
+        }
+
+        // `OblivionPower.AfterCardPlayed` pays out the amount its BeforeCardPlayed
+        // recorded, as Doom on the enemy carrying it. Paying the SNAPSHOT is what keeps
+        // Oblivion off the card that applied it -- at BeforeCardPlayed the enemy does not
+        // have the power yet, so there is nothing recorded for that play.
+        for (int i = 0; i < state.Enemies.Count && i < oblivionBefore.Length; i++)
+        {
+            if (oblivionBefore[i] > 0 && state.Enemies[i].Hp > 0)
+            {
+                BuffSystem.Apply(state.Enemies[i].Buffs, BuffId.Doom, oblivionBefore[i]);
+            }
         }
 
         IncrementPlayedCardTypeCounters(state, def);
@@ -618,6 +639,14 @@ public static class CombatEngine
         }
 
         Effects.CardEffects.KillDoomedEnemiesForTurnEnd(state);
+
+        // `OblivionPower.AfterSideTurnEnd` removes itself when the PLAYER's side turn ends
+        // -- not its owner's, which is the enemy's. Removed after the Doom it spent the
+        // turn stacking has been paid, so the last card played still counts.
+        foreach (var enemy in state.Enemies)
+        {
+            BuffSystem.Remove(enemy.Buffs, BuffId.Oblivion);
+        }
 
         // ── Enemy turns ───────────────────────────────────────────────────────
         state.PlayerTurn = false;
@@ -1082,6 +1111,9 @@ public static class CombatEngine
                 0,
                 5
                     + BuffSystem.Get(state.PlayerBuffs, BuffId.MachineLearning)
+                    // `DemesnePower.ModifyHandDraw`, the other half of a power that also
+                    // raises max energy -- both every turn, not once.
+                    + BuffSystem.Get(state.PlayerBuffs, BuffId.Demesne)
                     + Effects.RelicEffects.ExtraHandDraw(state)
                     - BuffSystem.Get(state.PlayerBuffs, BuffId.MindRot)
             ),
@@ -1258,6 +1290,8 @@ public static class CombatEngine
             0,
             state.MaxEnergy
                 + BuffSystem.Get(state.PlayerBuffs, BuffId.PyrePower)
+                // `DemesnePower.ModifyMaxEnergy`.
+                + BuffSystem.Get(state.PlayerBuffs, BuffId.Demesne)
                 - BuffSystem.Get(state.PlayerBuffs, BuffId.WasteAway)
         );
     }
@@ -1931,6 +1965,8 @@ public static class CombatEngine
             {
                 BuffSystem.Remove(state.PlayerBuffs, BuffId.Constrict);
             }
+
+            Effects.CardEffects.CheapenMelancholyForDeath(state);
 
             foreach (var enemy in state.Enemies.Where(e => e.Hp > 0))
             {

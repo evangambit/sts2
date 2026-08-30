@@ -315,6 +315,10 @@ READ: dict[str, tuple[str, str]] = {
         "a6b5e6033e67",
         "13/17 damage, Ethereal, and nothing else -- no exhaust",
     ),
+    "Demesne": (
+        "7b0253f7a76a",
+        "DemesnePower 1: +1 hand draw AND +1 max energy every turn; the upgrade is a discount",
+    ),
     "DemonForm": (
         "f52b476dd53f",
         "DemonFormPower at the StrengthPower var, 2 upgrading by 1",
@@ -565,6 +569,10 @@ READ: dict[str, tuple[str, str]] = {
         "9f0073aca2ef",
         "MayhemPower 1; the upgrade cuts the cost",
     ),
+    "Melancholy": (
+        "1a827bd8c371",
+        "13/17 block, and every creature death makes each copy in a combat pile one cheaper",
+    ),
     "MementoMori": (
         "23dd9431e144",
         "9 + 4 per card discarded this turn; OnUpgrade raises BOTH -- base +2 and per-discard +1",
@@ -600,6 +608,10 @@ READ: dict[str, tuple[str, str]] = {
     "NotYet": (
         "d23576d6487a",
         "heal 10/13; CanBeGeneratedInCombat is false",
+    ),
+    "Oblivion": (
+        "28cec0ebd7c5",
+        "OblivionPower 3/4 on the TARGET -- every later card that turn Dooms it for that much",
     ),
     "Offering": (
         "93f6ff753d2f",
