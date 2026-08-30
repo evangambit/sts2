@@ -841,6 +841,10 @@ READ: dict[str, tuple[str, str]] = {
         "e5ed2377e470",
         "7/9 then SetupStrikePower 2/3, which is a TemporaryStrengthPower",
     ),
+    "SharedFate": (
+        "b4f51371fa8f",
+        "PERMANENT Strength loss: 2 on the player and 2/3 on the target, both negative StrengthPowers",
+    ),
     "Shatter": (
         "31e3abaee6cc",
         "hits all, then evokes the front orb TWICE per orb held",
@@ -880,6 +884,10 @@ READ: dict[str, tuple[str, str]] = {
     "Snap": (
         "a8b149a8f00c",
         "OstyDamage 7/10, then a HAND card of your choosing gains Retain -- the select is outside the missing-Osty guard",
+    ),
+    "SoulStorm": (
+        "580df34b806c",
+        "9 damage plus 2/3 per SOUL in the EXHAUST pile, at the target only",
     ),
     "Spinner": (
         "2e4bbee2ca95",

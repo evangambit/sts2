@@ -5243,8 +5243,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
                 return true;
             case "SharedFate":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
-                ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 2 : 1);
+                // Two StrengthPowers, both at a NEGATIVE amount: the player loses 2 and the
+                // TARGET loses 2/3, and neither is temporary. The emulator gained Strength
+                // on the player and took the enemy's back at the end of their turn.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, -2);
+                ApplyEnemyDebuff(state, BuffId.Strength, upgraded ? -3 : -2, rng);
                 return true;
             case "Shroud":
                 // BlockVar(2, Unpowered) upgrading by 1 -- and it is the block per DOOM
@@ -5253,11 +5256,15 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Shroud, upgraded ? 3 : 2);
                 return true;
             case "SoulStorm":
-                DealDamageToAll(
-                    state,
-                    DmgFrom(state, state.ExhaustPile.Count * (upgraded ? 3 : 2), def, card)
-                );
+            {
+                // CalculationBase 9 plus ExtraDamage 2 (upgrading by 1) per SOUL in the
+                // EXHAUST pile, at `cardPlay.Target`. The emulator had no base at all,
+                // counted the whole exhaust pile rather than the Souls in it, and threw the
+                // result at every enemy.
+                int souls = state.ExhaustPile.Count(c => c.DefId == 446);
+                DealDamage(state, DmgFrom(state, 9 + (upgraded ? 3 : 2) * souls, def, card));
                 return true;
+            }
             case "TheScythe":
                 DealDamage(state, 13 + state.CardsExhaustedThisTurn * (upgraded ? 2 : 1));
                 return true;
@@ -7536,7 +7543,7 @@ public static class CardEffects
     )
     {
         int amount = BuffSystem.Get(state.PlayerBuffs, BuffId.SleightOfFlesh);
-        if (amount <= 0 || magnitude == 0 || !IsEnemyDebuff(id))
+        if (amount <= 0 || magnitude == 0 || !IsEnemyDebuff(id, magnitude))
         {
             return;
         }
@@ -7550,7 +7557,7 @@ public static class CardEffects
     /// (NextTurnEnergy, ShivDamage, OutbreakCounter) and are not debuffs on anyone.
     /// `ITemporaryPower` is excluded because the game excludes it by name.
     /// </summary>
-    private static bool IsEnemyDebuff(BuffId id)
+    private static bool IsEnemyDebuff(BuffId id, int magnitude)
     {
         if (
             id is BuffId.TemporaryStrength or BuffId.TemporaryDexterity or BuffId.TemporaryFocus
@@ -7560,8 +7567,22 @@ public static class CardEffects
             return false;
         }
 
-        int? powerId = GeneratedData.Powers.FindId($"{id}Power");
-        return powerId is int found && !GeneratedData.Powers.Get(found).IsBuff;
+        if (GeneratedData.Powers.FindId($"{id}Power") is not int found)
+        {
+            return false;
+        }
+
+        var power = GeneratedData.Powers.Get(found);
+
+        // `PowerModel.GetTypeForAmount`: a COUNTER power at a negative amount is a Debuff
+        // whatever its declared type. Strength is the one that matters -- Shared Fate takes
+        // it off both sides, and that is a debuff on the enemy however the power is labelled.
+        if (magnitude < 0 && power.StackType == "Counter")
+        {
+            return true;
+        }
+
+        return !power.IsBuff;
     }
 
     /// <summary>
