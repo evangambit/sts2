@@ -428,6 +428,13 @@ public sealed class CombatState
     /// is resolving and a repeat play must not qualify twice.
     /// </summary>
     public bool LethalAttackPlay;
+
+    /// <summary>
+    /// `CardPlaysFinished` filtered to SKILLS the player finished this turn, which Lunar
+    /// Blast spends as its hit count. Its own counter rather than a filter over history,
+    /// for the same reason every other per-turn tally here is.
+    /// </summary>
+    public int SkillCardsPlayedThisTurn;
     public int UnblockedDamageHitCount; // times player took unblocked damage this combat (TearAsunder)
     public int TargetEnemyIndex = -1; // -1 = auto (first living enemy), >=0 = specific index
 

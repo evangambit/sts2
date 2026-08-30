@@ -5950,7 +5950,16 @@ public static class CardEffects
                 return true;
             }
             case "LunarBlast":
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), Math.Max(1, state.Stars), rng);
+                // Lunar Blast: 4/5 damage once per SKILL the player has finished playing
+                // this turn -- `CalculationBase 0 + Extra 1` over `CardPlaysFinished`. With
+                // no skills played it deals NOTHING, exactly as Pull From Below does with no
+                // Ethereal (E265). The emulator hit once per STAR, floored at one.
+                DealDamageMultiHit(
+                    state,
+                    Dmg(state, def, upgraded, card),
+                    state.SkillCardsPlayedThisTurn,
+                    rng
+                );
                 return true;
             case "MakeItSo":
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -6298,8 +6307,13 @@ public static class CardEffects
                 DrawCards(state, 1, rng);
                 GainEnergy(state, upgraded ? 1 : 0);
                 break;
-            case "Hotfix":
             case "KnowThyPlace":
+                // Know Thy Place: Weak 1 and Vulnerable 1 on the TARGET, and it Exhausts
+                // until upgraded. The emulator drew a card.
+                ApplyEnemyDebuff(state, BuffId.Weak, 1, rng);
+                ApplyEnemyDebuff(state, BuffId.Vulnerable, 1, rng);
+                break;
+            case "Hotfix":
             case "Spur":
             case "UpMySleeve":
                 DrawCards(state, 1, rng);

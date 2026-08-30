@@ -1181,6 +1181,7 @@ public static class CombatEngine
         BuffSystem.Remove(state.PlayerBuffs, BuffId.FeralUsed);
         state.SkillPlayedWhileSmoggy = false;
         state.AttackCardsPlayedThisTurn = 0;
+        state.SkillCardsPlayedThisTurn = 0;
         state.AttackOrSkillCardsPlayedThisTurn = 0;
         state.CardPlaysThisTurn = 0;
         state.BlockGainsThisTurn = 0;
@@ -3398,6 +3399,13 @@ public static class CombatEngine
     {
         state.CardPlaysThisTurn++;
         state.CardsPlayedThisCombat++;
+        // `CardPlaysFinished` counted here, not at the start of the play: Lunar Blast's own
+        // play must not be in its count, and this runs after the card resolves.
+        if (def.Type == CardType.Skill)
+        {
+            state.SkillCardsPlayedThisTurn++;
+        }
+
         if (def.Type == CardType.Attack || def.Type == CardType.Skill)
         {
             state.AttackOrSkillCardsPlayedThisTurn++;

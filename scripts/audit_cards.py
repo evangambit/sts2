@@ -684,6 +684,10 @@ READ: dict[str, tuple[str, str]] = {
         "a4d6f5a6e460",
         "MultiplayerOnly; KnockdownPower multiplies only ANOTHER player's damage, so nothing alone",
     ),
+    "KnowThyPlace": (
+        "fbc908f02a8e",
+        "Weak 1 and Vulnerable 1 on the TARGET; Exhausts until upgraded",
+    ),
     "LegionOfBone": (
         "82fbd8dc1fdd",
         "summons 6/8 per LIVING player creature; MultiplayerOnly, so one in solo",
@@ -695,6 +699,10 @@ READ: dict[str, tuple[str, str]] = {
     "Lift": (
         "865a36dfcb82",
         "MultiplayerOnly; 11/16 block to the targeted ally, which is the player alone",
+    ),
+    "LunarBlast": (
+        "6c471b61c02d",
+        "4/5 damage once per SKILL finished this turn -- nothing at all if none",
     ),
     "MachineLearning": (
         "b89f428eb295",
