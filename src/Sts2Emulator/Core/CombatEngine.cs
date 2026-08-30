@@ -750,6 +750,9 @@ public static class CombatEngine
             // ends -- the enemy's, here -- so a Strangle taxes the cards played on the
             // turn it lands and no longer.
             BuffSystem.Remove(enemy.Buffs, BuffId.Strangle);
+
+            // `SicEmPower.AfterSideTurnEnd` removes itself the same way.
+            BuffSystem.Remove(enemy.Buffs, BuffId.SicEm);
         }
 
         // Dark Embrace: deferred draw for Ethereal cards exhausted at end of turn.

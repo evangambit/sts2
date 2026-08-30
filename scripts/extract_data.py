@@ -27,8 +27,11 @@ CARD_CTOR = re.compile(
     # and so whether the Kaiser Crab's Surrounded turns the player (E101).
     r"(?:,\s*TargetType\.(\w+))?",
 )
-# DamageVar(6m, ...) or DamageVar(6, ...)
-DAMAGE_VAR = re.compile(r"new DamageVar\((\d+(?:\.\d+)?)m?,")
+# DamageVar(6m, ...) or DamageVar(6, ...) -- and OstyDamageVar, which is the same thing
+# for a Necrobinder card whose PET swings. Ten cards declare their damage that way, and
+# matching only DamageVar gave every one of them BaseDamage 0: High Five dealt nothing at
+# all, because its case leans on the printed number.
+DAMAGE_VAR = re.compile(r"new (?:Osty)?DamageVar\((\d+(?:\.\d+)?)m?,")
 # BlockVar(5m, ...)
 BLOCK_VAR = re.compile(r"new BlockVar\((\d+(?:\.\d+)?)m?,")
 # UpgradeValueBy on damage / block
@@ -47,7 +50,9 @@ HAS_ENERGY_COST_X = re.compile(r"HasEnergyCostX\s*=>\s*true")
 MULTIPLAYER_ONLY = re.compile(
     r"MultiplayerConstraint\s*=>\s*CardMultiplayerConstraint\.MultiplayerOnly",
 )
-UPGRADE_DMG = re.compile(r"DynamicVars\.Damage\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
+UPGRADE_DMG = re.compile(
+    r"DynamicVars\.(?:Osty)?Damage\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)"
+)
 UPGRADE_BLOCK = re.compile(r"DynamicVars\.Block\.UpgradeValueBy\((\d+(?:\.\d+)?)m?\)")
 
 # HP: plain int, or an AscensionHelper pair. Both branches are kept: the second is what

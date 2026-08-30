@@ -359,6 +359,16 @@ public enum BuffId
     /// that applied or stacked it.
     /// </summary>
     Strangle,
+
+    /// <summary>
+    /// <c>SicEmPower</c>, a DEBUFF on an enemy: when OSTY damages it, Osty is summoned for
+    /// this amount — which on a living pet is `GainMaxHp`, so the pet GROWS. Removed when
+    /// the enemy's own side turn ends, like Strangle.
+    ///
+    /// The emulator used to give the PLAYER Strength for this card: wrong target, wrong
+    /// effect, wrong number.
+    /// </summary>
+    SicEm,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

@@ -4986,8 +4986,15 @@ public static class CardEffects
 
                 return true;
             case "SicEm":
+                // `OstyDamageVar(5)` upgrading by 1, then `SicEmPower` at 3 upgrading by 1
+                // ON THE TARGET. The Strength this used to give the player was the wrong
+                // target, the wrong effect and the wrong number -- the power makes every
+                // later Osty attack into this enemy GROW Osty by its amount.
+                //
+                // The debuff is applied after the damage, so Sic Em's own hit does not
+                // trigger it.
                 DealOstyDamage(state, upgraded ? 6 : 5);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 3 : 2);
+                ApplyEnemyDebuff(state, BuffId.SicEm, upgraded ? 4 : 3, rng);
                 return true;
             case "Snap":
                 DealOstyDamage(state, upgraded ? 10 : 7);
@@ -5258,6 +5265,31 @@ public static class CardEffects
             case "NoEscape":
             case "Lethality":
             case "HighFive":
+                // `OstyDamageVar(11)` upgrading by 2, at ALL opponents, then Vulnerable
+                // 2/3 on all of them -- and it does nothing at all without a living Osty
+                // (`IsPlayable => !IsOstyMissing`). This shared a body that applies the
+                // printed damage to ONE target and nothing else, which was zero damage
+                // besides: OstyDamageVar was not extracted, so BaseDamage was 0.
+                if (state.OstyHp > 0)
+                {
+                    DealDamageToAll(state, Dmg(state, def, upgraded, card));
+                    ApplyAllEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 3 : 2, rng);
+                }
+
+                return true;
+            case "SweepingGaze":
+                // `OstyDamageVar(10)` upgrading by 5, one hit at a RANDOM opponent.
+                if (state.OstyHp > 0)
+                {
+                    DealDamageToRandomEnemiesMultiHit(
+                        state,
+                        Dmg(state, def, upgraded, card),
+                        1,
+                        rng
+                    );
+                }
+
+                return true;
             case "Haunt":
             case "LegionOfBone":
             case "ReanimatePower":
@@ -6042,10 +6074,10 @@ public static class CardEffects
             case "RightHandHand":
             case "Snap":
             case "Squeeze":
-            case "SweepingGaze":
-                // TimesUp was here too, with a flat 8/12. It has a real body in
-                // ApplyNecrobinderCard, which runs first and returns -- so this label was
-                // dead, and a dead duplicate is how a card gets "fixed" in the wrong place.
+                // TimesUp and SweepingGaze were here too. Both have real bodies in
+                // ApplyNecrobinderCard, which runs first and returns -- so these labels
+                // were dead, and a dead duplicate is how a card gets "fixed" in the wrong
+                // place.
                 DealDamage(state, upgraded ? 12 : 8);
                 break;
             case "Murder":
@@ -6657,6 +6689,20 @@ public static class CardEffects
         state.OstyMaxHp = 0;
     }
 
+    /// <summary>
+    /// An OSTY attack: the pet swings, so nothing happens when it is not alive.
+    /// </summary>
+    /// <remarks>
+    /// `SicEmPower.AfterDamageGiven` fires when the dealer is Osty and the target carries
+    /// the debuff, summoning Osty for its amount -- which on a living pet is `GainMaxHp`,
+    /// so each Osty attack into a Sic Em'd enemy grows the pet. This is the only place
+    /// that knows an attack came from Osty, which is why the check lives here rather than
+    /// in the card.
+    ///
+    /// The damage itself is still dealt through the player's `DealDamage`. The game's
+    /// `.FromOsty(...)` makes OSTY the attacker, so the player's Strength should not raise
+    /// it -- that is a known gap and a separate one from the summon.
+    /// </remarks>
     private static void DealOstyDamage(CombatState state, int amount)
     {
         if (state.OstyHp <= 0)
@@ -6664,7 +6710,19 @@ public static class CardEffects
             return;
         }
 
-        DealDamage(state, amount);
+        var target = FirstEnemy(state);
+        if (target is null)
+        {
+            return;
+        }
+
+        DealDamageToEnemy(state, target, amount);
+
+        int sicEm = BuffSystem.Get(target.Buffs, BuffId.SicEm);
+        if (sicEm > 0)
+        {
+            SummonOsty(state, sicEm);
+        }
     }
 
     private static void ExhaustFirstDrawPileCard(CombatState state, Random rng)
