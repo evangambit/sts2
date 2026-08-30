@@ -283,7 +283,31 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
     no settled state to snapshot.
 
   What is left: 28 Regent cards are captured but unread, the same shape as the
-  Necrobinder's 46. Only the DEFECT pool has never had a card verified.
+  Necrobinder's 46.
+
+  **The DEFECT pool has now had its first capture pass too: 88 cards, 86 captured
+  (two of those parked) and the last two unreachable — Scavenge raises a selection
+  screen and Ignition needs an ally a solo run does not have.** It found THREE
+  divergences where the Necrobinder found 36 and the Regent 28, and the reason is
+  measurable: the Defect pool already had all 88 cards in the READ ledger and all
+  88 carrying their own test suite before any capture was taken.
+
+  That is the most useful number in this file. Reading and testing a pool cut the
+  live-capture yield by an order of magnitude — and did NOT take it to zero. The
+  three survivors are each a kind reading cannot catch:
+
+  - **Echo Form doubled itself** (E324). A timing bug: the play count is settled at
+    SETUP, and the emulator read it after the card resolved. The existing test had
+    been written from the emulator's behaviour and encoded the bug.
+  - **`Modded` was missing from the data entirely** (E326), skipped by
+    `extract_data.py` since the initial commit with no comment. Reading a card
+    cannot notice that the extractor never emitted it; the Defect pool was 87 cards
+    where the game has 88.
+  - **An auto-played card VANISHED** (E327). Three existing tests watched Uproar's
+    attack land and leave the draw pile; none asked where it went.
+
+  Reading tells you what a card should do. Only the game tells you what the
+  emulator does.
 
   Two more shapes a capture cannot express, both learned the hard way and both now
   refused by the generator rather than mis-generated: a capture where an enemy DIES
@@ -1330,7 +1354,7 @@ when the real number is 552.
 | Ironclad    |    87 |          85 |     86 |
 | Colourless  |    64 |          64 |     64 |
 | Silent      |    88 |          88 |     46 |
-| Defect      |    88 |          87 |      0 |
+| Defect      |    88 |          88 |     88 |
 | Necrobinder |    88 |          88 |     42 |
 | Regent      |    88 |          88 |     60 |
 | Event       |    27 |          27 |      1 |
@@ -1341,11 +1365,14 @@ when the real number is 552.
 (Ironclad's counts differ by pool vs id class — the pool excludes a few cards the class
 carries, and vice versa; it is tested end to end either way.)
 
-ONE whole character has never had a card verified: the DEFECT. The Necrobinder turned up
-36 divergences in 88 cards and the Regent 28 in 88 — far higher rates than any pool before
-them, and what a never-checked character looks like. Every batch written so far turned up
-real defects, and the per-character routines have had far less scrutiny than `Apply` did,
-so expect the same yield from the Defect.
+EVERY character pool has now been captured against the live game. The Necrobinder turned up
+36 divergences in 88 cards and the Regent 28 in 88 — both had never been read. The Defect,
+which arrived fully read and fully tested, turned up three. That contrast is the best
+evidence in this file for what each kind of work buys, and neither kind replaces the other.
+
+What is left is not a pool but a category: the cards that are captured but UNREAD (46
+Necrobinder, 28 Regent), where a live capture that happened to agree is the whole of the
+evidence.
 
 The "tested" counts are cards with a dedicated suite. The Necrobinder's other 46 and the
 Regent's other 28 are captured but untested-and-unread, which means a live capture that
