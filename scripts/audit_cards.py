@@ -383,6 +383,10 @@ READ: dict[str, tuple[str, str]] = {
         "53673a33b554",
         "ModifyCardPlayCount +1 while the turn's first-in-series plays are under Amount; upgrade removes Ethereal",
     ),
+    "EnfeeblingTouch": (
+        "0d82bda24362",
+        "a StrengthLoss var of 8/11 on the TARGET, as a negative TemporaryStrengthPower",
+    ),
     "Entropy": (
         "2f53842680ef",
         "EntropyPower at CardsVar(1) flat; the upgrade adds INNATE only",
@@ -458,6 +462,10 @@ READ: dict[str, tuple[str, str]] = {
     "ForgottenRitual": (
         "7d1014df5741",
         "3/4 energy, and only if a card was exhausted this turn",
+    ),
+    "Friendship": (
+        "9958b8c7e451",
+        "COSTS 2/1 Strength, and FriendshipPower gives +1 max energy for the rest of the combat",
     ),
     "GangUp": (
         "b3b1683dd737",
@@ -551,6 +559,10 @@ READ: dict[str, tuple[str, str]] = {
     "Intercept": (
         "796edd2d43e6",
         "MultiplayerOnly; 9/13 block and CoveredPower on an ALLY -- nothing at all alone",
+    ),
+    "Invoke": (
+        "4d07ccd9ae42",
+        "next turn: 2/3 energy AND a summon of 2/3, the summon removing itself after it fires",
     ),
     "IronWave": (
         "5ae0af44ddee",

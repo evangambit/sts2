@@ -502,6 +502,19 @@ public enum BuffId
     /// decrements at its owner's side-turn end and the doubling never varies.
     /// </summary>
     Debilitate,
+
+    /// <summary>
+    /// <c>FriendshipPower.ModifyMaxEnergy</c>: this much more energy every turn for the
+    /// rest of the combat. Friendship pays for it in Strength — it applies StrengthPower at
+    /// a NEGATIVE amount.
+    /// </summary>
+    Friendship,
+
+    /// <summary>
+    /// <c>SummonNextTurnPower.AfterPlayerTurnStart</c>: summons Osty for this much at the
+    /// start of the next player turn and then removes itself.
+    /// </summary>
+    SummonNextTurn,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

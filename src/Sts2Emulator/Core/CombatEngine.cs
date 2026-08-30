@@ -1162,6 +1162,15 @@ public static class CombatEngine
             Effects.CardEffects.AddRandomDefectPowerCardsToHand(state, creativeAi, rng);
         }
 
+        // `SummonNextTurnPower.AfterPlayerTurnStart`: summons for its amount and then
+        // removes itself, so Invoke pays out exactly once.
+        int summonNextTurn = BuffSystem.Get(state.PlayerBuffs, BuffId.SummonNextTurn);
+        if (summonNextTurn > 0)
+        {
+            Effects.CardEffects.SummonOsty(state, summonNextTurn);
+            BuffSystem.Remove(state.PlayerBuffs, BuffId.SummonNextTurn);
+        }
+
         // `CountdownPower.AfterSideTurnStart`: one RANDOM hittable enemy is Doomed for its
         // amount, rolled on the CombatTargets stream like every other unaimed card.
         int countdown = BuffSystem.Get(state.PlayerBuffs, BuffId.Countdown);
@@ -1386,6 +1395,9 @@ public static class CombatEngine
                 + BuffSystem.Get(state.PlayerBuffs, BuffId.PyrePower)
                 // `DemesnePower.ModifyMaxEnergy`.
                 + BuffSystem.Get(state.PlayerBuffs, BuffId.Demesne)
+                // `FriendshipPower.ModifyMaxEnergy`, the same shape -- and also for the
+                // rest of the combat, not one turn.
+                + BuffSystem.Get(state.PlayerBuffs, BuffId.Friendship)
                 - BuffSystem.Get(state.PlayerBuffs, BuffId.WasteAway)
         );
     }

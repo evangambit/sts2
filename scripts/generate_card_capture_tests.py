@@ -99,6 +99,16 @@ def buff_ids() -> set[str]:
 # `OutbreakCounter`, and it is the COUNTER the capture is looking at.
 DISPLAY_AMOUNT_BUFFS = {"OUTBREAK_POWER": "OutbreakCounter"}
 
+# Powers the emulator names the other way round. Only reorderings and rewordings of the
+# same concept belong here -- a live power with no emulator equivalent must still refuse,
+# because that is how a missing power gets noticed at all.
+BUFF_ALIASES = {
+    "ENERGY_NEXT_TURN_POWER": "NextTurnEnergy",
+    # `EnfeeblingTouchPower : TemporaryStrengthPower` with `IsPositive => false` -- a
+    # subclass that adds nothing but a sign, and the emulator models it as the base power.
+    "ENFEEBLING_TOUCH_POWER": "TemporaryStrength",
+}
+
 
 def buff_constant(live_id: str, buffs: set[str]) -> str:
     """Map a live power entry id (``VULNERABLE_POWER``) onto ``BuffId.Vulnerable``.
@@ -107,10 +117,13 @@ def buff_constant(live_id: str, buffs: set[str]) -> str:
         UnsupportedCaptureError: if no BuffId corresponds to the live power.
 
     """
-    if (override := DISPLAY_AMOUNT_BUFFS.get(live_id)) is not None:
-        if override not in buffs:
-            raise UnsupportedCaptureError(f"BuffId.{override} is gone; check {live_id}")
-        return f"BuffId.{override}"
+    for table in (DISPLAY_AMOUNT_BUFFS, BUFF_ALIASES):
+        if (override := table.get(live_id)) is not None:
+            if override not in buffs:
+                raise UnsupportedCaptureError(
+                    f"BuffId.{override} is gone; check {live_id}"
+                )
+            return f"BuffId.{override}"
 
     wanted = normalize(live_id)
     by_norm = {normalize(name): name for name in buffs}

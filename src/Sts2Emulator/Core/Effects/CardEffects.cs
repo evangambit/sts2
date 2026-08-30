@@ -5292,8 +5292,11 @@ public static class CardEffects
                 return true;
             }
             case "Invoke":
+                // SummonVar 2 and EnergyVar 2, both upgrading by 1: next turn brings the
+                // energy AND a summon. The emulator had the energy right and granted
+                // Crimson Mantle block for the other half.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 3 : 2);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.CrimsonMantleBlock, upgraded ? 3 : 2);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.SummonNextTurn, upgraded ? 3 : 2);
                 return true;
             case "PullFromBelow":
                 // CalculationBase 0 + CalculationExtra 1 per Ethereal card PLAYED this
@@ -5420,7 +5423,10 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.DevourLife, upgraded ? 2 : 1);
                 return true;
             case "EnfeeblingTouch":
-                ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 6 : 3);
+                // The var is "StrengthLoss" 8, upgrading by 3. EnfeeblingTouchPower is a
+                // TemporaryStrengthPower with `IsPositive => false`, so the shape was right
+                // and only the numbers were invented: 3 and 6 for 8 and 11.
+                ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 11 : 8);
                 return true;
             case "ForbiddenGrimoire":
                 // One stack; the upgrade is a discount. ForbiddenGrimoirePower adds that
@@ -5430,8 +5436,15 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.ForbiddenGrimoire, 1);
                 return true;
             case "Friendship":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 1 : 2);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, 1);
+                // `PowerCmd.Apply<StrengthPower>(..., -StrengthPower.BaseValue)` -- the
+                // card COSTS Strength, and the upgrade is `UpgradeValueBy(-1)` on the var
+                // it then negates, so upgrading costs LESS. Then FriendshipPower 1, which
+                // is +1 max energy for the rest of the combat.
+                //
+                // The emulator gained Strength and gave a one-shot energy: wrong sign on
+                // one half and wrong duration on the other.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? -1 : -2);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Friendship, 1);
                 return true;
             case "SleightOfFlesh":
                 // PowerVar 9, upgrading by 4. Its own case: it had been the fifth of ten
