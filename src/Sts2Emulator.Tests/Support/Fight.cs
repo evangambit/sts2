@@ -1,5 +1,7 @@
 using Sts2Emulator.Core;
 using Sts2Emulator.Core.Effects;
+using Sts2Emulator.GeneratedData;
+using Xunit;
 
 namespace Sts2Emulator.Tests;
 
@@ -261,6 +263,36 @@ internal sealed class Fight
         CombatEngine.Step(State, State.Hand.Count + 1 + slot, _rng);
 
     public int PlayerBuffAmount(BuffId id) => BuffSystem.Get(State.PlayerBuffs, id);
+
+    /// <summary>
+    /// Asserts the player carries exactly these POWERS and no others.
+    /// </summary>
+    /// <remarks>
+    /// A capture asserts the powers the game reported, which says nothing about the ones it
+    /// did NOT report — so an emulator that invents a power passes. That is not a
+    /// hypothetical: Venerate gains STARS, the emulator granted Strength and Dexterity, and
+    /// a live capture of it passed clean because the game's empty status list generated no
+    /// assertions at all.
+    ///
+    /// "Power" means a <c>BuffId</c> with a matching <c>&lt;Name&gt;Power</c> in the
+    /// generated power data. The twenty or so ids without one are the emulator's own
+    /// counters — ShivDamage, OutbreakCounter, NextTurnEnergy — which the game does not
+    /// show and which must not be asserted against a readout that could never contain them.
+    /// </remarks>
+    public void PlayerPowersAre(params BuffId[] expected)
+    {
+        var unexpected = State
+            .PlayerBuffs.Where(buff => buff.Magnitude != 0)
+            .Select(buff => buff.Id)
+            .Where(id => GeneratedData.Powers.FindId($"{id}Power") is not null)
+            .Where(id => !expected.Contains(id))
+            .ToList();
+
+        Assert.True(
+            unexpected.Count == 0,
+            $"the game reported no such power, and the emulator has: {string.Join(", ", unexpected)}"
+        );
+    }
 
     public int EnemyBuffAmount(BuffId id, int index = 0) =>
         BuffSystem.Get(State.Enemies[index].Buffs, id);

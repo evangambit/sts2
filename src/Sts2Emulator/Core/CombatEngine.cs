@@ -92,9 +92,16 @@ public static class CombatEngine
 
         int effectiveCost = EffectiveCost(card, def, state);
         int energyToSpend = Math.Max(0, effectiveCost);
+        // `PlayerCombatState.HasEnoughResourcesFor` refuses a play whose STAR cost is more
+        // than the player holds -- a second resource, checked alongside the energy rather
+        // than folded into it. (The excess-energy-for-stars hook is on AbstractModel and
+        // nothing in the game overrides it, so there is no conversion to model.)
+        int starsToSpend = def.HasStarCostX ? state.Stars : Math.Max(0, def.StarCost);
+
         if (
             def.Unplayable
             || energyToSpend > state.Energy
+            || starsToSpend > state.Stars
             || IsBlockedBySmoggy(def, state)
             || IsBlockedByEnthralled(card, state)
             || IsBlockedBySloth(state)
@@ -125,6 +132,8 @@ public static class CombatEngine
         }
 
         state.Energy -= energyToSpend;
+        // `SpendResources` takes the stars AFTER the energy.
+        state.Stars = Math.Max(0, state.Stars - starsToSpend);
         // What this play actually cost, which is what CardPlay.Resources.EnergyValue
         // reports: an X card is printed at zero and takes the rest of the bar inside its
         // own effect, so the printed cost would tell a relic the play was free.

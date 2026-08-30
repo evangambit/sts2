@@ -88,6 +88,15 @@ public readonly record struct CardDef(
     // whatever is left on the bar, so the printed cost says nothing about what a play
     // actually cost — which is what CardPlay.Resources.EnergyValue reports to relics.
     bool HasEnergyCostX = false,
+    // The game's CardModel.CanonicalStarCost, which defaults to -1 and means "no star
+    // cost". Stars are the Regent's SECOND resource: `PlayerCombatState.
+    // HasEnoughResourcesFor` refuses a play whose star cost exceeds them, and
+    // `CardModel.SpendResources` takes them after the energy. Nothing upgrades a star cost
+    // -- `UpgradeStarCostBy` has no callers -- so the printed number is the whole story.
+    int StarCost = -1,
+    // The game's CardModel.HasStarCostX, which Stardust alone declares: it spends EVERY
+    // star and reads the count back as its hit count, the way an X energy card does.
+    bool HasStarCostX = false,
     // The game's CardModel.MultiplayerConstraint. CardFactory.FilterForPlayerCount drops
     // these from every pool in a solo run, so a single-player agent must never be offered
     // one — 21 cards, and the emulator's pools were built without the filter.

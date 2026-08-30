@@ -395,6 +395,10 @@ READ: dict[str, tuple[str, str]] = {
         "53673a33b554",
         "ModifyCardPlayCount +1 while the turn's first-in-series plays are under Amount; upgrade removes Ethereal",
     ),
+    "Eidolon": (
+        "5b700da2e1b9",
+        "exhausts the hand; Intangible 1 ONLY if nine or more were exhausted",
+    ),
     "EnfeeblingTouch": (
         "0d82bda24362",
         "a StrengthLoss var of 8/11 on the TARGET, as a negative TemporaryStrengthPower",
@@ -1045,6 +1049,10 @@ READ: dict[str, tuple[str, str]] = {
     "Veilpiercer": (
         "4f43e45d74bb",
         "VeilpiercerPower: ETHEREAL cards cost 0, one stack spent per Ethereal played",
+    ),
+    "Venerate": (
+        "bd3c22b2985d",
+        "GainStars 2/3, and nothing else -- no Strength, no Dexterity",
     ),
     "Vicious": (
         "2bf236b729ef",

@@ -5284,9 +5284,20 @@ public static class CardEffects
                 AddSoulsToDrawPile(state, upgraded ? 4 : 3, upgraded: false);
                 return true;
             case "Eidolon":
-                ExhaustFirstCardsFromHand(state, state.Hand.Count, rng);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
+            {
+                // Intangible ONLY if it exhausted nine or more -- `if (exhaustedCount >= 9)`,
+                // and the threshold is why the card has a `ShouldGlowGold` watching the hand
+                // size. The emulator granted it for any hand at all, which at a normal five
+                // cards is a free turn of taking 1 from everything.
+                int exhausted = state.Hand.Count;
+                ExhaustFirstCardsFromHand(state, exhausted, rng);
+                if (exhausted >= 9)
+                {
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
+                }
+
                 return true;
+            }
             case "SharedFate":
                 // Two StrengthPowers, both at a NEGATIVE amount: the player loses 2 and the
                 // TARGET loses 2/3, and neither is temporary. The emulator gained Strength
@@ -6436,8 +6447,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.ToolsOfTheTrade, 1);
                 break;
             case "Venerate":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, upgraded ? 2 : 1);
+                // `PlayerCmd.GainStars(StarsVar 2)`, upgrading by 1 -- the Regent's own
+                // resource, and the whole card. The emulator granted Strength AND Dexterity,
+                // and a live capture of it passed clean because the generator only asserted
+                // the powers the game DID report.
+                GainStars(state, upgraded ? 3 : 2);
                 break;
             case "WellLaidPlans":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, upgraded ? 2 : 1);

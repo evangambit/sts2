@@ -33,6 +33,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -61,6 +62,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Equal(2, fight.State.DiscardPile.Count);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(21, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -90,6 +92,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(21, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -118,6 +121,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(79, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -145,6 +149,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(57, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -173,6 +178,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(20, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -202,6 +208,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -229,6 +236,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -258,6 +266,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(82, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -286,6 +295,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(58, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -312,6 +322,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(23, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -342,6 +353,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -369,6 +381,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(87, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -396,6 +409,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(81, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -425,6 +439,7 @@ public class CardCaptureTests
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.BorrowedTime));
+        fight.PlayerPowersAre(BuffId.BorrowedTime);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -452,6 +467,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(81, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -479,6 +495,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(38, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -509,6 +526,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(4, fight.PlayerBuffAmount(BuffId.Calcify));
+        fight.PlayerPowersAre(BuffId.Calcify);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -539,6 +557,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.CallOfTheVoid));
+        fight.PlayerPowersAre(BuffId.CallOfTheVoid);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -566,6 +585,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(72, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -594,6 +614,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.ConsumingShadow));
+        fight.PlayerPowersAre(BuffId.ConsumingShadow);
         Assert.Equal(84, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -624,6 +645,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(6, fight.PlayerBuffAmount(BuffId.Countdown));
+        fight.PlayerPowersAre(BuffId.Countdown);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -654,6 +676,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(4, fight.PlayerBuffAmount(BuffId.DanseMacabre));
+        fight.PlayerPowersAre(BuffId.DanseMacabre);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -681,6 +704,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -709,6 +733,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(82, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -738,6 +763,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -769,6 +795,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -798,12 +825,71 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(80, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
         Assert.Equal(2, fight.EnemyBuffAmount(BuffId.Debilitate, 0));
         Assert.Equal(1, fight.State.OstyHp);
         Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void DefendNecrobinder_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card DefendNecrobinder --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(132), Card(132), Card(473), Card(49), Card(IC.AscendersBane), Card(473))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(473), Card(132), Card(473), Card(132), Card(132), Card(524))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(5, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void DefendRegent_Base_ByrdonisElite_Regent_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card DefendRegent --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(133), Card(133), Card(IC.AscendersBane), Card(474), Card(532), Card(133))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.Stars = 3;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(5, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.Stars);
+        fight.PlayerPowersAre();
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
     }
 
     [Fact]
@@ -828,6 +914,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(77, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -857,6 +944,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -888,6 +976,7 @@ public class CardCaptureTests
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.NextTurnEnergy));
+        fight.PlayerPowersAre(BuffId.NextTurnEnergy);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -918,6 +1007,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Demesne));
+        fight.PlayerPowersAre(BuffId.Demesne);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -948,6 +1038,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.DevourLife));
+        fight.PlayerPowersAre(BuffId.DevourLife);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -977,6 +1068,7 @@ public class CardCaptureTests
         Assert.Equal(15, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1004,6 +1096,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(82, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1031,6 +1124,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(80, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1060,6 +1154,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1089,6 +1184,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Equal(5, fight.State.ExhaustPile.Count);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1118,6 +1214,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1148,6 +1245,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1177,10 +1275,41 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
         Assert.Equal(2, fight.EnemyBuffAmount(BuffId.Vulnerable, 0));
+    }
+
+    [Fact]
+    public void FallingStar_Base_ByrdonisElite_Regent_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card FallingStar --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(179), Card(133), Card(474), Card(179), Card(474), Card(IC.AscendersBane))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.Stars = 3;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(9, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(1, fight.State.Stars);
+        fight.PlayerPowersAre();
+        Assert.Equal(82, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Weak, 0));
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Vulnerable, 0));
     }
 
     [Fact]
@@ -1204,6 +1333,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.FanOfKnives));
+        fight.PlayerPowersAre(BuffId.FanOfKnives);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1232,6 +1362,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(4, fight.PlayerBuffAmount(BuffId.FastenPower));
+        fight.PlayerPowersAre(BuffId.FastenPower);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1261,6 +1392,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(83, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1292,6 +1424,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Feral));
+        fight.PlayerPowersAre(BuffId.Feral);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1321,6 +1454,7 @@ public class CardCaptureTests
         Assert.Equal(5, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(87, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1348,6 +1482,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Equal(6, fight.State.ExhaustPile.Count);
+        fight.PlayerPowersAre();
         Assert.Equal(55, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1373,6 +1508,7 @@ public class CardCaptureTests
         Assert.Equal(5, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1398,6 +1534,7 @@ public class CardCaptureTests
         Assert.Equal(5, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(85, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1425,6 +1562,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(78, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1452,6 +1590,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(80, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1480,6 +1619,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.ForbiddenGrimoire));
+        fight.PlayerPowersAre(BuffId.ForbiddenGrimoire);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1509,6 +1649,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1540,6 +1681,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(-2, fight.PlayerBuffAmount(BuffId.Strength));
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Friendship));
+        fight.PlayerPowersAre(BuffId.Strength, BuffId.Friendship);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1569,6 +1711,7 @@ public class CardCaptureTests
         Assert.Equal(9, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1596,6 +1739,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1623,6 +1767,7 @@ public class CardCaptureTests
         Assert.Equal(7, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1652,6 +1797,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(86, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1681,6 +1827,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(80, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1712,6 +1859,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(6, fight.PlayerBuffAmount(BuffId.Haunt));
+        fight.PlayerPowersAre(BuffId.Haunt);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1739,6 +1887,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(75, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1766,6 +1915,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(79, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1798,6 +1948,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(2, fight.PlayerBuffAmount(BuffId.SummonNextTurn));
         Assert.Equal(2, fight.PlayerBuffAmount(BuffId.NextTurnEnergy));
+        fight.PlayerPowersAre(BuffId.SummonNextTurn, BuffId.NextTurnEnergy);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1826,6 +1977,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(23, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -1856,6 +2008,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(6, fight.PlayerBuffAmount(BuffId.Juggernaut));
+        fight.PlayerPowersAre(BuffId.Juggernaut);
         Assert.Equal(28, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -1886,6 +2039,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(8, fight.PlayerBuffAmount(BuffId.Juggernaut));
+        fight.PlayerPowersAre(BuffId.Juggernaut);
         Assert.Equal(28, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -1916,6 +2070,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1946,6 +2101,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(50, fight.PlayerBuffAmount(BuffId.Lethality));
+        fight.PlayerPowersAre(BuffId.Lethality);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -1975,6 +2131,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2002,6 +2159,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(84, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2029,6 +2187,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(83, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2057,6 +2216,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(18, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -2086,6 +2246,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(14, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -2115,6 +2276,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(13, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -2147,6 +2309,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.NecroMastery));
+        fight.PlayerPowersAre(BuffId.NecroMastery);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2176,6 +2339,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2207,6 +2371,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(3, fight.PlayerBuffAmount(BuffId.Neurosurge));
+        fight.PlayerPowersAre(BuffId.Neurosurge);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2234,6 +2399,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(87, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2262,6 +2428,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2293,6 +2460,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Nostalgia));
+        fight.PlayerPowersAre(BuffId.Nostalgia);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2322,6 +2490,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2350,6 +2519,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(82, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2378,6 +2548,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(0, fight.PlayerBuffAmount(BuffId.OutbreakCounter));
+        fight.PlayerPowersAre(BuffId.OutbreakCounter, BuffId.Outbreak);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2407,6 +2578,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2437,6 +2609,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Pagestorm));
+        fight.PlayerPowersAre(BuffId.Pagestorm);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2466,6 +2639,7 @@ public class CardCaptureTests
         Assert.Equal(3, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2496,6 +2670,7 @@ public class CardCaptureTests
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(2, fight.PlayerBuffAmount(BuffId.Vigor));
+        fight.PlayerPowersAre(BuffId.Vigor);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2524,6 +2699,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(11, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -2555,6 +2731,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(9, fight.PlayerBuffAmount(BuffId.PhantomBlades));
+        fight.PlayerPowersAre(BuffId.PhantomBlades);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2582,6 +2759,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(84, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2610,6 +2788,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(84, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2638,6 +2817,7 @@ public class CardCaptureTests
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.FreeSkillPower));
+        fight.PlayerPowersAre(BuffId.FreeSkillPower);
         Assert.Equal(76, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2663,6 +2843,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2690,6 +2871,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2719,6 +2901,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(79, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2748,6 +2931,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2777,6 +2961,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2806,6 +2991,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2835,6 +3021,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(81, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2862,6 +3049,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(83, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2891,6 +3079,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2920,6 +3109,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(63, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2950,6 +3140,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.ReaperForm));
+        fight.PlayerPowersAre(BuffId.ReaperForm);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -2979,6 +3170,7 @@ public class CardCaptureTests
         Assert.Equal(7, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(81, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3006,6 +3198,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(75, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3033,6 +3226,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3062,6 +3256,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(86, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3091,6 +3286,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3119,6 +3315,7 @@ public class CardCaptureTests
         Assert.Equal(5, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3149,6 +3346,7 @@ public class CardCaptureTests
         Assert.Equal(2, fight.State.DrawPile.Count);
         Assert.Equal(5, fight.State.DiscardPile.Count);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(83, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3177,6 +3375,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Equal(2, fight.State.ExhaustPile.Count);
+        fight.PlayerPowersAre();
         Assert.Equal(28, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -3208,6 +3407,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.SentryMode));
+        fight.PlayerPowersAre(BuffId.SentryMode);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3237,6 +3437,7 @@ public class CardCaptureTests
         Assert.Equal(7, fight.State.DrawPile.Count);
         Assert.Equal(2, fight.State.DiscardPile.Count);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(77, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3267,6 +3468,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
         Assert.Equal(-2, fight.PlayerBuffAmount(BuffId.Strength));
+        fight.PlayerPowersAre(BuffId.Strength);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3295,6 +3497,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3325,6 +3528,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(2, fight.PlayerBuffAmount(BuffId.Shroud));
+        fight.PlayerPowersAre(BuffId.Shroud);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3354,6 +3558,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(85, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3382,6 +3587,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(18, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3410,6 +3616,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(9, fight.PlayerBuffAmount(BuffId.SleightOfFlesh));
+        fight.PlayerPowersAre(BuffId.SleightOfFlesh);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3437,6 +3644,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(84, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3465,6 +3673,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(5, fight.PlayerBuffAmount(BuffId.Smokestack));
+        fight.PlayerPowersAre(BuffId.Smokestack);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3494,6 +3703,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(81, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3523,6 +3733,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(82, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3553,6 +3764,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Spinner));
+        fight.PlayerPowersAre(BuffId.Spinner);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3583,6 +3795,7 @@ public class CardCaptureTests
         Assert.Empty(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(4, fight.PlayerBuffAmount(BuffId.SpiritOfAsh));
+        fight.PlayerPowersAre(BuffId.SpiritOfAsh);
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3612,6 +3825,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3641,6 +3855,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3670,6 +3885,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(80, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3700,6 +3916,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(60, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3727,6 +3944,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(82, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3756,6 +3974,7 @@ public class CardCaptureTests
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(25, fight.PlayerBuffAmount(BuffId.CrueltyPower));
+        fight.PlayerPowersAre(BuffId.CrueltyPower);
         Assert.Equal(18, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -3763,6 +3982,64 @@ public class CardCaptureTests
         Assert.Equal(29, fight.State.Enemies[1].Hp);
         Assert.Equal(0, fight.State.Enemies[1].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
+    }
+
+    [Fact]
+    public void StrikeNecrobinder_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card StrikeNecrobinder --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(473), Card(524), Card(132), Card(473), Card(49), Card(IC.AscendersBane))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(132), Card(132), Card(473), Card(473), Card(132), Card(473))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(84, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void StrikeRegent_Base_ByrdonisElite_Regent_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card StrikeRegent --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(474), Card(179), Card(133), Card(474), Card(133), Card(474))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.Stars = 3;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.Stars);
+        fight.PlayerPowersAre();
+        Assert.Equal(84, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
     }
 
     [Fact]
@@ -3785,6 +4062,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(82, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3813,6 +4091,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(80, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3842,6 +4121,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(77, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3869,6 +4149,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(82, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3895,6 +4176,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(24, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -3927,6 +4209,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3956,6 +4239,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -3984,6 +4268,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(76, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -4011,6 +4296,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Equal(2, fight.State.DiscardPile.Count);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -4040,6 +4326,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(83, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -4067,6 +4354,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(77, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -4095,6 +4383,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(14, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
@@ -4128,6 +4417,7 @@ public class CardCaptureTests
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
         Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Veilpiercer));
+        fight.PlayerPowersAre(BuffId.Veilpiercer);
         Assert.Equal(80, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
@@ -4157,11 +4447,40 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Single(fight.State.DiscardPile);
         Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
         Assert.Equal(1, fight.State.OstyHp);
         Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void Venerate_Base_ByrdonisElite_Regent_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Venerate --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(532), Card(474), Card(133), Card(133), Card(532), Card(474))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.Stars = 3;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(5, fight.State.Stars);
+        fight.PlayerPowersAre();
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
     }
 
     [Fact]
@@ -4186,6 +4505,7 @@ public class CardCaptureTests
         Assert.Equal(6, fight.State.DrawPile.Count);
         Assert.Empty(fight.State.DiscardPile);
         Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));

@@ -325,6 +325,14 @@ def render_test(
             f"        fight.State.OstyMaxHp = {ally['max_hp']};",
         ]
 
+    # Stars, the Regent's resource. The mod reports the field only for a character whose
+    # star counter is always shown, or when there are stars to show, so its absence means
+    # zero and staging is skipped. Osty's comment applies here word for word: it is the
+    # character's whole mechanic, and a capture that does not rebuild it checks the
+    # assertions below against a board the game never had.
+    if (before_stars := player.get("stars")) is not None:
+        lines.append(f"        fight.State.Stars = {before_stars};")
+
     if "hand_index" not in fixture:
         raise UnsupportedCaptureError(
             "capture predates hand_index; re-capture so the played card is unambiguous",
@@ -346,12 +354,42 @@ def render_test(
         count_assert(after_player["exhaust_pile_count"], "fight.State.ExhaustPile"),
     ]
 
+    # Asserted whenever EITHER side of the capture reports stars: a card that spends the
+    # last one leaves the field out of the after state, and "the key is gone" has to read
+    # as zero rather than as nothing to check.
+    if player.get("stars") is not None or after_player.get("stars") is not None:
+        lines.append(
+            f"        Assert.Equal({after_player.get('stars') or 0}, fight.State.Stars);"
+        )
+
+    player_powers = [
+        buff_constant(str(status["id"]), buffs)
+        for status in after_player.get("status") or []
+    ]
+    # A power the emulator splits in two shows up ONCE in the game's readout, so the
+    # natural id has to be allowed alongside the aliased one: Outbreak is the emulator's
+    # damage and OutbreakCounter its progress, and the game reports a single OUTBREAK_POWER
+    # whose displayed number is the counter.
+    by_norm = {name.lower(): name for name in buffs}
+    for status in after_player.get("status") or []:
+        live_id = str(status["id"])
+        if live_id not in DISPLAY_AMOUNT_BUFFS:
+            continue
+        if (
+            natural := by_norm.get(normalize(live_id).removesuffix("power"))
+        ) is not None:
+            player_powers.append(f"BuffId.{natural}")
     lines.extend(
         f"        Assert.Equal({int(status['amount'])}, "
         f"fight.PlayerBuffAmount({buff_constant(str(status['id']), buffs)}));"
         for status in after_player.get("status") or []
         if status.get("amount") is not None
     )
+
+    # And nothing ELSE. Asserting only the powers the game reported says nothing about the
+    # ones it did not, so an emulator that invents a power passes -- which is how Venerate
+    # granted Strength and Dexterity for a card that gains stars, through a clean capture.
+    lines.append(f"        fight.PlayerPowersAre({', '.join(player_powers)});")
 
     # A capture where something DIED cannot be rebuilt positionally. The game drops the
     # dead enemy from its readout AND renumbers the survivors -- a Fiend Fire that killed

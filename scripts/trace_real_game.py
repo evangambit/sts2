@@ -114,6 +114,13 @@ def summarize_state(state: dict[str, Any]) -> dict[str, Any]:
             "discard_pile_count": player.get("discard_pile_count"),
             "exhaust_pile_count": player.get("exhaust_pile_count"),
             "gold": player.get("gold"),
+            # The Regent's resource. The mod reports it only for a character whose star
+            # counter is always shown or when there are stars to show, so `None` here means
+            # the character has none rather than that the field was missed. Same lesson as
+            # `allies` above: a summary that drops a character's central mechanic is the
+            # same blindness one layer up, and four Regent captures had already been taken
+            # and passed before anyone noticed the number was not in them.
+            "stars": player.get("stars"),
             "hand": hand,
             "status": normalize_status(player.get("status") or []),
         },

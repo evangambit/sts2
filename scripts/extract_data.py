@@ -43,6 +43,12 @@ UPGRADE_COST = re.compile(r"EnergyCost\.UpgradeBy\((-?\d+)\)")
 # X-cost cards are printed at cost 0 and declare themselves this way instead. Without
 # the flag nothing downstream can tell "free" from "spends the whole bar".
 HAS_ENERGY_COST_X = re.compile(r"HasEnergyCostX\s*=>\s*true")
+# `CardModel.CanonicalStarCost => -1` unless a card overrides it. Twenty-one Regent cards
+# do, and it is a SECOND resource the play has to have and spend -- not a variant of the
+# energy cost. Nothing upgrades a star cost (`UpgradeStarCostBy` has no callers), so the
+# printed number is the whole story.
+STAR_COST = re.compile(r"CanonicalStarCost\s*=>\s*(\d+)")
+HAS_STAR_COST_X = re.compile(r"HasStarCostX\s*=>\s*true")
 
 # CardFactory.FilterForPlayerCount drops MultiplayerOnly cards from every pool in a solo
 # run. Without the flag the reward pools are larger than the game's and offer cards that
@@ -352,6 +358,10 @@ def extract_cards() -> str:
             flags.append("EtherealRemovedWhenUpgraded: true")
         if HAS_ENERGY_COST_X.search(text):
             flags.append("HasEnergyCostX: true")
+        if match := STAR_COST.search(text):
+            flags.append(f"StarCost: {match.group(1)}")
+        if HAS_STAR_COST_X.search(text):
+            flags.append("HasStarCostX: true")
         if MULTIPLAYER_ONLY.search(text):
             flags.append("MultiplayerOnly: true")
         # CardModel.CanBeGeneratedByModifiers. Eight curses refuse to be handed out by
