@@ -194,6 +194,10 @@ READ: dict[str, tuple[str, str]] = {
         "2746a617868c",
         "5/7 damage, then Forge 5/7 per PRIOR powered hit on that target this turn",
     ),
+    "Begone": (
+        "328917df044b",
+        "a CHOSEN hand card becomes a MINION STRIKE, upgraded if Begone was",
+    ),
     "BelieveInYou": (
         "7c0411593bd4",
         "MultiplayerOnly: 2/3 energy to an ALLY, which is the player alone in singleplayer",
@@ -289,6 +293,10 @@ READ: dict[str, tuple[str, str]] = {
     "Catastrophe": (
         "d68da1dfdebf",
         "2/3 cards auto-played, each a StableShuffle pick off Rng.Shuffle, preferring playable",
+    ),
+    "Charge": (
+        "b4f994c9ccfb",
+        "two CHOSEN draw-pile cards become MINION DIVE BOMBS, in place",
     ),
     "ChildOfTheStars": (
         "538c59ae0155",
@@ -394,6 +402,10 @@ READ: dict[str, tuple[str, str]] = {
     "Debilitate": (
         "1309afb34411",
         "10/12 damage then DebilitatePower 2/3: doubles Vulnerable and Weak, amount is a DURATION",
+    ),
+    "DecisionsDecisions": (
+        "80a50680eeae",
+        "6 stars: draw 3/5, then AUTO-PLAY a CHOSEN playable Skill three times",
     ),
     "DefendIronclad": (
         "f44f2ddf1ff3",
@@ -567,6 +579,10 @@ READ: dict[str, tuple[str, str]] = {
         "5d12e05575b0",
         "16/20 damage",
     ),
+    "Glimmer": (
+        "b20d5ba4d78c",
+        "draw 3/4, then put ONE CHOSEN hand card back on top of the draw pile",
+    ),
     "Glow": (
         "be94b7c9e4f1",
         "a star (1/2), a card now, and a card next turn",
@@ -574,6 +590,10 @@ READ: dict[str, tuple[str, str]] = {
     "GoldAxe": (
         "40b23415dc9f",
         "damage equals CardPlaysFinished this combat; the upgrade adds Retain",
+    ),
+    "Guards": (
+        "0ad47cb3b12c",
+        "ANY NUMBER of CHOSEN hand cards become MINION SACRIFICES; declining is legal",
     ),
     "HammerTime": (
         "057d32b9c3d4",
@@ -598,6 +618,10 @@ READ: dict[str, tuple[str, str]] = {
     "Headbutt": (
         "c989485a6f72",
         "9/12 then a CHOSEN discard-pile card onto the top of the draw pile",
+    ),
+    "HeavenlyDrill": (
+        "ed29701b26bb",
+        "HasEnergyCostX: 8/10 damage per energy spent, the whole COUNT doubled at four or more",
     ),
     "HelixDrill": (
         "0cf3cb9ebaea",
@@ -695,6 +719,10 @@ READ: dict[str, tuple[str, str]] = {
     "KnowThyPlace": (
         "fbc908f02a8e",
         "Weak 1 and Vulnerable 1 on the TARGET; Exhausts until upgraded",
+    ),
+    "Largesse": (
+        "1b14a0e745ae",
+        "MultiplayerOnly and AnyAlly, so unplayable solo; it gives an ALLY a colourless card",
     ),
     "LegionOfBone": (
         "82fbd8dc1fdd",
@@ -845,6 +873,10 @@ READ: dict[str, tuple[str, str]] = {
         "c59e041d1155",
         "6 + 2/3 per CardTag.Strike in AllCards -- which includes the PlayPile, so it counts itself",
     ),
+    "PhotonCut": (
+        "526b6075b707",
+        "10/13 damage, draw 1/2, then put ONE CHOSEN hand card on top of the draw pile",
+    ),
     "Pillage": (
         "bb4f6f43b2ee",
         "6/9 then draw one at a time while the drawn card is an Attack and the hand has room",
@@ -908,6 +940,10 @@ READ: dict[str, tuple[str, str]] = {
     "Quadcast": (
         "152560e8ca9a",
         "RepeatVar(4) evokes of the FRONT orb, dequeuing on the last; the upgrade is the cost",
+    ),
+    "Quasar": (
+        "02a6c8250d5c",
+        "2 stars: three DISTINCT colourless cards offered, one taken, and skipping is allowed",
     ),
     "Rage": (
         "cfadf3ad1cf6",

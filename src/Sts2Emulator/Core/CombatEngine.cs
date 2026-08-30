@@ -2193,6 +2193,95 @@ public static class CombatEngine
 
                 break;
 
+            case CardSelectionKind.TransformHandToMinionStrike:
+                if (index < state.Hand.Count)
+                {
+                    // `CardCmd.Transform(chosen, new MinionStrike)` -- in place, and the new
+                    // card is upgraded when the transforming card was.
+                    state.Hand[index] = new CardInstance(310, selection.GeneratedUpgraded);
+                }
+
+                break;
+
+            case CardSelectionKind.TransformHandToMinionSacrifice:
+                if (index < state.Hand.Count)
+                {
+                    state.Hand[index] = new CardInstance(309, selection.GeneratedUpgraded);
+                }
+
+                // `CardSelectorPrefs(prompt, 0, 999999999)`: any number, so the screen comes
+                // back until the player declines or the hand is spent.
+                if (state.Hand.Count > 0)
+                {
+                    var rest = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
+                    {
+                        if (state.Hand[i].DefId != 309)
+                        {
+                            rest.Add(i);
+                        }
+                    }
+
+                    if (rest.Count > 0)
+                    {
+                        state.PendingSelection = new PendingCardSelection
+                        {
+                            Kind = CardSelectionKind.TransformHandToMinionSacrifice,
+                            Candidates = rest,
+                            SourceCardDefId = selection.SourceCardDefId,
+                            Amount = selection.Amount,
+                            Skippable = true,
+                            GeneratedUpgraded = selection.GeneratedUpgraded,
+                        };
+                        return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
+                    }
+                }
+
+                break;
+
+            case CardSelectionKind.TransformDrawToMinionDiveBomb:
+                if (index < state.DrawPile.Count)
+                {
+                    state.DrawPile[index] = new CardInstance(308, selection.GeneratedUpgraded);
+                }
+
+                if (selection.Amount > 1 && state.DrawPile.Count > 0)
+                {
+                    var more = new List<int>();
+                    for (int i = 0; i < state.DrawPile.Count; i++)
+                    {
+                        more.Add(i);
+                    }
+
+                    state.PendingSelection = new PendingCardSelection
+                    {
+                        Kind = CardSelectionKind.TransformDrawToMinionDiveBomb,
+                        Candidates = more,
+                        SourceCardDefId = selection.SourceCardDefId,
+                        Amount = selection.Amount - 1,
+                        Skippable = selection.Skippable,
+                        GeneratedUpgraded = selection.GeneratedUpgraded,
+                    };
+                    return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
+                }
+
+                break;
+
+            case CardSelectionKind.AutoPlaySkillThrice:
+                if (index < state.Hand.Count)
+                {
+                    // `CardCmd.AutoPlay(card)` three times over -- the card leaves hand once
+                    // and is played from the queue, which is what an auto-play is.
+                    var chosenSkill = state.Hand[index];
+                    state.Hand.RemoveAt(index);
+                    for (int i = 0; i < 3; i++)
+                    {
+                        state.AutoPlayQueue.Add(chosenSkill);
+                    }
+                }
+
+                break;
+
             case CardSelectionKind.HandToDrawPileTop:
                 if (index < state.Hand.Count)
                 {

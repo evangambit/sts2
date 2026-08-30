@@ -158,6 +158,29 @@ public enum CardSelectionKind
     /// random into a different card, which is a different effect entirely.
     /// </summary>
     TransfigureInHand = 19,
+
+    /// <summary>
+    /// Begone: a card CHOSEN from hand becomes a MINION STRIKE, upgraded if Begone was.
+    /// </summary>
+    TransformHandToMinionStrike = 20,
+
+    /// <summary>
+    /// Charge: cards CHOSEN from the draw pile become MINION DIVE BOMBS, in place, upgraded
+    /// if Charge was. Two of them, so the screen reopens.
+    /// </summary>
+    TransformDrawToMinionDiveBomb = 21,
+
+    /// <summary>
+    /// Guards: ANY NUMBER of hand cards become MINION SACRIFICES —
+    /// <c>CardSelectorPrefs(prompt, 0, 999999999)</c>, so keeping none is legal and the
+    /// screen reopens until the player stops or the hand runs out.
+    /// </summary>
+    TransformHandToMinionSacrifice = 22,
+
+    /// <summary>
+    /// Decisions, Decisions: a playable SKILL chosen from hand is AUTO-PLAYED three times.
+    /// </summary>
+    AutoPlaySkillThrice = 23,
 }
 
 /// <summary>

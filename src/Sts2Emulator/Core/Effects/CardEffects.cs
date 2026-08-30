@@ -2726,6 +2726,58 @@ public static class CardEffects
         );
     }
 
+    /// <summary>
+    /// A transform screen, carrying whether the transforming card was upgraded -- the new
+    /// card arrives upgraded when it was.
+    /// </summary>
+    private static void OpenTransformSelection(
+        CombatState state,
+        CardSelectionKind kind,
+        List<int> candidates,
+        int sourceCardDefId,
+        int amount,
+        bool upgraded,
+        bool skippable = false
+    )
+    {
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = kind,
+            Candidates = candidates,
+            SourceCardDefId = sourceCardDefId,
+            Amount = amount,
+            Skippable = skippable,
+            GeneratedUpgraded = upgraded,
+        };
+    }
+
+    /// <summary>
+    /// Glimmer's and Photon Cut's shared screen: ONE card CHOSEN from hand goes back on TOP
+    /// of the draw pile.
+    /// </summary>
+    private static void OpenPutBackSelection(CombatState state, int sourceCardDefId)
+    {
+        var hand = new List<int>();
+        for (int i = 0; i < state.Hand.Count; i++)
+        {
+            hand.Add(i);
+        }
+
+        OpenCardSelection(
+            state,
+            CardSelectionKind.HandToDrawPileTop,
+            hand,
+            sourceCardDefId,
+            autoPick: 0,
+            amount: 1
+        );
+    }
+
     private static void PullSovereignBladesToHand(CombatState state)
     {
         foreach (var pile in new[] { state.DrawPile, state.DiscardPile, state.ExhaustPile })
@@ -4489,6 +4541,45 @@ public static class CardEffects
         };
     }
 
+    /// <summary>
+    /// Quasar's screen: three DISTINCT colourless cards offered, one taken, and skipping is
+    /// allowed. Toolbox's shape with a different source and a skip.
+    /// </summary>
+    private static void OpenColorlessOffer(
+        CombatState state,
+        int sourceCardDefId,
+        Random rng,
+        bool upgraded
+    )
+    {
+        var pool = GeneratedData.CardPools.Colorless;
+        if (pool.Length == 0)
+        {
+            return;
+        }
+
+        var stream = state.CardGenerationRng ?? rng;
+        var offer = new List<int>();
+        for (int guard = 0; offer.Count < 3 && guard < 64; guard++)
+        {
+            int id = pool[stream.Next(pool.Length)];
+            if (!offer.Contains(id))
+            {
+                offer.Add(id);
+            }
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.GeneratedCardToHand,
+            Candidates = [.. Enumerable.Range(0, offer.Count)],
+            SourceCardDefId = sourceCardDefId,
+            GeneratedCandidates = offer,
+            GeneratedUpgraded = upgraded,
+            Skippable = true,
+        };
+    }
+
     internal static void AddRandomPoolCardToHand(CombatState state, Random rng)
     {
         var pool = GeneratedData.CardPools.Ironclad;
@@ -5998,8 +6089,31 @@ public static class CardEffects
                 ApplyTemporaryStrengthDownToAll(state, upgraded ? 2 : 1);
                 return true;
             case "DecisionsDecisions":
+            {
+                // Decisions, Decisions: six stars, Exhaust. Draw CardsVar 3 (upgrading by
+                // 2), then AUTO-PLAY a playable SKILL chosen from hand three times --
+                // RepeatVar 3, which does not upgrade. The emulator drew and stopped.
                 DrawCards(state, upgraded ? 5 : 3, rng);
+                var skills = new List<int>();
+                for (int i = 0; i < state.Hand.Count; i++)
+                {
+                    var held = GeneratedData.Cards.Get(state.Hand[i].DefId);
+                    if (held.Type == CardType.Skill && !held.Unplayable)
+                    {
+                        skills.Add(i);
+                    }
+                }
+
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.AutoPlaySkillThrice,
+                    skills,
+                    def.Id,
+                    autoPick: skills.Count > 0 ? skills[0] : 0,
+                    amount: 1
+                );
                 return true;
+            }
             case "DyingStar":
                 // Three stars, Ethereal: 9/11 at ALL enemies and a StrengthLoss of 9/11 on
                 // each. The emulator hit one for the right damage and took 3/5 Strength off
@@ -6020,14 +6134,20 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 3 : 2, rng);
                 return true;
             case "HeavenlyDrill":
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                if (state.Stars >= 4)
+            {
+                // Heavenly Drill: `HasEnergyCostX` -- 8/10 damage once per energy spent, and
+                // the whole hit count DOUBLED when that is four or more. The emulator dealt
+                // one hit and traded stars for energy, which is not on the card at all.
+                int drills = RelicEffects.ModifyXValue(state, state.Energy);
+                state.Energy = 0;
+                if (drills >= 4)
                 {
-                    state.Stars -= 4;
-                    GainEnergy(state, 4);
+                    drills *= 2;
                 }
 
+                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), drills, rng);
                 return true;
+            }
             case "Hegemony":
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 3 : 2);
@@ -6081,9 +6201,12 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Vigor, upgraded ? 3 : 2);
                 return true;
             case "PhotonCut":
+                // Photon Cut: 10/13 damage, draw 1/2, then put ONE card CHOSEN from hand on
+                // top of the draw pile. The emulator moved the leftmost card, which is the
+                // whole decision the card offers.
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 DrawCards(state, upgraded ? 2 : 1, rng);
-                MoveFirstHandCardToTopOfDrawPile(state);
+                OpenPutBackSelection(state, def.Id);
                 return true;
             case "PillarOfCreation":
                 // Pillar of Creation: `BlockVar(3, Unpowered)` upgrading by 1 -- block for
@@ -6374,8 +6497,67 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 4 : 3, rng);
                 break;
             case "Begone":
+            {
+                // Begone: a card CHOSEN from hand becomes a MINION STRIKE, upgraded if
+                // Begone was. The emulator transformed a random card into a random one.
+                var hand = new List<int>();
+                for (int i = 0; i < state.Hand.Count; i++)
+                {
+                    hand.Add(i);
+                }
+
+                OpenTransformSelection(
+                    state,
+                    CardSelectionKind.TransformHandToMinionStrike,
+                    hand,
+                    def.Id,
+                    amount: 1,
+                    upgraded: upgraded
+                );
+                break;
+            }
             case "Charge":
+            {
+                // Charge: CardsVar 2 cards CHOSEN from the DRAW pile become MINION DIVE
+                // BOMBS, in place.
+                var pile = new List<int>();
+                for (int i = 0; i < state.DrawPile.Count; i++)
+                {
+                    pile.Add(i);
+                }
+
+                OpenTransformSelection(
+                    state,
+                    CardSelectionKind.TransformDrawToMinionDiveBomb,
+                    pile,
+                    def.Id,
+                    amount: 2,
+                    upgraded: upgraded
+                );
+                break;
+            }
             case "Guards":
+            {
+                // Guards: `CardSelectorPrefs(prompt, 0, 999999999)` -- ANY NUMBER of hand
+                // cards become MINION SACRIFICES, and keeping none is a legal answer, so the
+                // screen is skippable and reopens until the player stops.
+                var anyHand = new List<int>();
+                for (int i = 0; i < state.Hand.Count; i++)
+                {
+                    anyHand.Add(i);
+                }
+
+                OpenTransformSelection(
+                    state,
+                    CardSelectionKind.TransformHandToMinionSacrifice,
+                    anyHand,
+                    def.Id,
+                    amount: 1,
+                    upgraded: upgraded,
+                    skippable: true
+                );
+                break;
+            }
             case "Seance":
             case "Transfigure":
                 TransformRandomCardInHand(state, rng);
@@ -6444,13 +6626,28 @@ public static class CardEffects
             case "Putrefy":
                 ApplyEnemyDebuff(state, BuffId.Poison, upgraded ? 8 : 5, rng);
                 break;
+            case "Quasar":
+                // Quasar: two stars for three DISTINCT colourless cards offered, one of
+                // which joins the hand -- and the screen is SKIPPABLE (`canSkip: true`). The
+                // upgrade upgrades what it offers. Toolbox's screen, on a card that had been
+                // taking a random class card instead.
+                OpenColorlessOffer(state, def.Id, rng, upgraded);
+                break;
             case "BundleOfJoy":
             case "Dirge":
+                AddRandomClassCardToHand(state, rng, upgraded);
+                break;
+            case "Largesse":
+                // Largesse: MultiplayerOnly and `TargetType.AnyAlly`, so a solo run can
+                // never play it -- `CanPlay` refuses on NoLivingAllies. The body is what it
+                // would do: one distinct colourless card into the ALLY's hand, upgraded if
+                // Largesse was. Written out rather than left as a random class card, so the
+                // next reader is not told a lie about a card they cannot reach.
+                AddColorlessCardsToHand(state, 1, rng);
+                break;
             case "Distraction":
             case "GlimpseBeyond":
-            case "Largesse":
             case "Metamorphosis":
-            case "Quasar":
             case "WhiteNoise":
                 AddRandomClassCardToHand(state, rng, upgraded);
                 break;
@@ -6646,6 +6843,14 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 9 : 6, rng);
                 break;
             case "Glimmer":
+            {
+                // Glimmer: draw CardsVar 3 (upgrading by 1), then put ONE card CHOSEN from
+                // hand back on TOP of the draw pile. The emulator drew 1/2 and put nothing
+                // back.
+                DrawCards(state, upgraded ? 4 : 3, rng);
+                OpenPutBackSelection(state, def.Id);
+                break;
+            }
             case "Parse":
                 DrawCards(state, upgraded ? 2 : 1, rng);
                 break;
