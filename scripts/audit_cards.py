@@ -198,6 +198,10 @@ READ: dict[str, tuple[str, str]] = {
         "f9c4feb15911",
         "CalculatedDamage multiplied by the owner's Block; the upgrade cuts the cost",
     ),
+    "Bolas": (
+        "b8546461a2d8",
+        "3/? damage, and BeforeHandDraw returns it to hand next turn like Thrumming Hatchet",
+    ),
     "Brand": (
         "7e119d6e535f",
         "1 HP, exhaust a CHOSEN card, then Strength 1/2",
@@ -350,6 +354,10 @@ READ: dict[str, tuple[str, str]] = {
     "FanOfKnives": (
         "d7e8bd0fc0fb",
         "FanOfKnivesPower 1 (Single) plus 4/5 Shivs; the power retargets Shiv to AllEnemies",
+    ),
+    "Fasten": (
+        "722085cc0e95",
+        "FastenPower 4/6 -- extra block on Defend-tagged cards",
     ),
     "Feed": (
         "9a10f38d7248",
@@ -533,6 +541,10 @@ READ: dict[str, tuple[str, str]] = {
         "93f6ff753d2f",
         "6 HP, 2 energy, draw 3/5 -- the upgrade raises the CARDS, not the energy",
     ),
+    "Omnislice": (
+        "f0db6829de5b",
+        "8/11 to the target, then its TOTAL plus overkill splashed Unpowered to the others",
+    ),
     "OneTwoPunch": (
         "a56222737af0",
         "OneTwoPunchPower at the Attacks var, 1 upgrading by 1",
@@ -714,6 +726,10 @@ READ: dict[str, tuple[str, str]] = {
         "2ae905512994",
         "8/10 then StranglePower 2/3 -- which the upgrade DOES raise; not Vulnerable",
     ),
+    "Stratagem": (
+        "0946b8866ed9",
+        "StratagemPower 1; the upgrade cuts the cost",
+    ),
     "StrikeIronclad": (
         "67c1d4a0a5d2",
         "6 damage upgrading by 3",
@@ -721,6 +737,10 @@ READ: dict[str, tuple[str, str]] = {
     "SwordBoomerang": (
         "07bb371af7ba",
         "DamageVar(3) x 3/4 at random opponents, re-rolled per hit; the upgrade raises the REPEAT",
+    ),
+    "TagTeam": (
+        "eac3765d3fcc",
+        "MultiplayerOnly; TagTeamPower only helps OTHER players, so damage alone is the whole card solo",
     ),
     "Tank": (
         "37d5bdd8725d",
@@ -734,13 +754,29 @@ READ: dict[str, tuple[str, str]] = {
         "90dc93ac180a",
         "5/7 x (1 + unblocked hits received this COMBAT, not this turn)",
     ),
+    "TheBomb": (
+        "181cc426bc25",
+        "Turns 3 flat, BombDamage 40 upgrading by 10",
+    ),
+    "TheGambit": (
+        "87d3ab31fa9b",
+        "50/75 block then TheGambitPower 1, which kills on the next unblocked powered attack",
+    ),
     "TheHunt": (
         "f5fda73d95f0",
         "extra CardReward of 3 from the room's own pool, behind the Fatal gate",
     ),
+    "ThinkingAhead": (
+        "d108fc8a7af1",
+        "draw 2 then a CHOSEN hand card onto the draw pile top; minimum 1, so not skippable",
+    ),
     "Thrash": (
         "9ba3bc8cab0c",
         "4/6 x2, then eats a random Attack and permanently ADDS its damage",
+    ),
+    "ThrummingHatchet": (
+        "dd8e9746aa77",
+        "11/14, and BeforeHandDraw returns it to hand next turn if it was played",
     ),
     "Thunderclap": (
         "332719e08b6f",
@@ -762,6 +798,14 @@ READ: dict[str, tuple[str, str]] = {
         "d7183e4fde0a",
         "5/7 x2",
     ),
+    "UltimateDefend": (
+        "0ed2403c30c8",
+        "11/15 block",
+    ),
+    "UltimateStrike": (
+        "6ef98ae43eeb",
+        "14/20",
+    ),
     "Unmovable": (
         "97a2d149b01f",
         "UnmovablePower 1; the upgrade cuts the cost",
@@ -777,6 +821,10 @@ READ: dict[str, tuple[str, str]] = {
     "Vicious": (
         "2bf236b729ef",
         "ViciousPower at CardsVar 1/2",
+    ),
+    "Volley": (
+        "0fffb46d98dd",
+        "HasEnergyCostX; 10/14 x X at RANDOM opponents, re-rolled per hit",
     ),
     "Voltaic": (
         "2acb93296cb5",

@@ -5400,13 +5400,6 @@ public static class CardEffects
                 {
                     ApplyEnemyDebuff(state, BuffId.Stunned, 1, rng);
                 }
-                else if (def.Name == "SeekerStrike")
-                {
-                    // The game shuffles the draw pile and offers three; the emulator
-                    // offers every Attack in it rather than a sampled three.
-                    OpenDrawPileSelection(state, def.Id, CardType.Attack);
-                }
-
                 return true;
             case "Exterminate":
                 DealDamageMultiHit(state, Dmg(state, def, upgraded, card), 4, rng);
