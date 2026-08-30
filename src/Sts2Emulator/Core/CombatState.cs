@@ -451,6 +451,30 @@ public sealed class CombatState
     public int CardPlaysLastTurn;
 
     /// <summary>
+    /// `CardDrawnEntry` rows this turn with `!FromHandDraw` -- every draw that was not the
+    /// turn's opening hand. Death March's damage scales with it.
+    /// </summary>
+    public int ExtraCardsDrawnThisTurn;
+
+    /// <summary>
+    /// A `PowerReceivedEntry` for DoomPower with the player as Applier, this turn. Death's
+    /// Door reads it, and nothing else does -- so it is a flag rather than a count.
+    /// </summary>
+    public bool DoomAppliedThisTurn;
+
+    /// <summary>
+    /// `CreatureAttackedEntry` rows this turn whose Actor is OSTY. Flatten costs nothing
+    /// once the pet has swung at all, and Rattle hits `1 +` this many times.
+    /// </summary>
+    /// <remarks>
+    /// Counted once per Osty ATTACK, which is once per card that swings -- including a
+    /// swing that lands on several enemies at once, like High Five's. Whether the game logs
+    /// one entry per attack or one per creature attacked is not settled by the source, and
+    /// only a Rattle played after a High Five tells them apart.
+    /// </remarks>
+    public int OstyAttacksThisTurn;
+
+    /// <summary>
     /// `CardModel.LastStarsSpent` for the play in flight. Stardust reads the stars it SPENT
     /// as its hit count, and by the time its effect runs the counter is already zero --
     /// `SpendResources` takes them before `OnPlay`.

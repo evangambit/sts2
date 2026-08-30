@@ -253,9 +253,24 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
     happened four times (E262, E271, E276, E293). Run it after every edit to a
     stacked switch, before the tests.
 
-  Still unread in the pool: 46 cards are implemented and captured but have no
-  source reading, so a capture that happens to agree is all that stands behind
-  them. `uv run python scripts/card_pair.py --list Necrobinder` is the worklist.
+  **The Necrobinder pool has since had its READING pass as well: all 45 cards that
+  were captured but unread are now read against the decompiled source, tested and
+  in the READ ledger.** It found 20 more divergences, E329 to E337, on cards whose
+  live captures had all passed — a rate close to the capture pass's own. That is
+  the measurement worth keeping: capture and reading find DIFFERENT things.
+
+  - Three cards with green fixtures were wrong in ways that produce the right pile
+    counts. Undeath cloned a Soul instead of itself, Time's Up scaled by the wrong
+    counter in a fixture where both readings gave zero, and Bone Shards gained its
+    block with no pet (E330-E334).
+  - `if (!Osty.CheckMissingWithAnim(Owner))` wraps the WHOLE body of an Osty card.
+    Four cards had let part of it escape (E332). When a card's body is inside a
+    guard, the guard belongs around the whole arm.
+  - The label-stack hazard has a second half: a label sitting in someone ELSE's
+    stack is a card nobody has read. Misery had been High Five since the first
+    commit (E330). Reading also cleared 12 dead labels out of the generic dispatch.
+  - One flag — `fromHandDraw` on `DrawCards` — fixed a card that was too strong
+    and one that was too weak at once (E329).
 
   **The Regent pool has now had its first pass too: 88 cards, 79 captured (three
   of those parked as un-rebuildable) and the rest read from source.** It found 28
@@ -282,8 +297,9 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
     while `debug_add_card` generates one, and a card that ends the turn so there is
     no settled state to snapshot.
 
-  What is left: 28 Regent cards are captured but unread, the same shape as the
-  Necrobinder's 46.
+  What is left: 28 Regent cards are captured but unread — the same shape the
+  Necrobinder's 45 were in before their reading pass, and worth expecting a similar
+  yield from.
 
   **The DEFECT pool has now had its first capture pass too: 88 cards, 86 captured
   (two of those parked) and the last two unreachable — Scavenge raises a selection
@@ -1355,7 +1371,7 @@ when the real number is 552.
 | Colourless  |    64 |          64 |     64 |
 | Silent      |    88 |          88 |     46 |
 | Defect      |    88 |          88 |     88 |
-| Necrobinder |    88 |          88 |     42 |
+| Necrobinder |    88 |          88 |     88 |
 | Regent      |    88 |          88 |     60 |
 | Event       |    27 |          27 |      1 |
 | Token       |    14 |          11 |      1 |

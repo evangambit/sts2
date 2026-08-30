@@ -290,6 +290,12 @@ public readonly record struct CardInstance(
     // `CardModel.HasSingleTurnSly`, which Hand Trick sets on a chosen Skill. Sly is
     // otherwise a keyword on the DEFINITION, so this is the per-copy half of the same
     // question -- see CardInstanceExtensions.IsSlyThisTurn.
+    // `CardPlayFinishedEntry.CardPlay.Card == this && HappenedThisTurn` -- whether THIS
+    // copy has already been played this turn. Fetch draws only on its first play of a turn,
+    // so a Fetch pulled back out of the discard and played again draws nothing, while a
+    // SECOND Fetch played the same turn still does. Set as the card leaves play and cleared
+    // across every pile at the turn boundary.
+    bool PlayedThisTurn = false,
     bool SlyThisTurn = false,
     // `CardCmd.ApplyKeyword(card, CardKeyword.Sly)`, which Master Planner does to every
     // Skill its owner plays. Unlike Hand Trick's grant this one is permanent for the

@@ -33,7 +33,10 @@
   `uv run python scripts/audit_shared_card_bodies.py` after every edit to a stacked switch,
   BEFORE the tests — it names the slip in seconds where a capture only catches the cards
   that happen to have one. Name the card the body is for in its comment; that is the
-  convention the scan relies on.
+  convention the scan relies on. **The hazard has a second half**: a label sitting in
+  SOMEONE ELSE'S stack is a card nobody has read. Misery had been High Five's body since the
+  first commit, and Sow and Banshee's Cry had been in Strike's. When you read a card, check
+  whether its `case` has a body of its own or is riding on the one above it.
 - Native card effects with multiple actions should use explicit card cases when decompiled effect order matters; do not rely on fallback damage/block ordering.
 - Native card effects that move cards from discard to hand should operate after the played card has left hand, clear `FreeThisTurn`, and respect the 10-card hand cap.
 - Native card effects that splash based on the first hit should use the effective first-hit HP-loss plus overkill amount, then apply splash as unpowered damage unless decompiled value props say otherwise.
@@ -46,6 +49,12 @@
 - Native card powers that modify a played card's destination pile should make that decision in `CombatEngine` after effects resolve but before adding the card to discard.
 - Native card powers with extra dynamic variables can be represented with companion `BuffId` entries when `BuffState` needs to track both the visible counter and hidden per-power state.
 - State that belongs to one COPY of a card rides on `CardInstance`, not on the player.
+- **`card_pair.py` strips vfx/anim/sfx lines, and the strip list is a place a real effect
+  can hide.** `CardCmd.PreviewCardPileAdd(...)` is usually UI and is usually dropped, but
+  thirteen cards write their whole effect INSIDE that call. Grave Warden read as block and
+  nothing else, and the reading deleted a Soul the game makes. When a card declares a var
+  its visible body never reads, open the decompiled file itself before concluding the var
+  is dead.
   Rampage's damage growth is per-copy, so two Rampages in a deck grow separately —
   `CardInstance.BonusDamage` carries it. `CardEffects.Apply` takes the instance by value
   and cannot hand a mutation back, so a card that changes the copy being played sets

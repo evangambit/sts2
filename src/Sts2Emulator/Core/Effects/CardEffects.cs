@@ -87,35 +87,35 @@ public static class CardEffects
                 break;
 
             case ST.FranticEscape: // 1-cost status, increments Sandpit on enemy; cost increases per play
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    BuffSystem.Apply(target.Buffs, BuffId.Sandpit, 1);
-                }
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        BuffSystem.Apply(target.Buffs, BuffId.Sandpit, 1);
+                    }
 
-                state.PlayedCardCostBump++;
-                break;
-            }
+                    state.PlayedCardCostBump++;
+                    break;
+                }
 
             // ── Ironclad Attacks ─────────────────────────────────────────────────
 
             case IC.Break: // 1-cost, 20/30 dmg + Vulnerable 5/7
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    ApplyEnemyDebuffToTarget(
-                        state,
-                        target,
-                        BuffId.Vulnerable,
-                        upgraded ? 7 : 5,
-                        rng
-                    );
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        ApplyEnemyDebuffToTarget(
+                            state,
+                            target,
+                            BuffId.Vulnerable,
+                            upgraded ? 7 : 5,
+                            rng
+                        );
+                    }
+                    break;
                 }
-                break;
-            }
 
             case IC.Bludgeon: // 3-cost, 32/42 dmg
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -133,100 +133,100 @@ public static class CardEffects
             // ── Colourless cards that were falling through to the approximation ──
 
             case CL.ThrummingHatchet: // 1-cost, 11/14 dmg, and it comes back next turn
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                    }
+
+                    // BeforeHandDraw puts it back in hand next turn if it was played this
+                    // one, which is the queue Feral already uses.
+                    state.ReturnToHandBeforeDraw.Add(card with { FreeThisTurn = false });
+
+                    break;
                 }
-
-                // BeforeHandDraw puts it back in hand next turn if it was played this
-                // one, which is the queue Feral already uses.
-                state.ReturnToHandBeforeDraw.Add(card with { FreeThisTurn = false });
-
-                break;
-            }
 
             case CL.Fisticuffs: // 1-cost, 7/9 dmg, block equal to the damage DEALT
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    // Block is what actually landed plus overkill, not the printed number
-                    // -- so a Vulnerable target pays out more and a blocked one less.
-                    int dealt = DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    GainBlock(state, dealt, rng);
-                }
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        // Block is what actually landed plus overkill, not the printed number
+                        // -- so a Vulnerable target pays out more and a blocked one less.
+                        int dealt = DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        GainBlock(state, dealt, rng);
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case CL.Jackpot: // 3-cost, 25/30 dmg, then three free cards into hand
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                }
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                    }
 
-                AddZeroCostCardsToHand(state, 3, upgraded);
-                break;
-            }
+                    AddZeroCostCardsToHand(state, 3, upgraded);
+                    break;
+                }
 
             case CL.SeekerStrike: // 1-cost, 9/12 dmg, then one of three draw-pile cards
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                }
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                    }
 
-                OpenDrawPileSampleSelection(state, def.Id, 3, rng);
-                break;
-            }
+                    OpenDrawPileSampleSelection(state, def.Id, 3, rng);
+                    break;
+                }
 
             case CL.Catastrophe: // 2-cost: auto-play 2/3 cards off the draw pile
-            {
-                AutoPlayFromDrawPile(state, upgraded ? 3 : 2, rng);
-                break;
-            }
+                {
+                    AutoPlayFromDrawPile(state, upgraded ? 3 : 2, rng);
+                    break;
+                }
 
             case 546: // Cascade -- X-cost: auto-play X (+1 upgraded) off the draw pile
-            {
-                // Cascade used to grant Strength, which is a different card entirely.
-                AutoPlayFromDrawPile(state, state.Energy + (upgraded ? 1 : 0));
-                state.Energy = 0;
-                break;
-            }
+                {
+                    // Cascade used to grant Strength, which is a different card entirely.
+                    AutoPlayFromDrawPile(state, state.Energy + (upgraded ? 1 : 0));
+                    state.Energy = 0;
+                    break;
+                }
 
             case CL.BeatDown: // 3-cost: auto-play 3/4 Attacks out of the discard pile
-            {
-                AutoPlayAttacksFromDiscard(state, upgraded ? 4 : 3, rng);
-                break;
-            }
+                {
+                    AutoPlayAttacksFromDiscard(state, upgraded ? 4 : 3, rng);
+                    break;
+                }
 
             case CL.HiddenGem: // 1-cost: a draw-pile card gains Replay 2/3
-            {
-                GrantReplayToADrawPileCard(state, upgraded ? 3 : 2);
-                break;
-            }
+                {
+                    GrantReplayToADrawPileCard(state, upgraded ? 3 : 2);
+                    break;
+                }
 
             case IC.Bash: // 2-cost, 8/10 dmg + Vulnerable 2/3
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    ApplyEnemyDebuffToTarget(
-                        state,
-                        target,
-                        BuffId.Vulnerable,
-                        upgraded ? 3 : 2,
-                        rng
-                    );
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        ApplyEnemyDebuffToTarget(
+                            state,
+                            target,
+                            BuffId.Vulnerable,
+                            upgraded ? 3 : 2,
+                            rng
+                        );
+                    }
+                    break;
                 }
-                break;
-            }
 
             case IC.BodySlam: // 1/0-cost, dmg = player's current block
                 DealDamage(state, DmgFrom(state, state.PlayerBlock, def, card));
@@ -250,12 +250,12 @@ public static class CardEffects
                 break;
 
             case IC.Bully: // 0-cost, 4 + 2/3 * target's Vulnerable stacks
-            {
-                var t = FirstEnemy(state);
-                int vuln = t != null ? BuffSystem.Get(t.Buffs, BuffId.Vulnerable) : 0;
-                DealDamage(state, DmgFrom(state, 4 + (upgraded ? 3 : 2) * vuln, def, card));
-                break;
-            }
+                {
+                    var t = FirstEnemy(state);
+                    int vuln = t != null ? BuffSystem.Get(t.Buffs, BuffId.Vulnerable) : 0;
+                    DealDamage(state, DmgFrom(state, 4 + (upgraded ? 3 : 2) * vuln, def, card));
+                    break;
+                }
 
             case IC.Cinder: // 2-cost, 18/24 dmg + exhaust a random card from hand
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -281,12 +281,12 @@ public static class CardEffects
                 break;
 
             case CL.Volley: // X-cost, 10/14 damage X times to random enemies
-            {
-                int x = RelicEffects.ModifyXValue(state, state.Energy);
-                state.Energy = 0;
-                DealDamageToRandomEnemiesMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
-                break;
-            }
+                {
+                    int x = RelicEffects.ModifyXValue(state, state.Energy);
+                    state.Energy = 0;
+                    DealDamageToRandomEnemiesMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
+                    break;
+                }
 
             case CL.Omnislice: // 0-cost, 8/11 damage + splash effective first-hit damage to other enemies
                 DealOmnislice(state, Dmg(state, def, upgraded, card));
@@ -329,24 +329,24 @@ public static class CardEffects
                 break;
 
             case IC.Dismantle: // 1-cost, 8/10 dmg, hits twice if target is Vulnerable
-            {
-                var t = FirstEnemy(state);
-                int hits = (t != null && BuffSystem.Get(t.Buffs, BuffId.Vulnerable) > 0) ? 2 : 1;
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), hits, rng);
-                break;
-            }
+                {
+                    var t = FirstEnemy(state);
+                    int hits = (t != null && BuffSystem.Get(t.Buffs, BuffId.Vulnerable) > 0) ? 2 : 1;
+                    DealDamageMultiHit(state, Dmg(state, def, upgraded, card), hits, rng);
+                    break;
+                }
 
             case IC.FiendFire: // 2-cost, exhaust hand, deal 7/10 dmg per card exhausted
-            {
-                int count = state.Hand.Count;
-                while (state.Hand.Count > 0)
                 {
-                    ExhaustCard(state, state.Hand[0], rng: rng);
-                    state.Hand.RemoveAt(0);
+                    int count = state.Hand.Count;
+                    while (state.Hand.Count > 0)
+                    {
+                        ExhaustCard(state, state.Hand[0], rng: rng);
+                        state.Hand.RemoveAt(0);
+                    }
+                    DealDamageMultiHit(state, Dmg(state, def, upgraded, card), count, rng);
+                    break;
                 }
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), count, rng);
-                break;
-            }
 
             case IC.FightMe: // 2-cost, 5/6 dmg twice, gain 3/4 Strength, enemy gains 1 Strength
                 DealDamageMultiHit(state, Dmg(state, def, upgraded, card), 2, rng);
@@ -375,44 +375,44 @@ public static class CardEffects
                 break;
 
             case IC.MoltenFist: // 1-cost, 10/14 dmg + reapply target's Vulnerable if it survives
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    int vulnerable =
-                        target.Hp > 0 ? BuffSystem.Get(target.Buffs, BuffId.Vulnerable) : 0;
-                    if (vulnerable > 0)
+                    var target = FirstEnemy(state);
+                    if (target != null)
                     {
-                        int before = vulnerable;
-                        BuffSystem.Apply(target.Buffs, BuffId.Vulnerable, vulnerable);
-                        DrawForVicious(
-                            state,
-                            BuffId.Vulnerable,
-                            before,
-                            BuffSystem.Get(target.Buffs, BuffId.Vulnerable),
-                            rng
-                        );
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        int vulnerable =
+                            target.Hp > 0 ? BuffSystem.Get(target.Buffs, BuffId.Vulnerable) : 0;
+                        if (vulnerable > 0)
+                        {
+                            int before = vulnerable;
+                            BuffSystem.Apply(target.Buffs, BuffId.Vulnerable, vulnerable);
+                            DrawForVicious(
+                                state,
+                                BuffId.Vulnerable,
+                                before,
+                                BuffSystem.Get(target.Buffs, BuffId.Vulnerable),
+                                rng
+                            );
+                        }
                     }
+                    break;
                 }
-                break;
-            }
 
             case IC.Feed: // 1-cost, 10/12 dmg; if kills gain 3/4 max HP; exhaust
-            {
-                var feedTarget = FirstEnemy(state);
-                if (feedTarget != null)
                 {
-                    bool feedFatal = TriggersFatal(state, feedTarget);
-                    DealDamageToEnemy(state, feedTarget, Dmg(state, def, upgraded, card));
-                    if (feedFatal && feedTarget.Hp <= 0)
+                    var feedTarget = FirstEnemy(state);
+                    if (feedTarget != null)
                     {
-                        // `CreatureCmd.GainMaxHp`, which heals as well as raising the cap.
-                        GainMaxHp(state, upgraded ? 4 : 3);
+                        bool feedFatal = TriggersFatal(state, feedTarget);
+                        DealDamageToEnemy(state, feedTarget, Dmg(state, def, upgraded, card));
+                        if (feedFatal && feedTarget.Hp <= 0)
+                        {
+                            // `CreatureCmd.GainMaxHp`, which heals as well as raising the cap.
+                            GainMaxHp(state, upgraded ? 4 : 3);
+                        }
                     }
+                    break;
                 }
-                break;
-            }
 
             case IC.Mangle: // 3-cost, 15/20 dmg + enemy loses Strength 10/15 this turn
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -458,26 +458,26 @@ public static class CardEffects
                 break;
 
             case IC.PrimalForce: // 0-cost, transform all Attacks in hand to GiantRocks
-            {
-                for (int i = 0; i < state.Hand.Count; i++)
                 {
-                    var handCard = state.Hand[i];
-                    if (GeneratedData.Cards.Get(handCard.DefId).Type == CardType.Attack)
+                    for (int i = 0; i < state.Hand.Count; i++)
                     {
-                        state.Hand[i] = new CardInstance(IC.GiantRock, upgraded);
+                        var handCard = state.Hand[i];
+                        if (GeneratedData.Cards.Get(handCard.DefId).Type == CardType.Attack)
+                        {
+                            state.Hand[i] = new CardInstance(IC.GiantRock, upgraded);
+                        }
                     }
+                    break;
                 }
-                break;
-            }
 
             case IC.SetupStrike: // 1-cost, 7/9 dmg + 2/3 temporary Strength
-            {
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                int strength = upgraded ? 3 : 2;
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, strength);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryStrength, strength);
-                break;
-            }
+                {
+                    DealDamage(state, Dmg(state, def, upgraded, card));
+                    int strength = upgraded ? 3 : 2;
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, strength);
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryStrength, strength);
+                    break;
+                }
 
             case IC.Spite: // 0-cost, 5 dmg; 2/3 hits if the player lost HP this turn
                 DealDamageMultiHit(
@@ -493,27 +493,27 @@ public static class CardEffects
                 break;
 
             case IC.Stoke: // 1-cost, exhaust hand and add random cards
-            {
-                int count = state.Hand.Count;
-                foreach (var handCard in state.Hand.ToArray())
                 {
-                    ExhaustCard(state, handCard, rng: rng);
-                }
-
-                state.Hand.Clear();
-                for (int i = 0; i < count; i++)
-                {
-                    if (state.Hand.Count < MaxCardsInHand)
+                    int count = state.Hand.Count;
+                    foreach (var handCard in state.Hand.ToArray())
                     {
-                        var ironcladPool = IroncladGenerationPool();
-                        int defId = ironcladPool[
-                            CardGenerationRng(state, rng).Next(ironcladPool.Count)
-                        ];
-                        state.Hand.Add(new CardInstance(defId, upgraded));
+                        ExhaustCard(state, handCard, rng: rng);
                     }
+
+                    state.Hand.Clear();
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (state.Hand.Count < MaxCardsInHand)
+                        {
+                            var ironcladPool = IroncladGenerationPool();
+                            int defId = ironcladPool[
+                                CardGenerationRng(state, rng).Next(ironcladPool.Count)
+                            ];
+                            state.Hand.Add(new CardInstance(defId, upgraded));
+                        }
+                    }
+                    break;
                 }
-                break;
-            }
 
             case IC.SwordBoomerang: // 1-cost, 3 dmg × 3/4 hits to random enemies
                 // TargetingRandomOpponents, and AttackCommand re-rolls the target inside
@@ -558,11 +558,11 @@ public static class CardEffects
                 break;
 
             case IC.TearAsunder: // 2-cost, 5/7 dmg × (1 + unblocked damage hits received this combat)
-            {
-                int hits = 1 + state.UnblockedDamageHitCount;
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), hits, rng);
-                break;
-            }
+                {
+                    int hits = 1 + state.UnblockedDamageHitCount;
+                    DealDamageMultiHit(state, Dmg(state, def, upgraded, card), hits, rng);
+                    break;
+                }
 
             case IC.Thrash: // 1-cost, 4/6 dmg × 2, then EAT a random Attack from hand
                 // `+ card.BonusDamage` for the same reason Rampage's call site has it: the
@@ -594,12 +594,12 @@ public static class CardEffects
                 break;
 
             case IC.Whirlwind: // X-cost, 5/8 dmg × (energy spent) to ALL enemies
-            {
-                int x = RelicEffects.ModifyXValue(state, state.Energy);
-                state.Energy = 0;
-                DealDamageToAllMultiHit(state, Dmg(state, def, upgraded, card), x);
-                break;
-            }
+                {
+                    int x = RelicEffects.ModifyXValue(state, state.Energy);
+                    state.Energy = 0;
+                    DealDamageToAllMultiHit(state, Dmg(state, def, upgraded, card), x);
+                    break;
+                }
 
             // ── Ironclad Skills ──────────────────────────────────────────────────
 
@@ -695,22 +695,22 @@ public static class CardEffects
                 break;
 
             case IC.Dominate: // 1-cost, Vulnerable 1/2 to enemy, gain Strength = its Vulnerable
-            {
-                // PowerVar<VulnerablePower>(1m) with OnUpgrade UpgradeValueBy(1m); this
-                // used to apply 1 whether or not the card was upgraded.
-                ApplyEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 2 : 1, rng);
-                var t = FirstEnemy(state);
-                if (t != null)
                 {
-                    BuffSystem.Apply(
-                        state.PlayerBuffs,
-                        BuffId.Strength,
-                        BuffSystem.Get(t.Buffs, BuffId.Vulnerable)
-                    );
-                }
+                    // PowerVar<VulnerablePower>(1m) with OnUpgrade UpgradeValueBy(1m); this
+                    // used to apply 1 whether or not the card was upgraded.
+                    ApplyEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 2 : 1, rng);
+                    var t = FirstEnemy(state);
+                    if (t != null)
+                    {
+                        BuffSystem.Apply(
+                            state.PlayerBuffs,
+                            BuffId.Strength,
+                            BuffSystem.Get(t.Buffs, BuffId.Vulnerable)
+                        );
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case IC.DrumOfBattle: // 1-cost, draw 2; on self-exhaust gain 2/3 energy
                 DrawCards(state, 2, rng);
@@ -726,17 +726,17 @@ public static class CardEffects
                 break;
 
             case IC.ExpectAFight: // 2/1-cost, gain 1 energy per Attack in hand
-            {
-                int attackCount = state.Hand.Count(card =>
-                    GeneratedData.Cards.Get(card.DefId).Type == CardType.Attack
-                );
-                GainEnergy(state, attackCount);
-                // ...and then `NoEnergyGainPower` on yourself, which is the card's entire
-                // COST and was missing: it was a free burst of energy with no downside.
-                // Applied AFTER its own gain, so the card pays itself first.
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoEnergyGain, 1);
-                break;
-            }
+                {
+                    int attackCount = state.Hand.Count(card =>
+                        GeneratedData.Cards.Get(card.DefId).Type == CardType.Attack
+                    );
+                    GainEnergy(state, attackCount);
+                    // ...and then `NoEnergyGainPower` on yourself, which is the card's entire
+                    // COST and was missing: it was a free burst of energy with no downside.
+                    // Applied AFTER its own gain, so the card pays itself first.
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.NoEnergyGain, 1);
+                    break;
+                }
 
             case IC.FlameBarrier: // 2-cost, 12/16 block + FlameBarrier 4/6
                 GainBlock(state, Blk(def, upgraded, card), rng);
@@ -752,17 +752,17 @@ public static class CardEffects
                 break;
 
             case IC.Havoc: // 1/0-cost, play top card of draw pile and exhaust it
-            {
-                if (state.DrawPile.Count > 0)
                 {
-                    var top = state.DrawPile[0];
-                    state.RemoveFromDrawPileAt(0);
-                    var topDef = GeneratedData.Cards.Get(top.DefId);
-                    PlayNestedCard(topDef, top.Upgraded, state, rng);
-                    ExhaustCard(state, top, rng: rng);
+                    if (state.DrawPile.Count > 0)
+                    {
+                        var top = state.DrawPile[0];
+                        state.RemoveFromDrawPileAt(0);
+                        var topDef = GeneratedData.Cards.Get(top.DefId);
+                        PlayNestedCard(topDef, top.Upgraded, state, rng);
+                        ExhaustCard(state, top, rng: rng);
+                    }
+                    break;
                 }
-                break;
-            }
 
             case IC.InfernalBlade: // 1/0-cost, add a random Ironclad Attack to hand free this turn
                 AddRandomInfernalBladeAttack(state, rng);
@@ -783,19 +783,19 @@ public static class CardEffects
                 break;
 
             case IC.SecondWind: // 1-cost, exhaust non-Attacks, gain 5/7 block per
-            {
-                int blockEach = upgraded ? 7 : 5;
-                var nonAtk = state
-                    .Hand.Where(c => GeneratedData.Cards.Get(c.DefId).Type != CardType.Attack)
-                    .ToList();
-                foreach (var c in nonAtk)
                 {
-                    state.Hand.Remove(c);
-                    ExhaustCard(state, c, rng: rng);
-                    GainBlock(state, blockEach, rng);
+                    int blockEach = upgraded ? 7 : 5;
+                    var nonAtk = state
+                        .Hand.Where(c => GeneratedData.Cards.Get(c.DefId).Type != CardType.Attack)
+                        .ToList();
+                    foreach (var c in nonAtk)
+                    {
+                        state.Hand.Remove(c);
+                        ExhaustCard(state, c, rng: rng);
+                        GainBlock(state, blockEach, rng);
+                    }
+                    break;
                 }
-                break;
-            }
 
             case IC.Restlessness: // 0-cost, if this was the only card in hand, draw and gain energy
                 if (state.Hand.Count == 0)
@@ -837,32 +837,32 @@ public static class CardEffects
                 ApplyEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 4 : 3, rng);
                 break;
             case IC.TrueGrit: // 1-cost, gain 7/9 block; exhaust a card (chosen when upgraded)
-            {
-                GainBlock(state, Blk(def, upgraded, card), rng);
-                if (state.Hand.Count > 0)
                 {
-                    if (upgraded)
+                    GainBlock(state, Blk(def, upgraded, card), rng);
+                    if (state.Hand.Count > 0)
                     {
-                        // CardSelectCmd.FromHand — upgraded lets the player pick.
-                        OpenCardSelection(
-                            state,
-                            CardSelectionKind.ExhaustFromHand,
-                            state.Hand.Count,
-                            def.Id,
-                            autoPick: CardSelectionRng(state, rng).Next(state.Hand.Count)
-                        );
+                        if (upgraded)
+                        {
+                            // CardSelectCmd.FromHand — upgraded lets the player pick.
+                            OpenCardSelection(
+                                state,
+                                CardSelectionKind.ExhaustFromHand,
+                                state.Hand.Count,
+                                def.Id,
+                                autoPick: CardSelectionRng(state, rng).Next(state.Hand.Count)
+                            );
+                        }
+                        else
+                        {
+                            // Unupgraded stays random: Rng.CombatCardSelection.NextItem(hand).
+                            int index = CardSelectionRng(state, rng).Next(state.Hand.Count);
+                            var c = state.Hand[index];
+                            state.Hand.RemoveAt(index);
+                            ExhaustCard(state, c, rng: rng);
+                        }
                     }
-                    else
-                    {
-                        // Unupgraded stays random: Rng.CombatCardSelection.NextItem(hand).
-                        int index = CardSelectionRng(state, rng).Next(state.Hand.Count);
-                        var c = state.Hand[index];
-                        state.Hand.RemoveAt(index);
-                        ExhaustCard(state, c, rng: rng);
-                    }
+                    break;
                 }
-                break;
-            }
 
             // ── Ironclad Power Cards ─────────────────────────────────────────────
 
@@ -968,15 +968,15 @@ public static class CardEffects
                 break;
 
             case CL.Rend: // 2-cost, 15/18 + 5/8 per non-temporary debuff on target
-            {
-                var target = FirstEnemy(state);
-                int debuffs = target != null ? CountRendDebuffs(target) : 0;
-                DealDamage(
-                    state,
-                    DmgFrom(state, (upgraded ? 18 : 15) + debuffs * (upgraded ? 8 : 5), def, card)
-                );
-                break;
-            }
+                {
+                    var target = FirstEnemy(state);
+                    int debuffs = target != null ? CountRendDebuffs(target) : 0;
+                    DealDamage(
+                        state,
+                        DmgFrom(state, (upgraded ? 18 : 15) + debuffs * (upgraded ? 8 : 5), def, card)
+                    );
+                    break;
+                }
 
             case CL.Alchemize: // 1/0-cost, gain random potion
                 ProcureRandomPotion(state, rng);
@@ -987,14 +987,14 @@ public static class CardEffects
                 break;
 
             case CL.Discovery: // 1-cost, choose one of three generated cards; free this turn
-            {
-                // CardFactory.GetDistinctForCombat(..., 3, Rng.CombatCardGeneration) then
-                // a choose-a-card screen. The game's canSkip is not modelled: every action
-                // in a selection is a candidate, and skipping would need one of its own.
-                OpenGeneratedCardSelection(state, def.Id, optionCount: 3, rng);
+                {
+                    // CardFactory.GetDistinctForCombat(..., 3, Rng.CombatCardGeneration) then
+                    // a choose-a-card screen. The game's canSkip is not modelled: every action
+                    // in a selection is a candidate, and skipping would need one of its own.
+                    OpenGeneratedCardSelection(state, def.Id, optionCount: 3, rng);
 
-                break;
-            }
+                    break;
+                }
 
             case CL.Finesse: // 0-cost, 4/7 block + draw 1
                 // BlockVar(4m) with OnUpgrade UpgradeValueBy(3m), and Cards.g.cs had
@@ -1011,20 +1011,20 @@ public static class CardEffects
                 break;
 
             case CL.HandOfGreed: // 2-cost, 20/25 dmg; gain 20/25 gold on fatal
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    int hpBefore = target.Hp;
-                    bool greedFatal = TriggersFatal(state, target);
-                    DealDamageToEnemy(state, target, upgraded ? 25 : 20);
-                    if (target.Hp <= 0 && hpBefore > 0 && greedFatal)
+                    var target = FirstEnemy(state);
+                    if (target != null)
                     {
-                        GainGold(state, upgraded ? 25 : 20);
+                        int hpBefore = target.Hp;
+                        bool greedFatal = TriggersFatal(state, target);
+                        DealDamageToEnemy(state, target, upgraded ? 25 : 20);
+                        if (target.Hp <= 0 && hpBefore > 0 && greedFatal)
+                        {
+                            GainGold(state, upgraded ? 25 : 20);
+                        }
                     }
+                    break;
                 }
-                break;
-            }
 
             case CL.BelieveInYou: // 0-cost multiplayer ally energy; self in single-player
                 GainEnergy(state, upgraded ? 3 : 2);
@@ -1212,21 +1212,21 @@ public static class CardEffects
                 break;
 
             case SI.Assassinate: // 0-cost, 10/13 damage + Vulnerable 1/2, exhaust
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    ApplyEnemyDebuffToTarget(
-                        state,
-                        target,
-                        BuffId.Vulnerable,
-                        upgraded ? 2 : 1,
-                        rng
-                    );
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        ApplyEnemyDebuffToTarget(
+                            state,
+                            target,
+                            BuffId.Vulnerable,
+                            upgraded ? 2 : 1,
+                            rng
+                        );
+                    }
+                    break;
                 }
-                break;
-            }
 
             case SI.Backflip: // 1-cost, 5/8 block and draw 2
                 GainBlock(state, Blk(def, upgraded, card), rng);
@@ -1284,14 +1284,14 @@ public static class CardEffects
                 break;
 
             case SI.BubbleBubble: // 1-cost, apply 9/12 poison if target is already poisoned
-            {
-                var target = FirstEnemy(state);
-                if (target != null && BuffSystem.Get(target.Buffs, BuffId.Poison) > 0)
                 {
-                    ApplyEnemyDebuffToTarget(state, target, BuffId.Poison, upgraded ? 12 : 9, rng);
+                    var target = FirstEnemy(state);
+                    if (target != null && BuffSystem.Get(target.Buffs, BuffId.Poison) > 0)
+                    {
+                        ApplyEnemyDebuffToTarget(state, target, BuffId.Poison, upgraded ? 12 : 9, rng);
+                    }
+                    break;
                 }
-                break;
-            }
 
             case SI.BulletTime: // 3/2-cost, hand costs nothing this turn and you cannot DRAW
                 // `NoDrawPower`, not NoBlock. The comment beside it said "prevent draw" and
@@ -1309,12 +1309,12 @@ public static class CardEffects
                 break;
 
             case SI.CalculatedGamble: // 0-cost, discard hand and draw that many; upgrade retains
-            {
-                int count = state.Hand.Count;
-                DiscardFirstCardsFromHand(state, count);
-                DrawCards(state, count, rng);
-                break;
-            }
+                {
+                    int count = state.Hand.Count;
+                    DiscardFirstCardsFromHand(state, count);
+                    DrawCards(state, count, rng);
+                    break;
+                }
 
             case SI.CloakAndDagger: // 1-cost, 6 block and add 1/2 Shivs
                 GainBlock(state, Blk(def, upgraded, card), rng);
@@ -1367,76 +1367,76 @@ public static class CardEffects
                 break;
 
             case SI.EchoingSlash: // 1-cost, 10/13 to ALL, re-thrown once per enemy it kills
-            {
-                // `while (attackCount > 0) { attackCount--; ... attackCount +=
-                // enumerable.Count(r => r.WasTargetKilled); }` -- the volley repeats once
-                // for every creature the previous one killed, and those repeats can kill
-                // in turn. Against a row of small enemies it cascades until nothing is
-                // standing.
-                //
-                // The old comment here said the card "gains damage per kill", which is a
-                // different card: the damage never changes, the number of volleys does.
-                int damage = Dmg(state, def, upgraded, card);
-                int volleys = 1;
-                while (volleys > 0)
                 {
-                    volleys--;
-                    volleys += DealDamageToAllCountingKills(state, damage);
-                }
+                    // `while (attackCount > 0) { attackCount--; ... attackCount +=
+                    // enumerable.Count(r => r.WasTargetKilled); }` -- the volley repeats once
+                    // for every creature the previous one killed, and those repeats can kill
+                    // in turn. Against a row of small enemies it cascades until nothing is
+                    // standing.
+                    //
+                    // The old comment here said the card "gains damage per kill", which is a
+                    // different card: the damage never changes, the number of volleys does.
+                    int damage = Dmg(state, def, upgraded, card);
+                    int volleys = 1;
+                    while (volleys > 0)
+                    {
+                        volleys--;
+                        volleys += DealDamageToAllCountingKills(state, damage);
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case SI.Envenom: // 2-cost, attacks apply 1/2 poison on damage
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Envenom, upgraded ? 2 : 1);
                 break;
 
             case SI.EscapePlan: // 0-cost, draw 1; if it is a Skill, gain 3/5 block
-            {
-                // `(await CardPileCmd.Draw(...)).FirstOrDefault()` and then a type check on
-                // what came back. The emulator peeked at `DrawPile[0]` BEFORE drawing,
-                // which is the same card only while the draw pile is non-empty: with an
-                // empty pile the draw reshuffles the discard and the peek describes a card
-                // that no longer exists, and with a full hand the draw returns nothing at
-                // all while the peek still says Skill.
-                int handBefore = state.Hand.Count;
-                DrawCards(state, 1, rng);
-                bool drewSkill =
-                    state.Hand.Count > handBefore
-                    && GeneratedData.Cards.Get(state.Hand[^1].DefId).Type == CardType.Skill;
-                if (drewSkill)
                 {
-                    GainBlock(state, Blk(def, upgraded, card), rng);
-                }
+                    // `(await CardPileCmd.Draw(...)).FirstOrDefault()` and then a type check on
+                    // what came back. The emulator peeked at `DrawPile[0]` BEFORE drawing,
+                    // which is the same card only while the draw pile is non-empty: with an
+                    // empty pile the draw reshuffles the discard and the peek describes a card
+                    // that no longer exists, and with a full hand the draw returns nothing at
+                    // all while the peek still says Skill.
+                    int handBefore = state.Hand.Count;
+                    DrawCards(state, 1, rng);
+                    bool drewSkill =
+                        state.Hand.Count > handBefore
+                        && GeneratedData.Cards.Get(state.Hand[^1].DefId).Type == CardType.Skill;
+                    if (drewSkill)
+                    {
+                        GainBlock(state, Blk(def, upgraded, card), rng);
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case SI.Expertise: // 1-cost, draw until hand has 6/7 cards
                 DrawCards(state, Math.Max(0, (upgraded ? 7 : 6) - state.Hand.Count), rng);
                 break;
 
             case SI.Expose: // 0-cost, remove block/artifact and apply Vulnerable 2/3
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    target.Block = 0;
-                    // `PowerCmd.Remove<ArtifactPower>` takes the whole power off, not one
-                    // stack -- and it happens BEFORE the Vulnerable, so the debuff always
-                    // lands. Consuming a single charge left a two-Artifact enemy holding
-                    // one, which then swallowed the Vulnerable this card exists to apply.
-                    BuffSystem.Remove(target.Buffs, BuffId.Artifact);
-                    ApplyEnemyDebuffToTarget(
-                        state,
-                        target,
-                        BuffId.Vulnerable,
-                        upgraded ? 3 : 2,
-                        rng
-                    );
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        target.Block = 0;
+                        // `PowerCmd.Remove<ArtifactPower>` takes the whole power off, not one
+                        // stack -- and it happens BEFORE the Vulnerable, so the debuff always
+                        // lands. Consuming a single charge left a two-Artifact enemy holding
+                        // one, which then swallowed the Vulnerable this card exists to apply.
+                        BuffSystem.Remove(target.Buffs, BuffId.Artifact);
+                        ApplyEnemyDebuffToTarget(
+                            state,
+                            target,
+                            BuffId.Vulnerable,
+                            upgraded ? 3 : 2,
+                            rng
+                        );
+                    }
+                    break;
                 }
-                break;
-            }
 
             case SI.FanOfKnives: // FanOfKnivesPower, and 4/5 Shivs into hand
                 // `FanOfKnivesPower` does nothing on its own: the SHIV card reads it and
@@ -1514,34 +1514,34 @@ public static class CardEffects
                 break;
 
             case SI.HandTrick: // 1-cost, 7/10 block and mark a CHOSEN Skill Sly
-            {
-                GainBlock(state, Blk(def, upgraded, card), rng);
-                // `CardSelectCmd.FromHand` filtered to `card.Type == Skill &&
-                // !card.IsSlyThisTurn`. The marking was the whole second half of the card
-                // and did nothing at all before: Sly was unmodelled, so Hand Trick was
-                // seven block.
-                var skills = new List<int>();
-                for (int i = 0; i < state.Hand.Count; i++)
                 {
-                    var candidate = state.Hand[i];
-                    if (
-                        GeneratedData.Cards.Get(candidate.DefId).Type == CardType.Skill
-                        && !candidate.IsSlyThisTurn()
-                    )
+                    GainBlock(state, Blk(def, upgraded, card), rng);
+                    // `CardSelectCmd.FromHand` filtered to `card.Type == Skill &&
+                    // !card.IsSlyThisTurn`. The marking was the whole second half of the card
+                    // and did nothing at all before: Sly was unmodelled, so Hand Trick was
+                    // seven block.
+                    var skills = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
                     {
-                        skills.Add(i);
+                        var candidate = state.Hand[i];
+                        if (
+                            GeneratedData.Cards.Get(candidate.DefId).Type == CardType.Skill
+                            && !candidate.IsSlyThisTurn()
+                        )
+                        {
+                            skills.Add(i);
+                        }
                     }
-                }
 
-                OpenCardSelection(
-                    state,
-                    CardSelectionKind.MarkHandCardSly,
-                    skills,
-                    def.Id,
-                    autoPick: skills.Count > 0 ? skills[0] : 0
-                );
-                break;
-            }
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.MarkHandCardSly,
+                        skills,
+                        def.Id,
+                        autoPick: skills.Count > 0 ? skills[0] : 0
+                    );
+                    break;
+                }
 
             case SI.HiddenDaggers: // 1-cost, discard 2 CHOSEN cards, then add 2 Shivs
                 // The card deals NO damage: its two vars are CardsVar(2) -- how many to
@@ -1565,34 +1565,34 @@ public static class CardEffects
                 break;
 
             case SI.KnifeTrap: // 2-cost, REPLAY every Shiv in the exhaust pile
-            {
-                // The card takes every Shiv-tagged card out of the EXHAUST pile, upgrades
-                // each one if the trap is upgraded, and auto-plays them all at the trap's
-                // own target. `CalculatedShivs` is a display var counting them; there is no
-                // damage and no block on the card at all.
-                //
-                // Thorns 4/6 was not a smaller version of that. It was a different card.
-                var trapped = state.ExhaustPile.Where(c => c.DefId == SI.Shiv).ToList();
-                foreach (var shiv in trapped)
                 {
-                    state.ExhaustPile.Remove(shiv);
-                }
+                    // The card takes every Shiv-tagged card out of the EXHAUST pile, upgrades
+                    // each one if the trap is upgraded, and auto-plays them all at the trap's
+                    // own target. `CalculatedShivs` is a display var counting them; there is no
+                    // damage and no block on the card at all.
+                    //
+                    // Thorns 4/6 was not a smaller version of that. It was a different card.
+                    var trapped = state.ExhaustPile.Where(c => c.DefId == SI.Shiv).ToList();
+                    foreach (var shiv in trapped)
+                    {
+                        state.ExhaustPile.Remove(shiv);
+                    }
 
-                // Given a target, so the replays must not roll for one -- see
-                // CombatState.AutoPlayTargetIndex. The trap is TargetType.AnyEnemy, so the
-                // target is whichever enemy the play was aimed at.
-                var aim = FirstEnemy(state);
-                state.AutoPlayTargetIndex = aim is null ? -1 : state.Enemies.IndexOf(aim);
-                foreach (var shiv in trapped)
-                {
-                    // `CardCmd.Upgrade(item)` happens before the play, so an upgraded trap
-                    // replays UPGRADED Shivs -- the upgrade is on what it throws, not on
-                    // how many.
-                    state.AutoPlayQueue.Add(upgraded ? shiv with { Upgraded = true } : shiv);
-                }
+                    // Given a target, so the replays must not roll for one -- see
+                    // CombatState.AutoPlayTargetIndex. The trap is TargetType.AnyEnemy, so the
+                    // target is whichever enemy the play was aimed at.
+                    var aim = FirstEnemy(state);
+                    state.AutoPlayTargetIndex = aim is null ? -1 : state.Enemies.IndexOf(aim);
+                    foreach (var shiv in trapped)
+                    {
+                        // `CardCmd.Upgrade(item)` happens before the play, so an upgraded trap
+                        // replays UPGRADED Shivs -- the upgrade is on what it throws, not on
+                        // how many.
+                        state.AutoPlayQueue.Add(upgraded ? shiv with { Upgraded = true } : shiv);
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case SI.LeadingStrike: // 1-cost Strike, 3/6 damage and add 2 Shivs
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -1608,17 +1608,17 @@ public static class CardEffects
                 break;
 
             case SI.Malaise: // X-cost, enemy loses X Strength and gains X Weak
-            {
-                // X, plus one more when upgraded -- `if (base.IsUpgraded) powerAmount++`,
-                // which the emulator ignored entirely. And the Strength loss is a plain
-                // `StrengthPower(-powerAmount)`: PERMANENT, not the temporary one that is
-                // handed back at end of turn.
-                int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
-                ApplyEnemyDebuff(state, BuffId.Strength, -x, rng);
-                ApplyEnemyDebuff(state, BuffId.Weak, x, rng);
-                state.Energy = 0;
-                break;
-            }
+                {
+                    // X, plus one more when upgraded -- `if (base.IsUpgraded) powerAmount++`,
+                    // which the emulator ignored entirely. And the Strength loss is a plain
+                    // `StrengthPower(-powerAmount)`: PERMANENT, not the temporary one that is
+                    // handed back at end of turn.
+                    int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
+                    ApplyEnemyDebuff(state, BuffId.Strength, -x, rng);
+                    ApplyEnemyDebuff(state, BuffId.Weak, x, rng);
+                    state.Energy = 0;
+                    break;
+                }
 
             case SI.MasterPlanner: // 2/1-cost power: every Skill played becomes Sly
                 // `MasterPlannerPower.AfterCardPlayed` calls
@@ -1669,15 +1669,15 @@ public static class CardEffects
                 break;
 
             case SI.Neutralize: // 0-cost, 3/4 damage and Weak 1/2
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, upgraded ? 2 : 1, rng);
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, upgraded ? 2 : 1, rng);
+                    }
+                    break;
                 }
-                break;
-            }
 
             case SI.Nightmare: // 3/2-cost: THREE copies of a CHOSEN card, next turn
                 // Two things were wrong and each was the whole card. It picked the
@@ -1741,15 +1741,15 @@ public static class CardEffects
                 break;
 
             case SI.PoisonedStab: // 1-cost, 6/8 damage and Poison 3/4
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    ApplyEnemyDebuffToTarget(state, target, BuffId.Poison, upgraded ? 4 : 3, rng);
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        ApplyEnemyDebuffToTarget(state, target, BuffId.Poison, upgraded ? 4 : 3, rng);
+                    }
+                    break;
                 }
-                break;
-            }
 
             case SI.Pounce: // 2-cost, 14/20 damage and next Skill free
                 // PowerCmd.Apply<FreeSkillPower>(1) — the next Skill costs 0. This used to
@@ -1791,30 +1791,30 @@ public static class CardEffects
                 break;
 
             case SI.Ricochet: // 2-cost, 3 damage to a RANDOM enemy, 4/5 times
-            {
-                // TargetType.RandomEnemy, and `AttackCommand.Execute` rolls
-                // `Rng.CombatTargets.NextItem(validTargets)` INSIDE its per-hit loop, with
-                // the living targets recomputed each time round. The emulator used
-                // DealDamageMultiHit, which lands every hit on the AIMED-AT creature -- so
-                // a card that sprays hits across the room put all of them on one enemy,
-                // and the target stream was never drawn from, which desynchronises every
-                // roll downstream. Bouncing Flask had the same defect (E139).
-                //
-                // The damage never upgrades. `RepeatVar(4)` does: 4 hits, 5 upgraded.
-                int damage = Dmg(state, def, upgraded, card);
-                for (int i = 0; i < (upgraded ? 5 : 4); i++)
                 {
-                    var target = RandomLivingEnemy(state, rng);
-                    if (target == null)
+                    // TargetType.RandomEnemy, and `AttackCommand.Execute` rolls
+                    // `Rng.CombatTargets.NextItem(validTargets)` INSIDE its per-hit loop, with
+                    // the living targets recomputed each time round. The emulator used
+                    // DealDamageMultiHit, which lands every hit on the AIMED-AT creature -- so
+                    // a card that sprays hits across the room put all of them on one enemy,
+                    // and the target stream was never drawn from, which desynchronises every
+                    // roll downstream. Bouncing Flask had the same defect (E139).
+                    //
+                    // The damage never upgrades. `RepeatVar(4)` does: 4 hits, 5 upgraded.
+                    int damage = Dmg(state, def, upgraded, card);
+                    for (int i = 0; i < (upgraded ? 5 : 4); i++)
                     {
-                        break;
+                        var target = RandomLivingEnemy(state, rng);
+                        if (target == null)
+                        {
+                            break;
+                        }
+
+                        DealDamageToEnemy(state, target, damage);
                     }
 
-                    DealDamageToEnemy(state, target, damage);
+                    break;
                 }
-
-                break;
-            }
 
             case SI.SerpentForm: // 3-cost power: every card played hits a RANDOM enemy for 4/6
                 // `SerpentFormPower` records its amount before each card the player plays
@@ -1845,12 +1845,12 @@ public static class CardEffects
                 break;
 
             case SI.Skewer: // X-cost, 8/11 damage X times
-            {
-                int x = RelicEffects.ModifyXValue(state, state.Energy);
-                state.Energy = 0;
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
-                break;
-            }
+                {
+                    int x = RelicEffects.ModifyXValue(state, state.Energy);
+                    state.Energy = 0;
+                    DealDamageMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
+                    break;
+                }
 
             case SI.Slice: // 0-cost, 6/9 damage
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -1873,15 +1873,15 @@ public static class CardEffects
                 break;
 
             case SI.StormOfSteel: // 1-cost, discard hand and add upgraded Shivs if upgraded
-            {
-                int count = state.Hand.Count;
-                DiscardFirstCardsFromHand(state, count);
-                for (int i = 0; i < count && state.Hand.Count < MaxCardsInHand; i++)
                 {
-                    state.Hand.Add(new CardInstance(SI.Shiv, upgraded, FreeThisTurn: true));
+                    int count = state.Hand.Count;
+                    DiscardFirstCardsFromHand(state, count);
+                    for (int i = 0; i < count && state.Hand.Count < MaxCardsInHand; i++)
+                    {
+                        state.Hand.Add(new CardInstance(SI.Shiv, upgraded, FreeThisTurn: true));
+                    }
+                    break;
                 }
-                break;
-            }
 
             case SI.Strangle: // 1-cost, 8/10 damage and StranglePower 2/3
                 // Vulnerable 2 used to stand in for StranglePower, and the comment here
@@ -1900,16 +1900,16 @@ public static class CardEffects
 
             case SI.SuckerPunch: // 1-cost, 8/10 damage and Weak 1/2
             case SI.Suppress: // 0-cost, 11/17 damage and Weak 3/5
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    int weak = def.Id == SI.Suppress ? (upgraded ? 5 : 3) : (upgraded ? 2 : 1);
-                    ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, weak, rng);
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        int weak = def.Id == SI.Suppress ? (upgraded ? 5 : 3) : (upgraded ? 2 : 1);
+                        ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, weak, rng);
+                    }
+                    break;
                 }
-                break;
-            }
 
             case SI.Survivor: // 1-cost, 8/11 block and discard a CHOSEN card
                 GainBlock(state, Blk(def, upgraded, card), rng);
@@ -1921,25 +1921,25 @@ public static class CardEffects
                 break;
 
             case SI.TheHunt: // 1-cost, 10/15 damage; a KILL earns an extra card reward
-            {
-                // `TheHuntPower` is a visual marker and nothing else -- the behaviour is in
-                // the card. If the attack kills its target, the room gains a whole extra
-                // CardReward of three, which is the entire reason to play the card and was
-                // simply absent.
-                var quarry = FirstEnemy(state);
-                if (quarry != null)
                 {
-                    bool huntFatal = TriggersFatal(state, quarry);
-                    DealDamageToEnemy(state, quarry, Dmg(state, def, upgraded, card));
-                    if (huntFatal && quarry.Hp <= 0)
+                    // `TheHuntPower` is a visual marker and nothing else -- the behaviour is in
+                    // the card. If the attack kills its target, the room gains a whole extra
+                    // CardReward of three, which is the entire reason to play the card and was
+                    // simply absent.
+                    var quarry = FirstEnemy(state);
+                    if (quarry != null)
                     {
-                        state.ExtraCardRewards++;
-                        BuffSystem.Apply(state.PlayerBuffs, BuffId.TheHunt, 1);
+                        bool huntFatal = TriggersFatal(state, quarry);
+                        DealDamageToEnemy(state, quarry, Dmg(state, def, upgraded, card));
+                        if (huntFatal && quarry.Hp <= 0)
+                        {
+                            state.ExtraCardRewards++;
+                            BuffSystem.Apply(state.PlayerBuffs, BuffId.TheHunt, 1);
+                        }
                     }
-                }
 
-                break;
-            }
+                    break;
+                }
 
             case SI.ToolsOfTheTrade: // 1/0-cost, draw then discard each turn
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.ToolsOfTheTrade, 1);
@@ -2398,7 +2398,18 @@ public static class CardEffects
         state.Hand[idx] = new CardInstance(defId, false);
     }
 
-    public static void DrawCards(CombatState state, int count, Random rng)
+    /// <param name="fromHandDraw">
+    /// `CardPileCmd.Draw(..., fromHandDraw)`. The turn-start hand draw passes true, and the
+    /// hooks that fire only on EXTRA draws read it -- Speedster, and Death March's count.
+    /// The emulator used `state.PlayerTurn` as a stand-in, which is already true while the
+    /// hand is being drawn, so those hooks fired on the opening hand too.
+    /// </param>
+    public static void DrawCards(
+        CombatState state,
+        int count,
+        Random rng,
+        bool fromHandDraw = false
+    )
     {
         // NoDrawPower stops every later draw this turn, whatever asks for it.
         if (BuffSystem.Get(state.PlayerBuffs, BuffId.NoDraw) > 0)
@@ -2430,9 +2441,15 @@ public static class CardEffects
             var card = state.DrawPile[0];
             state.RemoveFromDrawPileAt(0);
             state.CardsDrawnThisCombat++;
+            if (!fromHandDraw)
+            {
+                // `CardDrawnEntry` with `!FromHandDraw`, which Death March counts.
+                state.ExtraCardsDrawnThisTurn++;
+            }
+
             CountDrawnCardForAutomation(state);
             PoisonAllForCorrosiveWave(state, rng);
-            DamageAllForSpeedster(state);
+            DamageAllForSpeedster(state, fromHandDraw);
             DrawForIteration(state, card, rng);
 
             if (
@@ -2837,10 +2854,10 @@ public static class CardEffects
     /// `SpeedsterPower.AfterCardDrawn`: a card drawn while the player's own side is acting,
     /// and NOT as part of the hand draw, deals `Amount` unpowered damage to every enemy.
     /// </summary>
-    private static void DamageAllForSpeedster(CombatState state)
+    private static void DamageAllForSpeedster(CombatState state, bool fromHandDraw)
     {
         int speedster = BuffSystem.Get(state.PlayerBuffs, BuffId.Speedster);
-        if (speedster <= 0 || !state.PlayerTurn)
+        if (speedster <= 0 || fromHandDraw || !state.PlayerTurn)
         {
             return;
         }
@@ -3807,46 +3824,46 @@ public static class CardEffects
         switch (kind)
         {
             case CardSelectionKind.DiscardToDrawPileTop when index < state.DiscardPile.Count:
-            {
-                var card = state.DiscardPile[index];
-                state.DiscardPile.RemoveAt(index);
-                state.TopDeck(card);
-                break;
-            }
+                {
+                    var card = state.DiscardPile[index];
+                    state.DiscardPile.RemoveAt(index);
+                    state.TopDeck(card);
+                    break;
+                }
 
             case CardSelectionKind.ExhaustFromHand when index < state.Hand.Count:
             case CardSelectionKind.ExhaustFromHandThenDraw when index < state.Hand.Count:
             case CardSelectionKind.ExhaustFromHandRepeated when index < state.Hand.Count:
-            {
-                var card = state.Hand[index];
-                state.Hand.RemoveAt(index);
-                ExhaustCard(state, card);
-                break;
-            }
+                {
+                    var card = state.Hand[index];
+                    state.Hand.RemoveAt(index);
+                    ExhaustCard(state, card);
+                    break;
+                }
 
             case CardSelectionKind.DrawPileToHand when index < state.DrawPile.Count:
-            {
-                var card = state.DrawPile[index];
-                state.RemoveFromDrawPileAt(index);
-                state.Hand.Add(card);
-                break;
-            }
+                {
+                    var card = state.DrawPile[index];
+                    state.RemoveFromDrawPileAt(index);
+                    state.Hand.Add(card);
+                    break;
+                }
 
             case CardSelectionKind.HandToDrawPileTop when index < state.Hand.Count:
-            {
-                var card = state.Hand[index];
-                state.Hand.RemoveAt(index);
-                state.TopDeck(card);
-                break;
-            }
+                {
+                    var card = state.Hand[index];
+                    state.Hand.RemoveAt(index);
+                    state.TopDeck(card);
+                    break;
+                }
 
             case CardSelectionKind.DiscardToHand when index < state.DiscardPile.Count:
-            {
-                var picked = state.DiscardPile[index];
-                state.DiscardPile.RemoveAt(index);
-                state.Hand.Add(picked);
-                break;
-            }
+                {
+                    var picked = state.DiscardPile[index];
+                    state.DiscardPile.RemoveAt(index);
+                    state.Hand.Add(picked);
+                    break;
+                }
 
             case CardSelectionKind.MarkHandCardSly when index < state.Hand.Count:
                 state.Hand[index] = state.Hand[index] with { SlyThisTurn = true };
@@ -3862,12 +3879,12 @@ public static class CardEffects
                 break;
 
             case CardSelectionKind.DiscardFromHandRepeated when index < state.Hand.Count:
-            {
-                var card = state.Hand[index];
-                state.Hand.RemoveAt(index);
-                DiscardMovedCards(state, [card]);
-                break;
-            }
+                {
+                    var card = state.Hand[index];
+                    state.Hand.RemoveAt(index);
+                    DiscardMovedCards(state, [card]);
+                    break;
+                }
         }
     }
 
@@ -4455,23 +4472,23 @@ public static class CardEffects
                 GainEnergy(state, 1);
                 break;
             case OrbType.Glass:
-            {
-                // `GlassOrb.Passive` deals its value to EVERY hittable enemy and then
-                // decays itself by one, and skips the whole thing when the value has run
-                // down to nothing. The emulator drew a CARD instead -- an invented effect
-                // on an orb whose whole identity is a decaying area attack.
-                int value = GlassValue(state, orb);
-                if (value > 0)
                 {
-                    state.Orbs[index] = orb with
+                    // `GlassOrb.Passive` deals its value to EVERY hittable enemy and then
+                    // decays itself by one, and skips the whole thing when the value has run
+                    // down to nothing. The emulator drew a CARD instead -- an invented effect
+                    // on an orb whose whole identity is a decaying area attack.
+                    int value = GlassValue(state, orb);
+                    if (value > 0)
                     {
-                        PassiveValue = Math.Max(0, orb.PassiveValue - 1),
-                    };
-                    DealUnpoweredDamageToAll(state, value);
-                }
+                        state.Orbs[index] = orb with
+                        {
+                            PassiveValue = Math.Max(0, orb.PassiveValue - 1),
+                        };
+                        DealUnpoweredDamageToAll(state, value);
+                    }
 
-                break;
-            }
+                    break;
+                }
         }
     }
 
@@ -4630,37 +4647,37 @@ public static class CardEffects
         switch (def.Name)
         {
             case "TeslaCoil":
-            {
-                // The damage is the small half. Every LIGHTNING orb held then fires its
-                // passive AT THIS CARD'S TARGET, twice each when upgraded -- which is the
-                // card. It was sharing the plain-Strike arm and did none of it.
-                //
-                // `OrbCmd.Passive(ctx, orb, cardPlay.Target)` passes an explicit target, so
-                // these do NOT roll the way a loose Lightning passive does: aiming the ring
-                // is the point.
-                var coilTarget = FirstEnemy(state);
-                if (coilTarget == null)
                 {
+                    // The damage is the small half. Every LIGHTNING orb held then fires its
+                    // passive AT THIS CARD'S TARGET, twice each when upgraded -- which is the
+                    // card. It was sharing the plain-Strike arm and did none of it.
+                    //
+                    // `OrbCmd.Passive(ctx, orb, cardPlay.Target)` passes an explicit target, so
+                    // these do NOT roll the way a loose Lightning passive does: aiming the ring
+                    // is the point.
+                    var coilTarget = FirstEnemy(state);
+                    if (coilTarget == null)
+                    {
+                        return true;
+                    }
+
+                    DealDamageToEnemy(state, coilTarget, Dmg(state, def, upgraded, card));
+                    int coilTimes = upgraded ? 2 : 1;
+                    foreach (var orb in state.Orbs)
+                    {
+                        if (orb.Type != OrbType.Lightning)
+                        {
+                            continue;
+                        }
+
+                        for (int i = 0; i < coilTimes && coilTarget.Hp > 0; i++)
+                        {
+                            DealUnpoweredDamageToEnemy(state, coilTarget, LightningPassiveValue(state));
+                        }
+                    }
+
                     return true;
                 }
-
-                DealDamageToEnemy(state, coilTarget, Dmg(state, def, upgraded, card));
-                int coilTimes = upgraded ? 2 : 1;
-                foreach (var orb in state.Orbs)
-                {
-                    if (orb.Type != OrbType.Lightning)
-                    {
-                        continue;
-                    }
-
-                    for (int i = 0; i < coilTimes && coilTarget.Hp > 0; i++)
-                    {
-                        DealUnpoweredDamageToEnemy(state, coilTarget, LightningPassiveValue(state));
-                    }
-                }
-
-                return true;
-            }
             case "WroughtInWar":
                 // Wrought In War: 7/9 damage and a Forge of 7/9. Its own case, out of a
                 // stack whose body is three `def.Name ==` branches it never matched.
@@ -4752,37 +4769,37 @@ public static class CardEffects
                 ChannelOrb(state, OrbType.Frost);
                 return true;
             case "Null":
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, upgraded ? 3 : 2, rng);
-                }
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, upgraded ? 3 : 2, rng);
+                    }
 
-                ChannelOrb(state, OrbType.Dark);
-                return true;
-            }
+                    ChannelOrb(state, OrbType.Dark);
+                    return true;
+                }
             case "Barrage":
                 DealDamageMultiHit(state, Dmg(state, def, upgraded, card), state.Orbs.Count, rng);
                 return true;
             case "BeamCell":
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    ApplyEnemyDebuffToTarget(
-                        state,
-                        target,
-                        BuffId.Vulnerable,
-                        upgraded ? 2 : 1,
-                        rng
-                    );
-                }
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        ApplyEnemyDebuffToTarget(
+                            state,
+                            target,
+                            BuffId.Vulnerable,
+                            upgraded ? 2 : 1,
+                            rng
+                        );
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "Claw":
                 DealDamage(
                     state,
@@ -4910,27 +4927,27 @@ public static class CardEffects
 
                 return true;
             case "Tempest":
-            {
-                int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
-                state.Energy = 0;
-                for (int i = 0; i < x; i++)
                 {
-                    ChannelOrb(state, OrbType.Lightning);
-                }
+                    int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
+                    state.Energy = 0;
+                    for (int i = 0; i < x; i++)
+                    {
+                        ChannelOrb(state, OrbType.Lightning);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "MultiCast":
-            {
-                int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
-                state.Energy = 0;
-                for (int i = 0; i < x; i++)
                 {
-                    EvokeNextOrb(state, rng, dequeue: i == x - 1);
-                }
+                    int x = RelicEffects.ModifyXValue(state, state.Energy) + (upgraded ? 1 : 0);
+                    state.Energy = 0;
+                    for (int i = 0; i < x; i++)
+                    {
+                        EvokeNextOrb(state, rng, dequeue: i == x - 1);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "Quadcast":
                 for (int i = 0; i < 4; i++)
                 {
@@ -4939,36 +4956,36 @@ public static class CardEffects
 
                 return true;
             case "Shatter":
-            {
-                DealDamageToAll(state, Dmg(state, def, upgraded, card));
-                int orbCount = state.Orbs.Count;
-                for (int i = 0; i < orbCount; i++)
                 {
-                    EvokeNextOrb(state, rng, dequeue: false);
-                    EvokeNextOrb(state, rng);
-                }
+                    DealDamageToAll(state, Dmg(state, def, upgraded, card));
+                    int orbCount = state.Orbs.Count;
+                    for (int i = 0; i < orbCount; i++)
+                    {
+                        EvokeNextOrb(state, rng, dequeue: false);
+                        EvokeNextOrb(state, rng);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "Hyperbeam":
                 DealDamageToAll(state, Dmg(state, def, upgraded, card));
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, -3);
                 return true;
             case "Sunder":
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    int hpBefore = target.Hp;
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    if (hpBefore > 0 && target.Hp == 0)
+                    var target = FirstEnemy(state);
+                    if (target != null)
                     {
-                        GainEnergy(state, 3);
+                        int hpBefore = target.Hp;
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        if (hpBefore > 0 && target.Hp == 0)
+                        {
+                            GainEnergy(state, 3);
+                        }
                     }
-                }
 
-                return true;
-            }
+                    return true;
+                }
             case "Turbo":
                 // `EnergyVar(2)` +1, and then a VOID into the discard pile. The Void is
                 // the card's whole cost -- an unplayable, Ethereal status that clogs the
@@ -5020,11 +5037,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Feral, 1);
                 return true;
             case "FlakCannon":
-            {
-                int statuses = ExhaustStatusesOutsideExhaustPile(state, rng);
-                DealDamageToRandomEnemiesMultiHit(state, Dmg(state, def, upgraded, card), statuses, rng);
-                return true;
-            }
+                {
+                    int statuses = ExhaustStatusesOutsideExhaustPile(state, rng);
+                    DealDamageToRandomEnemiesMultiHit(state, Dmg(state, def, upgraded, card), statuses, rng);
+                    return true;
+                }
             case "FocusedStrike":
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, upgraded ? 2 : 1);
@@ -5137,16 +5154,16 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Subroutine, 1);
                 return true;
             case "Synchronize":
-            {
-                // `CalculatedVar("CalculatedFocus")`, base 0 and extra 2, multiplied by the
-                // number of DISTINCT orb types held -- 2 Focus PER TYPE, not a flat 2, and
-                // worth nothing at all with an empty ring. Temporary, as
-                // `SynchronizePower : TemporaryFocusPower`.
-                int synchronize = state.Orbs.Select(o => o.Type).Distinct().Count() * 2;
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, synchronize);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryFocus, synchronize);
-                return true;
-            }
+                {
+                    // `CalculatedVar("CalculatedFocus")`, base 0 and extra 2, multiplied by the
+                    // number of DISTINCT orb types held -- 2 Focus PER TYPE, not a flat 2, and
+                    // worth nothing at all with an empty ring. Temporary, as
+                    // `SynchronizePower : TemporaryFocusPower`.
+                    int synchronize = state.Orbs.Select(o => o.Type).Distinct().Count() * 2;
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, synchronize);
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryFocus, synchronize);
+                    return true;
+                }
             case "TrashToTreasure":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.TrashToTreasure, 1);
                 return true;
@@ -5159,23 +5176,23 @@ public static class CardEffects
                 AutoPlayRandomDrawPileAttack(state, rng);
                 return true;
             case "Voltaic":
-            {
-                // `CalculatedVar.Calculate` runs ONCE, before the loop, over the combat's
-                // OrbChanneledEntry history. The emulator re-read
-                // `LightningOrbsChanneledThisCombat` as its loop BOUND while the body
-                // incremented it -- `i` and the bound rose together, so the loop never
-                // terminated. It ran until both overflowed: four minutes of channelling
-                // for one card, and a hang for any agent stepping the environment.
-                //
-                // Snapshotting the count is the fix and also the faithful reading.
-                int channelled = state.LightningOrbsChanneledThisCombat;
-                for (int i = 0; i < channelled; i++)
                 {
-                    ChannelOrb(state, OrbType.Lightning, rng);
-                }
+                    // `CalculatedVar.Calculate` runs ONCE, before the loop, over the combat's
+                    // OrbChanneledEntry history. The emulator re-read
+                    // `LightningOrbsChanneledThisCombat` as its loop BOUND while the body
+                    // incremented it -- `i` and the bound rose together, so the loop never
+                    // terminated. It ran until both overflowed: four minutes of channelling
+                    // for one card, and a hang for any agent stepping the environment.
+                    //
+                    // Snapshotting the count is the fix and also the faithful reading.
+                    int channelled = state.LightningOrbsChanneledThisCombat;
+                    for (int i = 0; i < channelled; i++)
+                    {
+                        ChannelOrb(state, OrbType.Lightning, rng);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "WhiteNoise":
                 AddRandomDefectPowerCardsToHand(state, 1, rng);
                 if (state.Hand.Count > 0)
@@ -5206,26 +5223,26 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 6 : 4, rng);
                 return true;
             case "Scrape":
-            {
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                int before = state.Hand.Count;
-                DrawCards(state, upgraded ? 5 : 4, rng);
-                for (int i = state.Hand.Count - 1; i >= before; i--)
                 {
-                    var drawnDef = GeneratedData.Cards.Get(state.Hand[i].DefId);
-                    int cost =
-                        state.Hand[i].CostForCombat == int.MinValue
-                            ? drawnDef.Cost
-                            : state.Hand[i].CostForCombat;
-                    if (cost != 0 || drawnDef.Cost < 0)
+                    DealDamage(state, Dmg(state, def, upgraded, card));
+                    int before = state.Hand.Count;
+                    DrawCards(state, upgraded ? 5 : 4, rng);
+                    for (int i = state.Hand.Count - 1; i >= before; i--)
                     {
-                        state.DiscardPile.Add(state.Hand[i] with { FreeThisTurn = false });
-                        state.Hand.RemoveAt(i);
+                        var drawnDef = GeneratedData.Cards.Get(state.Hand[i].DefId);
+                        int cost =
+                            state.Hand[i].CostForCombat == int.MinValue
+                                ? drawnDef.Cost
+                                : state.Hand[i].CostForCombat;
+                        if (cost != 0 || drawnDef.Cost < 0)
+                        {
+                            state.DiscardPile.Add(state.Hand[i] with { FreeThisTurn = false });
+                            state.Hand.RemoveAt(i);
+                        }
                     }
-                }
 
-                return true;
-            }
+                    return true;
+                }
             case "SweepingBeam":
                 DealDamageToAll(state, Dmg(state, def, upgraded, card));
                 DrawCards(state, 1, rng);
@@ -5239,23 +5256,23 @@ public static class CardEffects
 
                 return true;
             case "GoForTheEyes":
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    // `MonsterModel.IntendsToAttack` is `NextMove.Intents.Any(...)` -- ANY
-                    // intent of the move, not just the one shown first. An enemy whose
-                    // move is a block-then-attack announces the block as its primary
-                    // intent and was reading as "not attacking".
-                    if (IntendsToAttack(target))
+                    var target = FirstEnemy(state);
+                    if (target != null)
                     {
-                        ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, upgraded ? 2 : 1, rng);
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        // `MonsterModel.IntendsToAttack` is `NextMove.Intents.Any(...)` -- ANY
+                        // intent of the move, not just the one shown first. An enemy whose
+                        // move is a block-then-attack announces the block as its primary
+                        // intent and was reading as "not attacking".
+                        if (IntendsToAttack(target))
+                        {
+                            ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, upgraded ? 2 : 1, rng);
+                        }
                     }
-                }
 
-                return true;
-            }
+                    return true;
+                }
             case "GunkUp":
                 DealDamageMultiHit(state, Dmg(state, def, upgraded, card), 3, rng);
                 AddGeneratedStatusToDiscard(state, ST.Slimed, rng);
@@ -5276,29 +5293,38 @@ public static class CardEffects
         switch (def.Name)
         {
             case "StrikeNecrobinder":
-            case "BansheesCry":
             case "Bury":
             case "Defile":
             case "Reap":
-            case "Sow":
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 return true;
-            case "Eradicate":
-            {
-                // `HasEnergyCostX` with `WithHitCount(ResolveEnergyXValue())` -- 11/14
-                // damage ONCE PER ENERGY SPENT, at one target, and the card Retains. The
-                // emulator dealt a single hit and never spent the energy, which is why a
-                // live capture of it killed a 90 HP elite the emulator would have left at
-                // 79.
-                //
-                // Placed AFTER the plain-damage stack, not in the middle of it: written
-                // between `case "Defile"` and `case "Reap"` this body caught the four
-                // labels above it, and three captures said so within the minute.
-                int x = RelicEffects.ModifyXValue(state, state.Energy);
-                state.Energy = 0;
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
+            case "Sow":
+                // `TargetingAllOpponents`, 8 upgrading by 3, and Retain. It shared the
+                // single-target body above -- the second card in that stack to turn out to
+                // be an all-enemies attack, after Banshee's Cry.
+                DealDamageToAll(state, Dmg(state, def, upgraded, card));
                 return true;
-            }
+            case "BansheesCry":
+                // `TargetingAllOpponents`, 33 to each. Upgrading takes the COST from 9 to 7
+                // and leaves the damage alone. It shared the single-target body above.
+                DealDamageToAll(state, Dmg(state, def, upgraded, card));
+                return true;
+            case "Eradicate":
+                {
+                    // `HasEnergyCostX` with `WithHitCount(ResolveEnergyXValue())` -- 11/14
+                    // damage ONCE PER ENERGY SPENT, at one target, and the card Retains. The
+                    // emulator dealt a single hit and never spent the energy, which is why a
+                    // live capture of it killed a 90 HP elite the emulator would have left at
+                    // 79.
+                    //
+                    // Placed AFTER the plain-damage stack, not in the middle of it: written
+                    // between `case "Defile"` and `case "Reap"` this body caught the four
+                    // labels above it, and three captures said so within the minute.
+                    int x = RelicEffects.ModifyXValue(state, state.Energy);
+                    state.Energy = 0;
+                    DealDamageMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
+                    return true;
+                }
             case "Veilpiercer":
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 // `PowerCmd.Apply<VeilpiercerPower>(..., 1m, ...)` -- one stack, and NOT
@@ -5310,13 +5336,16 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Veilpiercer, 1);
                 return true;
             case "DefendNecrobinder":
-            case "Undeath":
+                // BlockVar 5 upgrading by 3, and that is all of it.
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                if (def.Name == "Undeath")
-                {
-                    state.DiscardPile.Add(new CardInstance(446, false));
-                }
-
+                return true;
+            case "Undeath":
+                // Block 7 upgrading by 2, and then `CreateClone()` -- a copy of UNDEATH,
+                // which the live capture places in the discard pile. The emulator made a
+                // SOUL instead, so the pile counts matched and the card did not: a deck
+                // that should fill with free 7-block skills filled with draw-one cantrips.
+                GainBlock(state, Blk(def, upgraded, card), rng);
+                state.DiscardPile.Add(new CardInstance(def.Id, card.Upgraded));
                 return true;
             case "Afterlife":
                 SummonOsty(state, upgraded ? 9 : 6);
@@ -5325,44 +5354,44 @@ public static class CardEffects
                 SummonOsty(state, upgraded ? 7 : 5);
                 return true;
             case "Cleanse":
-            {
-                // Summon 3/5, then EXHAUST a card CHOSEN from the draw pile. The emulator
-                // exhausted the top one -- which card you spend is the decision.
-                SummonOsty(state, upgraded ? 5 : 3);
-                var drawPile = new List<int>();
-                for (int i = 0; i < state.DrawPile.Count; i++)
                 {
-                    drawPile.Add(i);
-                }
+                    // Summon 3/5, then EXHAUST a card CHOSEN from the draw pile. The emulator
+                    // exhausted the top one -- which card you spend is the decision.
+                    SummonOsty(state, upgraded ? 5 : 3);
+                    var drawPile = new List<int>();
+                    for (int i = 0; i < state.DrawPile.Count; i++)
+                    {
+                        drawPile.Add(i);
+                    }
 
-                OpenCardSelection(
-                    state,
-                    CardSelectionKind.ExhaustFromDrawPile,
-                    drawPile,
-                    def.Id,
-                    autoPick: 0,
-                    amount: 1
-                );
-                return true;
-            }
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.ExhaustFromDrawPile,
+                        drawPile,
+                        def.Id,
+                        autoPick: 0,
+                        amount: 1
+                    );
+                    return true;
+                }
             case "Dirge":
-            {
-                // `HasEnergyCostX`, and the X is the LOOP COUNT: the card summons for the
-                // Summon var (3, upgrading to 4) once per energy spent, and makes one Soul
-                // per energy spent. The emulator summoned once and made the SUMMON AMOUNT
-                // of Souls, so at nine energy it was short eight summons and six Souls.
-                int x = RelicEffects.ModifyXValue(state, state.Energy);
-                state.Energy = 0;
-                for (int i = 0; i < x; i++)
                 {
-                    SummonOsty(state, upgraded ? 4 : 3);
-                }
+                    // `HasEnergyCostX`, and the X is the LOOP COUNT: the card summons for the
+                    // Summon var (3, upgrading to 4) once per energy spent, and makes one Soul
+                    // per energy spent. The emulator summoned once and made the SUMMON AMOUNT
+                    // of Souls, so at nine energy it was short eight summons and six Souls.
+                    int x = RelicEffects.ModifyXValue(state, state.Energy);
+                    state.Energy = 0;
+                    for (int i = 0; i < x; i++)
+                    {
+                        SummonOsty(state, upgraded ? 4 : 3);
+                    }
 
-                // `Soul.Create`, not `Soul.CreateInHand` -- a live capture put all nine in
-                // the DRAW pile.
-                AddSoulsToDrawPile(state, x, upgraded);
-                return true;
-            }
+                    // `Soul.Create`, not `Soul.CreateInHand` -- a live capture put all nine in
+                    // the DRAW pile.
+                    AddSoulsToDrawPile(state, x, upgraded);
+                    return true;
+                }
             case "NecroMastery":
                 // `SummonVar(5m)` upgrading by 3, not 10/13 -- and the power applied is
                 // `NecroMasteryPower`, not Strength. Someone modelled "a power at amount
@@ -5387,19 +5416,34 @@ public static class CardEffects
 
                 return true;
             case "BoneShards":
+                // OstyDamage 9 (upgrading by 3) at ALL opponents, then the block, then Osty
+                // dies -- and the whole body sits inside `if (!Osty.CheckMissingWithAnim)`,
+                // so a missing Osty gains NO block either. The emulator hit one enemy with
+                // unboosted damage and gained the block whether or not Osty was there.
                 if (state.OstyHp > 0)
                 {
-                    DealDamage(state, upgraded ? 12 : 9);
+                    DealDamageToAll(
+                        state,
+                        OstyAttackDamage(state, Dmg(state, def, upgraded, card))
+                    );
+                    GainBlock(state, Blk(def, upgraded, card), rng);
                     KillOsty(state);
                 }
 
-                GainBlock(state, Blk(def, upgraded, card), rng);
                 return true;
             case "Fetch":
-                DealOstyDamage(state, upgraded ? 6 : 3);
+                // OstyDamage 3 (upgrading by 3) and then `CardsVar(1)` -- but the draw is
+                // gated on `!HasBeenPlayedThisTurn`, a history query about THIS copy. A
+                // Fetch that comes back out of the discard and plays again is damage only.
+                // The emulator drew every time; it is a nought-cost card, so that was an
+                // unbounded draw engine.
                 if (state.OstyHp > 0)
                 {
-                    DrawCards(state, 1, rng);
+                    DealOstyDamage(state, upgraded ? 6 : 3);
+                    if (!card.PlayedThisTurn)
+                    {
+                        DrawCards(state, 1, rng);
+                    }
                 }
 
                 return true;
@@ -5410,13 +5454,33 @@ public static class CardEffects
                 DealOstyDamage(state, upgraded ? 9 : 6);
                 return true;
             case "Rattle":
-                DealOstyDamage(state, upgraded ? 9 : 7);
-                return true;
+                {
+                    // `WithHitCount(1 + Osty's attacks this turn)` at OstyDamage 7 upgrading by
+                    // 2 -- so it is one hit played first and more after every earlier swing.
+                    // The count is taken BEFORE this attack, which is why it is read here. The
+                    // emulator hit once, always.
+                    int swings = state.OstyAttacksThisTurn;
+                    for (int i = 0; i < 1 + swings; i++)
+                    {
+                        DealOstyDamage(state, upgraded ? 9 : 7);
+                    }
+
+                    // One `WithHitCount` attack, so it is ONE entry however many times it
+                    // lands -- restored here because each hit went through the counting
+                    // chokepoint. Counting the hits instead makes each Rattle in a turn double
+                    // the last, which is not a shape the card's numbers suggest.
+                    state.OstyAttacksThisTurn = swings + 1;
+                    return true;
+                }
             case "RightHandHand":
                 DealOstyDamage(state, upgraded ? 6 : 4);
                 return true;
             case "Sacrifice":
-                if (state.OstyMaxHp > 0)
+                // `IsOstyAlive`, not "an Osty existed once" -- the block is `Osty.MaxHp * 2`
+                // and the whole body is inside the missing-Osty guard. The emulator tested
+                // OstyMaxHp, which survives the pet's death, so a dead Osty still paid out
+                // twice its old size in block.
+                if (state.OstyHp > 0)
                 {
                     int block = state.OstyMaxHp * 2;
                     KillOsty(state);
@@ -5436,58 +5500,60 @@ public static class CardEffects
                 ApplyEnemyDebuff(state, BuffId.SicEm, upgraded ? 4 : 3, rng);
                 return true;
             case "Snap":
-            {
-                DealOstyDamage(state, upgraded ? 10 : 7);
-
-                // `CardSelectCmd.FromHand(..., filter: c => !c.Keywords.Contains(Retain))`
-                // then `CardCmd.ApplyKeyword(chosen, Retain)` -- it makes a card in HAND
-                // Retain. The emulator put a retaining SOUL in the discard pile instead,
-                // which is a different card in a different pile.
-                //
-                // Same screen Well Laid Plans raises, but asked for one and not skippable:
-                // its prefs are `CardSelectorPrefs(prompt, 1)`, a minimum of one.
-                var keepable = new List<int>();
-                for (int i = 0; i < state.Hand.Count; i++)
                 {
-                    if (!state.Hand[i].IsRetained())
+                    DealOstyDamage(state, upgraded ? 10 : 7);
+
+                    // `CardSelectCmd.FromHand(..., filter: c => !c.Keywords.Contains(Retain))`
+                    // then `CardCmd.ApplyKeyword(chosen, Retain)` -- it makes a card in HAND
+                    // Retain. The emulator put a retaining SOUL in the discard pile instead,
+                    // which is a different card in a different pile.
+                    //
+                    // Same screen Well Laid Plans raises, but asked for one and not skippable:
+                    // its prefs are `CardSelectorPrefs(prompt, 1)`, a minimum of one.
+                    var keepable = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
                     {
-                        keepable.Add(i);
+                        if (!state.Hand[i].IsRetained())
+                        {
+                            keepable.Add(i);
+                        }
                     }
-                }
 
-                OpenCardSelection(
-                    state,
-                    CardSelectionKind.RetainForNextTurn,
-                    keepable,
-                    def.Id,
-                    autoPick: keepable.Count > 0 ? keepable[0] : 0,
-                    amount: 1
-                );
-                return true;
-            }
-            case "BlightStrike":
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
-                {
-                    // Doom for the damage actually dealt -- `Results.Sum(r =>
-                    // r.TotalDamage)`, blocked plus unblocked -- and not the flat 4 the
-                    // emulator had. This Doom carries a card source, so unlike Reaper
-                    // Form's it goes through the chokepoint the Unsettling Lamp doubles.
-                    DealDamageToEnemy(
+                    OpenCardSelection(
                         state,
-                        target,
-                        Dmg(state, def, upgraded, card),
-                        out int dealt
+                        CardSelectionKind.RetainForNextTurn,
+                        keepable,
+                        def.Id,
+                        autoPick: keepable.Count > 0 ? keepable[0] : 0,
+                        amount: 1
                     );
-                    ApplyEnemyDebuffToTarget(state, target, BuffId.Doom, dealt, rng);
+                    return true;
                 }
+            case "BlightStrike":
+                {
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        // Doom for the damage actually dealt -- `Results.Sum(r =>
+                        // r.TotalDamage)`, blocked plus unblocked -- and not the flat 4 the
+                        // emulator had. This Doom carries a card source, so unlike Reaper
+                        // Form's it goes through the chokepoint the Unsettling Lamp doubles.
+                        DealDamageToEnemy(
+                            state,
+                            target,
+                            Dmg(state, def, upgraded, card),
+                            out int dealt
+                        );
+                        ApplyEnemyDebuffToTarget(state, target, BuffId.Doom, dealt, rng);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "Deathbringer":
-                ApplyEnemyDebuff(state, BuffId.Doom, upgraded ? 26 : 21, rng);
-                ApplyEnemyDebuff(state, BuffId.Weak, 1, rng);
+                // `HittableEnemies`, both powers -- 21 Doom upgrading by 5, and 1 Weak that
+                // does not upgrade. The emulator put both on ONE enemy.
+                ApplyAllEnemyDebuff(state, BuffId.Doom, upgraded ? 26 : 21, rng);
+                ApplyAllEnemyDebuff(state, BuffId.Weak, 1, rng);
                 return true;
             case "EndOfDays":
                 ApplyAllEnemyDebuff(state, BuffId.Doom, upgraded ? 37 : 29, rng);
@@ -5517,32 +5583,36 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 2 : 1);
                 return true;
             case "DeathsDoor":
-            {
-                int gains = state.PlayerHp <= state.PlayerMaxHp / 2 ? (upgraded ? 4 : 3) : 1;
-                for (int i = 0; i < gains; i++)
                 {
-                    GainBlock(state, Blk(def, upgraded, card), rng);
-                }
+                    // One block gain, plus `RepeatVar(2)` more if the player has applied DOOM
+                    // this turn -- `WasDoomAppliedThisTurn`, which is a history query and not a
+                    // health check. The emulator gated on being at half HP or below and did
+                    // 3/4 gains rather than 1/3, so it was wrong in both halves.
+                    int gains = state.DoomAppliedThisTurn ? 3 : 1;
+                    for (int i = 0; i < gains; i++)
+                    {
+                        GainBlock(state, Blk(def, upgraded, card), rng);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "Fear":
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    ApplyEnemyDebuffToTarget(
-                        state,
-                        target,
-                        BuffId.Vulnerable,
-                        upgraded ? 2 : 1,
-                        rng
-                    );
-                }
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        ApplyEnemyDebuffToTarget(
+                            state,
+                            target,
+                            BuffId.Vulnerable,
+                            upgraded ? 2 : 1,
+                            rng
+                        );
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "Putrefy":
                 // One "Power" var at 2, upgrading by 1, spent on BOTH debuffs -- and on
                 // `cardPlay.Target`, not on everyone. The emulator had it at 1/2 and aimed
@@ -5573,18 +5643,54 @@ public static class CardEffects
                 return true;
             case "DrainPower":
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                UpgradeDiscardCards(state, upgraded ? 3 : 2);
+                UpgradeDiscardCards(state, upgraded ? 3 : 2, rng);
                 return true;
             case "Dredge":
-                MoveDiscardCardsToHand(state, 3);
-                return true;
+                {
+                    // `CardSelectCmd.FromCombatPile(PileType.Discard, ...)` for
+                    // `Math.Min(Cards(3), MaxCardsInHand - hand.Count)`: the player picks which
+                    // three come back, and a full hand shrinks the ask before the screen opens
+                    // rather than after. Upgrading adds RETAIN and does NOT change the count --
+                    // the emulator took the three oldest discards and read the upgrade as a
+                    // different number of cards.
+                    int room = MaxCardsInHand - state.Hand.Count;
+                    int picks = Math.Min(3, room);
+                    if (picks > 0)
+                    {
+                        OpenCardSelection(
+                            state,
+                            CardSelectionKind.DiscardToHand,
+                            state.DiscardPile.Count,
+                            def.Id,
+                            autoPick: 0,
+                            amount: picks
+                        );
+                    }
+
+                    return true;
+                }
             case "GraveWarden":
+                // BlockVar 8 upgrading by 3, then `CardsVar(1)` Souls into the DRAW pile at
+                // a random position. Both halves correct -- and the Soul was briefly
+                // deleted from here, because `card_pair.py` dropped every line containing
+                // `PreviewCardPileAdd(` and this card's only other effect is written INSIDE
+                // that call. The live capture caught it as a draw pile one card short.
                 GainBlock(state, Blk(def, upgraded, card), rng);
                 AddSoulsToDrawPile(state, 1, upgraded: false);
                 return true;
             case "Graveblast":
+                // 4 damage upgrading by 2, then ONE card CHOSEN from the discard pile comes
+                // to hand -- `CardSelectCmd.FromCombatPile`, the same screen as Hologram's.
+                // The emulator took the oldest discard. Upgrading also drops Exhaust, which
+                // the card data already carries.
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                MoveDiscardCardsToHand(state, 1);
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.DiscardToHand,
+                    state.DiscardPile.Count,
+                    def.Id,
+                    autoPick: 0
+                );
                 return true;
             case "Reave":
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -5614,20 +5720,20 @@ public static class CardEffects
                 AddSoulsToDrawPile(state, upgraded ? 4 : 3, upgraded: false);
                 return true;
             case "Eidolon":
-            {
-                // Intangible ONLY if it exhausted nine or more -- `if (exhaustedCount >= 9)`,
-                // and the threshold is why the card has a `ShouldGlowGold` watching the hand
-                // size. The emulator granted it for any hand at all, which at a normal five
-                // cards is a free turn of taking 1 from everything.
-                int exhausted = state.Hand.Count;
-                ExhaustFirstCardsFromHand(state, exhausted, rng);
-                if (exhausted >= 9)
                 {
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
-                }
+                    // Intangible ONLY if it exhausted nine or more -- `if (exhaustedCount >= 9)`,
+                    // and the threshold is why the card has a `ShouldGlowGold` watching the hand
+                    // size. The emulator granted it for any hand at all, which at a normal five
+                    // cards is a free turn of taking 1 from everything.
+                    int exhausted = state.Hand.Count;
+                    ExhaustFirstCardsFromHand(state, exhausted, rng);
+                    if (exhausted >= 9)
+                    {
+                        BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "SharedFate":
                 // Two StrengthPowers, both at a NEGATIVE amount: the player loses 2 and the
                 // TARGET loses 2/3, and neither is temporary. The emulator gained Strength
@@ -5642,54 +5748,83 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Shroud, upgraded ? 3 : 2);
                 return true;
             case "SoulStorm":
-            {
-                // CalculationBase 9 plus ExtraDamage 2 (upgrading by 1) per SOUL in the
-                // EXHAUST pile, at `cardPlay.Target`. The emulator had no base at all,
-                // counted the whole exhaust pile rather than the Souls in it, and threw the
-                // result at every enemy.
-                int souls = state.ExhaustPile.Count(c => c.DefId == 446);
-                DealDamage(state, DmgFrom(state, 9 + (upgraded ? 3 : 2) * souls, def, card));
-                return true;
-            }
+                {
+                    // CalculationBase 9 plus ExtraDamage 2 (upgrading by 1) per SOUL in the
+                    // EXHAUST pile, at `cardPlay.Target`. The emulator had no base at all,
+                    // counted the whole exhaust pile rather than the Souls in it, and threw the
+                    // result at every enemy.
+                    int souls = state.ExhaustPile.Count(c => c.DefId == 446);
+                    DealDamage(state, DmgFrom(state, 9 + (upgraded ? 3 : 2) * souls, def, card));
+                    return true;
+                }
             case "TheScythe":
-                DealDamage(state, 13 + state.CardsExhaustedThisTurn * (upgraded ? 2 : 1));
+                // `_baseDamage = 13`, and every play adds `IntVar("Increase", 4)` -- 5
+                // upgraded -- to this copy's damage, for good. Rampage's shape, and the
+                // reason the printed damage is 0 in the card data: the DamageVar is built
+                // from a [SavedProperty] the extractor cannot read.
+                //
+                // The emulator scaled it by the cards EXHAUSTED this turn, which is a
+                // different card. It exhausts itself, so within one combat the growth shows
+                // only if the copy is recovered -- but `BuffFromPlay` is also called on
+                // `DeckVersion`, so the growth is meant to persist for the whole RUN.
+                // Combat does not write back to the deck here, so that half is still owed.
+                DealDamage(state, DmgFrom(state, 13, def, card) + card.BonusDamage);
+                state.PlayedCardBonusDamage += upgraded ? 5 : 4;
                 return true;
             case "TimesUp":
-                DealDamage(
-                    state,
-                    DmgFrom(state, state.CardsPlayedThisCombat * (upgraded ? 2 : 1), def, card)
-                );
-                return true;
+                {
+                    // CalculationBase 0 plus ExtraDamage 1 per point of DOOM on the TARGET, and
+                    // upgrading buys Retain rather than damage. The emulator counted the cards
+                    // played this combat, which is a different card entirely -- and the live
+                    // capture could not tell them apart, because a fresh enemy has no Doom and
+                    // no cards have been played, so both readings dealt nothing.
+                    var doomed = FirstEnemy(state);
+                    if (doomed != null)
+                    {
+                        DealDamageToEnemy(
+                            state,
+                            doomed,
+                            DmgFrom(state, BuffSystem.Get(doomed.Buffs, BuffId.Doom), def, card)
+                        );
+                    }
+
+                    return true;
+                }
             case "DeathMarch":
+                // CalculationBase 8 (upgrades by 1) plus ExtraDamage 4 (upgrades by 2) per
+                // `CardDrawnEntry` this turn with `!FromHandDraw` -- the cards drawn on top
+                // of the opening hand. The emulator counted `DrawnCardsSinceAutomationProc`,
+                // which is Automation's own counter and resets when Automation fires, and
+                // never upgraded the base.
                 DealDamage(
                     state,
                     DmgFrom(
                         state,
-                        8 + state.DrawnCardsSinceAutomationProc * (upgraded ? 6 : 4),
+                        (upgraded ? 9 : 8) + state.ExtraCardsDrawnThisTurn * (upgraded ? 6 : 4),
                         def,
                         card
                     )
                 );
                 return true;
             case "Hang":
-            {
-                // The stacks are read BEFORE the top-up, so the first Hang lands at 1x and
-                // applies 2; the second lands at 2x and takes it to 4. The emulator applied
-                // Constrict instead -- a different power with a different effect.
-                var hung = FirstEnemy(state);
-                int stacks = hung != null ? BuffSystem.Get(hung.Buffs, BuffId.Hang) : 0;
+                {
+                    // The stacks are read BEFORE the top-up, so the first Hang lands at 1x and
+                    // applies 2; the second lands at 2x and takes it to 4. The emulator applied
+                    // Constrict instead -- a different power with a different effect.
+                    var hung = FirstEnemy(state);
+                    int stacks = hung != null ? BuffSystem.Get(hung.Buffs, BuffId.Hang) : 0;
 
-                // Pre-multiplied rather than folded into IncomingDamage: the game's
-                // multiplier is gated on `cardSource is Hang`, and that function attacks
-                // with no idea which card it is holding. The pipeline ends in a single
-                // `(int)dmg`, so multiplying the base is the same arithmetic.
-                DealDamage(state, Dmg(state, def, upgraded, card) * Math.Max(1, stacks));
+                    // Pre-multiplied rather than folded into IncomingDamage: the game's
+                    // multiplier is gated on `cardSource is Hang`, and that function attacks
+                    // with no idea which card it is holding. The pipeline ends in a single
+                    // `(int)dmg`, so multiplying the base is the same arithmetic.
+                    DealDamage(state, Dmg(state, def, upgraded, card) * Math.Max(1, stacks));
 
-                // `Math.Max(2, amount)`, clamped so the counter cannot pass 999999999.
-                int add = Math.Min(Math.Max(2, stacks), Math.Max(0, 999999999 - stacks));
-                ApplyEnemyDebuff(state, BuffId.Hang, add, rng);
-                return true;
-            }
+                    // `Math.Max(2, amount)`, clamped so the counter cannot pass 999999999.
+                    int add = Math.Min(Math.Max(2, stacks), Math.Max(0, 999999999 - stacks));
+                    ApplyEnemyDebuff(state, BuffId.Hang, add, rng);
+                    return true;
+                }
             case "Invoke":
                 // SummonVar 2 and EnergyVar 2, both upgrading by 1: next turn brings the
                 // energy AND a summon. The emulator had the energy right and granted
@@ -5711,82 +5846,95 @@ public static class CardEffects
                 );
                 return true;
             case "SculptingStrike":
-            {
-                // 9/12 damage, then a card CHOSEN from hand gains ETHEREAL -- filtered to
-                // the ones that do not already have it. The emulator gave the leftmost card
-                // RETAIN: a different keyword, on a card nobody picked.
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                var plain = new List<int>();
-                for (int i = 0; i < state.Hand.Count; i++)
                 {
-                    if (!state.Hand[i].IsEthereal())
+                    // 9/12 damage, then a card CHOSEN from hand gains ETHEREAL -- filtered to
+                    // the ones that do not already have it. The emulator gave the leftmost card
+                    // RETAIN: a different keyword, on a card nobody picked.
+                    DealDamage(state, Dmg(state, def, upgraded, card));
+                    var plain = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
                     {
-                        plain.Add(i);
+                        if (!state.Hand[i].IsEthereal())
+                        {
+                            plain.Add(i);
+                        }
                     }
-                }
 
-                OpenCardSelection(
-                    state,
-                    CardSelectionKind.GrantEtherealInHand,
-                    plain,
-                    def.Id,
-                    autoPick: plain.Count > 0 ? plain[0] : 0,
-                    amount: 1
-                );
-                return true;
-            }
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.GrantEtherealInHand,
+                        plain,
+                        def.Id,
+                        autoPick: plain.Count > 0 ? plain[0] : 0,
+                        amount: 1
+                    );
+                    return true;
+                }
             case "Seance":
-            {
-                // `CardSelectCmd.FromCombatPile(PileType.Draw, ..., CardsVar 1)` and then
-                // `CardCmd.TransformTo<Soul>` on the pick. The emulator transformed
-                // DrawPile[0] -- which card you spend is the whole decision the card
-                // offers, and taking the top one is a rule the game does not have. The
-                // upgrade drops the COST, not the count.
-                var pile = new List<int>();
-                for (int i = 0; i < state.DrawPile.Count; i++)
                 {
-                    pile.Add(i);
-                }
+                    // `CardSelectCmd.FromCombatPile(PileType.Draw, ..., CardsVar 1)` and then
+                    // `CardCmd.TransformTo<Soul>` on the pick. The emulator transformed
+                    // DrawPile[0] -- which card you spend is the whole decision the card
+                    // offers, and taking the top one is a rule the game does not have. The
+                    // upgrade drops the COST, not the count.
+                    var pile = new List<int>();
+                    for (int i = 0; i < state.DrawPile.Count; i++)
+                    {
+                        pile.Add(i);
+                    }
 
-                OpenCardSelection(
-                    state,
-                    CardSelectionKind.TransformDrawPileToSoul,
-                    pile,
-                    def.Id,
-                    autoPick: 0,
-                    amount: 1
-                );
-                return true;
-            }
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.TransformDrawPileToSoul,
+                        pile,
+                        def.Id,
+                        autoPick: 0,
+                        amount: 1
+                    );
+                    return true;
+                }
             case "Transfigure":
-            {
-                // A card CHOSEN from hand gains a REPLAY and costs one more for the combat.
-                // The emulator transformed a card at random into a different card and gave
-                // a point of energy -- neither of which the card does. The Exhaust keyword
-                // it drops on upgrade is on the DEFINITION, so nothing to do here.
-                var anyCard = new List<int>();
-                for (int i = 0; i < state.Hand.Count; i++)
                 {
-                    anyCard.Add(i);
-                }
+                    // A card CHOSEN from hand gains a REPLAY and costs one more for the combat.
+                    // The emulator transformed a card at random into a different card and gave
+                    // a point of energy -- neither of which the card does. The Exhaust keyword
+                    // it drops on upgrade is on the DEFINITION, so nothing to do here.
+                    var anyCard = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
+                    {
+                        anyCard.Add(i);
+                    }
 
-                OpenCardSelection(
-                    state,
-                    CardSelectionKind.TransfigureInHand,
-                    anyCard,
-                    def.Id,
-                    autoPick: 0,
-                    amount: 1
-                );
-                return true;
-            }
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.TransfigureInHand,
+                        anyCard,
+                        def.Id,
+                        autoPick: 0,
+                        amount: 1
+                    );
+                    return true;
+                }
             case "Unleash":
                 // `CalculationBaseVar(6)` + 1 per point of Osty's CURRENT hp -- not max,
                 // and not divided by anything. OnUpgrade raises the base by 3.
-                DealDamage(
-                    state,
-                    DmgFrom(state, (upgraded ? 9 : 6) + OstyHpForDamage(state), def, card)
-                );
+                //
+                // ...and the whole body is inside `if (!Osty.CheckMissingWithAnim)`, so
+                // with no pet it deals NOTHING -- the base paid out regardless, the same
+                // slip as Protector's and Squeeze's.
+                if (state.OstyHp > 0)
+                {
+                    DealDamage(
+                        state,
+                        DmgFrom(
+                            state,
+                            OstyAttackDamage(state, (upgraded ? 9 : 6) + OstyHpForDamage(state)),
+                            def,
+                            card
+                        )
+                    );
+                }
+
                 return true;
             case "Squeeze":
                 // `CalculationBaseVar(25)` + `ExtraDamageVar(5)` per OTHER card tagged
@@ -5794,24 +5942,46 @@ public static class CardEffects
                 // per-card by 1. The emulator read Osty's MAX HP, which is a different
                 // number entirely -- measured against the game it dealt 10 where the card
                 // dealt 30.
-                DealDamage(
-                    state,
-                    DmgFrom(
+                //
+                // ...and the whole body is inside `if (!Osty.CheckMissingWithAnim)`, so
+                // with no pet it deals NOTHING -- it is `.FromOsty`, like Protector.
+                if (state.OstyHp > 0)
+                {
+                    DealDamage(
                         state,
-                        (upgraded ? 30 : 25) + CountOtherOstyAttacks(state) * (upgraded ? 6 : 5),
-                        def,
-                        card
-                    )
-                );
+                        DmgFrom(
+                            state,
+                            OstyAttackDamage(
+                                state,
+                                (upgraded ? 30 : 25)
+                                    + CountOtherOstyAttacks(state) * (upgraded ? 6 : 5)
+                            ),
+                            def,
+                            card
+                        )
+                    );
+                }
+
                 return true;
             case "Protector":
                 // `CalculationBaseVar(10)` + 1 per point of Osty's MAX hp, and OnUpgrade
                 // raises the base by 5 and cuts the cost. The base was 0 here, so with a
                 // one-HP Osty the card dealt 1 where the game dealt 11.
-                DealDamage(
-                    state,
-                    DmgFrom(state, (upgraded ? 15 : 10) + OstyMaxHpForDamage(state), def, card)
-                );
+                // ...and the whole body is inside `if (!Osty.CheckMissingWithAnim)`, so
+                // with no pet it deals NOTHING -- the emulator still paid out the base.
+                if (state.OstyHp > 0)
+                {
+                    DealDamage(
+                        state,
+                        DmgFrom(
+                            state,
+                            OstyAttackDamage(state, (upgraded ? 15 : 10) + OstyMaxHpForDamage(state)),
+                            def,
+                            card
+                        )
+                    );
+                }
+
                 return true;
             case "Calcify":
                 // PowerVar 4 upgrading by 2, and CalcifyPower adds that to OSTY's attacks
@@ -5907,16 +6077,16 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.SentryMode, 1);
                 return true;
             case "NoEscape":
-            {
-                // CalculationBase 10 (upgrading by 5) plus CalculationExtra 5 for each
-                // FULL DoomThreshold of 10 already on the target -- `Math.Floor(doom /
-                // 10)`. It had been sitting in High Five's Osty-attack body and applied
-                // nothing at all.
-                var doomed = FirstEnemy(state);
-                int already = doomed != null ? BuffSystem.Get(doomed.Buffs, BuffId.Doom) : 0;
-                ApplyEnemyDebuff(state, BuffId.Doom, (upgraded ? 15 : 10) + 5 * (already / 10), rng);
-                return true;
-            }
+                {
+                    // CalculationBase 10 (upgrading by 5) plus CalculationExtra 5 for each
+                    // FULL DoomThreshold of 10 already on the target -- `Math.Floor(doom /
+                    // 10)`. It had been sitting in High Five's Osty-attack body and applied
+                    // nothing at all.
+                    var doomed = FirstEnemy(state);
+                    int already = doomed != null ? BuffSystem.Get(doomed.Buffs, BuffId.Doom) : 0;
+                    ApplyEnemyDebuff(state, BuffId.Doom, (upgraded ? 15 : 10) + 5 * (already / 10), rng);
+                    return true;
+                }
             case "Lethality":
                 // PowerVar 50 upgrading by 25 -- a PERCENTAGE, and only on the first Attack
                 // card of the turn.
@@ -5927,12 +6097,7 @@ public static class CardEffects
                 // BeforeCardPlayed on an ETHEREAL card -- nothing to do with exhausting.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.SpiritOfAsh, upgraded ? 5 : 4);
                 return true;
-            case "Misery":
             case "HighFive":
-                // High Five, and Misery shares this body as it always has -- naming both is
-                // what keeps `audit_shared_card_bodies.py` quiet about a stack that is
-                // correct. Misery's own reading is still owed.
-                //
                 // `OstyDamageVar(11)` upgrading by 2, at ALL opponents, then Vulnerable
                 // 2/3 on all of them -- and it does nothing at all without a living Osty
                 // (`IsPlayable => !IsOstyMissing`). This shared a body that applies the
@@ -5945,6 +6110,45 @@ public static class CardEffects
                 }
 
                 return true;
+            case "Misery":
+                {
+                    // 7 damage upgrading by 2 at the target, and then every DEBUFF the target
+                    // was carrying is copied onto every other hittable enemy -- at the amount
+                    // it had, stacking with whatever they already hold. The list is snapshotted
+                    // BEFORE the attack, so a debuff the hit removes still spreads and one the
+                    // hit adds does not.
+                    //
+                    // Misery had been stacked onto High Five's body since the first commit, so
+                    // it was an Osty attack at every enemy for eleven with a Vulnerable rider.
+                    // Upgrading also adds RETAIN, which the card data carries.
+                    var struck = FirstEnemy(state);
+                    if (struck == null)
+                    {
+                        return true;
+                    }
+
+                    var spread = struck
+                        .Buffs.Where(b => b.Magnitude != 0 && IsEnemyDebuff(b.Id, b.Magnitude))
+                        .Select(b => (b.Id, b.Magnitude))
+                        .ToList();
+
+                    DealDamageToEnemy(state, struck, Dmg(state, def, upgraded, card));
+
+                    foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToList())
+                    {
+                        if (ReferenceEquals(enemy, struck))
+                        {
+                            continue;
+                        }
+
+                        foreach (var (id, magnitude) in spread)
+                        {
+                            ApplyEnemyDebuffToTarget(state, enemy, id, magnitude, rng);
+                        }
+                    }
+
+                    return true;
+                }
             case "SweepingGaze":
                 // `OstyDamageVar(10)` upgrading by 5, one hit at a RANDOM opponent.
                 if (state.OstyHp > 0)
@@ -6052,35 +6256,35 @@ public static class CardEffects
             case "FallingStar":
             case "GammaBlast":
             case "MeteorShower":
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    int debuff =
-                        def.Name == "Comet" ? 3
-                        : def.Name is "GammaBlast" or "MeteorShower" ? 2
-                        : 1;
-                    ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, debuff, rng);
-                    ApplyEnemyDebuffToTarget(state, target, BuffId.Vulnerable, debuff, rng);
-                }
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        int debuff =
+                            def.Name == "Comet" ? 3
+                            : def.Name is "GammaBlast" or "MeteorShower" ? 2
+                            : 1;
+                        ApplyEnemyDebuffToTarget(state, target, BuffId.Weak, debuff, rng);
+                        ApplyEnemyDebuffToTarget(state, target, BuffId.Vulnerable, debuff, rng);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "BeatIntoShape":
-            {
-                // 5/7 damage, then a Forge of CalculationBase 5/7 plus CalculationExtra 5/7
-                // for each powered hit the player has landed ON THIS TARGET this turn --
-                // minus the hits this very attack just made, so it does not count itself.
-                //
-                // The emulator dealt damage scaled by the player's BLOCK and forged nothing.
-                var shaped = FirstEnemy(state);
-                int hitsBefore = shaped?.PoweredHitsThisTurn ?? 0;
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                int per = upgraded ? 7 : 5;
-                Forge(state, per + per * hitsBefore);
-                return true;
-            }
+                {
+                    // 5/7 damage, then a Forge of CalculationBase 5/7 plus CalculationExtra 5/7
+                    // for each powered hit the player has landed ON THIS TARGET this turn --
+                    // minus the hits this very attack just made, so it does not count itself.
+                    //
+                    // The emulator dealt damage scaled by the player's BLOCK and forged nothing.
+                    var shaped = FirstEnemy(state);
+                    int hitsBefore = shaped?.PoweredHitsThisTurn ?? 0;
+                    DealDamage(state, Dmg(state, def, upgraded, card));
+                    int per = upgraded ? 7 : 5;
+                    Forge(state, per + per * hitsBefore);
+                    return true;
+                }
             case "CollisionCourse":
                 // 11/15 damage, then a DEBRIS into hand -- `CreateCard<Debris>` through
                 // AddGeneratedCardToCombat, so it is a generated card and Arsenal pays for
@@ -6101,31 +6305,31 @@ public static class CardEffects
                 ApplyTemporaryStrengthDownToAll(state, upgraded ? 2 : 1);
                 return true;
             case "DecisionsDecisions":
-            {
-                // Decisions, Decisions: six stars, Exhaust. Draw CardsVar 3 (upgrading by
-                // 2), then AUTO-PLAY a playable SKILL chosen from hand three times --
-                // RepeatVar 3, which does not upgrade. The emulator drew and stopped.
-                DrawCards(state, upgraded ? 5 : 3, rng);
-                var skills = new List<int>();
-                for (int i = 0; i < state.Hand.Count; i++)
                 {
-                    var held = GeneratedData.Cards.Get(state.Hand[i].DefId);
-                    if (held.Type == CardType.Skill && !held.Unplayable)
+                    // Decisions, Decisions: six stars, Exhaust. Draw CardsVar 3 (upgrading by
+                    // 2), then AUTO-PLAY a playable SKILL chosen from hand three times --
+                    // RepeatVar 3, which does not upgrade. The emulator drew and stopped.
+                    DrawCards(state, upgraded ? 5 : 3, rng);
+                    var skills = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
                     {
-                        skills.Add(i);
+                        var held = GeneratedData.Cards.Get(state.Hand[i].DefId);
+                        if (held.Type == CardType.Skill && !held.Unplayable)
+                        {
+                            skills.Add(i);
+                        }
                     }
-                }
 
-                OpenCardSelection(
-                    state,
-                    CardSelectionKind.AutoPlaySkillThrice,
-                    skills,
-                    def.Id,
-                    autoPick: skills.Count > 0 ? skills[0] : 0,
-                    amount: 1
-                );
-                return true;
-            }
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.AutoPlaySkillThrice,
+                        skills,
+                        def.Id,
+                        autoPick: skills.Count > 0 ? skills[0] : 0,
+                        amount: 1
+                    );
+                    return true;
+                }
             case "DyingStar":
                 // Three stars, Ethereal: 9/11 at ALL enemies and a StrengthLoss of 9/11 on
                 // each. The emulator hit one for the right damage and took 3/5 Strength off
@@ -6146,20 +6350,20 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 3 : 2, rng);
                 return true;
             case "HeavenlyDrill":
-            {
-                // Heavenly Drill: `HasEnergyCostX` -- 8/10 damage once per energy spent, and
-                // the whole hit count DOUBLED when that is four or more. The emulator dealt
-                // one hit and traded stars for energy, which is not on the card at all.
-                int drills = RelicEffects.ModifyXValue(state, state.Energy);
-                state.Energy = 0;
-                if (drills >= 4)
                 {
-                    drills *= 2;
-                }
+                    // Heavenly Drill: `HasEnergyCostX` -- 8/10 damage once per energy spent, and
+                    // the whole hit count DOUBLED when that is four or more. The emulator dealt
+                    // one hit and traded stars for energy, which is not on the card at all.
+                    int drills = RelicEffects.ModifyXValue(state, state.Energy);
+                    state.Energy = 0;
+                    if (drills >= 4)
+                    {
+                        drills *= 2;
+                    }
 
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), drills, rng);
-                return true;
-            }
+                    DealDamageMultiHit(state, Dmg(state, def, upgraded, card), drills, rng);
+                    return true;
+                }
             case "Hegemony":
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, upgraded ? 3 : 2);
@@ -6175,20 +6379,20 @@ public static class CardEffects
                 );
                 return true;
             case "KnockoutBlow":
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    int hpBefore = target.Hp;
-                    DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
-                    if (hpBefore > 0 && target.Hp == 0)
+                    var target = FirstEnemy(state);
+                    if (target != null)
                     {
-                        GainStars(state, 5);
+                        int hpBefore = target.Hp;
+                        DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
+                        if (hpBefore > 0 && target.Hp == 0)
+                        {
+                            GainStars(state, 5);
+                        }
                     }
-                }
 
-                return true;
-            }
+                    return true;
+                }
             case "LunarBlast":
                 // Lunar Blast: 4/5 damage once per SKILL the player has finished playing
                 // this turn -- `CalculationBase 0 + Extra 1` over `CardPlaysFinished`. With
@@ -6348,63 +6552,63 @@ public static class CardEffects
                 DrawCards(state, 1, rng);
                 return true;
             case "Shiv":
-            {
-                // `Shiv.TargetType` is AllEnemies while its owner holds FanOfKnivesPower,
-                // and AnyEnemy otherwise -- the retarget lives on the SHIV, read from the
-                // power, rather than in anything Fan of Knives does when it is played.
-                int shivDamage = ShivDamage(state, def, upgraded, card);
-                if (BuffSystem.Get(state.PlayerBuffs, BuffId.FanOfKnives) > 0)
                 {
-                    DealDamageToAll(state, shivDamage);
-                }
-                else
-                {
-                    DealDamage(state, shivDamage);
-                }
+                    // `Shiv.TargetType` is AllEnemies while its owner holds FanOfKnivesPower,
+                    // and AnyEnemy otherwise -- the retarget lives on the SHIV, read from the
+                    // power, rather than in anything Fan of Knives does when it is played.
+                    int shivDamage = ShivDamage(state, def, upgraded, card);
+                    if (BuffSystem.Get(state.PlayerBuffs, BuffId.FanOfKnives) > 0)
+                    {
+                        DealDamageToAll(state, shivDamage);
+                    }
+                    else
+                    {
+                        DealDamage(state, shivDamage);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "SovereignBlade":
-            {
-                // Ten damage plus everything forged into THIS copy, once -- `SetRepeats`
-                // has no callers, so the hit count never leaves one. With SeekingEdge it
-                // hits every enemy rather than the target; with Parry it gains that much
-                // block afterwards, from `CalculationBase 0 + Extra 1` per point.
-                //
-                // The emulator hit once for the printed ten and then DOUBLED the player's
-                // block, which is not an effect this card has.
-                int bladeDamage = Dmg(state, def, upgraded, card) + card.BonusDamage;
-                if (BuffSystem.Get(state.PlayerBuffs, BuffId.SeekingEdge) > 0)
                 {
-                    // `ConquerorPower.ModifyDamageMultiplicative` is gated on
-                    // `cardSource is SovereignBlade`, so it lives here rather than in
-                    // BuffSystem.IncomingDamage -- the same reason Hang's does.
-                    foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
+                    // Ten damage plus everything forged into THIS copy, once -- `SetRepeats`
+                    // has no callers, so the hit count never leaves one. With SeekingEdge it
+                    // hits every enemy rather than the target; with Parry it gains that much
+                    // block afterwards, from `CalculationBase 0 + Extra 1` per point.
+                    //
+                    // The emulator hit once for the printed ten and then DOUBLED the player's
+                    // block, which is not an effect this card has.
+                    int bladeDamage = Dmg(state, def, upgraded, card) + card.BonusDamage;
+                    if (BuffSystem.Get(state.PlayerBuffs, BuffId.SeekingEdge) > 0)
                     {
-                        DealDamageToEnemy(state, enemy, ConqueredDamage(enemy, bladeDamage));
+                        // `ConquerorPower.ModifyDamageMultiplicative` is gated on
+                        // `cardSource is SovereignBlade`, so it lives here rather than in
+                        // BuffSystem.IncomingDamage -- the same reason Hang's does.
+                        foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
+                        {
+                            DealDamageToEnemy(state, enemy, ConqueredDamage(enemy, bladeDamage));
+                        }
                     }
-                }
-                else
-                {
-                    var bladeTarget = FirstEnemy(state);
-                    if (bladeTarget != null)
+                    else
                     {
-                        DealDamageToEnemy(
-                            state,
-                            bladeTarget,
-                            ConqueredDamage(bladeTarget, bladeDamage)
-                        );
+                        var bladeTarget = FirstEnemy(state);
+                        if (bladeTarget != null)
+                        {
+                            DealDamageToEnemy(
+                                state,
+                                bladeTarget,
+                                ConqueredDamage(bladeTarget, bladeDamage)
+                            );
+                        }
                     }
-                }
 
-                int parry = BuffSystem.Get(state.PlayerBuffs, BuffId.Parry);
-                if (parry > 0)
-                {
-                    GainBlock(state, parry, rng);
-                }
+                    int parry = BuffSystem.Get(state.PlayerBuffs, BuffId.Parry);
+                    if (parry > 0)
+                    {
+                        GainBlock(state, parry, rng);
+                    }
 
-                return true;
-            }
+                    return true;
+                }
             case "SporeMind":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
                 return true;
@@ -6509,67 +6713,67 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 4 : 3, rng);
                 break;
             case "Begone":
-            {
-                // Begone: a card CHOSEN from hand becomes a MINION STRIKE, upgraded if
-                // Begone was. The emulator transformed a random card into a random one.
-                var hand = new List<int>();
-                for (int i = 0; i < state.Hand.Count; i++)
                 {
-                    hand.Add(i);
-                }
+                    // Begone: a card CHOSEN from hand becomes a MINION STRIKE, upgraded if
+                    // Begone was. The emulator transformed a random card into a random one.
+                    var hand = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
+                    {
+                        hand.Add(i);
+                    }
 
-                OpenTransformSelection(
-                    state,
-                    CardSelectionKind.TransformHandToMinionStrike,
-                    hand,
-                    def.Id,
-                    amount: 1,
-                    upgraded: upgraded
-                );
-                break;
-            }
+                    OpenTransformSelection(
+                        state,
+                        CardSelectionKind.TransformHandToMinionStrike,
+                        hand,
+                        def.Id,
+                        amount: 1,
+                        upgraded: upgraded
+                    );
+                    break;
+                }
             case "Charge":
-            {
-                // Charge: CardsVar 2 cards CHOSEN from the DRAW pile become MINION DIVE
-                // BOMBS, in place.
-                var pile = new List<int>();
-                for (int i = 0; i < state.DrawPile.Count; i++)
                 {
-                    pile.Add(i);
-                }
+                    // Charge: CardsVar 2 cards CHOSEN from the DRAW pile become MINION DIVE
+                    // BOMBS, in place.
+                    var pile = new List<int>();
+                    for (int i = 0; i < state.DrawPile.Count; i++)
+                    {
+                        pile.Add(i);
+                    }
 
-                OpenTransformSelection(
-                    state,
-                    CardSelectionKind.TransformDrawToMinionDiveBomb,
-                    pile,
-                    def.Id,
-                    amount: 2,
-                    upgraded: upgraded
-                );
-                break;
-            }
+                    OpenTransformSelection(
+                        state,
+                        CardSelectionKind.TransformDrawToMinionDiveBomb,
+                        pile,
+                        def.Id,
+                        amount: 2,
+                        upgraded: upgraded
+                    );
+                    break;
+                }
             case "Guards":
-            {
-                // Guards: `CardSelectorPrefs(prompt, 0, 999999999)` -- ANY NUMBER of hand
-                // cards become MINION SACRIFICES, and keeping none is a legal answer, so the
-                // screen is skippable and reopens until the player stops.
-                var anyHand = new List<int>();
-                for (int i = 0; i < state.Hand.Count; i++)
                 {
-                    anyHand.Add(i);
-                }
+                    // Guards: `CardSelectorPrefs(prompt, 0, 999999999)` -- ANY NUMBER of hand
+                    // cards become MINION SACRIFICES, and keeping none is a legal answer, so the
+                    // screen is skippable and reopens until the player stops.
+                    var anyHand = new List<int>();
+                    for (int i = 0; i < state.Hand.Count; i++)
+                    {
+                        anyHand.Add(i);
+                    }
 
-                OpenTransformSelection(
-                    state,
-                    CardSelectionKind.TransformHandToMinionSacrifice,
-                    anyHand,
-                    def.Id,
-                    amount: 1,
-                    upgraded: upgraded,
-                    skippable: true
-                );
-                break;
-            }
+                    OpenTransformSelection(
+                        state,
+                        CardSelectionKind.TransformHandToMinionSacrifice,
+                        anyHand,
+                        def.Id,
+                        amount: 1,
+                        upgraded: upgraded,
+                        skippable: true
+                    );
+                    break;
+                }
             case "Seance":
             case "Transfigure":
                 TransformRandomCardInHand(state, rng);
@@ -6855,14 +7059,14 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 9 : 6, rng);
                 break;
             case "Glimmer":
-            {
-                // Glimmer: draw CardsVar 3 (upgrading by 1), then put ONE card CHOSEN from
-                // hand back on TOP of the draw pile. The emulator drew 1/2 and put nothing
-                // back.
-                DrawCards(state, upgraded ? 4 : 3, rng);
-                OpenPutBackSelection(state, def.Id);
-                break;
-            }
+                {
+                    // Glimmer: draw CardsVar 3 (upgrading by 1), then put ONE card CHOSEN from
+                    // hand back on TOP of the draw pile. The emulator drew 1/2 and put nothing
+                    // back.
+                    DrawCards(state, upgraded ? 4 : 3, rng);
+                    OpenPutBackSelection(state, def.Id);
+                    break;
+                }
             case "Parse":
                 DrawCards(state, upgraded ? 2 : 1, rng);
                 break;
@@ -7116,51 +7320,48 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.InfiniteBlades, upgraded ? 2 : 1);
                 break;
             case "CrescentSpear":
-            {
-                // Crescent Spear: CalculationBase 8 plus ExtraDamage 2 (upgrading by 1) for
-                // each card with a STAR COST the player holds --
-                // `AllCards.Count(c => c.CanonicalStarCost >= 0 || c.HasStarCostX)`. AllCards
-                // spans every pile INCLUDING Play, so the spear counts itself; the emulator
-                // removes the played card from hand before resolving, hence the + 1.
-                //
-                // It had been sitting in a flat 8/12 body with nine other cards.
-                int starCards = 1;
-                foreach (
-                    var pile in new[]
-                    {
+                {
+                    // Crescent Spear: CalculationBase 8 plus ExtraDamage 2 (upgrading by 1) for
+                    // each card with a STAR COST the player holds --
+                    // `AllCards.Count(c => c.CanonicalStarCost >= 0 || c.HasStarCostX)`. AllCards
+                    // spans every pile INCLUDING Play, so the spear counts itself; the emulator
+                    // removes the played card from hand before resolving, hence the + 1.
+                    //
+                    // It had been sitting in a flat 8/12 body with nine other cards.
+                    int starCards = 1;
+                    foreach (
+                        var pile in new[]
+                        {
                         state.Hand,
                         state.DrawPile,
                         state.DiscardPile,
                         state.ExhaustPile,
-                    }
-                )
-                {
-                    foreach (var held in pile)
+                        }
+                    )
                     {
-                        var d = GeneratedData.Cards.Get(held.DefId);
-                        if (d.StarCost >= 0 || d.HasStarCostX)
+                        foreach (var held in pile)
                         {
-                            starCards++;
+                            var d = GeneratedData.Cards.Get(held.DefId);
+                            if (d.StarCost >= 0 || d.HasStarCostX)
+                            {
+                                starCards++;
+                            }
                         }
                     }
-                }
 
-                DealDamage(state, DmgFrom(state, 8 + (upgraded ? 3 : 2) * starCards, def, card));
-                break;
-            }
-            case "DeathMarch":
-            case "Flatten":
+                    DealDamage(state, DmgFrom(state, 8 + (upgraded ? 3 : 2) * starCards, def, card));
+                    break;
+                }
             case "MementoMori":
-            case "Poke":
             case "PreciseCut":
-            case "Rattle":
-            case "RightHandHand":
-            case "Snap":
-            case "Squeeze":
-                // TimesUp and SweepingGaze were here too. Both have real bodies in
-                // ApplyNecrobinderCard, which runs first and returns -- so these labels
-                // were dead, and a dead duplicate is how a card gets "fixed" in the wrong
-                // place.
+                // Memento Mori and Precise Cut, on a flat 8/12 that nothing has checked.
+                // Seven Necrobinder cards were stacked here as well -- DeathMarch, Flatten,
+                // Poke, Rattle, RightHandHand, Snap and Squeeze -- along with TimesUp and
+                // SweepingGaze before them. All nine have real bodies in
+                // ApplyNecrobinderCard, which runs first and returns, so the labels were
+                // dead; a dead duplicate is how a card gets "fixed" in the copy nothing
+                // reaches, and it is also a trap for the next person to write a body under
+                // the wrong label in the stack.
                 DealDamage(state, upgraded ? 12 : 8);
                 break;
             case "Supermassive":
@@ -7178,19 +7379,9 @@ public static class CardEffects
                 );
                 break;
             case "Murder":
-            case "TheScythe":
+                // TheScythe was stacked here on Murder's flat 25/35; it has a real body in
+                // ApplyNecrobinderCard, so the label was dead.
                 DealDamage(state, upgraded ? 35 : 25);
-                break;
-            case "Fetch":
-            case "HighFive":
-            case "Protector":
-            case "SicEm":
-                // SoulStorm and Unleash were here too, both with guessed flat numbers.
-                // Both have real bodies in ApplyNecrobinderCard, which runs first and
-                // returns -- so these labels were dead, and a dead duplicate is how a
-                // card ends up "fixed" in the copy nothing reaches.
-                AddRandomClassCardToHand(state, rng, freeThisTurn: true);
-                DealDamage(state, upgraded ? 10 : 7);
                 break;
             case "ToolsOfTheTrade":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.ToolsOfTheTrade, 1);
@@ -7519,7 +7710,7 @@ public static class CardEffects
 
     private static void MoveZeroCostDiscardCardsToHand(CombatState state)
     {
-        for (int i = 0; i < state.DiscardPile.Count && state.Hand.Count < MaxCardsInHand; )
+        for (int i = 0; i < state.DiscardPile.Count && state.Hand.Count < MaxCardsInHand;)
         {
             var card = state.DiscardPile[i];
             var def = GeneratedData.Cards.Get(card.DefId);
@@ -7821,8 +8012,14 @@ public static class CardEffects
     /// own attacks are not touched, which is why this is a helper at the Osty sites rather
     /// than a term in `BuffSystem.IncomingDamage`.
     /// </summary>
-    internal static int OstyAttackDamage(CombatState state, int amount) =>
-        amount + BuffSystem.Get(state.PlayerBuffs, BuffId.Calcify);
+    internal static int OstyAttackDamage(CombatState state, int amount)
+    {
+        // Every Osty attack is costed here, so this is also where "the pet has swung this
+        // turn" is recorded -- `AfterAttack` with `command.Attacker == Owner.Osty`, which
+        // Flatten watches for.
+        state.OstyAttacksThisTurn++;
+        return amount + BuffSystem.Get(state.PlayerBuffs, BuffId.Calcify);
+    }
 
     private static void DealOstyDamage(CombatState state, int amount)
     {
@@ -7936,17 +8133,83 @@ public static class CardEffects
         }
     }
 
-    private static void UpgradeDiscardCards(CombatState state, int count)
+    /// <summary>
+    /// Drain Power: `discard.Where(IsUpgradable).TakeRandom(count, Rng.CombatCardSelection)`
+    /// upgraded in place.
+    /// </summary>
+    /// <remarks>
+    /// A SHUFFLE of the upgradable cards, not a walk from the front -- the same shape as
+    /// Anointed's rares. Taking the first ones by index picked a different set whenever
+    /// there were more candidates than picks, and drew nothing from the stream, which
+    /// slides every later roll in the combat.
+    /// </remarks>
+    private static void UpgradeDiscardCards(CombatState state, int count, Random rng)
     {
-        for (int i = 0; i < state.DiscardPile.Count && count > 0; i++)
+        var upgradable = new List<int>();
+        for (int i = 0; i < state.DiscardPile.Count; i++)
         {
-            if (!IsUpgradable(state.DiscardPile[i]))
+            if (IsUpgradable(state.DiscardPile[i]))
+            {
+                upgradable.Add(i);
+            }
+        }
+
+        if (upgradable.Count == 0)
+        {
+            return;
+        }
+
+        var selection = CardSelectionRng(state, rng);
+        for (int i = upgradable.Count - 1; i > 0; i--)
+        {
+            int j = selection.Next(i + 1);
+            (upgradable[i], upgradable[j]) = (upgradable[j], upgradable[i]);
+        }
+
+        foreach (int index in upgradable.Take(count))
+        {
+            state.DiscardPile[index] = state.DiscardPile[index] with { Upgraded = true };
+        }
+    }
+
+    /// <summary>
+    /// Clears <c>CardInstance.PlayedThisTurn</c> across every combat pile at the turn
+    /// boundary -- the flag stands in for a history query scoped to the turn, so it has to
+    /// expire with the turn wherever the copy ended up.
+    /// </summary>
+    internal static void ClearPlayedThisTurn(CombatState state)
+    {
+        foreach (var pile in new[] { state.Hand, state.DrawPile, state.DiscardPile, state.ExhaustPile })
+        {
+            for (int i = 0; i < pile.Count; i++)
+            {
+                if (pile[i].PlayedThisTurn)
+                {
+                    pile[i] = pile[i] with { PlayedThisTurn = false };
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// `RightHandHand.AfterCardPlayedLate`: every copy in the DISCARD pile returns to hand
+    /// once a play has cost `EnergyVar(2)` or more.
+    /// </summary>
+    internal static void ReturnRightHandHandsFromDiscard(CombatState state)
+    {
+        for (int i = state.DiscardPile.Count - 1; i >= 0; i--)
+        {
+            if (
+                GeneratedData.Cards.Get(state.DiscardPile[i].DefId).Name != "RightHandHand"
+                || state.Hand.Count >= MaxCardsInHand
+            )
             {
                 continue;
             }
 
-            state.DiscardPile[i] = state.DiscardPile[i] with { Upgraded = true };
-            count--;
+            var returning = state.DiscardPile[i];
+            state.DiscardPile.RemoveAt(i);
+            state.Hand.Add(returning);
         }
     }
 
@@ -8140,56 +8403,56 @@ public static class CardEffects
         switch (orb.Type)
         {
             case OrbType.Lightning:
-            {
-                // `ApplyLightningDamage` with a null target rolls
-                // `Rng.CombatTargets.NextItem(hittable)` -- the evoke is aimed by the
-                // stream, not at whoever the player last pointed at. The passive already
-                // rolled; the evoke did not, so a Defect with three enemies in front of it
-                // put every evoke into the same one and never drew from the stream.
-                var target = RandomLivingEnemy(state, rng);
-                if (target == null)
                 {
-                    return;
-                }
+                    // `ApplyLightningDamage` with a null target rolls
+                    // `Rng.CombatTargets.NextItem(hittable)` -- the evoke is aimed by the
+                    // stream, not at whoever the player last pointed at. The passive already
+                    // rolled; the evoke did not, so a Defect with three enemies in front of it
+                    // put every evoke into the same one and never drew from the stream.
+                    var target = RandomLivingEnemy(state, rng);
+                    if (target == null)
+                    {
+                        return;
+                    }
 
-                DealUnpoweredDamageToEnemy(state, target, LightningEvokeValue(state));
-                int thunder = BuffSystem.Get(state.PlayerBuffs, BuffId.Thunder);
-                if (thunder > 0 && target.Hp > 0)
-                {
-                    DealUnpoweredDamageToEnemy(state, target, thunder);
-                }
+                    DealUnpoweredDamageToEnemy(state, target, LightningEvokeValue(state));
+                    int thunder = BuffSystem.Get(state.PlayerBuffs, BuffId.Thunder);
+                    if (thunder > 0 && target.Hp > 0)
+                    {
+                        DealUnpoweredDamageToEnemy(state, target, thunder);
+                    }
 
-                break;
-            }
+                    break;
+                }
             case OrbType.Frost:
                 GainUnpoweredBlock(state, FrostEvokeValue(state), rng);
                 break;
             case OrbType.Dark:
-            {
-                var target = state.Enemies.Where(e => e.Hp > 0).MinBy(e => e.Hp);
-                if (target != null)
                 {
-                    DealUnpoweredDamageToEnemy(state, target, orb.EvokeValue);
-                }
+                    var target = state.Enemies.Where(e => e.Hp > 0).MinBy(e => e.Hp);
+                    if (target != null)
+                    {
+                        DealUnpoweredDamageToEnemy(state, target, orb.EvokeValue);
+                    }
 
-                break;
-            }
+                    break;
+                }
             case OrbType.Plasma:
                 GainEnergy(state, 2);
                 break;
             case OrbType.Glass:
-            {
-                // `EvokeVal => PassiveVal * 2m`, to every hittable enemy -- so a Glass orb
-                // that has decayed to nothing evokes for nothing. Was a two-card draw off
-                // a `new Random(0)`, which is both the wrong effect and a fresh stream.
-                int value = GlassValue(state, orb) * 2;
-                if (value > 0)
                 {
-                    DealUnpoweredDamageToAll(state, value);
-                }
+                    // `EvokeVal => PassiveVal * 2m`, to every hittable enemy -- so a Glass orb
+                    // that has decayed to nothing evokes for nothing. Was a two-card draw off
+                    // a `new Random(0)`, which is both the wrong effect and a fresh stream.
+                    int value = GlassValue(state, orb) * 2;
+                    if (value > 0)
+                    {
+                        DealUnpoweredDamageToAll(state, value);
+                    }
 
-                break;
-            }
+                    break;
+                }
         }
     }
 
@@ -8298,6 +8561,7 @@ public static class CardEffects
         DrawForVicious(state, id, before, BuffSystem.Get(target.Buffs, id), rng);
         DamageForSleightOfFlesh(state, target, id, magnitude);
         BlockForShroud(state, id, magnitude, rng);
+        NoteDoomApplied(state, id, magnitude);
         if (id == BuffId.Poison && magnitude > 0)
         {
             CountPoisonForOutbreak(state);
@@ -8514,6 +8778,19 @@ public static class CardEffects
     {
         DamageForSleightOfFlesh(state, target, BuffId.Doom, doom);
         BlockForShroud(state, BuffId.Doom, doom, rng: null);
+        NoteDoomApplied(state, BuffId.Doom, doom);
+    }
+
+    /// <summary>
+    /// `PowerReceivedEntry` for Doom applied BY the player, which Death's Door asks about.
+    /// Recorded at the same two chokepoints as Shroud, for the same reason.
+    /// </summary>
+    private static void NoteDoomApplied(CombatState state, BuffId id, int magnitude)
+    {
+        if (id == BuffId.Doom && magnitude != 0)
+        {
+            state.DoomAppliedThisTurn = true;
+        }
     }
 
     private static void DrawForVicious(
@@ -8861,15 +9138,15 @@ public static class CardEffects
             case "Zap":
             case "BallLightning":
             case "Chaos":
-            {
-                var target = FirstEnemy(state);
-                if (target != null)
                 {
-                    DealUnpoweredDamageToEnemy(target, Math.Max(0, (upgraded ? 10 : 8) + focus));
-                }
+                    var target = FirstEnemy(state);
+                    if (target != null)
+                    {
+                        DealUnpoweredDamageToEnemy(target, Math.Max(0, (upgraded ? 10 : 8) + focus));
+                    }
 
-                break;
-            }
+                    break;
+                }
             case "ColdSnap":
             case "Coolheaded":
             case "Glacier":

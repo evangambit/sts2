@@ -58,7 +58,15 @@ for name in sys.argv[1:]:
         "WithHitFx",
         "Flash()",
         "SfxCmd",
-        "PreviewCardPileAdd(",
+    )
+    # `CardCmd.PreviewCardPileAdd(result);` is UI and is dropped -- but the same call is
+    # also written WRAPPING the effect, and dropping the line then hides the whole thing.
+    # Grave Warden's only effect besides its block is a Soul into the draw pile, and it
+    # sits inside that call: read through this tool the card looked like block and nothing
+    # else, and the emulator's correct arm was "fixed" into a wrong one. Thirteen cards are
+    # written that way. Only the standalone form is cosmetic.
+    PREVIEW_ONLY = re.compile(
+        r"^\s*CardCmd\.PreviewCardPileAdd\([\w.]+(,\s*[\d.f]+)?\);\s*$",
     )
     # Indentation is PRESERVED. An earlier version stripped it, and Second Wind's block
     # gain then read as sitting outside its foreach when it is inside -- per card exhausted
@@ -66,7 +74,7 @@ for name in sys.argv[1:]:
     # too; only the vfx/anim/sfx lines are dropped.
     body = []
     for l in src.read_text().split("\n"):
-        if not l.strip() or any(k in l for k in SKIP):
+        if not l.strip() or any(k in l for k in SKIP) or PREVIEW_ONLY.match(l):
             continue
         body.append(l.replace("\t", "    "))
     print("--- SOURCE")

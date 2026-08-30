@@ -353,6 +353,12 @@ public static class CombatEngine
             }
         }
 
+        // The play is finished, so the copy carries `PlayedThisTurn` into whichever pile it
+        // lands in -- read by Fetch, which draws only the first time a given copy is played
+        // in a turn. Stamped here rather than in each branch below so no destination can
+        // forget it.
+        card = card with { PlayedThisTurn = true };
+
         // Corruption: Skills exhaust instead of discard.
         bool corruptedSkill =
             def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.Corruption) > 0;
@@ -371,7 +377,11 @@ public static class CombatEngine
                     CostBump = card.CostBump + state.PlayedCardCostBump,
                     // Genetic Algorithm Exhausts, and its growth is on the CARD -- so the
                     // copy that lands in the exhaust pile carries it. This branch is the
-                    // only one that had no bonus fields at all.
+                    // only one that had no bonus fields at all. BonusDamage belongs here
+                    // for the same reason: The Scythe exhausts itself and grows by four
+                    // every play, so a copy recovered from the exhaust pile has to
+                    // remember.
+                    BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
                     BonusBlock = card.BonusBlock + state.PlayedCardBonusBlock,
                     CostForCombat = state.PlayedCardCostForCombat != int.MinValue
                         ? state.PlayedCardCostForCombat
@@ -486,6 +496,15 @@ public static class CombatEngine
             {
                 Effects.CardEffects.DealUnpoweredDamage(state, serpentTarget, serpentFormBefore);
             }
+        }
+
+        // `RightHandHand.AfterCardPlayedLate`: a play that SPENT two or more energy pulls
+        // every copy sitting in the DISCARD pile back to hand. On the card, so it comes
+        // back for the card that was expensive rather than for the one it belongs to --
+        // and it costs nothing itself, so it can never bring itself back.
+        if (energyToSpend >= 2)
+        {
+            Effects.CardEffects.ReturnRightHandHandsFromDiscard(state);
         }
 
         // `CardPlayFinishedEntry.WasEthereal` -- counted when the play FINISHES, which is
@@ -1275,6 +1294,10 @@ public static class CombatEngine
         state.SkillPlayedWhileSmoggy = false;
         state.AttackCardsPlayedThisTurn = 0;
         state.SkillCardsPlayedThisTurn = 0;
+        state.ExtraCardsDrawnThisTurn = 0;
+        state.DoomAppliedThisTurn = false;
+        state.OstyAttacksThisTurn = 0;
+        Effects.CardEffects.ClearPlayedThisTurn(state);
         state.AttackOrSkillCardsPlayedThisTurn = 0;
         // Carried over before the reset: Pale Blue Dot reads LAST turn's plays.
         state.CardPlaysLastTurn = state.CardPlaysThisTurn;
@@ -1442,7 +1465,8 @@ public static class CombatEngine
                     + Effects.RelicEffects.ExtraHandDraw(state)
                     - BuffSystem.Get(state.PlayerBuffs, BuffId.MindRot)
             ),
-            rng
+            rng,
+            fromHandDraw: true
         );
         int nextTurnDraw = BuffSystem.Get(state.PlayerBuffs, BuffId.NextTurnDraw);
         if (nextTurnDraw > 0)
@@ -1742,6 +1766,27 @@ public static class CombatEngine
         if (def.Id == Effects.IC.Stomp)
         {
             cost -= state.AttackCardsPlayedThisTurn;
+        }
+
+        // Banshee's Cry gets `EnergyVar(2)` cheaper per ETHEREAL card played this combat,
+        // through two hooks that add up to the same number: `AfterCardEnteredCombat` pays
+        // the whole backlog at once, and `AfterCardPlayed` pays each new one as it lands.
+        // Derived here instead of stamped on the instance, so a copy generated mid-combat
+        // is priced correctly without a creation hook. (A CLONE skips the backlog in the
+        // game -- `IsClone` returns early -- and is priced with it here.)
+        if (def.Name == "BansheesCry")
+        {
+            cost -= 2 * state.EtherealCardPlaysThisCombat;
+        }
+
+        // `Flatten.ReduceCost` is `EnergyCost.SetThisTurn(0)`, fired by `AfterAttack` when
+        // the attacker was OSTY and again by `AfterCardEnteredCombat` for a copy that
+        // arrives after the pet has already swung. A SET rather than a discount, so it
+        // beats Borrowed Time's tax below -- and derived here for the same reason as
+        // Banshee's Cry, so a late copy is priced right without a creation hook.
+        if (def.Name == "Flatten" && state.OstyAttacksThisTurn > 0)
+        {
+            return 0;
         }
 
         // FranticEscape's OnPlay ends with `base.EnergyCost.AddThisCombat(1)` -- on the

@@ -102,6 +102,138 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "Afterlife": (
+        "3c50500e8694",
+        "Summon 6/9 and nothing else; a dead duplicate arm drew cards.",
+    ),
+    "BansheesCry": (
+        "6aeeaee4db7f",
+        "33 to ALL, and 2 cheaper per Ethereal card played; had neither.",
+    ),
+    "Bodyguard": (
+        "ccf12b1bb5f4",
+        "Summon 5/7 and nothing else; a dead duplicate arm gained block.",
+    ),
+    "BoneShards": (
+        "cd7e52f353df",
+        "Osty hits ALL for 9/12, block, kill -- and the block is inside the missing-Osty guard.",
+    ),
+    "Bury": ("8a99f88b7959", "52/63 at one target; correct."),
+    "DeathMarch": (
+        "bd8a51d2308f",
+        "8/9 + 4/6 per NON-hand-draw this turn; counted Automation's draws and never upgraded the base.",
+    ),
+    "Deathbringer": (
+        "3a26bb59aab8",
+        "Doom 21/26 and Weak 1 to ALL hittable enemies; both landed on one.",
+    ),
+    "DeathsDoor": (
+        "00fc803d67fc",
+        "1 block gain, 3 if the player applied Doom this turn; gated on half HP and did 3/4.",
+    ),
+    "DefendNecrobinder": (
+        "de9b93de7490",
+        "Block 5/8; correct, and split off Undeath's case so it cannot clone itself.",
+    ),
+    "Defy": ("cf363200adee", "Block 6/9 and Weak 1 on the target; correct."),
+    "Delay": ("f61e6290febf", "Block 11/13 and 1/2 energy next turn; correct."),
+    "DrainPower": (
+        "1cc1b760863e",
+        "10/12 damage, then 2/3 RANDOM upgradable discards upgraded; took the front of the pile.",
+    ),
+    "Dredge": (
+        "2ba57ec9d4b9",
+        "Up to 3 CHOSEN discards to hand, clamped by hand room; took the oldest three.",
+    ),
+    "EndOfDays": ("f01cfd9f6337", "Doom 29/37 to all then DoomKill; correct."),
+    "Fear": ("8d9e1f059ded", "7/8 and Vulnerable 1/2 on the target; correct."),
+    "Fetch": (
+        "6ef8f0ecdb05",
+        "Osty 3/6, and draws only on this COPY's first play of the turn; drew every time.",
+    ),
+    "Flatten": (
+        "a64ea6f955a7",
+        "Osty 12/16, and free for the turn once Osty has swung; had no cost hook.",
+    ),
+    "GlimpseBeyond": ("53de3cacd223", "3/4 Souls into the draw pile; correct."),
+    "GraveWarden": (
+        "86a184cfa05c",
+        "Block 8/11 and one Soul to the draw pile; correct. `card_pair.py` hid the Soul inside a PreviewCardPileAdd line and the reading briefly deleted it.",
+    ),
+    "Graveblast": (
+        "78fd5261799a",
+        "4/6, then a CHOSEN discard to hand; took the oldest.",
+    ),
+    "HighFive": (
+        "45f3d3270eb8",
+        "Osty hits all for 11/13 plus Vulnerable 2/3, nothing without a pet; correct.",
+    ),
+    "Misery": (
+        "e0fb8e27fcb2",
+        "7/9, then the target's debuffs (snapshot BEFORE the hit) copied to every other enemy; had High Five's body.",
+    ),
+    "NegativePulse": ("30c534f09f57", "Block 5/6 and Doom 7/11 to all; correct."),
+    "Parse": ("489bf24322fa", "Draw 3/4, Ethereal; correct."),
+    "Poke": ("d470530d086d", "Osty 6/9 at one target; correct."),
+    "Protector": (
+        "fd9a24ffcad7",
+        "10/15 + Osty's MAX hp, and NOTHING without a pet; the base paid out regardless.",
+    ),
+    "PullAggro": ("7bf8145061e8", "Summon 4/5 then block 7/9; correct."),
+    "Rattle": (
+        "f9441c26cd02",
+        "Osty 7/9, hit 1 + Osty's swings this turn times; hit once always.",
+    ),
+    "Reanimate": ("cc56a66d12c1", "Summon 20/25, Exhaust; correct."),
+    "Reap": ("f6bd7d8138d1", "27/33 at one target, Retain; correct."),
+    "Reave": (
+        "54c112231e7c",
+        "9/11 and one Soul to the draw pile, upgraded if Reave was; correct.",
+    ),
+    "RightHandHand": (
+        "83fa8c2f25e9",
+        "Osty 4/6, and every copy in the DISCARD returns to hand after a play costing 2+; had only the attack.",
+    ),
+    "Sacrifice": (
+        "fa9f788c7243",
+        "Block = Osty MaxHp x2 then kill, gated on the pet being ALIVE; tested MaxHp, which outlives it.",
+    ),
+    "Scourge": ("882938e1eaa8", "Doom 13/16 on the target then draw 1/2; correct."),
+    "Severance": (
+        "44e148080484",
+        "13/18 and a Soul each to draw, discard and hand; correct.",
+    ),
+    "SicEm": (
+        "52de4429313a",
+        "Osty 5/6 then SicEmPower 3/4 on the target, applied even with no pet; correct.",
+    ),
+    "Sow": (
+        "bf13fd7189a2",
+        "8/11 to ALL enemies, Retain; shared the single-target Strike body.",
+    ),
+    "Spur": ("29cfffc2dc8b", "Summon 3/5 then heal Osty 5/7; correct."),
+    "Squeeze": (
+        "1e4c424b500b",
+        "25/30 + 5/6 per other OstyAttack card, and nothing without a pet; the guard was missing.",
+    ),
+    "StrikeNecrobinder": ("8ea264c0d967", "6/9 at one target; correct."),
+    "TheScythe": (
+        "34652cae3a94",
+        "13, and this COPY gains 4/5 damage per play for good; scaled by cards exhausted this turn.",
+    ),
+    "TimesUp": (
+        "68e6e9106d0b",
+        "1 damage per point of DOOM on the target; scaled by cards played this combat, and the capture could not tell them apart.",
+    ),
+    "Undeath": (
+        "74754adf044c",
+        "Block 7/9 then a CLONE OF ITSELF to the discard; the emulator cloned a Soul, so the pile counts matched.",
+    ),
+    "Unleash": ("ac7ffe499a9e", "6/9 + Osty's CURRENT hp; correct."),
+    "Wisp": (
+        "4efd9f2a0a9c",
+        "Gain 1 energy; upgrading buys Retain, not a second energy. Correct.",
+    ),
     "Accelerant": (
         "a8ad0a653203",
         "AccelerantPower 1/2, which PoisonPower reads to re-trigger itself",
