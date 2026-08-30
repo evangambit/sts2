@@ -877,14 +877,16 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 Card coverage is now the finished part rather than the open one. What is left, in the order
 the evidence argues for:
 
-1. **Read the Silent's remaining 30 captured-but-unread cards.** The Necrobinder's pass
-   found 21 defects in 45, the Regent's 13 in 27 — two pools agreeing that roughly one
-   unread card in two is wrong however green its capture. The Silent's are the last of
-   them; after that every implemented card in the game has been read against the source.
-2. **Relics are the next layer with no equivalent pass.** 171 of 296 are modelled and only
-   64 have been read against the source; the other 107 are wired up and were never compared
-   to anything. `audit_relics.py` is the burn-down. Events are one layer out again, with one
-   test to the whole pool's name.
+1. **Relics.** The card burn-down is finished — every card with a test suite has been read
+   against the current source — and relics are the same job one layer out, with no
+   equivalent pass behind them. 171 of 296 are modelled and 64 read, so 107 are wired up
+   and have never been compared to anything. `audit_relics.py` is the worklist, and the
+   card passes give the rate to expect: **one item in two that nobody has read is wrong.**
+   Events are a layer out again, with one test to the whole pool's name.
+2. **The 66 cards still unread**, which are also the 66 still in `Pending` with no tests:
+   Curses, Statuses, Tokens, Minions and event cards. Lower value per card than a
+   character pool, but Statuses and Curses are what half the game's punishment mechanics
+   are made of.
 3. **Automate capture over many seeds** with the headless harness, so coverage stops
    depending on which seeds anyone happened to try. Related: exposing each named RNG
    stream's seed and call count from the mod would make the RNG-dependent cards capturable,

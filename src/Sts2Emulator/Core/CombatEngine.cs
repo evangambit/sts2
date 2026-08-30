@@ -1805,6 +1805,16 @@ public static class CombatEngine
             return 0;
         }
 
+        // Pinpoint is one cheaper per SKILL played this turn -- `AddThisTurn(-1)` from
+        // `AfterCardPlayed`, plus an `AfterCardEnteredCombat` that pays the backlog at
+        // once. Derived rather than stamped, for the same reason as Banshee's Cry: the two
+        // hooks add to the same number, and a copy that arrives late is priced right
+        // without a creation hook.
+        if (def.Name == "Pinpoint")
+        {
+            cost -= state.SkillCardsPlayedThisTurn;
+        }
+
         // FranticEscape's OnPlay ends with `base.EnergyCost.AddThisCombat(1)` -- on the
         // CARD, so only the copy that was played gets dearer. A player-wide counter made
         // every escape in the deck cost more the moment one was used, and a live capture

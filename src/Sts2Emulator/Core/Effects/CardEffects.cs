@@ -1297,7 +1297,7 @@ public static class CardEffects
                 // `NoDrawPower`, not NoBlock. The comment beside it said "prevent draw" and
                 // the line applied the wrong buff, so the card stopped the player blocking
                 // and left them drawing freely.
-                MakeHandFreeThisTurn(state);
+                MakeHandFreeThisTurn(state, skipXCost: true);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoDraw, 1);
                 break;
 
@@ -1463,8 +1463,19 @@ public static class CardEffects
                 );
                 break;
 
-            case SI.Flanking: // 2/1-cost, next turn energy approximation
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, 2);
+            case SI.Flanking:
+                // MultiplayerOnly, and `CanPlay` refuses it in a solo run -- so this arm is
+                // unreachable and exists to say what the card is rather than to run.
+                //
+                // `FlankingPower(2)` on the TARGET: `ModifyDamageMultiplicative` returns
+                // its Amount for a powered attack on that enemy from any dealer OTHER than
+                // the applier, and comes off at the end of the owner's side turn. So it
+                // doubles what your ALLIES do to one enemy, and there are no allies here
+                // for it to pay out to -- which is why nothing is applied rather than
+                // something being invented.
+                //
+                // The emulator gave the PLAYER two energy next turn: a different effect on
+                // a different creature, and one an agent would have been able to observe.
                 break;
 
             case SI.Flechettes: // 1-cost, 5/7 damage once per Skill in hand
@@ -1736,7 +1747,13 @@ public static class CardEffects
 
                 break;
 
-            case SI.Pinpoint: // 3-cost, 15/19 damage; cost reduces this turn in game
+            case SI.Pinpoint:
+                // 15 damage upgrading by 4. Its cost is the rest of the card: two hooks
+                // that both call `EnergyCost.AddThisTurn(-1)` per SKILL played this turn --
+                // `AfterCardEnteredCombat` pays the backlog for a copy that arrives late,
+                // `AfterCardPlayed` pays each new one. Derived in `CombatEngine` from
+                // `SkillCardsPlayedThisTurn`, the same way Banshee's Cry and Flatten are.
+                // The emulator's comment said the cost reduces "in game" and left it there.
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 break;
 
@@ -1860,8 +1877,15 @@ public static class CardEffects
                 ApplyEnemyDebuff(state, BuffId.Poison, upgraded ? 10 : 7, rng);
                 break;
 
-            case SI.Sneaky: // 2-cost, stealth/block power approximation
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Afterimage, upgraded ? 2 : 1);
+            case SI.Sneaky:
+                // MultiplayerOnly, like Flanking above, and unreachable for the same reason.
+                //
+                // `SneakyPower(1)` upgrading by 1: `AfterCardPlayed` gains its Amount as
+                // Unpowered block when ANOTHER player plays an Attack. Solo there is no
+                // other player, so it never pays, and the honest arm is empty.
+                //
+                // The emulator stacked Afterimage, which is block per card played by the
+                // owner -- a power that DOES pay out solo, on a card that should not.
                 break;
 
             case SI.Speedster: // 2-cost power: a card drawn MID-TURN hits all enemies for 2
@@ -9277,10 +9301,20 @@ public static class CardEffects
         }
     }
 
-    private static void MakeHandFreeThisTurn(CombatState state)
+    /// <param name="skipXCost">
+    /// Bullet Time's `if (!card.EnergyCost.CostsX)`: an X-cost card is NOT made free,
+    /// because free would mean spending nothing and therefore doing nothing. The emulator
+    /// freed the whole hand, which turned every X card in it into a dead draw.
+    /// </param>
+    private static void MakeHandFreeThisTurn(CombatState state, bool skipXCost = false)
     {
         for (int i = 0; i < state.Hand.Count; i++)
         {
+            if (skipXCost && GeneratedData.Cards.Get(state.Hand[i].DefId).HasEnergyCostX)
+            {
+                continue;
+            }
+
             state.Hand[i] = state.Hand[i] with { FreeThisTurn = true };
         }
     }

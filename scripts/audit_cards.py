@@ -102,6 +102,108 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "Acrobatics": ("bcc58ace2ee0", "Draw 3/4 then discard a CHOSEN card; correct."),
+    "BouncingFlask": (
+        "766f4097ab21",
+        "Poison 3 to a RANDOM enemy per bounce, 3/4 bounces; correct.",
+    ),
+    "BulletTime": (
+        "4e180a25fb08",
+        "Hand free for the turn EXCEPT X-cost cards, plus NoDraw 1; the emulator freed the X cards too, turning them into dead draws.",
+    ),
+    "Burst": ("25dceef8846d", "BurstPower for 1/2 SKILL replays; correct."),
+    "DaggerThrow": ("07eab37057c7", "9/12, draw 1, discard a CHOSEN card; correct."),
+    "Dash": ("81b36f100587", "Block 10/13 FIRST, then damage 10/13; correct."),
+    "Finisher": (
+        "33a02522c3dc",
+        "6/8 once per Attack FINISHED this turn, no minimum hit and it does not count itself; correct.",
+    ),
+    "Flanking": (
+        "77c43ef93b15",
+        "MultiplayerOnly: FlankingPower 2 on the target, doubling what ALLIES deal to it. The emulator gave the player 2 energy next turn -- a real, observable buff on an unreachable card.",
+    ),
+    "Flechettes": (
+        "9a59e9c1eb58",
+        "5/7 once per Skill in hand, no minimum hit; correct.",
+    ),
+    "GrandFinale": (
+        "c0bc1dd9afe1",
+        "60/75 to all, playable only with an EMPTY draw pile -- a mask rule, and it is in the mask; correct.",
+    ),
+    "HandTrick": (
+        "d56344a53d5f",
+        "Block 7/10 and a CHOSEN non-Sly Skill in hand becomes Sly for the turn; correct.",
+    ),
+    "Haze": (
+        "0030df952ecf",
+        "Three cost, Sly, Poison 4/6 to every hittable enemy; correct.",
+    ),
+    "HiddenDaggers": (
+        "4ee86e9d45b9",
+        "Discard 2 CHOSEN cards then make 2 Shivs, upgraded if it was; correct.",
+    ),
+    "KnifeTrap": (
+        "fb56b49e840c",
+        "Replays every Shiv in the EXHAUST pile at its own target, upgrading them if upgraded; correct.",
+    ),
+    "Malaise": (
+        "38efe14304fe",
+        "X (+1 upgraded) permanent Strength loss and Weak on the target; correct.",
+    ),
+    "MasterPlanner": (
+        "44ec3393272c",
+        "Every Skill the owner plays gains the Sly keyword for the combat; correct.",
+    ),
+    "Mirage": (
+        "75e85e77a1e9",
+        "Block equal to all the Poison on living enemies, upgrade is a cost cut; correct.",
+    ),
+    "Murder": (
+        "d8953cad6a0f",
+        "1 + 1 per card drawn this COMBAT, upgrade is a cost cut; correct.",
+    ),
+    "NoxiousFumes": ("7eb0bdebb700", "Poison 2/3 to every enemy each turn; correct."),
+    "Outbreak": (
+        "35184319329d",
+        "OutbreakPower 11/15, paid on every third Poison applied; correct.",
+    ),
+    "PhantomBlades": (
+        "9107f85b9994",
+        "Shivs Retain, and the FIRST Shiv of the turn hits for 9/12 more; correct.",
+    ),
+    "Pinpoint": (
+        "25c89e153264",
+        "15/19, and one cheaper per SKILL played this turn through two hooks; the emulator had a comment saying so and no code.",
+    ),
+    "PreciseCut": (
+        "98c2cb739f75",
+        "13/16 less 2 per OTHER card in hand -- the played card is already out of hand; correct.",
+    ),
+    "Prepared": (
+        "67cdee4edc61",
+        "Draw 1/2 then discard that many CHOSEN cards; correct.",
+    ),
+    "SerpentForm": (
+        "b29e6203454e",
+        "4/6 to a random enemy on every card played, snapshot before and paid after; correct.",
+    ),
+    "Sneaky": (
+        "60210937566b",
+        "MultiplayerOnly: block when ANOTHER player plays an Attack. The emulator stacked Afterimage, which is block per card the OWNER plays -- a power that does pay out solo.",
+    ),
+    "Speedster": (
+        "c3e3d8755037",
+        "2 damage to all on every non-hand draw; the upgrade adds INNATE, not damage. Correct.",
+    ),
+    "Survivor": ("8a181b1a3b78", "Block 8/11 and discard a CHOSEN card; correct."),
+    "Tracking": (
+        "2a9783f7891a",
+        "TrackingPower 2, or +1 if already held; multiplies card attacks on a Weak target. Correct.",
+    ),
+    "WraithForm": (
+        "5c7a42ec7896",
+        "Intangible 2/3 and WraithFormPower 1, which takes Dexterity EVERY turn; correct.",
+    ),
     "Bombardment": (
         "4812ad4c0628",
         "18/24 and Exhaust -- then it AUTO-PLAYS itself out of the exhaust pile every turn, free; the emulator had a plain attack.",

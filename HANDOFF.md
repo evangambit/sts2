@@ -1409,7 +1409,7 @@ when the real number is 552.
 | ----------- | ----: | ----------: | -----: |
 | Ironclad    |    87 |          85 |     86 |
 | Colourless  |    64 |          64 |     64 |
-| Silent      |    88 |          88 |     46 |
+| Silent      |    88 |          88 |     88 |
 | Defect      |    88 |          88 |     88 |
 | Necrobinder |    88 |          88 |     88 |
 | Regent      |    88 |          88 |     88 |
@@ -2581,9 +2581,18 @@ no game running:
   records the version that was read, and re-flags when the card changes underneath it.
   The number worth watching is `tested but unread`: cards that LOOK covered, which is
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in. That
-  burn-down is now the main line of work — **30 left**, down from 194. Ironclad, the
-  Defect, the Necrobinder and the Regent are finished; what remains is the Silent's
-  tail. The rate
+  burn-down is **finished**: 0 left, down from 194. Every card in the game that has
+  a test suite has been read against the current source, and `card_pair.py --list`
+  reports zero. The 66 cards still unread are all in `Pending` with no tests
+  either — Curses, Statuses, Tokens, Minions and event cards, which is the next
+  layer rather than this one.
+
+  The three read passes give a rate worth carrying to relics. The Necrobinder's
+  never-read cards ran 21 defects in 45 and the Regent's 13 in 27, so **one card
+  in two that nobody has looked at is wrong** whatever its capture says. The
+  Silent's tail ran 4 in 30 — those thirty already had suites from an earlier pass
+  over the same pool, so a pool worked over once yields an order of magnitude
+  less. The rate
   has held all the way through: Ironclad's first batch found two divergences in eighteen
   cards, and the Necrobinder's 45 unread cards found twenty-one. Budget roughly one
   divergence per two to nine cards depending on how much the pool has been captured, and

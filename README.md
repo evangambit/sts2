@@ -96,7 +96,7 @@ semantics rather than re-created in Python.
 | pool          | cards | implemented | with a test suite |
 | ------------- | ----: | ----------: | ----------------: |
 | Ironclad      |    87 |          85 |                86 |
-| Silent        |    88 |          88 |                46 |
+| Silent        |    88 |          88 |                88 |
 | Defect        |    88 |          88 |                88 |
 | Necrobinder   |    88 |          88 |                88 |
 | The Regent    |    88 |          88 |                88 |
@@ -129,17 +129,23 @@ Three independent mechanisms, because they catch different things:
    `tests/fixtures/cards/blocked/`, each with a written reason.
 3. **Source audits.** `audit_cards.py` and `audit_relics.py` track which cards and relics
    have actually been *read* against the current source, keyed by a digest of that source so
-   a note goes stale the moment the game patches. `audit_shared_card_bodies.py` catches the
+   a note goes stale the moment the game patches. Every card with a test suite has now been
+   read — the number that matters is "tested but unread", cards that LOOK covered, and it
+   is zero. `audit_shared_card_bodies.py` catches the
    `switch`-label slip that has produced a dozen defects. `audit_enemy_moves.py`,
    `audit_card_keywords.py` and `audit_ascension_literals.py` report zero.
 
-Reading and capturing are not substitutes for each other, and the project has a measurement
-for it: the Defect pool arrived fully read and fully tested and live capture still found
-three defects, while the Necrobinder pool arrived fully captured and reading it still found
-twenty-one. The catalogue records both directions.
+Reading and capturing are not substitutes for each other, and the project has measurements
+for it in both directions. The Defect pool arrived fully read and fully tested, and live
+capture still found three defects. The Necrobinder and Regent pools arrived fully captured,
+and reading them found 21 of 45 and 13 of 27 — so **one card in two that nobody has read is
+wrong, whatever its capture says.** The Silent's already-worked-over tail ran 4 in 30, which
+is what a second pass over the same pool is worth.
 
 This is not yet a full game emulator. Exact Neow/shop/reward/event odds, the remaining 125
-relics, and expanded trace parity are still future work.
+relics, and expanded trace parity are still future work. Relics are the next layer with no
+reading pass behind them: 171 of 296 are modelled and 64 have been read, so 107 are wired up
+and have never been compared to anything.
 
 ## Requirements
 
