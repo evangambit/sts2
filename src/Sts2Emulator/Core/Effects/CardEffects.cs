@@ -3672,7 +3672,17 @@ public static class CardEffects
     {
         TriggerEnemyThorns(state, target);
 
-        int damage = BuffSystem.IncomingDamage(amount, state.PlayerBuffs, target.Buffs);
+        // `LethalityPower.ModifyDamageMultiplicative` is `1 + Amount/100`, and only for the
+        // turn's first Attack card -- the flag the play set.
+        int lethality = BuffSystem.Get(state.PlayerBuffs, BuffId.Lethality);
+        float lethalMultiplier =
+            lethality > 0 && state.LethalAttackPlay ? 1f + lethality / 100f : 1f;
+        int damage = BuffSystem.IncomingDamage(
+            amount,
+            state.PlayerBuffs,
+            target.Buffs,
+            lethalMultiplier
+        );
         int slowCount = BuffSystem.Get(target.Buffs, BuffId.SlowCount);
         if (BuffSystem.Get(target.Buffs, BuffId.Slow) > 0 && slowCount > 0)
         {
@@ -3721,8 +3731,7 @@ public static class CardEffects
             // riders that DO care are called by hand.
             int doom = damage * reaperForm;
             BuffSystem.Apply(target.Buffs, BuffId.Doom, doom);
-            DamageForSleightOfFlesh(state, target, BuffId.Doom, doom);
-            BlockForShroud(state, BuffId.Doom, doom, rng: null);
+            ApplyPowerDoomRiders(state, target, doom);
         }
 
         // BurrowedPower.AfterBlockBroken -- checked on every hit, because breaking the
@@ -5342,8 +5351,10 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, 1);
                 return true;
             case "Countdown":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.TheBombPower, 6);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.TheBombDamage, upgraded ? 9 : 6);
+                // PowerVar 6 upgrading by 3, and CountdownPower Dooms one RANDOM enemy for
+                // that much at the start of every player turn. The emulator gave it The
+                // Bomb, which is a different card with a different payload.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Countdown, upgraded ? 9 : 6);
                 return true;
             case "DanseMacabre":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, 2);
@@ -5360,13 +5371,19 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Demesne, 1);
                 return true;
             case "DevourLife":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoxiousFumes, upgraded ? 2 : 1);
+                // PowerVar 1 upgrading by 1: DevourLifePower summons Osty for its amount
+                // whenever a SOUL is played. It was granting Noxious Fumes.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.DevourLife, upgraded ? 2 : 1);
                 return true;
             case "EnfeeblingTouch":
                 ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 6 : 3);
                 return true;
             case "ForbiddenGrimoire":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.DarkEmbrace, 1);
+                // One stack; the upgrade is a discount. ForbiddenGrimoirePower adds that
+                // many extra card-REMOVAL rewards at combat end -- a reward row the
+                // emulator does not have, so the power is tracked and its payout is not
+                // modelled. It was granting Dark Embrace, which is a different card.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.ForbiddenGrimoire, 1);
                 return true;
             case "Friendship":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 1 : 2);
@@ -5409,9 +5426,17 @@ public static class CardEffects
                 ApplyEnemyDebuff(state, BuffId.Doom, (upgraded ? 15 : 10) + 5 * (already / 10), rng);
                 return true;
             }
-            case "Misery":
-            case "SpiritOfAsh":
             case "Lethality":
+                // PowerVar 50 upgrading by 25 -- a PERCENTAGE, and only on the first Attack
+                // card of the turn.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Lethality, upgraded ? 75 : 50);
+                return true;
+            case "SpiritOfAsh":
+                // The var is "BlockOnExhaust" 4, upgrading by 1, and the hook is
+                // BeforeCardPlayed on an ETHEREAL card -- nothing to do with exhausting.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.SpiritOfAsh, upgraded ? 5 : 4);
+                return true;
+            case "Misery":
             case "HighFive":
                 // `OstyDamageVar(11)` upgrading by 2, at ALL opponents, then Vulnerable
                 // 2/3 on all of them -- and it does nothing at all without a living Osty
@@ -7494,6 +7519,17 @@ public static class CardEffects
         {
             DrawCards(state, pagestorm, rng);
         }
+    }
+
+    /// <summary>
+    /// The two riders that care about Doom landing on an enemy, for Doom applied by a
+    /// POWER rather than a card -- which is why the caller applies the Doom itself and
+    /// skips the card-debuff chokepoint.
+    /// </summary>
+    internal static void ApplyPowerDoomRiders(CombatState state, EnemyState target, int doom)
+    {
+        DamageForSleightOfFlesh(state, target, BuffId.Doom, doom);
+        BlockForShroud(state, BuffId.Doom, doom, rng: null);
     }
 
     private static void DrawForVicious(

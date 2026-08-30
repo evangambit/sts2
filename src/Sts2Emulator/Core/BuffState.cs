@@ -436,6 +436,38 @@ public enum BuffId
     /// every attack into a Doom.
     /// </summary>
     Shroud,
+
+    /// <summary>
+    /// <c>CountdownPower.AfterSideTurnStart</c>: Dooms ONE random hittable enemy for this
+    /// much at the start of every player turn, rolled on the CombatTargets stream.
+    /// </summary>
+    Countdown,
+
+    /// <summary>
+    /// <c>DevourLifePower.AfterCardPlayed</c>: playing a SOUL summons Osty for this much.
+    /// </summary>
+    DevourLife,
+
+    /// <summary>
+    /// <c>ForbiddenGrimoirePower.AfterCombatEnd</c>: adds this many extra card-REMOVAL
+    /// rewards to the fight's rewards. The emulator has no removal reward to add, so the
+    /// power is tracked and its payout is not modelled — see the catalog.
+    /// </summary>
+    ForbiddenGrimoire,
+
+    /// <summary>
+    /// <c>LethalityPower.ModifyDamageMultiplicative</c>: the FIRST Attack card played each
+    /// turn hits for <c>1 + Amount/100</c>. Not every attack — the power counts the turn's
+    /// Attack plays and pays out only while that count is still one.
+    /// </summary>
+    Lethality,
+
+    /// <summary>
+    /// <c>SpiritOfAshPower.BeforeCardPlayed</c>: playing an ETHEREAL card gains this much
+    /// Unpowered block. The var is named BlockOnExhaust and the hook is not about
+    /// exhausting at all.
+    /// </summary>
+    SpiritOfAsh,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

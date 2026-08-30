@@ -406,6 +406,14 @@ public sealed class CombatState
     /// EXHAUSTED at end of turn and resets every turn.
     /// </summary>
     public int EtherealCardPlaysThisCombat;
+
+    /// <summary>
+    /// Set while the card being resolved is the FIRST Attack of the turn, which is the
+    /// condition `LethalityPower` pays out on. A flag rather than a re-derivation inside
+    /// the damage maths, because the attack counter has not been bumped yet while the card
+    /// is resolving and a repeat play must not qualify twice.
+    /// </summary>
+    public bool LethalAttackPlay;
     public int UnblockedDamageHitCount; // times player took unblocked damage this combat (TearAsunder)
     public int TargetEnemyIndex = -1; // -1 = auto (first living enemy), >=0 = specific index
 

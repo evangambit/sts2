@@ -189,7 +189,8 @@ public static class BuffSystem
     public static int IncomingDamage(
         int baseDamage,
         List<BuffState> attackerBuffs,
-        List<BuffState> defenderBuffs
+        List<BuffState> defenderBuffs,
+        float cardMultiplier = 1f
     )
     {
         // Everything in this function is the POWERED-ATTACK path, which is what lets the
@@ -265,6 +266,12 @@ public static class BuffSystem
         {
             dmg *= 0.5f;
         }
+
+        // A multiplicative the caller worked out because it depends on the CARD -- today
+        // only `LethalityPower`, which pays out on the first Attack card of the turn.
+        // Folded in here rather than applied to the result, so it lands before the single
+        // `(int)` at the end, which is where the game's own multiplicatives land.
+        dmg *= cardMultiplier;
 
         return CapIncomingDamage(Math.Max(0, (int)dmg), defenderBuffs);
     }

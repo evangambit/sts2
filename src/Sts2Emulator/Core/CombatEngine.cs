@@ -161,6 +161,21 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FreePowerPower, -1);
         }
 
+        // `SpiritOfAshPower.BeforeCardPlayed`: an ETHEREAL card played gains its amount in
+        // Unpowered block. Its var is called BlockOnExhaust and the hook has nothing to do
+        // with exhausting.
+        int spiritOfAsh = BuffSystem.Get(state.PlayerBuffs, BuffId.SpiritOfAsh);
+        if (spiritOfAsh > 0 && IsEtherealForPowers(state, card))
+        {
+            Effects.CardEffects.GainBlock(state, spiritOfAsh, rng);
+        }
+
+        // `LethalityPower` counts the turn's Attack plays and pays out only while that
+        // count is still one. The counter is bumped after the play, so during resolution
+        // it still holds the turn's earlier attacks -- zero means this is the first.
+        state.LethalAttackPlay =
+            def.Type == CardType.Attack && state.AttackCardsPlayedThisTurn == 0;
+
         // Its own power, not part of the chain above: `VeilpiercerPower.BeforeCardPlayed`
         // fires on any Ethereal card, so an Ethereal Attack spends a stack of this AND a
         // stack of FreeAttackPower.
@@ -222,6 +237,10 @@ public static class CombatEngine
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.SignalBoost, -1);
             }
         }
+
+        // `cardSource.CurrentPlayIndex > 0` returns 1m: a repeat of the same play gets no
+        // Lethality, so the flag is spent by the first resolution.
+        state.LethalAttackPlay = false;
 
         for (int i = 0; i < extraPlays; i++)
         {
@@ -404,6 +423,14 @@ public static class CombatEngine
             {
                 BuffSystem.Apply(state.Enemies[i].Buffs, BuffId.Doom, oblivionBefore[i]);
             }
+        }
+
+        // `DevourLifePower.AfterCardPlayed`: the card played being a SOUL summons Osty for
+        // its amount.
+        int devourLife = BuffSystem.Get(state.PlayerBuffs, BuffId.DevourLife);
+        if (devourLife > 0 && card.DefId == 446) // Soul
+        {
+            Effects.CardEffects.SummonOsty(state, devourLife);
         }
 
         IncrementPlayedCardTypeCounters(state, def);
@@ -1101,6 +1128,22 @@ public static class CombatEngine
         if (creativeAi > 0)
         {
             Effects.CardEffects.AddRandomDefectPowerCardsToHand(state, creativeAi, rng);
+        }
+
+        // `CountdownPower.AfterSideTurnStart`: one RANDOM hittable enemy is Doomed for its
+        // amount, rolled on the CombatTargets stream like every other unaimed card.
+        int countdown = BuffSystem.Get(state.PlayerBuffs, BuffId.Countdown);
+        if (countdown > 0)
+        {
+            var doomed = Effects.CardEffects.RandomLivingEnemy(state, rng);
+            if (doomed != null)
+            {
+                // `PowerCmd.Apply<DoomPower>(..., base.Owner, null)` -- no card source, so
+                // it skips the card-debuff chokepoint the Unsettling Lamp doubles, exactly
+                // as Reaper Form's does.
+                BuffSystem.Apply(doomed.Buffs, BuffId.Doom, countdown);
+                Effects.CardEffects.ApplyPowerDoomRiders(state, doomed, countdown);
+            }
         }
 
         // `SentryModePower.BeforeHandDraw` -- BEFORE the hand is drawn, so the Gazes are

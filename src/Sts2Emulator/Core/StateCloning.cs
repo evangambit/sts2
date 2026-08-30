@@ -180,6 +180,7 @@ public static class StateCloning
             LightningOrbsChanneledThisCombat = combat.LightningOrbsChanneledThisCombat,
             EtherealExhaustCount = combat.EtherealExhaustCount,
             EtherealCardPlaysThisCombat = combat.EtherealCardPlaysThisCombat,
+            LethalAttackPlay = combat.LethalAttackPlay,
             UnblockedDamageHitCount = combat.UnblockedDamageHitCount,
             TargetEnemyIndex = combat.TargetEnemyIndex,
             KnownTopCount = combat.KnownTopCount,

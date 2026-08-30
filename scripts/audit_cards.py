@@ -278,6 +278,10 @@ READ: dict[str, tuple[str, str]] = {
         "b0a0fc0db828",
         "CorruptionPower 1; the upgrade cuts the cost",
     ),
+    "Countdown": (
+        "fe80682a2c1d",
+        "CountdownPower 6/9: Dooms one RANDOM enemy for that much at every player turn start",
+    ),
     "CreativeAi": (
         "19982becfe13",
         "BeforeHandDraw adds Amount random POWER cards to hand; the upgrade is the cost",
@@ -326,6 +330,10 @@ READ: dict[str, tuple[str, str]] = {
     "DemonicShield": (
         "11bc94552c75",
         "MultiplayerOnly; 1 HP then block equal to the OWNER's block onto the target",
+    ),
+    "DevourLife": (
+        "57cc551acf61",
+        "DevourLifePower 1/2: playing a SOUL summons Osty for that much",
     ),
     "Dirge": (
         "f3e9d933e2bd",
@@ -422,6 +430,10 @@ READ: dict[str, tuple[str, str]] = {
     "FlashOfSteel": (
         "63571cc33a2e",
         "5 damage and draw 1",
+    ),
+    "ForbiddenGrimoire": (
+        "854c1d49c67e",
+        "one stack; the power adds that many card-REMOVAL rewards at combat end (payout not modelled)",
     ),
     "ForgottenRitual": (
         "7d1014df5741",
@@ -543,6 +555,10 @@ READ: dict[str, tuple[str, str]] = {
     "LegionOfBone": (
         "82fbd8dc1fdd",
         "summons 6/8 per LIVING player creature; MultiplayerOnly, so one in solo",
+    ),
+    "Lethality": (
+        "95f284e85bce",
+        "LethalityPower 50/75 PERCENT, and only on the first Attack card of the turn",
     ),
     "Lift": (
         "865a36dfcb82",
@@ -826,6 +842,10 @@ READ: dict[str, tuple[str, str]] = {
         "the Glass orb on play is the WHOLE upgrade; the power channels one at each energy reset",
     ),
     "Supercritical": ("f347dfeb9219", "EnergyVar(4) +2, Exhaust"),
+    "SpiritOfAsh": (
+        "cd5ba635948b",
+        ""BlockOnExhaust" 4/5, gained when an ETHEREAL card is PLAYED -- not on exhaust",
+    ),
     "Spite": (
         "fec43030abca",
         "5 damage, 2/3 hits if unblocked damage was received this turn",
