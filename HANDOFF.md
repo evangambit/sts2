@@ -2469,6 +2469,15 @@ no game running:
   card exhausted. Nesting is what these comparisons turn on; it preserves
   indentation now, and that near-miss is why.
 
+- `audit_dead_card_cases.py` — card `case` labels nothing can reach. **175 of them.**
+  `CardEffects` runs several switches in order and each returns when it has handled
+  the card, so a second `case` further down is dead. Five cards in the
+  tested-but-unread sweep were wrong in the dead copy, two of them because someone
+  had been maintaining it. Anything that greps for a card's implementation finds
+  the dead body just as readily as the live one, so **check which switch you are
+  in before editing a card**. Not mass-deleted: a dead body occasionally holds the
+  better reading and the live one is stale, so each wants a glance.
+
 - `audit_relics.py` — which relics the emulator **models**, and which have been read.
   **171/296**, and 63 read. The shared pool's commons, uncommons and rares are all
   modelled, the **shared pool's 22 Shop-rarity relics are done** (E214, E216), and so are
