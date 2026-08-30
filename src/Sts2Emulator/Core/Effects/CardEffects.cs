@@ -1033,7 +1033,7 @@ public static class CardEffects
                 break;
 
             case CL.PanicButton: // 0-cost, 30/40 block, then no card block for 2 turns
-                GainBlock(state, upgraded ? 40 : 30, rng);
+                GainBlock(state, Blk(def, upgraded, card), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 2);
                 break;
 
@@ -4449,7 +4449,7 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, upgraded ? 3 : 2);
                 return true;
             case "Compact":
-                GainBlock(state, upgraded ? 7 : 6, rng);
+                GainBlock(state, Blk(def, upgraded, card), rng);
                 TransformStatusesInHandToFuel(state, upgraded);
                 return true;
             case "ConsumingShadow":
@@ -4768,7 +4768,7 @@ public static class CardEffects
                 return true;
             case "PullAggro":
                 SummonOsty(state, upgraded ? 5 : 4);
-                GainBlock(state, upgraded ? 9 : 7, rng);
+                GainBlock(state, Blk(def, upgraded, card), rng);
                 return true;
             case "Reanimate":
                 SummonOsty(state, upgraded ? 25 : 20);
@@ -4788,7 +4788,7 @@ public static class CardEffects
                     KillOsty(state);
                 }
 
-                GainBlock(state, upgraded ? 12 : 9, rng);
+                GainBlock(state, Blk(def, upgraded, card), rng);
                 return true;
             case "Fetch":
                 DealOstyDamage(state, upgraded ? 6 : 3);
@@ -4847,7 +4847,7 @@ public static class CardEffects
                 KillDoomedEnemies(state);
                 return true;
             case "NegativePulse":
-                GainBlock(state, upgraded ? 6 : 5, rng);
+                GainBlock(state, Blk(def, upgraded, card), rng);
                 ApplyAllEnemyDebuff(state, BuffId.Doom, upgraded ? 11 : 7, rng);
                 return true;
             case "Oblivion":
@@ -4870,7 +4870,7 @@ public static class CardEffects
                 int gains = state.PlayerHp <= state.PlayerMaxHp / 2 ? (upgraded ? 4 : 3) : 1;
                 for (int i = 0; i < gains; i++)
                 {
-                    GainBlock(state, upgraded ? 7 : 6, rng);
+                    GainBlock(state, Blk(def, upgraded, card), rng);
                 }
 
                 return true;
@@ -4919,7 +4919,7 @@ public static class CardEffects
                 MoveDiscardCardsToHand(state, 3);
                 return true;
             case "GraveWarden":
-                GainBlock(state, upgraded ? 11 : 8, rng);
+                GainBlock(state, Blk(def, upgraded, card), rng);
                 AddSoulsToDrawPile(state, 1, upgraded: false);
                 return true;
             case "Graveblast":
@@ -5175,7 +5175,7 @@ public static class CardEffects
                 GainStars(state, 1);
                 return true;
             case "Glitterstream":
-                GainBlock(state, upgraded ? 13 : 11, rng);
+                GainBlock(state, Blk(def, upgraded, card), rng);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.BlockNextTurn, upgraded ? 7 : 5);
                 return true;
             case "GuidingStar":

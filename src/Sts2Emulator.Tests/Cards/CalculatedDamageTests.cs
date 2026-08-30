@@ -174,4 +174,46 @@ public class CalculatedDamageTests
         // 9 base (no cards discarded this turn) plus Sharp's 5.
         Assert.Equal(200 - 14, memento.Enemy0.Hp);
     }
+
+    /// <summary>
+    /// The block half of the same gap. Eight cards hardcoded their PRINTED block as an
+    /// `upgraded ? x : y`, which `Blk()` would have produced along with the Nimble and
+    /// Goopy enchantment bonuses. The first block scan only looked at bare literals, so a
+    /// ternary hid from it — the same way Gang Up's CalculationBase hid from the first
+    /// damage scan.
+    /// </summary>
+    [Fact]
+    public void NimbleRaisesAHardcodedBlockCard()
+    {
+        var card = new CardInstance(CL.PanicButton, false) with
+        {
+            Enchantment = Enchantment.Nimble,
+            EnchantAmount = 6,
+        };
+        var fight = Fight.Hand(card).Energy(3);
+
+        fight.Play(0);
+
+        Assert.Equal(36, fight.State.PlayerBlock);
+    }
+
+    [Fact]
+    public void WithoutTheEnchantmentItIsThePrintedBlock()
+    {
+        var fight = Fight.Hand(new CardInstance(CL.PanicButton, false)).Energy(3);
+
+        fight.Play(0);
+
+        Assert.Equal(30, fight.State.PlayerBlock);
+    }
+
+    [Fact]
+    public void AndTheUpgradeStillApplies()
+    {
+        var fight = Fight.Hand(new CardInstance(CL.PanicButton, true)).Energy(3);
+
+        fight.Play(0);
+
+        Assert.Equal(40, fight.State.PlayerBlock);
+    }
 }

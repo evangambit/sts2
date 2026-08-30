@@ -493,9 +493,21 @@ READ: dict[str, tuple[str, str]] = {
         "9f81ad699e06",
         "15/20 then ManglePower 10/15 -- a TemporaryStrengthPower, so it lapses",
     ),
+    "MasterOfStrategy": (
+        "b7c6b4a4d2df",
+        "draw 3/4, Exhaust",
+    ),
+    "Mayhem": (
+        "9f0073aca2ef",
+        "MayhemPower 1; the upgrade cuts the cost",
+    ),
     "MementoMori": (
         "23dd9431e144",
         "9 + 4 per card discarded this turn; OnUpgrade raises BOTH -- base +2 and per-discard +1",
+    ),
+    "Mimic": (
+        "4e4946c8fbe1",
+        "MultiplayerOnly; block equal to the TARGET's block, so self-doubling alone",
     ),
     "MoltenFist": (
         "74f5009156a4",
@@ -508,6 +520,10 @@ READ: dict[str, tuple[str, str]] = {
     "NecroMastery": (
         "97601e8d4de7",
         "SummonVar(5)+3, then NecroMasteryPower -- not 10/13 and not Strength",
+    ),
+    "Nostalgia": (
+        "7a737716050f",
+        "NostalgiaPower 1; the upgrade cuts the cost",
     ),
     "NotYet": (
         "d23576d6487a",
@@ -529,6 +545,14 @@ READ: dict[str, tuple[str, str]] = {
         "53815c93c362",
         "17/23 to all, and ONLY when the exhaust pile holds 3+",
     ),
+    "Panache": (
+        "d063d1dcfd21",
+        "PanachePower at PanacheDamage 10 upgrading by 4",
+    ),
+    "PanicButton": (
+        "03795b5f26a9",
+        "30/40 block then NoBlockPower for 2 turns; the Turns var does not upgrade",
+    ),
     "PerfectedStrike": (
         "c59e041d1155",
         "6 + 2/3 per CardTag.Strike in AllCards -- which includes the PlayPile, so it counts itself",
@@ -549,9 +573,17 @@ READ: dict[str, tuple[str, str]] = {
         "4ee72fbd4d78",
         "14/20 then FreeSkillPower 1",
     ),
+    "PrepTime": (
+        "a6111c9632c6",
+        "PrepTimePower 4 upgrading by 2",
+    ),
     "PrimalForce": (
         "b118064bae03",
         "every transformable Attack in hand becomes a GiantRock, upgraded if the card is",
+    ),
+    "Production": (
+        "49d19af65d48",
+        "2/3 energy, Exhaust",
     ),
     "Pyre": (
         "06ccde0bb08d",
