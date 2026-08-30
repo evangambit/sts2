@@ -10,7 +10,9 @@ public static class RunNativeExports
     // v13: the observation carries the shop's whole board, priced.
     // v15: the map offers a whole row, not four children -- Winged Boots' free travel.
     // v16: state list 17 reports an open card-offer grid.
-    public const int RUN_NATIVE_API_VERSION = 16;
+    // v17: state list 19 names the enemies in the active combat, and 20 says what an open
+    // card-select screen is FOR.
+    public const int RUN_NATIVE_API_VERSION = 17;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -284,6 +286,32 @@ public static class RunNativeExports
             // The screen offers a WHOLE bundle, so an agent needs all six to choose
             // between them, and a replay needs them to map the live screen's indexes.
             18 => WriteIntArray(run.State.BundleOffer, output),
+            // 19: the DefId of every enemy in the active combat, in the engine's own enemy
+            // order -- the DEAD included, because the enemy list keeps its dead where the
+            // game removes them, and slot i here has to name the same creature as enemy
+            // slot i of the observation. The observation carries an enemy's hp, block,
+            // intent and buffs but never says WHICH enemy it is, so nothing outside the
+            // engine could put a name to what it was fighting.
+            19 => WriteIntArray(
+                run.State.ActiveCombat is { } combat
+                    ? [.. combat.Enemies.Select(enemy => enemy.DefId)]
+                    : [],
+                output
+            ),
+            // 20: what an open card-select screen is FOR, as
+            // (DeckSelection, its argument, whether it is a rest-site upgrade). The
+            // card-select phase offers a list of the deck and says nothing about what
+            // answering it does -- removal, upgrade, transform and Dolly's Mirror are one
+            // screen and four different decisions, and the difference is not recoverable
+            // from the cards on offer.
+            20 => WriteIntArray(
+                [
+                    (int)run.State.PendingSelectionKind,
+                    run.State.PendingSelectionArg,
+                    run.State.PendingRestUpgrade ? 1 : 0,
+                ],
+                output
+            ),
             _ => -3,
         };
     }

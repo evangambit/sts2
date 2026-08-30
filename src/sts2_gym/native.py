@@ -12,8 +12,8 @@ _LIB_NAMES = {
     "darwin": "Sts2Emulator.dylib",
 }
 _ALLOW_STALE_ENV = "STS2_ALLOW_STALE_NATIVE"
-_REQUIRED_NATIVE_API_VERSION = 22
-_REQUIRED_RUN_NATIVE_API_VERSION = 16
+_REQUIRED_NATIVE_API_VERSION = 23
+_REQUIRED_RUN_NATIVE_API_VERSION = 17
 
 
 def _repo_root() -> Path:
@@ -162,6 +162,18 @@ _lib.Sts2_ObsEnemySlotSize.argtypes = []
 
 _lib.Sts2_ObsSecondaryIntentOffset.restype = ctypes.c_int
 _lib.Sts2_ObsSecondaryIntentOffset.argtypes = []
+
+_lib.Sts2_ObsSelectionKindOffset.restype = ctypes.c_int
+_lib.Sts2_ObsSelectionKindOffset.argtypes = []
+
+_lib.Sts2_ObsSelectionCountOffset.restype = ctypes.c_int
+_lib.Sts2_ObsSelectionCountOffset.argtypes = []
+
+_lib.Sts2_ObsSelectionOffset.restype = ctypes.c_int
+_lib.Sts2_ObsSelectionOffset.argtypes = []
+
+_lib.Sts2_ObsMaxSelectionCandidates.restype = ctypes.c_int
+_lib.Sts2_ObsMaxSelectionCandidates.argtypes = []
 
 _lib.Sts2_ObsOrbCapacityOffset.restype = ctypes.c_int
 _lib.Sts2_ObsOrbCapacityOffset.argtypes = []
@@ -472,6 +484,15 @@ OBS_MAX_ENEMY_BUFFS: int = _lib.Sts2_ObsMaxEnemyBuffs()
 OBS_ENEMY_OFFSET: int = _lib.Sts2_ObsEnemyOffset()
 OBS_ENEMY_SLOT_SIZE: int = _lib.Sts2_ObsEnemySlotSize()
 OBS_SECONDARY_INTENT_OFFSET: int = _lib.Sts2_ObsSecondaryIntentOffset()
+
+# The open card-selection block: whether a screen is up, how many cards it offers, and
+# the cards themselves. It is the one part of the observation that cannot be derived from
+# the offsets above -- it sits between the secondary-intent block and the orbs, and
+# neither of the two block sizes that separate them is published.
+OBS_SELECTION_KIND_OFFSET: int = _lib.Sts2_ObsSelectionKindOffset()
+OBS_SELECTION_COUNT_OFFSET: int = _lib.Sts2_ObsSelectionCountOffset()
+OBS_SELECTION_OFFSET: int = _lib.Sts2_ObsSelectionOffset()
+OBS_MAX_SELECTION_CANDIDATES: int = _lib.Sts2_ObsMaxSelectionCandidates()
 
 # Defect's orb ring. Each slot is (type + 1, passive value, evoke value), with 0 in the
 # first field for an empty slot -- Lightning is type 0, so a raw type could not be told

@@ -36,7 +36,8 @@ public static class NativeExports
     public const int MAX_ENEMY_BUFFS = 5;
 
     // v17: observation carries an open card selection (kind, count, candidates).
-    public const int NATIVE_API_VERSION = 22;
+    // v23: the selection block's own offsets are exported, so a reader can decode it.
+    public const int NATIVE_API_VERSION = 23;
     private static ReadOnlySpan<int> StarterDeckIds =>
         [472, 472, 472, 472, 472, 131, 131, 131, 131, 30, 10001];
 
@@ -280,6 +281,24 @@ public static class NativeExports
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsSecondaryIntentOffset")]
     public static int Sts2_ObsSecondaryIntentOffset() => CombatObservation.SecondaryIntentOffset;
+
+    // The open card-selection block. Its offsets sit BETWEEN the exported secondary-intent
+    // offset and the exported orb offsets, and the two block sizes that separate them are
+    // not exported -- so the selection block is the one part of the observation a reader
+    // cannot derive from what is already published. Anything decoding a Burning Pact or a
+    // Survivor screen needs all four, and computing them from a remembered layout is the
+    // magic-number failure the exports above exist to prevent.
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsSelectionKindOffset")]
+    public static int Sts2_ObsSelectionKindOffset() => CombatObservation.SelectionKindOffset;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsSelectionCountOffset")]
+    public static int Sts2_ObsSelectionCountOffset() => CombatObservation.SelectionCountOffset;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsSelectionOffset")]
+    public static int Sts2_ObsSelectionOffset() => CombatObservation.SelectionOffset;
+
+    [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsMaxSelectionCandidates")]
+    public static int Sts2_ObsMaxSelectionCandidates() => CombatObservation.MaxSelectionCandidates;
 
     [UnmanagedCallersOnly(EntryPoint = "Sts2_ObsOrbCapacityOffset")]
     public static int Sts2_ObsOrbCapacityOffset() => CombatObservation.OrbCapacityOffset;

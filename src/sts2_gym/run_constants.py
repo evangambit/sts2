@@ -29,6 +29,14 @@ PHASE_TREASURE = 10
 PHASE_CRYSTAL_SPHERE = 11
 PHASE_BUNDLE_SELECT = 12
 
+# The rest site's own options. They are SPARSE rather than contiguous: 3 is the leave
+# action every reward screen shares, so Girya's lift and Shovel's dig sit past it.
+REST_HEAL_ACTION = 0
+REST_UPGRADE_ACTION = 1
+REST_CLONE_ACTION = 2
+REST_LIFT_ACTION = 4
+REST_DIG_ACTION = 5
+
 # Commits the highlighted bundle on Scroll Boxes' choose-a-bundle screen. The game answers
 # that screen in two steps -- `select_bundle` then `confirm_bundle_selection` -- and the
 # emulator spends an action on each the same way.

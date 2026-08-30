@@ -347,6 +347,20 @@ class Sts2RunEnv(gym.Env):
                 if phase == PHASE_MAP
                 else ()
             ),
+            # What an open card-select screen is FOR: (kind, its argument, whether it
+            # is the rest site's upgrade). One screen answers four different questions --
+            # remove, upgrade, transform, duplicate -- and which one is not recoverable
+            # from the cards it lists.
+            "deck_selection": native.run_state_list(self._run_handle, 20, 3),
+            # Which enemies are on the field, in the same order as the observation's
+            # enemy slots -- the dead kept in place, as the engine keeps them. The
+            # observation says how much hp an enemy has and what it means to do, and
+            # never says what it is.
+            "enemy_def_ids": native.run_state_list(
+                self._run_handle,
+                19,
+                native.MAX_ENEMIES,
+            ),
             "player_won": native.run_player_won(self._run_handle),
             "encounter_id": native.run_encounter_id(self._run_handle),
             "encounter": ENCOUNTER_NAMES.get(

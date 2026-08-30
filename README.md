@@ -29,7 +29,8 @@ exposed it and how to reproduce it.
   hand-maintained — a hand-kept list of ids is a claim about the game that nothing rechecks.
 - `src/Sts2Emulator/Interop`: native exports used by Python.
 - `src/sts2_gym`: Python `ctypes` bindings plus Gymnasium wrappers for single-combat and
-  full-run training.
+  full-run training. `names.py` reads the id-to-name tables straight out of the emulator's
+  own source, for anything that has to show a state to a person.
 - `src/Sts2Emulator.Tests`: xUnit tests for combat and run behaviour.
 - `src/Sts2Emulator.Tests/Cards`: per-card test classes, the tests generated from live card
   captures, and the coverage guard that fails the build when an implemented card has no
@@ -38,6 +39,7 @@ exposed it and how to reproduce it.
   command layer, and the live fixtures.
 - `scripts`: build, data extraction, patch update, trace validation, full-run trace capture,
   live per-card and per-event capture, the source-vs-emulator audits, and training scripts.
+  `scripts/play.py` is the interactive client that lets a person play a run by hand.
 
 ## Architecture
 
@@ -129,7 +131,7 @@ Three independent mechanisms, because they catch different things:
    rounding, what a power sees mid-effect. Five fixtures that cannot be rebuilt live in
    `tests/fixtures/cards/blocked/`, each with a written reason.
 3. **Source audits.** `audit_cards.py` and `audit_relics.py` track which cards and relics
-   have actually been *read* against the current source, keyed by a digest of that source so
+   have actually been _read_ against the current source, keyed by a digest of that source so
    a note goes stale the moment the game patches. Every card with a test suite has now been
    read — the number that matters is "tested but unread", cards that LOOK covered, and it
    is zero. `audit_shared_card_bodies.py` catches the
@@ -225,6 +227,30 @@ uv run python scripts/generate_card_capture_tests.py
 
 That needs the game running with STS2MCP; see [AGENTS.md](AGENTS.md) for the conventions and
 for what the capture harness deliberately refuses to do.
+
+## Play a run by hand
+
+```bash
+uv run python scripts/play.py                 # a random seed
+uv run python scripts/play.py --seed CLIPLAY  # the same run every time
+```
+
+An interactive terminal client for the same `Sts2RunEnv` the agent uses. It reads the
+observation, names everything in it, labels every action the mask allows, and asks a
+person to pick one — combat, map, shop, rest, event, reward and card-select screens
+included. `help` lists the meta-commands: `deck`, `relics`, `map`, `log`, `state`, and
+`undo`, which restores a faithful `clone()` of the position before the last move.
+
+Aiming is `<action> <enemy>`, so `0 2` plays hand card 0 at the second enemy standing.
+
+It shows the run **exactly as the observation carries it and no more**, which is the point
+of having it: the screens are the fastest way to reach a state a fixture would otherwise
+have to build, and the only reader that puts a name to every id at once — so a wrong card,
+a wrong intent or an option that should not be on a screen reads as something a player
+notices. Where the emulator models nothing there is nothing to show: an event's options
+are numbered rather than named, the draw pile is a count rather than a list, and the
+Crystal Sphere's board stays under its fog (see
+[docs/agent-interface.md](docs/agent-interface.md)).
 
 ## Train and evaluate
 
