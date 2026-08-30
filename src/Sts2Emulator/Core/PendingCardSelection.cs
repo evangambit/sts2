@@ -137,6 +137,27 @@ public enum CardSelectionKind
     /// decision the card offers, and taking the top one is a rule the game does not have.
     /// </remarks>
     TransformDrawPileToSoul = 16,
+
+    /// <summary>
+    /// Cleanse: a card CHOSEN from the draw pile is exhausted.
+    /// <c>CardSelectCmd.FromCombatPile(PileType.Draw, ..., ExhaustSelectionPrompt)</c> then
+    /// <c>CardCmd.Exhaust</c>. The emulator exhausted the top card.
+    /// </summary>
+    ExhaustFromDrawPile = 17,
+
+    /// <summary>
+    /// Sculpting Strike: a card CHOSEN from hand, filtered to those not already Ethereal,
+    /// gains the ETHEREAL keyword. The emulator gave the leftmost card RETAIN — a
+    /// different keyword on a card nobody picked.
+    /// </summary>
+    GrantEtherealInHand = 18,
+
+    /// <summary>
+    /// Transfigure: a card CHOSEN from hand gains a REPLAY and, unless it costs X or less
+    /// than nothing, costs one more for the combat. The emulator transformed a card at
+    /// random into a different card, which is a different effect entirely.
+    /// </summary>
+    TransfigureInHand = 19,
 }
 
 /// <summary>

@@ -1763,6 +1763,50 @@ public static class CombatEngine
 
                 break;
 
+            case CardSelectionKind.ExhaustFromDrawPile:
+                if (index < state.DrawPile.Count)
+                {
+                    var doomedCard = state.DrawPile[index];
+                    state.RemoveFromDrawPileAt(index);
+                    Effects.CardEffects.ExhaustCard(state, doomedCard, rng: rng);
+                }
+
+                break;
+
+            case CardSelectionKind.GrantEtherealInHand:
+                if (index < state.Hand.Count)
+                {
+                    // `CardCmd.ApplyKeyword(card, Ethereal)` -- the per-copy grant, the same
+                    // one Call of the Void's power hands out.
+                    state.Hand[index] = state.Hand[index] with { EtherealForCombat = true };
+                }
+
+                break;
+
+            case CardSelectionKind.TransfigureInHand:
+                if (index < state.Hand.Count)
+                {
+                    var chosen = state.Hand[index];
+                    var chosenDef = GeneratedData.Cards.Get(chosen.DefId);
+
+                    // `EnergyCost.AddThisCombat(1)` unless the card costs X or its cost is
+                    // negative -- an unplayable at -1 is not made to cost 0.
+                    int bump =
+                        !chosenDef.HasEnergyCostX && EffectiveCost(chosen, chosenDef, state) >= 0
+                            ? 1
+                            : 0;
+
+                    // `BaseReplayCount++` -- the card plays one extra time, and the count
+                    // rides on the copy exactly as Hidden Gem's Replay does.
+                    state.Hand[index] = chosen with
+                    {
+                        CostBump = chosen.CostBump + bump,
+                        ReplayCount = chosen.ReplayCount + 1,
+                    };
+                }
+
+                break;
+
             case CardSelectionKind.TransformDrawPileToSoul:
                 if (index < state.DrawPile.Count)
                 {

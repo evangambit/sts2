@@ -4995,9 +4995,26 @@ public static class CardEffects
                 SummonOsty(state, upgraded ? 7 : 5);
                 return true;
             case "Cleanse":
+            {
+                // Summon 3/5, then EXHAUST a card CHOSEN from the draw pile. The emulator
+                // exhausted the top one -- which card you spend is the decision.
                 SummonOsty(state, upgraded ? 5 : 3);
-                ExhaustFirstDrawPileCard(state, rng);
+                var drawPile = new List<int>();
+                for (int i = 0; i < state.DrawPile.Count; i++)
+                {
+                    drawPile.Add(i);
+                }
+
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.ExhaustFromDrawPile,
+                    drawPile,
+                    def.Id,
+                    autoPick: 0,
+                    amount: 1
+                );
                 return true;
+            }
             case "Dirge":
             {
                 // `HasEnergyCostX`, and the X is the LOOP COUNT: the card summons for the
@@ -5253,7 +5270,17 @@ public static class CardEffects
                 AddSoulsToDrawPile(state, upgraded ? 4 : 3, upgraded: false);
                 return true;
             case "CaptureSpirit":
-                LoseHp(state, upgraded ? 4 : 3);
+                // `CreatureCmd.Damage(cardPlay.Target, ...)` with the damage var marked
+                // Unblockable | Unpowered -- it hits the ENEMY for 3/4. The emulator took
+                // it out of the PLAYER's hp: right number, wrong creature.
+                {
+                    var spirited = FirstEnemy(state);
+                    if (spirited != null)
+                    {
+                        DealUnblockableUnpoweredDamageToEnemy(state, spirited, upgraded ? 4 : 3);
+                    }
+                }
+
                 AddSoulsToDrawPile(state, upgraded ? 4 : 3, upgraded: false);
                 return true;
             case "Eidolon":
@@ -5343,13 +5370,30 @@ public static class CardEffects
                 );
                 return true;
             case "SculptingStrike":
+            {
+                // 9/12 damage, then a card CHOSEN from hand gains ETHEREAL -- filtered to
+                // the ones that do not already have it. The emulator gave the leftmost card
+                // RETAIN: a different keyword, on a card nobody picked.
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                if (state.Hand.Count > 0)
+                var plain = new List<int>();
+                for (int i = 0; i < state.Hand.Count; i++)
                 {
-                    state.Hand[0] = state.Hand[0] with { Retain = true };
+                    if (!state.Hand[i].IsEthereal())
+                    {
+                        plain.Add(i);
+                    }
                 }
 
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.GrantEtherealInHand,
+                    plain,
+                    def.Id,
+                    autoPick: plain.Count > 0 ? plain[0] : 0,
+                    amount: 1
+                );
                 return true;
+            }
             case "Seance":
             {
                 // `CardSelectCmd.FromCombatPile(PileType.Draw, ..., CardsVar 1)` and then
@@ -5374,9 +5418,27 @@ public static class CardEffects
                 return true;
             }
             case "Transfigure":
-                TransformRandomCardInHand(state, rng);
-                GainEnergy(state, 1);
+            {
+                // A card CHOSEN from hand gains a REPLAY and costs one more for the combat.
+                // The emulator transformed a card at random into a different card and gave
+                // a point of energy -- neither of which the card does. The Exhaust keyword
+                // it drops on upgrade is on the DEFINITION, so nothing to do here.
+                var anyCard = new List<int>();
+                for (int i = 0; i < state.Hand.Count; i++)
+                {
+                    anyCard.Add(i);
+                }
+
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.TransfigureInHand,
+                    anyCard,
+                    def.Id,
+                    autoPick: 0,
+                    amount: 1
+                );
                 return true;
+            }
             case "Unleash":
                 // `CalculationBaseVar(6)` + 1 per point of Osty's CURRENT hp -- not max,
                 // and not divided by anything. OnUpgrade raises the base by 3.

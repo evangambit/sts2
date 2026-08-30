@@ -258,6 +258,10 @@ READ: dict[str, tuple[str, str]] = {
         "c6daf526d7c9",
         "CallOfTheVoidPower 1: a pool card into HAND every turn, granted ETHEREAL; upgrade adds Innate",
     ),
+    "CaptureSpirit": (
+        "3cc52a711e51",
+        "3/4 Unblockable Unpowered damage to the ENEMY, and 3/4 Souls",
+    ),
     "Catastrophe": (
         "d68da1dfdebf",
         "2/3 cards auto-played, each a StableShuffle pick off Rng.Shuffle, preferring playable",
@@ -265,6 +269,10 @@ READ: dict[str, tuple[str, str]] = {
     "Cinder": (
         "029fc97a5586",
         "18/24 then exhaust a random hand card on Rng.CombatCardSelection",
+    ),
+    "Cleanse": (
+        "f4a61f813c6e",
+        "summon 3/5, then EXHAUST a card CHOSEN from the draw pile",
     ),
     "Colossus": (
         "1808bffc3474",
@@ -821,6 +829,10 @@ READ: dict[str, tuple[str, str]] = {
         "45e5038838e0",
         "draw until the hand is full; the upgrade adds Retain",
     ),
+    "SculptingStrike": (
+        "379436715a78",
+        "9/12 damage, then a CHOSEN hand card gains ETHEREAL -- filtered to those without it",
+    ),
     "Seance": (
         "86f68be7e66f",
         "a CHOSEN draw-pile card becomes a Soul in place; the upgrade is a discount, not a second card",
@@ -989,6 +1001,10 @@ READ: dict[str, tuple[str, str]] = {
     "Thunderclap": (
         "332719e08b6f",
         "4/7 to all plus Vulnerable 1 to all; the upgrade raises damage only",
+    ),
+    "Transfigure": (
+        "cf6f49a825b6",
+        "a CHOSEN hand card gains a REPLAY and costs one more; upgrade only drops Exhaust",
     ),
     "TrashToTreasure": (
         "5176cb66ae7c",
