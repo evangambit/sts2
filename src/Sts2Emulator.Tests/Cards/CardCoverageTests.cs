@@ -35,7 +35,6 @@ public class CardCoverageTests
         "Bodyguard",
         "Bombardment",
         "BoneShards",
-        "BorrowedTime",
         "BrightestFlame",
         "Bulwark",
         "BundleOfJoy",

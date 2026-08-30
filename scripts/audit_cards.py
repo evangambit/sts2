@@ -218,6 +218,10 @@ READ: dict[str, tuple[str, str]] = {
         "b8546461a2d8",
         "3/? damage, and BeforeHandDraw returns it to hand next turn like Thrumming Hatchet",
     ),
+    "BorrowedTime": (
+        "3a18d83e44d6",
+        "4/6 energy now, and every card played for the REST OF THIS TURN costs one more",
+    ),
     "Brand": (
         "7e119d6e535f",
         "1 HP, exhaust a CHOSEN card, then Strength 1/2",

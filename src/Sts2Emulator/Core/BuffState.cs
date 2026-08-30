@@ -522,6 +522,13 @@ public enum BuffId
     /// owner when their HP is at or below it, and the player is not exempt.
     /// </summary>
     Neurosurge,
+
+    /// <summary>
+    /// <c>BorrowedTimePower.TryModifyEnergyCostInCombat</c>: every card its owner plays
+    /// costs this much MORE, and the power removes itself when their side turn ends. Not a
+    /// Late hook, so the cards that are made free stay free.
+    /// </summary>
+    BorrowedTime,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

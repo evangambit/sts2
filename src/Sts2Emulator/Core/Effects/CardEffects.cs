@@ -5192,8 +5192,11 @@ public static class CardEffects
                 DrawCards(state, upgraded ? 4 : 3, rng);
                 return true;
             case "BorrowedTime":
+                // EnergyVar 4 upgrading by 2 now, paid for with an ExtraCost of 1: every
+                // card played for the REST OF THIS TURN costs one more. The emulator
+                // granted NoBlock, which is not what the card borrows against.
                 GainEnergy(state, upgraded ? 6 : 4);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.BorrowedTime, 1);
                 return true;
             case "Neurosurge":
                 // EnergyVar 3 upgrading by 1, CardsVar 2, and NeurosurgePower 3 -- a DEBUFF

@@ -690,6 +690,10 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, -1);
         }
 
+        // `BorrowedTimePower.AfterSideTurnEnd` removes itself when the PLAYER's side turn
+        // ends, so the tax lands on the turn it was taken out and no later.
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.BorrowedTime);
+
         Effects.CardEffects.KillDoomedEnemiesForTurnEnd(state);
 
         // `DoomPower.BeforeSideTurnEnd` kills its owner when `CurrentHp <= Amount`, and the
@@ -1536,6 +1540,11 @@ public static class CombatEngine
         }
 
         cost += card.CostBump;
+
+        // `BorrowedTimePower.TryModifyEnergyCostInCombat` adds its amount to every card its
+        // owner plays. Additive and NOT a Late hook, so it sits with Tangled rather than
+        // with the zero-returns below -- a card made free is still free.
+        cost += BuffSystem.Get(state.PlayerBuffs, BuffId.BorrowedTime);
 
         if (
             BuffSystem.Get(state.PlayerBuffs, BuffId.Veilpiercer) > 0
