@@ -65,7 +65,28 @@ NODE_NAMES = {
     rc.NODE_RELIC: "treasure",
     rc.NODE_BOSS: "boss",
     rc.NODE_EVENT: "unknown",
+    rc.NODE_ANCIENT: "ancient",
 }
+
+# One character per room, for the drawn map. Chosen so the shape of a path is readable at
+# a glance rather than for prettiness: the two that end a run early -- the elite and the
+# boss -- are the two capitals that stand out, and `?` is the game's own mark for the
+# rooms it will not tell you about in advance.
+NODE_GLYPHS = {
+    rc.NODE_NORMAL: "m",
+    rc.NODE_ELITE: "E",
+    rc.NODE_REST: "r",
+    rc.NODE_SHOP: "$",
+    rc.NODE_RELIC: "t",
+    rc.NODE_BOSS: "B",
+    rc.NODE_EVENT: "?",
+    rc.NODE_ANCIENT: "a",
+}
+
+# Characters per map column. Three hold a node cell -- `[m]` when it can be travelled to,
+# ` m ` when it cannot -- and the fourth is the gap that gives a diagonal edge somewhere
+# to be drawn.
+MAP_COLUMN = 4
 
 # The rest site's actions, which are sparse: 3 is the leave action every reward screen
 # shares, so the site's own options straddle it.
@@ -527,24 +548,173 @@ def card_reward_screen(info, legal: set[int]) -> Screen:
     return screen
 
 
-def map_screen(info, legal: set[int]) -> Screen:
-    """Build the row of nodes the run may travel to.
+def gap_lines(
+    edges: list[tuple[int, int]],
+    width: int,
+    centre,
+) -> list[str]:
+    r"""Draw the edges between one map row and the row above it.
+
+    Two shapes, because the map has two. Ordinary rows step one column at most and are one
+    line of `|`, `/` and `\\` sitting between the nodes they join. The two FAN rows -- the
+    node below row one, which reaches every path start, and the row under the boss, which
+    all reaches the boss -- cross up to three columns, and a slash at the midpoint of a
+    three-column jump lands on a node it has nothing to do with. Those get the tree fan:
+    risers off the many, a bar across, a stem into the one.
+    """
+    if not edges:
+        return []
+
+    if all(abs(child - parent) <= 1 for parent, child in edges):
+        line = [" "] * (width * MAP_COLUMN)
+        for parent, child in edges:
+            if child == parent:
+                line[centre(parent)] = "|"
+            else:
+                low, high = sorted((centre(parent), centre(child)))
+                line[(low + high) // 2] = "/" if child > parent else "\\"
+        return ["".join(line)]
+
+    parents = {parent for parent, _child in edges}
+    children = {child for _parent, child in edges}
+    if len(parents) == 1:
+        hub, leaves, hub_below = centre(next(iter(parents))), children, True
+    elif len(children) == 1:
+        hub, leaves, hub_below = centre(next(iter(children))), parents, False
+    else:
+        # Not a fan: several nodes each reaching several columns. Nothing in the generator
+        # makes one, and drawing it wrong would be worse than saying so.
+        return [f"{'':<{MAP_COLUMN}}(edges too tangled to draw)"]
+
+    leaf_marks = sorted(centre(leaf) for leaf in leaves)
+    risers = [" "] * (width * MAP_COLUMN)
+    bar = [" "] * (width * MAP_COLUMN)
+    stem = [" "] * (width * MAP_COLUMN)
+    for at in range(min(*leaf_marks, hub), max(*leaf_marks, hub) + 1):
+        bar[at] = "-"
+    for at in leaf_marks:
+        risers[at] = "|"
+        bar[at] = "+"
+    bar[hub] = "+"
+    stem[hub] = "|"
+
+    fan = ["".join(risers), "".join(bar), "".join(stem)]
+    return fan if hub_below else fan[::-1]
+
+
+def map_lines(
+    graph: dict,
+    floor: int,
+    actions: dict[tuple[int, int], int],
+) -> list[str]:
+    r"""Draw the act map: every node, every edge, and where the run is standing.
+
+    Rows descend down the page so the boss is at the top and the run's own position is at
+    the bottom, next to the prompt -- which is the way the game draws it and, more to the
+    point, puts the rows a player is choosing between closest to where they type.
+
+    Almost every edge steps one column, and those are drawn as the single character that
+    sits between the two nodes: `|`, `/` or `\\`. Two rows are not like that. The node
+    below row 1 fans out to every path start and the whole of the row below the boss fans
+    into it, so those edges cross up to three columns -- drawn as a dashed run rather than
+    as one character, because a single slash placed at the midpoint of a three-column jump
+    sits over a node it has nothing to do with and reads as an edge that is not there.
+    """
+    nodes = graph["nodes"]
+    if not nodes:
+        return ["   (no map — the act has not generated one)"]
+
+    children: dict[tuple[int, int], list[tuple[int, int]]] = {}
+    for parent, child in graph["edges"]:
+        children.setdefault(parent, []).append(child)
+
+    current = graph["current"]
+    width = max(col for col, _row in nodes) + 1
+    rows = sorted({row for _col, row in nodes}, reverse=True)
+    # The floor a row sits on, derived from the row the run is actually standing on rather
+    # than assumed. Nothing promises floor and row share an origin, and a gutter that
+    # silently numbered every row wrong would be worse than no gutter at all.
+    offset = floor - current[1] if current is not None else 0
+
+    def centre(col: int) -> int:
+        return col * MAP_COLUMN + 1
+
+    lines: list[str] = []
+    for index, row in enumerate(rows):
+        cells = []
+        for col in range(width):
+            node_type = nodes.get((col, row), rc.NODE_NONE)
+            glyph = NODE_GLYPHS.get(node_type, " ")
+            if (col, row) == current:
+                cells.append(" @ ")
+            elif (col, row) in actions:
+                cells.append(f"[{glyph}]")
+            elif node_type == rc.NODE_NONE:
+                cells.append("   ")
+            else:
+                cells.append(f" {glyph} ")
+        lines.append(f"  {row + offset:>3}  " + " ".join(cells).rstrip())
+
+        if index + 1 >= len(rows):
+            break
+        below = rows[index + 1]
+        edges = [
+            (col, child_col)
+            for col in range(width)
+            for child_col, child_row in children.get((col, below), ())
+            if child_row == row
+        ]
+        lines += [
+            "       " + line.rstrip()
+            for line in gap_lines(edges, width, centre)
+            if line.strip()
+        ]
+
+    lines.append("       " + " ".join(f" {col} " for col in range(width)))
+    lines.append("")
+    lines.append(
+        "   "
+        + " · ".join(
+            f"{NODE_GLYPHS[node_type]} {NODE_NAMES[node_type]}"
+            for node_type in (
+                rc.NODE_NORMAL,
+                rc.NODE_ELITE,
+                rc.NODE_EVENT,
+                rc.NODE_SHOP,
+                rc.NODE_RELIC,
+                rc.NODE_REST,
+                rc.NODE_BOSS,
+            )
+        ),
+    )
+    lines.append("   @ where you are · [x] where you may go · the gutter is the floor")
+    return lines
+
+
+def map_screen(env: Sts2RunEnv, info, legal: set[int]) -> Screen:
+    """Build the act map, with the row of nodes the run may travel to marked on it.
 
     `info["map_choices"]` drops the empty slots in ascending order and the mask sets the
-    same slots, so the legal actions line up with the entries one for one.
+    same slots, so the legal actions line up with the entries one for one -- and that
+    pairing is also what puts an action number on the right node of the drawing.
     """
     screen = Screen(title="MAP — where to next")
-    for action, choice in zip(sorted(legal), info["map_choices"]):
+    actions = {
+        (choice["x"], choice["y"]): action
+        for action, choice in zip(sorted(legal), info["map_choices"])
+    }
+    screen.lines += map_lines(env.map_graph(), int(info["floor"]), actions)
+    screen.lines.append("")
+
+    for (x, y), action in actions.items():
+        choice = next(c for c in info["map_choices"] if (c["x"], c["y"]) == (x, y))
         node = NODE_NAMES.get(choice["node_type"], f"node-{choice['node_type']}")
         encounter = (
             f"  ({choice['encounter']})"
             if choice["node_type"] in (rc.NODE_NORMAL, rc.NODE_ELITE, rc.NODE_BOSS)
             else ""
         )
-        screen.offer(
-            action,
-            f"{node:<10} at x={choice['x']}, y={choice['y']}{encounter}",
-        )
+        screen.offer(action, f"{node:<10} in column {x}{encounter}")
     return screen
 
 
@@ -768,7 +938,7 @@ def build_screen(env: Sts2RunEnv, obs, info, legal: set[int]) -> Screen:
     if phase == rc.PHASE_CARD_REWARD:
         return card_reward_screen(info, legal)
     if phase == rc.PHASE_MAP:
-        return map_screen(info, legal)
+        return map_screen(env, info, legal)
     if phase == rc.PHASE_REST:
         return rest_screen(legal)
     if phase == rc.PHASE_SHOP:
@@ -785,6 +955,10 @@ def build_screen(env: Sts2RunEnv, obs, info, legal: set[int]) -> Screen:
         return bundle_screen(info, legal)
     if phase == rc.PHASE_CRYSTAL_SPHERE:
         return crystal_sphere_screen(legal)
+    if phase == rc.PHASE_COMPLETE:
+        # Nothing to offer; the loop says how it ended. A title beats the fallback's
+        # "no screen written", which reads as a missing renderer rather than a finished run.
+        return Screen(title="RUN OVER")
     if phase == rc.PHASE_TREASURE:
         screen = Screen(title="TREASURE")
         if rc.REWARD_SKIP_ACTION in legal:
@@ -1051,10 +1225,20 @@ def loop(session: Session, interactive: bool, colour: bool) -> int:
             show = False
             continue
         if line == "map":
-            for choice in session.info["map_choices"]:
-                print(f"   {choice}")
-            if not session.info["map_choices"]:
-                print("   (no map is up)")
+            actions = {
+                (choice["x"], choice["y"]): action
+                for action, choice in zip(sorted(legal), session.info["map_choices"])
+            }
+            print()
+            print(
+                "\n".join(
+                    map_lines(
+                        session.env.map_graph(),
+                        int(session.info["floor"]),
+                        actions,
+                    ),
+                ),
+            )
             show = False
             continue
         if line == "log":

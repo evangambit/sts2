@@ -160,6 +160,65 @@ class InfoTests(unittest.TestCase):
             env.close()
 
 
+class MapDrawingTests(unittest.TestCase):
+    def test_the_drawn_map_shows_every_node_and_where_the_run_stands(self):
+        """A map you cannot find yourself on is a picture, not a map.
+
+        The drawing is checked against the graph it came from rather than against a
+        remembered picture: every node gets a glyph, the run's own position gets `@`, and
+        every node the mask offers is marked as choosable. A renderer that dropped a row
+        or misplaced the marker would still look plausible.
+        """
+        env = Sts2RunEnv(seed="CLIPLAY", max_episode_steps=400, max_floors=64)
+        _obs, info = env.reset()
+        try:
+            for _ in range(400):
+                legal = {int(a) for a in np.flatnonzero(env.action_masks())}
+                if not legal:
+                    break
+                if int(info["phase"]) == run_constants.PHASE_MAP:
+                    break
+                _obs, _reward, terminated, truncated, info = env.step(min(legal))
+                if terminated or truncated:
+                    self.fail("the run ended before a map")
+
+            graph = env.map_graph()
+            actions = {
+                (choice["x"], choice["y"]): action
+                for action, choice in zip(
+                    sorted(legal),
+                    info["map_choices"],
+                    strict=False,
+                )
+            }
+            drawn = "\n".join(play.map_lines(graph, int(info["floor"]), actions))
+
+            # The node rows are the ones carrying a floor in the gutter. The legend also
+            # holds a `[`, and counting that as a marked node would pass for free.
+            node_rows = [
+                line for line in drawn.splitlines() if line[:5].strip().isdigit()
+            ]
+            self.assertIn(
+                " @ ",
+                drawn,
+                "the map does not say where the run is standing",
+            )
+            self.assertEqual(
+                sum(line.count("[") for line in node_rows),
+                len(actions),
+                "the map marks a different number of nodes than the mask offers",
+            )
+            # One line per row of the map, whatever the connectors between them come to.
+            rows = {row for _col, row in graph["nodes"]}
+            gutters = {int(line.split()[0]) for line in node_rows}
+            self.assertEqual(len(gutters), len(rows), "a map row went undrawn")
+            # The gutter is the floor, derived from where the run stands rather than
+            # assumed to share an origin with the row.
+            self.assertIn(int(info["floor"]), gutters)
+        finally:
+            env.close()
+
+
 class DeckSelectionTests(unittest.TestCase):
     def test_a_deck_screen_says_what_answering_it_does(self):
         """One screen answers four questions, and the cards on it tell them apart in none.

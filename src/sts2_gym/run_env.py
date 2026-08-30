@@ -169,6 +169,44 @@ class Sts2RunEnv(gym.Env):
         )
         return obs, reward, terminated, truncated, info
 
+    def map_graph(self) -> dict:
+        """Read the whole act map: every node, every edge, and where the run stands.
+
+        Deliberately NOT part of ``_info()``. The map is six hundred integers that change
+        once an act, and ``_info()`` is rebuilt on every step of every training run --
+        paying for the map on each of them to serve the two screens that want it is the
+        wrong trade. Nothing about it is hidden, though: a map is fully visible in-game
+        from the moment the act starts, which is why this exposes structure and node
+        TYPES and not the encounter behind any node.
+
+        Returns:
+            ``{"nodes": {(col, row): node_type}, "edges": ((from, to), ...),
+            "current": (col, row)}``.
+
+        Raises:
+            RuntimeError: If the environment has not been reset yet.
+
+        """
+        if self._run_handle is None:
+            raise RuntimeError("Call reset() before map_graph().")
+
+        flat_nodes = native.run_state_list(self._run_handle, 15, 3 * 1024)
+        nodes = {
+            (flat_nodes[i], flat_nodes[i + 1]): flat_nodes[i + 2]
+            for i in range(0, len(flat_nodes) - 2, 3)
+        }
+        flat_edges = native.run_state_list(self._run_handle, 16, 4 * 2048)
+        edges = tuple(
+            ((flat_edges[i], flat_edges[i + 1]), (flat_edges[i + 2], flat_edges[i + 3]))
+            for i in range(0, len(flat_edges) - 3, 4)
+        )
+        current = native.run_state_list(self._run_handle, 21, 2)
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "current": (current[0], current[1]) if len(current) == 2 else None,
+        }
+
     def action_masks(self) -> np.ndarray:
         if self._run_handle is None:
             return np.zeros(native.RUN_MAX_ACTIONS, dtype=bool)

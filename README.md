@@ -241,6 +241,26 @@ person to pick one — combat, map, shop, rest, event, reward and card-select sc
 included. `help` lists the meta-commands: `deck`, `relics`, `map`, `log`, `state`, and
 `undo`, which restores a faithful `clone()` of the position before the last move.
 
+Choosing where to go draws the whole act map — every node, every edge, the floor in the
+gutter and `@` where the run is standing — with the nodes the mask allows marked `[x]`:
+
+```text
+   17               B          m monster · E elite · ? unknown · $ shop
+                    |          t treasure · r rest site · B boss
+        +-----------+---+
+        |               |
+   16   r               r
+        | \           / |
+   15   ?   E       ?   m
+        | /         |     \
+   14   ?           E       E
+        ...
+    8   r   m       m          [r]
+        | / |     / |           |
+    7   E   r   m   $           @
+        0   1   2   3   4   5   6
+```
+
 Aiming is `<action> <enemy>`, so `0 2` plays hand card 0 at the second enemy standing.
 
 It shows the run **exactly as the observation carries it and no more**, which is the point

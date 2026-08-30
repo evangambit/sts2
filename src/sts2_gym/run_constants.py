@@ -50,6 +50,9 @@ NODE_SHOP = 4
 NODE_RELIC = 5
 NODE_BOSS = 6
 NODE_EVENT = 7
+# The act's own ancient, which is the node a run stands on before row 1 and again at the
+# top of every act after the first. It is a real node in the map, not a placeholder.
+NODE_ANCIENT = 8
 
 ACT_OVERGROWTH = 1
 ACT_UNDERDOCKS = 2

@@ -12,7 +12,8 @@ public static class RunNativeExports
     // v16: state list 17 reports an open card-offer grid.
     // v17: state list 19 names the enemies in the active combat, and 20 says what an open
     // card-select screen is FOR.
-    public const int RUN_NATIVE_API_VERSION = 17;
+    // v18: state list 21 reports where on the map the run is standing.
+    public const int RUN_NATIVE_API_VERSION = 18;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -310,6 +311,16 @@ public static class RunNativeExports
                     run.State.PendingSelectionArg,
                     run.State.PendingRestUpgrade ? 1 : 0,
                 ],
+                output
+            ),
+            // 21: where the run is standing, as (col, row). Lists 15 and 16 give the
+            // map's nodes and its edges but not the position they are read from, and
+            // without it a drawn map has no "you are here" -- which is most of what
+            // looking at a map is for. At the start of an act that is the virtual node
+            // below row 1, which is a real entry in MapNodes and carries the act's
+            // ancient rather than NodeNone.
+            21 => WriteIntArray(
+                [run.State.CurrentMapCoord.Col, run.State.CurrentMapCoord.Row],
                 output
             ),
             _ => -3,
