@@ -118,7 +118,17 @@ def main() -> int:
         # names one of its own labels and not the others, or -- the Sleight of Flesh case
         # -- it names a card that is not in this stack at all, which is what a comment
         # written for a card that has since been split out looks like.
-        if args.all or (named and len(mentioned) <= 1 and len(mentioned) < len(names)):
+        # A body whose comment names NO card at all is the same defect wearing a different
+        # hat: the one that found it was written for The Smith and swallowed Foregone
+        # Conclusion and Hidden Cache, and it was invisible here only because the comment
+        # happened not to say "The Smith". Naming the card a body is for is the convention
+        # that makes this scan work, so an unnamed shared body is worth a look too.
+        unnamed = bool(comments) and not named
+        if (
+            args.all
+            or unnamed
+            or (named and len(mentioned) <= 1 and len(mentioned) < len(names))
+        ):
             suspicious.append((line_no, names, named, mentioned, comments))
 
     for line_no, names, named, mentioned, comments in suspicious:

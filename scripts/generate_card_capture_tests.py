@@ -104,9 +104,22 @@ DISPLAY_AMOUNT_BUFFS = {"OUTBREAK_POWER": "OutbreakCounter"}
 # because that is how a missing power gets noticed at all.
 BUFF_ALIASES = {
     "ENERGY_NEXT_TURN_POWER": "NextTurnEnergy",
-    # `EnfeeblingTouchPower : TemporaryStrengthPower` with `IsPositive => false` -- a
-    # subclass that adds nothing but a sign, and the emulator models it as the base power.
+    # Every `: TemporaryStrengthPower` subclass. They add nothing but a sign, and the
+    # emulator models them all as the base power -- thirteen classes in the game and one
+    # BuffId here, so the mapping has to be spelled out rather than derived from the name.
     "ENFEEBLING_TOUCH_POWER": "TemporaryStrength",
+    "CRUSH_UNDER_POWER": "TemporaryStrength",
+    "DYING_STAR_POWER": "TemporaryStrength",
+    "MANGLE_POWER": "TemporaryStrength",
+    "SETUP_STRIKE_POWER": "TemporaryStrength",
+    "COORDINATE_POWER": "TemporaryStrength",
+    "DARK_SHACKLES_POWER": "TemporaryStrength",
+    "FEEDING_FRENZY_POWER": "TemporaryStrength",
+    "PIERCING_WAIL_POWER": "TemporaryStrength",
+    "MONARCHS_GAZE_STRENGTH_DOWN_POWER": "TemporaryStrength",
+    "FLEX_POTION_POWER": "TemporaryStrength",
+    "SHACKLING_POTION_POWER": "TemporaryStrength",
+    "REPTILE_TRINKET_POWER": "TemporaryStrength",
 }
 
 

@@ -2604,6 +2604,27 @@ public static class CardEffects
     private static int ConqueredDamage(EnemyState target, int amount) =>
         BuffSystem.Get(target.Buffs, BuffId.Conqueror) > 0 ? amount * 2 : amount;
 
+    /// <summary>
+    /// Foregone Conclusion's screen: that many cards CHOSEN from the draw pile go to hand.
+    /// </summary>
+    internal static void OpenDrawPileToHandSelection(CombatState state, int amount)
+    {
+        var pile = new List<int>();
+        for (int i = 0; i < state.DrawPile.Count; i++)
+        {
+            pile.Add(i);
+        }
+
+        OpenCardSelection(
+            state,
+            CardSelectionKind.DrawPileToHand,
+            pile,
+            sourceCardDefId: 204, // ForegoneConclusion
+            autoPick: 0,
+            amount: amount
+        );
+    }
+
     private static void PullSovereignBladesToHand(CombatState state)
     {
         foreach (var pile in new[] { state.DrawPile, state.DiscardPile, state.ExhaustPile })
@@ -4440,13 +4461,13 @@ public static class CardEffects
 
                 return true;
             }
-            case "StrikeDefect":
             case "WroughtInWar":
-                // 7/9 damage and a Forge of 7/9. Its own case, out of a stack whose body is
-                // three `def.Name ==` branches it never matched.
+                // Wrought In War: 7/9 damage and a Forge of 7/9. Its own case, out of a
+                // stack whose body is three `def.Name ==` branches it never matched.
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 Forge(state, upgraded ? 9 : 7);
                 return true;
+            case "StrikeDefect":
             case "AdaptiveStrike":
             case "MomentumStrike":
             case "Synthesis":
@@ -5696,6 +5717,10 @@ public static class CardEffects
                 return true;
             case "Misery":
             case "HighFive":
+                // High Five, and Misery shares this body as it always has -- naming both is
+                // what keeps `audit_shared_card_bodies.py` quiet about a stack that is
+                // correct. Misery's own reading is still owed.
+                //
                 // `OstyDamageVar(11)` upgrading by 2, at ALL opponents, then Vulnerable
                 // 2/3 on all of them -- and it does nothing at all without a living Osty
                 // (`IsPlayable => !IsOstyMissing`). This shared a body that applies the
@@ -5856,15 +5881,21 @@ public static class CardEffects
                 AddRandomRegentCardsToHand(state, 2, rng);
                 return true;
             case "CrushUnder":
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 2 : 1);
+                // 7/8 at ALL enemies, then a StrengthLoss of 1/2 on all of them --
+                // `PowerCmd.Apply<CrushUnderPower>(enemies, ...)`, a TemporaryStrengthPower
+                // with `IsPositive => false`. The emulator hit one enemy and debuffed one.
+                DealDamageToAll(state, Dmg(state, def, upgraded, card));
+                ApplyTemporaryStrengthDownToAll(state, upgraded ? 2 : 1);
                 return true;
             case "DecisionsDecisions":
                 DrawCards(state, upgraded ? 5 : 3, rng);
                 return true;
             case "DyingStar":
-                DealDamage(state, Dmg(state, def, upgraded, card));
-                ApplyTemporaryStrengthDownToEnemy(state, upgraded ? 5 : 3);
+                // Three stars, Ethereal: 9/11 at ALL enemies and a StrengthLoss of 9/11 on
+                // each. The emulator hit one for the right damage and took 3/5 Strength off
+                // one -- a number that appears nowhere in the card.
+                DealDamageToAll(state, Dmg(state, def, upgraded, card));
+                ApplyTemporaryStrengthDownToAll(state, upgraded ? 11 : 9);
                 return true;
             case "GatherLight":
                 GainBlock(state, Blk(def, upgraded, card), rng);
@@ -6250,11 +6281,20 @@ public static class CardEffects
             case "Sacrifice":
                 GainBlock(state, upgraded ? 14 : 10, rng);
                 break;
-            case "ForegoneConclusion":
-            case "HiddenCache":
             case "TheSmith":
-                // Four stars for a Forge of 30/40 -- the biggest single forge in the pool.
+                // The Smith: four stars for a Forge of 30/40, the biggest single forge in
+                // the pool.
                 Forge(state, upgraded ? 40 : 30);
+                break;
+            case "ForegoneConclusion":
+                // ForegoneConclusionPower at CardsVar 2/3: BEFORE the next hand draw, that
+                // many cards CHOSEN from the draw pile go to hand, and the power removes
+                // itself. It had been sharing The Smith's forge and, before that, a draw.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.ForegoneConclusion, upgraded ? 3 : 2);
+                break;
+            case "HiddenCache":
+                DrawCards(state, 1, rng);
+                GainEnergy(state, upgraded ? 1 : 0);
                 break;
             case "Hotfix":
             case "KnowThyPlace":
@@ -6439,14 +6479,16 @@ public static class CardEffects
             case "LegionOfBone":
                 AddRandomClassCardToHand(state, rng, freeThisTurn: true);
                 break;
+            case "SpoilsOfBattle":
+                // Spoils of Battle: Forge 5/8, THEN draw two -- the draw does not upgrade.
+                Forge(state, upgraded ? 8 : 5);
+                DrawCards(state, 2, rng);
+                break;
             case "Glimmer":
             case "Glow":
             case "Parse":
             case "Prophesize":
-            case "SpoilsOfBattle":
-                // Forge 5/8, THEN draw two -- the draw does not upgrade.
-                Forge(state, upgraded ? 8 : 5);
-                DrawCards(state, 2, rng);
+                DrawCards(state, upgraded ? 2 : 1, rng);
                 break;
             case "Reflex":
             case "Scourge":
@@ -6559,13 +6601,17 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.SeekingEdge, 1);
                 Forge(state, upgraded ? 11 : 7);
                 break;
+            case "Furnace":
+                // Furnace: FurnacePower at ForgeVar 5/7, a Forge of that much at the start
+                // of EVERY turn. It had been one of thirty labels on a flat Strength body.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Furnace, upgraded ? 7 : 5);
+                break;
             case "Abrasive":
             case "Accelerant":
             case "BulkUp":
             case "Calcify":
             case "Feral":
             case "Friendship":
-            case "Furnace":
             case "Genesis":
             case "HammerTime":
             case "Lethality":
@@ -6643,6 +6689,38 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.InfiniteBlades, upgraded ? 2 : 1);
                 break;
             case "CrescentSpear":
+            {
+                // Crescent Spear: CalculationBase 8 plus ExtraDamage 2 (upgrading by 1) for
+                // each card with a STAR COST the player holds --
+                // `AllCards.Count(c => c.CanonicalStarCost >= 0 || c.HasStarCostX)`. AllCards
+                // spans every pile INCLUDING Play, so the spear counts itself; the emulator
+                // removes the played card from hand before resolving, hence the + 1.
+                //
+                // It had been sitting in a flat 8/12 body with nine other cards.
+                int starCards = 1;
+                foreach (
+                    var pile in new[]
+                    {
+                        state.Hand,
+                        state.DrawPile,
+                        state.DiscardPile,
+                        state.ExhaustPile,
+                    }
+                )
+                {
+                    foreach (var held in pile)
+                    {
+                        var d = GeneratedData.Cards.Get(held.DefId);
+                        if (d.StarCost >= 0 || d.HasStarCostX)
+                        {
+                            starCards++;
+                        }
+                    }
+                }
+
+                DealDamage(state, DmgFrom(state, 8 + (upgraded ? 3 : 2) * starCards, def, card));
+                break;
+            }
             case "DeathMarch":
             case "Flatten":
             case "MementoMori":
@@ -7802,6 +7880,15 @@ public static class CardEffects
         foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
         {
             DealUnpoweredDamageToEnemy(state, enemy, outbreak);
+        }
+    }
+
+    /// <summary>The same, at every living enemy -- `PowerCmd.Apply(enemies, ...)`.</summary>
+    private static void ApplyTemporaryStrengthDownToAll(CombatState state, int amount)
+    {
+        foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
+        {
+            ApplyTemporaryStrengthDownTo(enemy, amount);
         }
     }
 

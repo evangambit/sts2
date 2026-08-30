@@ -355,6 +355,10 @@ READ: dict[str, tuple[str, str]] = {
         "BeforeHandDraw adds Amount random POWER cards to hand; the upgrade is the cost",
     ),
     "Defragment": ("3e9d0372c793", "PowerVar<FocusPower>(1m) +1, permanent"),
+    "CrescentSpear": (
+        "cc261c42ff4d",
+        "1 star; damage 8 + 2/3 per card with a STAR COST the player holds, itself included",
+    ),
     "CrimsonMantle": (
         "99f07a8dd302",
         "CrimsonMantlePower at 8/10 and IncrementSelfDamage on play",
@@ -362,6 +366,10 @@ READ: dict[str, tuple[str, str]] = {
     "Cruelty": (
         "fb996cba1975",
         "CrueltyPower 25, upgrading by another 25",
+    ),
+    "CrushUnder": (
+        "e46be7e27d45",
+        "7/8 at ALL enemies and a temporary StrengthLoss of 1/2 on all of them",
     ),
     "DanseMacabre": (
         "ec6739a160d1",
@@ -434,6 +442,10 @@ READ: dict[str, tuple[str, str]] = {
     "DrumOfBattle": (
         "ee20d3312b87",
         "draw 2 always; the upgrade raises the ENERGY paid when it is exhausted",
+    ),
+    "DyingStar": (
+        "15b136ced646",
+        "3 stars, Ethereal: 9/11 at ALL enemies and a temporary StrengthLoss of 9/11 on each",
     ),
     "EchoForm": (
         "53673a33b554",
@@ -523,6 +535,10 @@ READ: dict[str, tuple[str, str]] = {
         "854c1d49c67e",
         "one stack; the power adds that many card-REMOVAL rewards at combat end (payout not modelled)",
     ),
+    "ForegoneConclusion": (
+        "233753cbb3a8",
+        "ForegoneConclusionPower 2/3: that many CHOSEN draw-pile cards to hand before the next draw",
+    ),
     "ForgottenRitual": (
         "7d1014df5741",
         "3/4 energy, and only if a card was exhausted this turn",
@@ -530,6 +546,10 @@ READ: dict[str, tuple[str, str]] = {
     "Friendship": (
         "9958b8c7e451",
         "COSTS 2/1 Strength, and FriendshipPower gives +1 max energy for the rest of the combat",
+    ),
+    "Furnace": (
+        "def1ec636ce0",
+        "FurnacePower 5/7: a Forge of that much at the start of EVERY turn",
     ),
     "GangUp": (
         "b3b1683dd737",

@@ -1248,6 +1248,25 @@ public static class CombatEngine
             }
         }
 
+        // `ForegoneConclusionPower.BeforeHandDraw`: that many cards CHOSEN from the draw
+        // pile go to hand, then the power removes itself. Raised BEFORE the draw, so the
+        // screen stands over the old hand -- and the end-turn work is already finished, so
+        // ValidActions simply restricts to it until it is answered, as Tools of the Trade's
+        // does.
+        int foregone = BuffSystem.Get(state.PlayerBuffs, BuffId.ForegoneConclusion);
+        if (foregone > 0 && state.DrawPile.Count > 0)
+        {
+            Effects.CardEffects.OpenDrawPileToHandSelection(state, foregone);
+            BuffSystem.Remove(state.PlayerBuffs, BuffId.ForegoneConclusion);
+        }
+
+        // `FurnacePower.AfterSideTurnStart`: a Forge of its amount, every turn.
+        int furnace = BuffSystem.Get(state.PlayerBuffs, BuffId.Furnace);
+        if (furnace > 0)
+        {
+            Effects.CardEffects.Forge(state, furnace);
+        }
+
         // `CallOfTheVoidPower.BeforeHandDraw`: cards from the character's OWN pool, each
         // granted Ethereal, straight into hand. The pool filter is the ordinary combat one
         // -- `GetUnlockedCards` drops Basic and Ancient, and `GetDistinctForCombat` runs
@@ -1865,6 +1884,29 @@ public static class CombatEngine
                     var card = state.DrawPile[index];
                     state.RemoveFromDrawPileAt(index);
                     state.Hand.Add(card);
+                }
+
+                // Foregone Conclusion asks for two or three, and a `CardSelectorPrefs` with
+                // a single count sets min and max alike -- so the screen reopens until the
+                // picks are spent, the way Well Laid Plans' does. Every other caller asks
+                // for one and never reaches this.
+                if (selection.Amount > 1 && state.DrawPile.Count > 0)
+                {
+                    var more = new List<int>();
+                    for (int i = 0; i < state.DrawPile.Count; i++)
+                    {
+                        more.Add(i);
+                    }
+
+                    state.PendingSelection = new PendingCardSelection
+                    {
+                        Kind = CardSelectionKind.DrawPileToHand,
+                        Candidates = more,
+                        SourceCardDefId = selection.SourceCardDefId,
+                        Amount = selection.Amount - 1,
+                        Skippable = selection.Skippable,
+                    };
+                    return new StepResult(Terminal: false, PlayerWon: false, Reward: 0f);
                 }
 
                 break;

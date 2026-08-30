@@ -567,6 +567,18 @@ public enum BuffId
     /// next turn, then remove itself. The star twin of <see cref="NextTurnEnergy" />.
     /// </summary>
     StarNextTurn,
+
+    /// <summary>
+    /// <c>ForegoneConclusionPower.BeforeHandDraw</c>: this many cards CHOSEN from the draw
+    /// pile go to hand before the next draw, then the power removes itself.
+    /// </summary>
+    ForegoneConclusion,
+
+    /// <summary>
+    /// <c>FurnacePower.AfterSideTurnStart</c>: a Forge of this much at the start of every
+    /// player turn.
+    /// </summary>
+    Furnace,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);
