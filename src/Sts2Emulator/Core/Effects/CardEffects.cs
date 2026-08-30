@@ -7647,6 +7647,19 @@ public static class CardEffects
         var chosen = state.DrawPile[index];
         state.RemoveFromDrawPileAt(index);
         PlayNestedCard(GeneratedData.Cards.Get(chosen.DefId), chosen.Upgraded, state, rng, chosen);
+
+        // `CardCmd.AutoPlay` moves the card to the Play pile and then to its result pile, so
+        // an auto-played card ends up somewhere. This one was taken out of the draw pile and
+        // never put down: the card VANISHED, and a live Uproar found it as a discard pile one
+        // short. Its sibling ten lines below has always done this.
+        if (chosen.IsExhaust())
+        {
+            ExhaustCard(state, chosen, rng: rng);
+        }
+        else
+        {
+            state.DiscardPile.Add(chosen with { FreeThisTurn = false });
+        }
     }
 
     private static void AutoPlayFirstDrawPileAttack(CombatState state, Random rng)

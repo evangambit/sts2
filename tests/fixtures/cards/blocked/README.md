@@ -29,3 +29,13 @@ The generator globs `../*.json` and never looks in here.
   `CountingRandom` at that position — the emulator already models the streams that way. That
   would make every RNG-dependent card capturable across all four pools. Until then a card
   that rolls is read, not captured.
+- `Voltaic-defect-ByrdonisElite.json` — the card channels one Lightning orb per Lightning
+  orb CHANNELLED THIS COMBAT, counted over `OrbChanneledEntry` history. The capture records
+  the orb QUEUE, which is not the same thing: an orb that was channelled and then evoked
+  still counts and is no longer in the queue. Cracked Core channels one at combat start, so
+  the game channelled one more and a rebuilt fight channels none.
+
+  Inferring the count from the staged queue would be right in this fixture and wrong in
+  general, which is worse than not capturing it. Same family as Supermassive above: a card
+  that reads COMBAT HISTORY rather than board state has nothing in the snapshot to rebuild
+  from.

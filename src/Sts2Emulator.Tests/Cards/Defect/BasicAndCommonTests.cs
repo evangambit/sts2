@@ -670,6 +670,27 @@ public class UproarTests
         Assert.DoesNotContain(fight.State.DrawPile, c => c.DefId == SI.Slice);
     }
 
+    /// <summary>
+    /// The auto-played attack ends up in the DISCARD pile, because `CardCmd.AutoPlay` moves
+    /// the card to the Play pile and then to its result pile. The emulator took it out of
+    /// the draw pile and never put it down, so the card vanished from the combat — three
+    /// tests here watched its damage and its absence from the draw pile, and none of them
+    /// asked where it went. A live Uproar found it as a discard pile one short.
+    /// </summary>
+    [Fact]
+    public void TheAutoPlayedAttackLandsInTheDiscardPile()
+    {
+        var fight = DefectFight.Hand(Card(Uproar)).Energy(2).Enemy(hp: 400);
+        fight.State.DrawPile.Clear();
+        fight.State.DrawPile.Add(new CardInstance(SI.Slice, false));
+
+        fight.Play();
+
+        // Uproar itself and the Slice it played.
+        Assert.Equal(2, fight.State.DiscardPile.Count);
+        Assert.Contains(fight.State.DiscardPile, c => c.DefId == SI.Slice);
+    }
+
     /// <summary>Which attack it plays is rolled, not the first one in the pile.</summary>
     [Fact]
     public void TheAttackIsRolled()
