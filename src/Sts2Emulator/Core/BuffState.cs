@@ -614,6 +614,19 @@ public enum BuffId
     /// back at the end of the turn. The Outbreak/OutbreakCounter shape again.
     /// </summary>
     MonologueApplied,
+
+    /// <summary>
+    /// <c>PaleBlueDotPower.ModifyHandDraw</c>: draw this many more, but only when the player
+    /// finished at least five card plays LAST turn — a threshold on the previous turn, not
+    /// a running total.
+    /// </summary>
+    PaleBlueDot,
+
+    /// <summary>
+    /// <c>PillarOfCreationPower.AfterCardGeneratedForCombat</c>: this much Unpowered block
+    /// for every card its owner GENERATES. The same hook Arsenal pays Strength from.
+    /// </summary>
+    PillarOfCreation,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

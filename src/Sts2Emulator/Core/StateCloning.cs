@@ -184,6 +184,7 @@ public static class StateCloning
             EtherealCardPlaysThisCombat = combat.EtherealCardPlaysThisCombat,
             LethalAttackPlay = combat.LethalAttackPlay,
             SkillCardsPlayedThisTurn = combat.SkillCardsPlayedThisTurn,
+            CardPlaysLastTurn = combat.CardPlaysLastTurn,
             UnblockedDamageHitCount = combat.UnblockedDamageHitCount,
             TargetEnemyIndex = combat.TargetEnemyIndex,
             KnownTopCount = combat.KnownTopCount,

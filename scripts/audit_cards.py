@@ -813,6 +813,10 @@ READ: dict[str, tuple[str, str]] = {
         "6cad5c1db797",
         "PagestormPower 1: drawing an ETHEREAL card draws that many more",
     ),
+    "PaleBlueDot": (
+        "668bf3c26656",
+        "PaleBlueDotPower 1/2: draw that many more, ONLY after five or more plays last turn",
+    ),
     "Panache": (
         "d063d1dcfd21",
         "PanachePower at PanacheDamage 10 upgrading by 4",
@@ -825,6 +829,10 @@ READ: dict[str, tuple[str, str]] = {
         "e28e91f8adc1",
         "ParryPower 10/14 -- inert, and the blade gains that much block after its attack",
     ),
+    "ParticleWall": (
+        "f583f01d1f1d",
+        "2 stars for 9 block, and the card RETURNS TO HAND instead of discarding",
+    ),
     "PerfectedStrike": (
         "c59e041d1155",
         "6 + 2/3 per CardTag.Strike in AllCards -- which includes the PlayPile, so it counts itself",
@@ -832,6 +840,10 @@ READ: dict[str, tuple[str, str]] = {
     "Pillage": (
         "bb4f6f43b2ee",
         "6/9 then draw one at a time while the drawn card is an Attack and the hand has room",
+    ),
+    "PillarOfCreation": (
+        "b6c1677a5bdc",
+        "PillarOfCreationPower 3/4: Unpowered block for every card GENERATED",
     ),
     "PoisonedStab": (
         "2d65de36f7c5",

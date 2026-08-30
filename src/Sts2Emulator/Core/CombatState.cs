@@ -435,6 +435,13 @@ public sealed class CombatState
     /// for the same reason every other per-turn tally here is.
     /// </summary>
     public int SkillCardsPlayedThisTurn;
+
+    /// <summary>
+    /// `CardPlaysFinished.Count(HappenedLastPlayerTurn)`. Pale Blue Dot draws more only when
+    /// the player finished at least five plays LAST turn, so the count has to survive the
+    /// reset that clears the current one.
+    /// </summary>
+    public int CardPlaysLastTurn;
     public int UnblockedDamageHitCount; // times player took unblocked damage this combat (TearAsunder)
     public int TargetEnemyIndex = -1; // -1 = auto (first living enemy), >=0 = specific index
 

@@ -1,0 +1,366 @@
+{
+  "_comment": "Captured from the live game by scripts/capture_card.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
+  "card": "PillarOfCreation",
+  "upgraded": false,
+  "encounter": "ByrdonisElite",
+  "seed": "ABCDEF",
+  "ascension": 8,
+  "target_index": 0,
+  "hand_index": 0,
+  "energy": 9,
+  "powers": [],
+  "enchantment": null,
+  "enchant_amount": null,
+  "game": {
+    "steam_buildid": "23811903",
+    "release": "v0.107.1"
+  },
+  "before": {
+    "state_type": "elite",
+    "run": {
+      "act": 1,
+      "floor": 1,
+      "ascension": 8
+    },
+    "player": {
+      "character": "The Regent",
+      "hp": 60,
+      "max_hp": 75,
+      "block": 0,
+      "energy": 9,
+      "max_energy": 3,
+      "draw_pile_count": 6,
+      "discard_pile_count": 0,
+      "exhaust_pile_count": 0,
+      "gold": 99,
+      "stars": 9,
+      "hand": [
+        {
+          "index": 0,
+          "id": "PILLAR_OF_CREATION",
+          "name": "Pillar of Creation",
+          "type": "Power",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
+          "is_upgraded": false
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_REGENT",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
+          "is_upgraded": false
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_REGENT",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
+          "is_upgraded": false
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_REGENT",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "AnyEnemy",
+          "is_upgraded": false
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_REGENT",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "AnyEnemy",
+          "is_upgraded": false
+        },
+        {
+          "index": 5,
+          "id": "DEFEND_REGENT",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
+          "is_upgraded": false
+        }
+      ],
+      "status": []
+    },
+    "battle": {
+      "round": 1,
+      "turn": "player",
+      "is_play_phase": true
+    },
+    "enemies": [
+      {
+        "entity_id": "BYRDONIS_0",
+        "name": "Byrdonis",
+        "hp": 90,
+        "max_hp": 90,
+        "block": 0,
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "17",
+            "title": "Aggressive"
+          }
+        ],
+        "status": [
+          {
+            "id": "TERRITORIAL_POWER",
+            "name": "Territorial",
+            "amount": 1,
+            "type": "Buff"
+          }
+        ]
+      }
+    ],
+    "allies": [],
+    "menu_screen": null,
+    "menu_options": null
+  },
+  "after": {
+    "state_type": "elite",
+    "run": {
+      "act": 1,
+      "floor": 1,
+      "ascension": 8
+    },
+    "player": {
+      "character": "The Regent",
+      "hp": 60,
+      "max_hp": 75,
+      "block": 0,
+      "energy": 8,
+      "max_energy": 3,
+      "draw_pile_count": 6,
+      "discard_pile_count": 0,
+      "exhaust_pile_count": 0,
+      "gold": 99,
+      "stars": 9,
+      "hand": [
+        {
+          "index": 0,
+          "id": "DEFEND_REGENT",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
+          "is_upgraded": false
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_REGENT",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
+          "is_upgraded": false
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_REGENT",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "AnyEnemy",
+          "is_upgraded": false
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_REGENT",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "AnyEnemy",
+          "is_upgraded": false
+        },
+        {
+          "index": 4,
+          "id": "DEFEND_REGENT",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
+          "is_upgraded": false
+        }
+      ],
+      "status": [
+        {
+          "id": "PILLAR_OF_CREATION_POWER",
+          "name": "Pillar of Creation",
+          "amount": 3,
+          "type": "Buff"
+        }
+      ]
+    },
+    "battle": {
+      "round": 1,
+      "turn": "player",
+      "is_play_phase": true
+    },
+    "enemies": [
+      {
+        "entity_id": "BYRDONIS_0",
+        "name": "Byrdonis",
+        "hp": 90,
+        "max_hp": 90,
+        "block": 0,
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "17",
+            "title": "Aggressive"
+          }
+        ],
+        "status": [
+          {
+            "id": "TERRITORIAL_POWER",
+            "name": "Territorial",
+            "amount": 1,
+            "type": "Buff"
+          }
+        ]
+      }
+    ],
+    "allies": [],
+    "menu_screen": null,
+    "menu_options": null
+  },
+  "before_piles": {
+    "hand_ordered": [
+      {
+        "id": "PILLAR_OF_CREATION",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      }
+    ],
+    "draw_pile_ordered": [
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "VENERATE",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "FALLING_STAR",
+        "is_upgraded": false
+      }
+    ],
+    "discard_pile_ordered": [],
+    "exhaust_pile_ordered": []
+  },
+  "after_piles": {
+    "hand_ordered": [
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      }
+    ],
+    "draw_pile_ordered": [
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "VENERATE",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "FALLING_STAR",
+        "is_upgraded": false
+      }
+    ],
+    "discard_pile_ordered": [],
+    "exhaust_pile_ordered": []
+  }
+}

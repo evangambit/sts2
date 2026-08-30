@@ -2543,10 +2543,22 @@ public static class CardEffects
     /// </remarks>
     internal static void NoteGeneratedCard(CombatState state, int count = 1)
     {
+        if (count <= 0)
+        {
+            return;
+        }
+
         int arsenal = BuffSystem.Get(state.PlayerBuffs, BuffId.Arsenal);
-        if (arsenal > 0 && count > 0)
+        if (arsenal > 0)
         {
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, arsenal * count);
+        }
+
+        // `PillarOfCreationPower.AfterCardGeneratedForCombat`, the same hook.
+        int pillar = BuffSystem.Get(state.PlayerBuffs, BuffId.PillarOfCreation);
+        if (pillar > 0)
+        {
+            GainBlock(state, pillar * count, rng: null);
         }
     }
 
@@ -5986,7 +5998,10 @@ public static class CardEffects
                 MoveFirstHandCardToTopOfDrawPile(state);
                 return true;
             case "PillarOfCreation":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.BlockNextTurn, upgraded ? 4 : 3);
+                // Pillar of Creation: `BlockVar(3, Unpowered)` upgrading by 1 -- block for
+                // every card GENERATED, through the same hook Arsenal pays Strength from.
+                // The emulator granted block NEXT TURN, once.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.PillarOfCreation, upgraded ? 4 : 3);
                 return true;
             case "Radiate":
                 DealDamageMultiHit(state, Dmg(state, def, upgraded, card), Math.Max(1, state.Stars), rng);
@@ -6644,6 +6659,12 @@ public static class CardEffects
                 // Neutron Aegis: five stars for `PowerVar<PlatingPower>(8)` upgrading by 3.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 11 : 8);
                 break;
+            case "PaleBlueDot":
+                // Pale Blue Dot: CardsVar 1 upgrading by 1, behind a threshold of five --
+                // the power draws that many more only when the player finished five or more
+                // card plays LAST turn.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.PaleBlueDot, upgraded ? 2 : 1);
+                break;
             case "MonarchsGaze":
                 // Monarch's Gaze: a `StrengthLoss` var of 1, and the upgrade is a discount.
                 // The power takes that much temporary Strength off the target of EVERY
@@ -6670,7 +6691,6 @@ public static class CardEffects
             case "MasterPlanner":
             case "NecroMastery":
             case "Neurosurge":
-            case "PaleBlueDot":
             case "ReaperForm":
             case "Royalties":
             case "SerpentForm":

@@ -394,6 +394,28 @@ public static class CombatEngine
                 }
             );
         }
+        else if (ReturnsToHandAfterPlay(def) && state.Hand.Count < Effects.CardEffects.MaxCardsInHand)
+        {
+            // `GetResultPileTypeForCardPlay` returning Hand where it would otherwise be
+            // Discard: Particle Wall comes back. The override only redirects the DISCARD
+            // case, so a card that exhausts or goes to the draw pile is unaffected -- which
+            // is why this sits after those branches rather than in front of them.
+            state.Hand.Add(
+                card with
+                {
+                    FreeThisTurn = false,
+                    BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
+                    BonusBlock = card.BonusBlock + state.PlayedCardBonusBlock,
+                    EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
+                    EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
+                    CostBump = card.CostBump + state.PlayedCardCostBump,
+                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
+                        ? state.PlayedCardCostForCombat
+                        : card.CostForCombat,
+                    FreeUntilPlayed = false,
+                }
+            );
+        }
         else
         {
             state.DiscardPile.Add(
@@ -1209,6 +1231,8 @@ public static class CombatEngine
         state.AttackCardsPlayedThisTurn = 0;
         state.SkillCardsPlayedThisTurn = 0;
         state.AttackOrSkillCardsPlayedThisTurn = 0;
+        // Carried over before the reset: Pale Blue Dot reads LAST turn's plays.
+        state.CardPlaysLastTurn = state.CardPlaysThisTurn;
         state.CardPlaysThisTurn = 0;
         state.BlockGainsThisTurn = 0;
         state.CardsExhaustedThisTurn = 0;
@@ -1344,6 +1368,13 @@ public static class CombatEngine
                 0,
                 5
                     + BuffSystem.Get(state.PlayerBuffs, BuffId.MachineLearning)
+                    // `PaleBlueDotPower.ModifyHandDraw`, and only past the threshold: five
+                    // card plays LAST turn, or the power adds nothing at all.
+                    + (
+                        state.CardPlaysLastTurn >= 5
+                            ? BuffSystem.Get(state.PlayerBuffs, BuffId.PaleBlueDot)
+                            : 0
+                    )
                     // `DemesnePower.ModifyHandDraw`, the other half of a power that also
                     // raises max energy -- both every turn, not once.
                     + BuffSystem.Get(state.PlayerBuffs, BuffId.Demesne)
@@ -3284,6 +3315,12 @@ public static class CombatEngine
     /// </remarks>
     private static bool MasterPlannerMarks(CombatState state, CardDef def) =>
         def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.MasterPlanner) > 0;
+
+    /// <summary>
+    /// `CardModel.GetResultPileTypeForCardPlay` overridden to return Hand where the base
+    /// would return Discard — the card comes back instead of being spent.
+    /// </summary>
+    private static bool ReturnsToHandAfterPlay(CardDef def) => def.Name == "ParticleWall";
 
     private static bool ShouldPlaceOnDrawPileAfterPlay(CombatState state, CardDef def)
     {
