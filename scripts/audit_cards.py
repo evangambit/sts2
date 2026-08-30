@@ -227,6 +227,10 @@ READ: dict[str, tuple[str, str]] = {
         "26b6580c09cd",
         "DarkEmbracePower 1; the upgrade cuts the cost",
     ),
+    "DarkShackles": (
+        "f47124de99a9",
+        "DarkShacklesPower IS a TemporaryStrengthPower with IsPositive false; 9 upgrading by 6",
+    ),
     "DefendIronclad": (
         "f44f2ddf1ff3",
         "5 block upgrading by 3",

@@ -242,6 +242,17 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   encounter is part of the name now, since the same card against two boards is two
   facts).
 
+  A capture also cannot express a card that raises a SCREEN. Splash opened a
+  Discovery-style "choose a card" and the run sat on it, so the next two captures
+  timed out waiting for an opening hand that was never coming — clear it with
+  `select_card` and `index` (not `card_index`). Cards that ask the player a
+  question are the third shape to capture some other way or not at all.
+
+  The generator refusing a fixture for `no BuffId for live power X` is worth
+  reading closely rather than working around: it found Strangle (a real and badly
+  wrong stand-in, E241) and Dark Shackles (where the emulator was RIGHT and simply
+  models the power as TemporaryStrength). Read the power before deciding which.
+
 - ✅ **Per-card ground truth from the running game.** `scripts/capture_card.py` stages one
   card (plus powers, plus energy) in a live combat, plays it, and commits the before/after;
   `scripts/generate_card_capture_tests.py` renders those into `Cards/CardCaptures.g.cs`.
