@@ -80,7 +80,6 @@ public class CardCoverageTests
         "Enlightenment",
         "Enthralled",
         "Entrench",
-        "Eradicate",
         "Exterminate",
         "FallingStar",
         "Fear",

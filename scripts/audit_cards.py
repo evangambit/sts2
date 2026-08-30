@@ -399,6 +399,10 @@ READ: dict[str, tuple[str, str]] = {
         "2c5a07c23183",
         "13/16 block then RetainHandPower 1 -- the block comes from ApplyBaseDamageAndBlock, not the case",
     ),
+    "Eradicate": (
+        "51bfec7ad75c",
+        "HasEnergyCostX: 11/14 damage ONCE PER ENERGY SPENT, one target, and it Retains",
+    ),
     "EternalArmor": (
         "1b597260757c",
         "PlatingPower 9 upgrading by 3",

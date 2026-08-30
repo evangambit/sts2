@@ -4949,11 +4949,26 @@ public static class CardEffects
             case "BansheesCry":
             case "Bury":
             case "Defile":
-            case "Eradicate":
             case "Reap":
             case "Sow":
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 return true;
+            case "Eradicate":
+            {
+                // `HasEnergyCostX` with `WithHitCount(ResolveEnergyXValue())` -- 11/14
+                // damage ONCE PER ENERGY SPENT, at one target, and the card Retains. The
+                // emulator dealt a single hit and never spent the energy, which is why a
+                // live capture of it killed a 90 HP elite the emulator would have left at
+                // 79.
+                //
+                // Placed AFTER the plain-damage stack, not in the middle of it: written
+                // between `case "Defile"` and `case "Reap"` this body caught the four
+                // labels above it, and three captures said so within the minute.
+                int x = RelicEffects.ModifyXValue(state, state.Energy);
+                state.Energy = 0;
+                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), x, rng);
+                return true;
+            }
             case "Veilpiercer":
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 // `PowerCmd.Apply<VeilpiercerPower>(..., 1m, ...)` -- one stack, and NOT
