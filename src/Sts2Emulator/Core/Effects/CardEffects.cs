@@ -4898,8 +4898,17 @@ public static class CardEffects
             case "Eradicate":
             case "Reap":
             case "Sow":
+                DealDamage(state, Dmg(state, def, upgraded, card));
+                return true;
             case "Veilpiercer":
                 DealDamage(state, Dmg(state, def, upgraded, card));
+                // `PowerCmd.Apply<VeilpiercerPower>(..., 1m, ...)` -- one stack, and NOT
+                // scaled by upgrade: the upgrade only raises the damage.
+                //
+                // Its own case. This card sat in a stack of eight labels sharing one
+                // plain-damage body, so a line added "to Veilpiercer" was really added to
+                // Defile, Reap and the rest of them too.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Veilpiercer, 1);
                 return true;
             case "DefendNecrobinder":
             case "Undeath":
@@ -4921,9 +4930,23 @@ public static class CardEffects
                 ExhaustFirstDrawPileCard(state, rng);
                 return true;
             case "Dirge":
-                SummonOsty(state, upgraded ? 4 : 3);
-                AddSoulsToDrawPile(state, upgraded ? 4 : 3, upgraded);
+            {
+                // `HasEnergyCostX`, and the X is the LOOP COUNT: the card summons for the
+                // Summon var (3, upgrading to 4) once per energy spent, and makes one Soul
+                // per energy spent. The emulator summoned once and made the SUMMON AMOUNT
+                // of Souls, so at nine energy it was short eight summons and six Souls.
+                int x = RelicEffects.ModifyXValue(state, state.Energy);
+                state.Energy = 0;
+                for (int i = 0; i < x; i++)
+                {
+                    SummonOsty(state, upgraded ? 4 : 3);
+                }
+
+                // `Soul.Create`, not `Soul.CreateInHand` -- a live capture put all nine in
+                // the DRAW pile.
+                AddSoulsToDrawPile(state, x, upgraded);
                 return true;
+            }
             case "NecroMastery":
                 // `SummonVar(5m)` upgrading by 3, not 10/13 -- and the power applied is
                 // `NecroMasteryPower`, not Strength. Someone modelled "a power at amount
@@ -5292,6 +5315,12 @@ public static class CardEffects
                 return true;
             case "Haunt":
             case "LegionOfBone":
+                // Summons for every LIVING player creature, which in a solo run is one --
+                // and the card is MultiplayerOnly, so a solo run only ever sees it through
+                // a debug grant. It has no damage and no block, so the shared
+                // ApplyBaseDamageAndBlock arm it used to sit in did nothing at all.
+                SummonOsty(state, upgraded ? 8 : 6);
+                return true;
             case "ReanimatePower":
                 ApplyBaseDamageAndBlock(def, upgraded, state, card, rng);
                 return true;

@@ -1,6 +1,6 @@
 {
   "_comment": "Captured from the live game by scripts/capture_card.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "card": "BoneShards",
+  "card": "Graveblast",
   "upgraded": false,
   "encounter": "ByrdonisElite",
   "seed": "ABCDEF",
@@ -36,13 +36,13 @@
       "hand": [
         {
           "index": 0,
-          "id": "BONE_SHARDS",
-          "name": "Bone Shards",
+          "id": "GRAVEBLAST",
+          "name": "Graveblast",
           "type": "Attack",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "AllEnemies",
+          "target_type": "AnyEnemy",
           "is_upgraded": false
         },
         {
@@ -80,8 +80,8 @@
         },
         {
           "index": 4,
-          "id": "STRIKE_NECROBINDER",
-          "name": "Strike",
+          "id": "UNLEASH",
+          "name": "Unleash",
           "type": "Attack",
           "cost": "1",
           "can_play": true,
@@ -91,13 +91,13 @@
         },
         {
           "index": 5,
-          "id": "DEFEND_NECROBINDER",
-          "name": "Defend",
-          "type": "Skill",
+          "id": "STRIKE_NECROBINDER",
+          "name": "Strike",
+          "type": "Attack",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "Self",
+          "target_type": "AnyEnemy",
           "is_upgraded": false
         }
       ],
@@ -163,12 +163,12 @@
       "character": "The Necrobinder",
       "hp": 52,
       "max_hp": 66,
-      "block": 9,
+      "block": 0,
       "energy": 8,
       "max_energy": 3,
       "draw_pile_count": 6,
-      "discard_pile_count": 1,
-      "exhaust_pile_count": 0,
+      "discard_pile_count": 0,
+      "exhaust_pile_count": 1,
       "gold": 99,
       "hand": [
         {
@@ -206,8 +206,8 @@
         },
         {
           "index": 3,
-          "id": "STRIKE_NECROBINDER",
-          "name": "Strike",
+          "id": "UNLEASH",
+          "name": "Unleash",
           "type": "Attack",
           "cost": "1",
           "can_play": true,
@@ -217,13 +217,13 @@
         },
         {
           "index": 4,
-          "id": "DEFEND_NECROBINDER",
-          "name": "Defend",
-          "type": "Skill",
+          "id": "STRIKE_NECROBINDER",
+          "name": "Strike",
+          "type": "Attack",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "Self",
+          "target_type": "AnyEnemy",
           "is_upgraded": false
         }
       ],
@@ -238,7 +238,7 @@
       {
         "entity_id": "BYRDONIS_0",
         "name": "Byrdonis",
-        "hp": 81,
+        "hp": 86,
         "max_hp": 90,
         "block": 0,
         "intents": [
@@ -258,14 +258,30 @@
         ]
       }
     ],
-    "allies": [],
+    "allies": [
+      {
+        "entity_id": "OSTY_0",
+        "name": "Osty",
+        "hp": 1,
+        "max_hp": 1,
+        "block": 0,
+        "status": [
+          {
+            "id": "DIE_FOR_YOU_POWER",
+            "name": "Die for You",
+            "amount": 1,
+            "type": "Buff"
+          }
+        ]
+      }
+    ],
     "menu_screen": null,
     "menu_options": null
   },
   "before_piles": {
     "hand_ordered": [
       {
-        "id": "BONE_SHARDS",
+        "id": "GRAVEBLAST",
         "is_upgraded": false
       },
       {
@@ -278,24 +294,6 @@
       },
       {
         "id": "DEFEND_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_NECROBINDER",
-        "is_upgraded": false
-      }
-    ],
-    "draw_pile_ordered": [
-      {
-        "id": "DEFEND_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
-        "id": "ASCENDERS_BANE",
         "is_upgraded": false
       },
       {
@@ -305,13 +303,31 @@
       {
         "id": "STRIKE_NECROBINDER",
         "is_upgraded": false
+      }
+    ],
+    "draw_pile_ordered": [
+      {
+        "id": "STRIKE_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "ASCENDERS_BANE",
+        "is_upgraded": false
       },
       {
         "id": "BODYGUARD",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_NECROBINDER",
+        "id": "DEFEND_NECROBINDER",
         "is_upgraded": false
       }
     ],
@@ -333,15 +349,23 @@
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_NECROBINDER",
+        "id": "UNLEASH",
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_NECROBINDER",
+        "id": "STRIKE_NECROBINDER",
         "is_upgraded": false
       }
     ],
     "draw_pile_ordered": [
+      {
+        "id": "STRIKE_NECROBINDER",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_NECROBINDER",
+        "is_upgraded": false
+      },
       {
         "id": "DEFEND_NECROBINDER",
         "is_upgraded": false
@@ -351,28 +375,20 @@
         "is_upgraded": false
       },
       {
-        "id": "UNLEASH",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_NECROBINDER",
-        "is_upgraded": false
-      },
-      {
         "id": "BODYGUARD",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_NECROBINDER",
+        "id": "DEFEND_NECROBINDER",
         "is_upgraded": false
       }
     ],
-    "discard_pile_ordered": [
+    "discard_pile_ordered": [],
+    "exhaust_pile_ordered": [
       {
-        "id": "BONE_SHARDS",
+        "id": "GRAVEBLAST",
         "is_upgraded": false
       }
-    ],
-    "exhaust_pile_ordered": []
+    ]
   }
 }

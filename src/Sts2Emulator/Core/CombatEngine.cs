@@ -161,6 +161,14 @@ public static class CombatEngine
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FreePowerPower, -1);
         }
 
+        // Its own power, not part of the chain above: `VeilpiercerPower.BeforeCardPlayed`
+        // fires on any Ethereal card, so an Ethereal Attack spends a stack of this AND a
+        // stack of FreeAttackPower.
+        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Veilpiercer) > 0 && IsEtherealForPowers(state, card))
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Veilpiercer, -1);
+        }
+
         // `BurstPower.ModifyCardPlayCount` is OneTwoPunch's rule for SKILLS -- but the
         // play count is settled when the play is SET UP, before the card resolves, which
         // is why a Burst does not double itself. Read here for that reason; the emulator
@@ -1363,6 +1371,14 @@ public static class CombatEngine
         }
 
         cost += card.CostBump;
+
+        if (
+            BuffSystem.Get(state.PlayerBuffs, BuffId.Veilpiercer) > 0
+            && IsEtherealForPowers(state, card)
+        )
+        {
+            return 0;
+        }
 
         if (def.Type == CardType.Attack)
         {
@@ -2570,6 +2586,16 @@ public static class CombatEngine
     /// stand-in for the tag is exact within Basic rarity, which is the only rarity this
     /// asks about — the caveat `Card.IsStrikeOrDefend` carries is about cards ABOVE Basic.
     /// </summary>
+    /// <summary>
+    /// The Ethereal keyword as a POWER sees it. `GhostSeed.AfterCardEnteredCombat` adds
+    /// the keyword to basic Strikes and Defends, so those really are Ethereal to anything
+    /// that reads `Card.Keywords` -- `CardInstance.IsEthereal()` alone only knows the
+    /// printed keyword.
+    /// </summary>
+    internal static bool IsEtherealForPowers(CombatState state, CardInstance card) =>
+        card.IsEthereal()
+        || (Effects.RelicEffects.MakesBasicsEthereal(state) && IsBasicStrikeOrDefend(card));
+
     private static bool IsBasicStrikeOrDefend(CardInstance card)
     {
         var def = GeneratedData.Cards.Get(card.DefId);

@@ -369,6 +369,14 @@ public enum BuffId
     /// effect, wrong number.
     /// </summary>
     SicEm,
+
+    /// <summary>
+    /// <c>VeilpiercerPower.TryModifyEnergyCostInCombatLate</c>: ETHEREAL cards cost
+    /// nothing, and <c>BeforeCardPlayed</c> decrements one stack per Ethereal played. A
+    /// keyword-scoped cousin of <see cref="FreeAttackPower" /> and friends, which are
+    /// scoped by card TYPE -- so an Ethereal Attack consumes this, not FreeAttackPower.
+    /// </summary>
+    Veilpiercer,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

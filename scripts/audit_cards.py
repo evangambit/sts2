@@ -311,6 +311,10 @@ READ: dict[str, tuple[str, str]] = {
         "f44f2ddf1ff3",
         "5 block upgrading by 3",
     ),
+    "Defile": (
+        "a6b5e6033e67",
+        "13/17 damage, Ethereal, and nothing else -- no exhaust",
+    ),
     "DemonForm": (
         "f52b476dd53f",
         "DemonFormPower at the StrengthPower var, 2 upgrading by 1",
@@ -318,6 +322,10 @@ READ: dict[str, tuple[str, str]] = {
     "DemonicShield": (
         "11bc94552c75",
         "MultiplayerOnly; 1 HP then block equal to the OWNER's block onto the target",
+    ),
+    "Dirge": (
+        "f3e9d933e2bd",
+        "HasEnergyCostX: X summons of 3/4, and X Souls into the DRAW pile",
     ),
     "Discovery": (
         "c37ed6ee736e",
@@ -523,6 +531,10 @@ READ: dict[str, tuple[str, str]] = {
     "Knockdown": (
         "a4d6f5a6e460",
         "MultiplayerOnly; KnockdownPower multiplies only ANOTHER player's damage, so nothing alone",
+    ),
+    "LegionOfBone": (
+        "82fbd8dc1fdd",
+        "summons 6/8 per LIVING player creature; MultiplayerOnly, so one in solo",
     ),
     "Lift": (
         "865a36dfcb82",
@@ -881,6 +893,10 @@ READ: dict[str, tuple[str, str]] = {
     "Uppercut": (
         "86c14967d906",
         "13 damage with NO damage upgrade; Weak and Vulnerable both at the Power var 1/2",
+    ),
+    "Veilpiercer": (
+        "4f43e45d74bb",
+        "VeilpiercerPower: ETHEREAL cards cost 0, one stack spent per Ethereal played",
     ),
     "Vicious": (
         "2bf236b729ef",
