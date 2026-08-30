@@ -166,6 +166,14 @@ READ: dict[str, tuple[str, str]] = {
         "28d66a384f64",
         "draw 3/4 then NoDrawPower -- the lockout is half the card",
     ),
+    "BeaconOfHope": (
+        "9c7eb023b564",
+        "MultiplayerOnly; BeaconOfHopePower shares block with TEAMMATES, so nothing alone",
+    ),
+    "BeatDown": (
+        "5110a4959ae2",
+        "3/4 Attacks from the discard by StableShuffle on Rng.Shuffle, each targeted on CombatTargets",
+    ),
     "BelieveInYou": (
         "7c0411593bd4",
         "MultiplayerOnly: 2/3 energy to an ALLY, which is the player alone in singleplayer",
@@ -375,6 +383,10 @@ READ: dict[str, tuple[str, str]] = {
         "c12475a629c3",
         "5/6 x2, Strength 3/4 to self and 1 to the TARGET -- a buff, not a debuff",
     ),
+    "Finesse": (
+        "f1f61fb75f18",
+        "4/7 block and draw 1",
+    ),
     "Fisticuffs": (
         "d81463205aa6",
         "block equals the damage that LANDED plus overkill, not the printed number",
@@ -387,6 +399,10 @@ READ: dict[str, tuple[str, str]] = {
         "2d01c20a3d54",
         "12/16 block and FlameBarrierPower 4/6",
     ),
+    "FlashOfSteel": (
+        "63571cc33a2e",
+        "5 damage and draw 1",
+    ),
     "ForgottenRitual": (
         "7d1014df5741",
         "3/4 energy, and only if a card was exhausted this turn",
@@ -398,6 +414,10 @@ READ: dict[str, tuple[str, str]] = {
     "GeneticAlgorithm": (
         "9c7cc2b93b94",
         "BlockVar(CurrentBlock) starts at 1 and rises by IntVar(Increase, 3m) per play, on the card AND its DeckVersion",
+    ),
+    "GoldAxe": (
+        "40b23415dc9f",
+        "damage equals CardPlaysFinished this combat; the upgrade adds Retain",
     ),
     "HandOfGreed": (
         "6d55f411d5c9",
@@ -488,6 +508,14 @@ READ: dict[str, tuple[str, str]] = {
         "0781143380ce",
         "JugglingPower 1; the upgrade adds INNATE, not an amount",
     ),
+    "Knockdown": (
+        "a4d6f5a6e460",
+        "MultiplayerOnly; KnockdownPower multiplies only ANOTHER player's damage, so nothing alone",
+    ),
+    "Lift": (
+        "865a36dfcb82",
+        "MultiplayerOnly; 11/16 block to the targeted ally, which is the player alone",
+    ),
     "MachineLearning": (
         "b89f428eb295",
         "ModifyHandDraw + CardsVar(1); the upgrade adds Innate",
@@ -516,6 +544,10 @@ READ: dict[str, tuple[str, str]] = {
     "Mimic": (
         "4e4946c8fbe1",
         "MultiplayerOnly; block equal to the TARGET's block, so self-doubling alone",
+    ),
+    "MindBlast": (
+        "adbf0809685f",
+        "damage equals the draw pile size, Innate; the upgrade cuts the cost",
     ),
     "MoltenFist": (
         "74f5009156a4",
@@ -637,6 +669,10 @@ READ: dict[str, tuple[str, str]] = {
         "ec209d59f6ad",
         "hand into the draw pile, shuffle, then draw CardsVar(4) +2",
     ),
+    "Rend": (
+        "02ee2f05ba1a",
+        "15/18 plus 5/8 per NON-TEMPORARY debuff on the target; the upgrade raises both",
+    ),
     "Restlessness": (
         "afe77c487409",
         "draw 2/3 and 2/3 energy, and ONLY when it was the last card in hand",
@@ -680,6 +716,10 @@ READ: dict[str, tuple[str, str]] = {
     "Shatter": (
         "31e3abaee6cc",
         "hits all, then evokes the front orb TWICE per orb held",
+    ),
+    "Shockwave": (
+        "17380b0e2bed",
+        "Weak AND Vulnerable at 3/5 to every hittable enemy",
     ),
     "ShrugItOff": (
         "cfb33fefb5a4",
@@ -943,6 +983,10 @@ READ: dict[str, tuple[str, str]] = {
     "Whirlwind": (
         "5d4c9161e732",
         "HasEnergyCostX; 5/8 x the X value to all enemies",
+    ),
+    "Whistle": (
+        "24a523b51488",
+        "33 damage then CreatureCmd.Stun -- a genuine stun, unlike Knockdown's power",
     ),
     "WhiteNoise": (
         "fb9249522b8f",

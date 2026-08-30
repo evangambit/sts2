@@ -201,7 +201,7 @@ public static class CardEffects
 
             case CL.BeatDown: // 3-cost: auto-play 3/4 Attacks out of the discard pile
             {
-                AutoPlayAttacksFromDiscard(state, upgraded ? 4 : 3);
+                AutoPlayAttacksFromDiscard(state, upgraded ? 4 : 3, rng);
                 break;
             }
 
@@ -3108,23 +3108,52 @@ public static class CardEffects
     /// Beat Down's three Attacks out of the discard pile. Unplayable attacks are skipped,
     /// which is the filter the card itself carries.
     /// </summary>
-    private static void AutoPlayAttacksFromDiscard(CombatState state, int count)
+    /// <summary>
+    /// Beat Down's Attacks out of the discard pile, chosen at RANDOM.
+    /// </summary>
+    /// <remarks>
+    /// `discard.Where(Attack && !Unplayable).StableShuffle(Rng.Shuffle).Take(n)` -- the
+    /// whole eligible set is shuffled once and the first n taken, so this is one shuffle
+    /// rather than n picks. Taking the first matching card by index was deterministic and
+    /// drew nothing from the stream: the fourth card with that pair of faults after
+    /// Anointed, Catastrophe and Seeker Strike.
+    ///
+    /// `StableShuffle` sorts by `ModelId` first, so the result does not depend on discard
+    /// order.
+    /// </remarks>
+    private static void AutoPlayAttacksFromDiscard(CombatState state, int count, Random? rng = null)
     {
-        for (int i = 0; i < count; i++)
-        {
-            int index = state.DiscardPile.FindIndex(c =>
+        var eligible = state
+            .DiscardPile.Select((c, i) => (Card: c, Index: i))
+            .Where(x =>
             {
-                var d = GeneratedData.Cards.Get(c.DefId);
+                var d = GeneratedData.Cards.Get(x.Card.DefId);
                 return d.Type == CardType.Attack && !d.Unplayable;
-            });
-            if (index < 0)
-            {
-                return;
-            }
+            })
+            .OrderBy(x => GeneratedData.Cards.Get(x.Card.DefId).Entry, StringComparer.Ordinal)
+            .ToList();
+        if (eligible.Count == 0)
+        {
+            return;
+        }
 
-            var card = state.DiscardPile[index];
+        var shuffle = state.ShuffleRng ?? rng ?? new Random(0);
+        for (int i = eligible.Count - 1; i > 0; i--)
+        {
+            int j = shuffle.Next(i + 1);
+            (eligible[i], eligible[j]) = (eligible[j], eligible[i]);
+        }
+
+        var taken = eligible.Take(count).ToList();
+        foreach (var pick in taken)
+        {
+            state.AutoPlayQueue.Add(pick.Card);
+        }
+
+        // Back to front, so an earlier removal does not shift a later index.
+        foreach (int index in taken.Select(x => x.Index).OrderByDescending(i => i))
+        {
             state.DiscardPile.RemoveAt(index);
-            state.AutoPlayQueue.Add(card);
         }
     }
 
@@ -5392,10 +5421,13 @@ public static class CardEffects
                 {
                     ApplyEnemyDebuff(state, BuffId.Vulnerable, upgraded ? 3 : 2, rng);
                 }
-                else if (def.Name == "Knockdown")
-                {
-                    ApplyEnemyDebuff(state, BuffId.Stunned, upgraded ? 3 : 2, rng);
-                }
+                // Knockdown used to apply Stunned 2/3 here. `KnockdownPower` is a damage
+                // MULTIPLIER on the target, and `ModifyDamageMultiplicative` returns 1
+                // when `dealer == base.Applier` -- so it only ever amplifies another
+                // player's attacks and does nothing at all alone. The card is
+                // MultiplayerOnly and its whole singleplayer effect is the damage.
+                // Stunned is a real debuff that costs an enemy turns; Whistle below
+                // genuinely calls `CreatureCmd.Stun`, which is why that branch stays.
                 else if (def.Name == "Whistle")
                 {
                     ApplyEnemyDebuff(state, BuffId.Stunned, 1, rng);

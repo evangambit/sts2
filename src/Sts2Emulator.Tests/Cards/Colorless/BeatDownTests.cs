@@ -82,4 +82,53 @@ public class BeatDownTests
 
         Assert.Equal(54, fight.Enemy0.Hp);
     }
+
+    /// <summary>
+    /// `discard.Where(Attack && !Unplayable).StableShuffle(Rng.Shuffle).Take(n)` — which
+    /// Attacks come back is a shuffle, not the first ones by index. Fourth card with this
+    /// pair of faults after Anointed, Catastrophe and Seeker Strike.
+    /// </summary>
+    [Fact]
+    public void WhichAttacksReturnVariesWithTheShuffleStream()
+    {
+        var seen = new HashSet<string>();
+        for (int seed = 0; seed < 24; seed++)
+        {
+            var fight = Fight.Hand(Card(CL.BeatDown)).Energy(3).Enemy(hp: 400);
+            fight.State.ShuffleRng = new CountingRandom(seed);
+            fight.State.DiscardPile =
+            [
+                Card(IC.StrikeIronclad),
+                Card(IC.Bludgeon),
+                Card(IC.Cinder),
+                Card(IC.Anger),
+                Card(IC.TwinStrike),
+            ];
+
+            fight.Play();
+
+            seen.Add(string.Join(",", Fight.Ids(fight.State.DiscardPile)));
+        }
+
+        Assert.True(seen.Count > 1, $"the pick never varied: {string.Join(" | ", seen)}");
+    }
+
+    [Fact]
+    public void ItRollsOnTheShuffleStream()
+    {
+        var fight = Fight.Hand(Card(CL.BeatDown)).Energy(3).Enemy(hp: 400);
+        var stream = new CountingRandom(9);
+        fight.State.ShuffleRng = stream;
+        fight.State.DiscardPile =
+        [
+            Card(IC.StrikeIronclad),
+            Card(IC.Bludgeon),
+            Card(IC.Cinder),
+            Card(IC.Anger),
+        ];
+
+        fight.Play();
+
+        Assert.True(stream.CallCount > 0, "the shuffle stream should have been drawn from");
+    }
 }
