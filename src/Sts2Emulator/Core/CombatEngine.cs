@@ -712,6 +712,21 @@ public static class CombatEngine
         // ends, so the tax lands on the turn it was taken out and no later.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.BorrowedTime);
 
+        // `IAmInvincible.AfterAutoPostPlayPhaseEntered`: if the card is sitting on TOP of
+        // the draw pile as the play phase ends, it plays ITSELF --
+        // `AutoPlayFromDrawPile(..., 1, Top, forceExhaust: false)`. Not once per copy and
+        // not repeatedly: the copy that plays leaves the pile, so a second one under it
+        // gets its turn the same way only if it too ends up on top.
+        if (
+            state.DrawPile.Count > 0
+            && GeneratedData.Cards.Get(state.DrawPile[0].DefId).Name == "IAmInvincible"
+        )
+        {
+            var invincible = state.DrawPile[0];
+            state.RemoveFromDrawPileAt(0);
+            AutoPlay(state, invincible, rng);
+        }
+
         Effects.CardEffects.KillDoomedEnemiesForTurnEnd(state);
 
         // `DoomPower.BeforeSideTurnEnd` kills its owner when `CurrentHp <= Amount`, and the

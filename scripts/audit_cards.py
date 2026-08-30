@@ -571,6 +571,10 @@ READ: dict[str, tuple[str, str]] = {
         "40b23415dc9f",
         "damage equals CardPlaysFinished this combat; the upgrade adds Retain",
     ),
+    "HammerTime": (
+        "057d32b9c3d4",
+        "MultiplayerOnly: HammerTimePower forges for the OTHER players, so nothing at all in solo",
+    ),
     "HandOfGreed": (
         "6d55f411d5c9",
         "same Fatal gate as Feed -- Minion AND Reattach, not Minion alone",
@@ -620,6 +624,10 @@ READ: dict[str, tuple[str, str]] = {
         "PowerVar<FocusPower>(3m) is NOT upgraded -- only the damage is; the Focus is spent, not gained",
     ),
     "IceLance": ("52b81d7a8986", "RepeatVar(3) Frost, not upgraded; the damage is"),
+    "IAmInvincible": (
+        "2dae14823342",
+        "10 block; the card auto-plays ITSELF when on TOP of the draw pile as the play phase ends",
+    ),
     "Ignition": (
         "8f6b9df8dc23",
         "MultiplayerOnly; channels Plasma on the TARGET ally, which is the player alone",

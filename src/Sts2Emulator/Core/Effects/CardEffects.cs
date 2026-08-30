@@ -5812,21 +5812,23 @@ public static class CardEffects
                 }
 
                 return true;
+            case "IAmInvincible":
+                // I Am Invincible: 10 block on play, and nothing else THEN. Its
+                // `AfterAutoPostPlayPhaseEntered` auto-plays the card ITSELF when it is
+                // sitting on top of the draw pile as the play phase ends -- see
+                // CombatEngine.EndTurn. The emulator auto-played the first ATTACK in the
+                // draw pile the moment this was played, which is neither the card, the
+                // trigger, nor the time.
+                GainBlock(state, Blk(def, upgraded, card), rng);
+                return true;
             case "DefendRegent":
             case "CloakOfStars":
-            case "IAmInvincible":
             case "ParticleWall":
             case "Reflect":
+                // Cosmic Indifference and I Am Invincible have their own cases now; what
+                // is left here is block, plus Reflect's Thorns.
                 GainBlock(state, Blk(def, upgraded, card), rng);
-                if (def.Name == "CosmicIndifference")
-                {
-                    MoveFirstHandCardToTopOfDrawPile(state);
-                }
-                else if (def.Name == "IAmInvincible")
-                {
-                    AutoPlayFirstDrawPileAttack(state, rng);
-                }
-                else if (def.Name == "Reflect")
+                if (def.Name == "Reflect")
                 {
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Thorns, 1);
                 }
@@ -6615,6 +6617,13 @@ public static class CardEffects
                 // Neutron Aegis: five stars for `PowerVar<PlatingPower>(8)` upgrading by 3.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 11 : 8);
                 break;
+            case "HammerTime":
+                // Hammer Time: one stack, and the upgrade is a discount. HammerTimePower
+                // forges for every OTHER player, so in a solo run it does nothing whatever
+                // -- tracked only because the game reports the power and a capture compares
+                // the whole set. `MultiplayerOnly`, like Legion of Bone (E264).
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.HammerTime, 1);
+                break;
             // Everything below still shares the flat Strength body this pool was built with.
             // Each of these is a card whose real effect has not been read yet; carving one
             // out means giving it its own case AFTER a `break`, never in front of a label.
@@ -6624,7 +6633,6 @@ public static class CardEffects
             case "Calcify":
             case "Feral":
             case "Friendship":
-            case "HammerTime":
             case "Lethality":
             case "MasterPlanner":
             case "MonarchsGaze":

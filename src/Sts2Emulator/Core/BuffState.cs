@@ -586,6 +586,13 @@ public enum BuffId
     /// itself.
     /// </summary>
     Genesis,
+
+    /// <summary>
+    /// <c>HammerTimePower.AfterForge</c>: forges the same amount for every OTHER player.
+    /// In a solo run there are none, so the power does nothing at all — it is tracked only
+    /// because the game reports it and a capture compares the whole power set.
+    /// </summary>
+    HammerTime,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);
