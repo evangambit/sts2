@@ -12,6 +12,35 @@ namespace Sts2Emulator.Tests;
 public class CardCaptureTests
 {
     [Fact]
+    public void BodySlam_Base_Sharp_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card BodySlam --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(IC.BodySlam) with { Enchantment = Enchantment.Sharp, EnchantAmount = 5 }, Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.DefendIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 27, maxHp: 27, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(23, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(27, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
+    }
+
+    [Fact]
     public void IronWave_Base_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by

@@ -222,6 +222,18 @@ cp mod_manifest.json           "$GAMEDIR/SlayTheSpire2.app/Contents/MacOS/mods/S
   and Giant Rock run on the generic damage-and-block path and were invisible to it — they
   have tests now, but an empty `Pending` still means "every card with effect code", not
   "every card".
+- ✅ **The enchantment question is settled against the game, not against a reading.**
+  E229/E235 changed seventeen cards on the strength of `DamageCmd.Attack` being the
+  same command whether the damage is printed or calculated. Two live captures
+  confirmed it: a Sharp Body Slam with ZERO block dealt 5 — the enchantment reaches
+  a `CalculatedDamageVar`, or it would have dealt nothing — and a Sharp Sword
+  Boomerang dealt 24 as three hits of 8, so a multi-hit pays the bonus PER HIT.
+  `--enchantment` on `capture_card.py` and `debug_enchant_card` in the mod exist for
+  exactly this. Note the Sword Boomerang fixture was NOT kept: its per-hit random
+  targeting reads `Rng.CombatTargets`, and a rebuilt fight cannot reproduce the
+  game's stream position, so the totals agree while the distribution does not.
+  Capture randomly-targeted cards against a single enemy or not at all.
+
 - ✅ **Per-card ground truth from the running game.** `scripts/capture_card.py` stages one
   card (plus powers, plus energy) in a live combat, plays it, and commits the before/after;
   `scripts/generate_card_capture_tests.py` renders those into `Cards/CardCaptures.g.cs`.

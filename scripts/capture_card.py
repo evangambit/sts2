@@ -34,6 +34,15 @@ from types import ModuleType
 from typing import Any
 
 REPO = Path(__file__).resolve().parent.parent
+
+# The piles a capture records. The game also has a PlayPile, which the mod does not
+# report and which a card sits in while it resolves -- see wait_for_play_to_settle.
+PILE_KEYS = (
+    "hand_ordered",
+    "draw_pile_ordered",
+    "discard_pile_ordered",
+    "exhaust_pile_ordered",
+)
 sys.path.insert(0, str(REPO / "scripts"))
 
 import start_real_game_run  # noqa: E402
@@ -260,7 +269,44 @@ def play_card(
     if result.get("status") != "ok":
         raise RuntimeError(f"play_card failed: {result}")
 
-    return trace_real_game.wait_for_state(base_url, 0.5)
+    return wait_for_play_to_settle(base_url, card_count_before=_card_count(state))
+
+
+def _card_count(state: dict[str, Any]) -> int:
+    """Cards in the piles a capture records -- hand, draw, discard and exhaust."""
+    piles = ordered_piles(state)
+    return sum(len(piles.get(name) or []) for name in PILE_KEYS)
+
+
+def wait_for_play_to_settle(
+    base_url: str,
+    card_count_before: int,
+    timeout: float = 10.0,
+) -> dict[str, Any]:
+    """Wait until the played card has LEFT the play pile, then snapshot.
+
+    A fixed settle delay is not enough for a card that resolves slowly. Sword Boomerang
+    throws three separately-targeted hits, and a state read after the damage landed but
+    before the card finished moving showed it in no pile at all -- not hand, not discard,
+    not exhaust -- because it was still in the PlayPile, which the mod does not report.
+    The generated test then asserted an empty discard and failed against an emulator that
+    was right.
+
+    The card played leaves the recorded piles one short until it arrives somewhere, so
+    waiting for the count to come back is waiting for the play to finish.
+    """
+    deadline = time.monotonic() + timeout
+    latest = trace_real_game.wait_for_state(base_url, 0.5)
+    while time.monotonic() < deadline:
+        if _card_count(latest) >= card_count_before:
+            return latest
+        time.sleep(0.25)
+        latest = start_real_game_run.get_state(base_url)
+
+    raise RuntimeError(
+        "the played card never reached a recorded pile -- it is probably still resolving. "
+        "Capturing here would record a state with the card in no pile at all.",
+    )
 
 
 def capture(
@@ -329,6 +375,12 @@ def capture(
         "hand_index": index,
         "energy": energy,
         "powers": powers,
+        # The enchantment belongs in the FIXTURE, not just the filename. The first Sharp
+        # capture recorded it in the name alone, which would have generated a test that
+        # rebuilt a plain card and expected the enchanted number -- a fixture that fails
+        # for a reason nothing in it explains.
+        "enchantment": enchantment,
+        "enchant_amount": enchant_amount if enchantment else None,
         "game": game_version(),
         "before": before,
         "after": after,
@@ -341,16 +393,7 @@ def capture(
 
 def ordered_piles(state: dict[str, Any]) -> dict[str, Any]:
     player = state.get("player") or {}
-    return {
-        name: player.get(name)
-        for name in (
-            "hand_ordered",
-            "draw_pile_ordered",
-            "discard_pile_ordered",
-            "exhaust_pile_ordered",
-        )
-        if player.get(name) is not None
-    }
+    return {name: player.get(name) for name in PILE_KEYS if player.get(name) is not None}
 
 
 def default_out(

@@ -128,8 +128,30 @@ def pile_literal(
     pile: list[dict[str, Any]],
     constants: dict[str, str],
     ids: dict[str, int],
+    enchant_index: int | None = None,
+    enchantment: str | None = None,
+    enchant_amount: float | None = None,
 ) -> str:
-    return ", ".join(card_literal(entry, constants, ids) for entry in pile)
+    """Render a pile, decorating one card with a staged enchantment if there was one.
+
+    The mod's pile readout does NOT report enchantments -- a Sharp Sword Boomerang and a
+    plain one read identically -- so the enchantment cannot be recovered from the pile.
+    It comes from the fixture's own record of what was staged, applied at the index the
+    card was staged into. Anything that enchanted a card by other means would be
+    invisible here, which is why `check_supported` refuses a fixture claiming an
+    enchantment it cannot place.
+    """
+    out = []
+    for i, entry in enumerate(pile):
+        literal = card_literal(entry, constants, ids)
+        if enchantment is not None and i == enchant_index:
+            amount = int(enchant_amount or 0)
+            literal = (
+                f"{literal} with {{ Enchantment = Enchantment.{enchantment}, "
+                f"EnchantAmount = {amount} }}"
+            )
+        out.append(literal)
+    return ", ".join(out)
 
 
 def count_assert(expected: int, collection: str) -> str:
@@ -178,6 +200,8 @@ def test_name(fixture: dict[str, Any]) -> str:
     for spec in fixture.get("powers") or []:
         power = spec.split("=")[0].removesuffix("_POWER")
         parts.append("".join(word.capitalize() for word in power.split("_")))
+    if enchantment := fixture.get("enchantment"):
+        parts.append(enchantment.capitalize())
     return "_".join(parts) + "_MatchesLiveCapture"
 
 
@@ -203,7 +227,14 @@ def render_test(
         + (" --upgraded" if fixture["upgraded"] else "")
         + f" --encounter {fixture['encounter']} --seed {fixture['seed']}.",
         "        // Every number below is the game's, not the emulator's.",
-        f"        var fight = Fight.Hand({pile_literal(piles['hand_ordered'], constants, ids)})",
+        f"        var fight = Fight.Hand({pile_literal(
+            piles['hand_ordered'],
+            constants,
+            ids,
+            enchant_index=fixture.get('hand_index'),
+            enchantment=fixture.get('enchantment'),
+            enchant_amount=fixture.get('enchant_amount'),
+        )})",
         f"            .PlayerHp({player['hp']}, {player['max_hp']})",
         f"            .Energy({player['energy']})",
     ]
@@ -240,6 +271,10 @@ def render_test(
     if "hand_index" not in fixture:
         raise UnsupportedCaptureError(
             "capture predates hand_index; re-capture so the played card is unambiguous",
+        )
+    if fixture.get("enchantment") and fixture.get("hand_index") is None:
+        raise UnsupportedCaptureError(
+            "capture claims an enchantment but records no hand_index to put it on",
         )
     hand_index = fixture["hand_index"]
     lines += [
