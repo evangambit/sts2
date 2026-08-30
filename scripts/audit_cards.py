@@ -190,6 +190,10 @@ READ: dict[str, tuple[str, str]] = {
         "5110a4959ae2",
         "3/4 Attacks from the discard by StableShuffle on Rng.Shuffle, each targeted on CombatTargets",
     ),
+    "BeatIntoShape": (
+        "2746a617868c",
+        "5/7 damage, then Forge 5/7 per PRIOR powered hit on that target this turn",
+    ),
     "BelieveInYou": (
         "7c0411593bd4",
         "MultiplayerOnly: 2/3 energy to an ALLY, which is the player alone in singleplayer",
@@ -197,6 +201,10 @@ READ: dict[str, tuple[str, str]] = {
     "BiasedCognition": (
         "d4f233f5adf2",
         "TWO vars: FocusPower(4m) +1, and BiasedCognitionPower(1m) which drains a Focus every turn",
+    ),
+    "BigBang": (
+        "0d1d5317673f",
+        "draw 1, a star, an energy and a Forge of 5; upgrade only adds Innate",
     ),
     "BlackHole": (
         "21c730e6ad53",
@@ -254,6 +262,10 @@ READ: dict[str, tuple[str, str]] = {
         "56019526be10",
         "4 + 2/3 per stack of the TARGET's Vulnerable; the upgrade raises the multiplier",
     ),
+    "Bulwark": (
+        "e59dd8fd9f23",
+        "12/15 block and a Forge of 10/13",
+    ),
     "BurningPact": (
         "680b497e0b0c",
         "exhaust a CHOSEN card, THEN draw 2/3 -- the draw must not seed its own candidates",
@@ -278,6 +290,10 @@ READ: dict[str, tuple[str, str]] = {
         "d68da1dfdebf",
         "2/3 cards auto-played, each a StableShuffle pick off Rng.Shuffle, preferring playable",
     ),
+    "ChildOfTheStars": (
+        "538c59ae0155",
+        "ChildOfTheStarsPower 2/3: that much Unpowered block PER STAR spent on a card cost",
+    ),
     "Cinder": (
         "029fc97a5586",
         "18/24 then exhaust a random hand card on Rng.CombatCardSelection",
@@ -285,6 +301,10 @@ READ: dict[str, tuple[str, str]] = {
     "Cleanse": (
         "f4a61f813c6e",
         "summon 3/5, then EXHAUST a card CHOSEN from the draw pile",
+    ),
+    "CollisionCourse": (
+        "fd47d73b50c3",
+        "11/15 damage and a DEBRIS into hand",
     ),
     "Colossus": (
         "1808bffc3474",
@@ -294,9 +314,17 @@ READ: dict[str, tuple[str, str]] = {
         "a20ff9f7cabf",
         "2 damage x 4/5 hits to all; the upgrade raises the REPEAT, not the damage",
     ),
+    "Conqueror": (
+        "dfdf89a0f3f5",
+        "Forge 3/5 and ConquerorPower on the target -- a Sovereign Blade hit lands DOUBLE",
+    ),
     "ConsumingShadow": (
         "ab55da889c51",
         "RepeatVar(2) +1 Dark orbs, and a power that evokes the LAST orb at each side turn end",
+    ),
+    "Convergence": (
+        "51fcda76ae54",
+        "RetainHand 1, an energy next turn, and a STAR next turn of 1/2",
     ),
     "Coolant": (
         "5b1ac7befd20",
@@ -313,6 +341,10 @@ READ: dict[str, tuple[str, str]] = {
     "Corruption": (
         "b0a0fc0db828",
         "CorruptionPower 1; the upgrade cuts the cost",
+    ),
+    "CosmicIndifference": (
+        "fc551e3adcb8",
+        "6/9 block, then a CHOSEN discarded card goes on top of the draw pile",
     ),
     "Countdown": (
         "fe80682a2c1d",
@@ -689,6 +721,10 @@ READ: dict[str, tuple[str, str]] = {
         "547ae627a131",
         "3/4 energy and 2 cards, and NeurosurgePower 3 on YOURSELF -- it Dooms you every turn",
     ),
+    "NeutronAegis": (
+        "01739e6c113a",
+        "5 stars for Plating 8/11",
+    ),
     "NoEscape": (
         "71a015232024",
         "Doom 10/15 plus 5 per FULL ten already on the target",
@@ -736,6 +772,10 @@ READ: dict[str, tuple[str, str]] = {
     "PanicButton": (
         "03795b5f26a9",
         "30/40 block then NoBlockPower for 2 turns; the Turns var does not upgrade",
+    ),
+    "Parry": (
+        "e28e91f8adc1",
+        "ParryPower 10/14 -- inert, and the blade gains that much block after its attack",
     ),
     "PerfectedStrike": (
         "c59e041d1155",
@@ -821,6 +861,10 @@ READ: dict[str, tuple[str, str]] = {
         "ec209d59f6ad",
         "hand into the draw pile, shuffle, then draw CardsVar(4) +2",
     ),
+    "RefineBlade": (
+        "439879250eda",
+        "Forge 9/13 and an energy next turn",
+    ),
     "Rend": (
         "02ee2f05ba1a",
         "15/18 plus 5/8 per NON-TEMPORARY debuff on the target; the upgrade raises both",
@@ -832,6 +876,10 @@ READ: dict[str, tuple[str, str]] = {
     "RollingBoulder": (
         "38d50e459556",
         "RollingBoulderPower 5/10; IncrementAmount 5 is the power's growth",
+    ),
+    "RoyalGamble": (
+        "2a67a322d546",
+        "5 stars for NINE stars, and it Exhausts; upgrade adds Retain",
     ),
     "Rupture": (
         "165723b123ef",
@@ -868,6 +916,10 @@ READ: dict[str, tuple[str, str]] = {
     "SeekerStrike": (
         "0b84fd59f9b3",
         "9/12 then one of THREE draw-pile cards sampled by StableShuffle on CombatCardSelection",
+    ),
+    "SeekingEdge": (
+        "59e6df5684e0",
+        "an inert power the blade reads to hit ALL enemies, plus Forge 7/11",
     ),
     "SentryMode": (
         "e37e1a42ddc0",
@@ -925,6 +977,10 @@ READ: dict[str, tuple[str, str]] = {
         "580df34b806c",
         "9 damage plus 2/3 per SOUL in the EXHAUST pile, at the target only",
     ),
+    "SovereignBlade": (
+        "739edf0963d8",
+        "the Forge token: 10 + all forged damage, once; SeekingEdge hits all, Parry gives block",
+    ),
     "Spinner": (
         "2e4bbee2ca95",
         "the Glass orb on play is the WHOLE upgrade; the power channels one at each energy reset",
@@ -941,6 +997,10 @@ READ: dict[str, tuple[str, str]] = {
     "Splash": (
         "d45d8307477e",
         "three Attacks from the OTHER characters' pools, canSkip, upgraded if the card is, free this turn",
+    ),
+    "SpoilsOfBattle": (
+        "80e64c39eb5d",
+        "Forge 5/8 then draw two",
     ),
     "Stampede": (
         "a9fc2868fdae",
@@ -969,6 +1029,10 @@ READ: dict[str, tuple[str, str]] = {
     "StrikeIronclad": (
         "67c1d4a0a5d2",
         "6 damage upgrading by 3",
+    ),
+    "SummonForth": (
+        "7de39cc98838",
+        "pulls every Sovereign Blade to HAND, then Forge 8/11",
     ),
     "SwordBoomerang": (
         "07bb371af7ba",
@@ -1001,6 +1065,10 @@ READ: dict[str, tuple[str, str]] = {
     "TheHunt": (
         "f5fda73d95f0",
         "extra CardReward of 3 from the room's own pool, behind the Fatal gate",
+    ),
+    "TheSmith": (
+        "b9d799312c6c",
+        "4 stars for a Forge of 30/40",
     ),
     "ThinkingAhead": (
         "d108fc8a7af1",
@@ -1402,6 +1470,10 @@ READ: dict[str, tuple[str, str]] = {
         "E170: BeforeFlushLate raises a min-0 selection every turn and gives each pick GiveSingleTurnRetain",
     ),
     "Zap": ("7552bd742ca7", "one Lightning channel; the upgrade is the cost"),
+    "WroughtInWar": (
+        "48a62bd32743",
+        "7/9 damage and a Forge of 7/9",
+    ),
 }
 
 

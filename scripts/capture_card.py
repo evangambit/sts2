@@ -89,6 +89,7 @@ def stage_card(
     card: str,
     upgraded: bool,
     energy: int,
+    stars: int | None = None,
     timeout: float = 15.0,
     enchantment: str | None = None,
     enchant_amount: float = 1.0,
@@ -129,6 +130,18 @@ def stage_card(
     )
     if result.get("status") != "ok":
         raise RuntimeError(f"debug_set_energy failed: {result}")
+
+    # Stars gate a play exactly as energy does, so a card costing more than Divine Right's
+    # opening three cannot be staged without setting them -- Seven Stars wants seven. Left
+    # alone by default, because for every other character the counter is not part of the
+    # board and a capture should not invent one.
+    if stars is not None:
+        result = trace_real_game.post_action(
+            base_url,
+            {"action": "debug_set_stars", "amount": stars},
+        )
+        if result.get("status") != "ok":
+            raise RuntimeError(f"debug_set_stars failed: {result}")
 
     if enchantment is not None:
         # debug_add_card puts the card on TOP of the hand, so index 0 is the one just
@@ -362,14 +375,18 @@ def wait_for_play_to_settle(
     latest = trace_real_game.wait_for_state(base_url, 0.5)
     while time.monotonic() < deadline:
         if _card_count(latest) >= target:
-            if not consumed:
-                return latest
-            # A consumed card's count comes back the instant it leaves hand, which is
-            # BEFORE its effect resolves -- the count cannot say when a Power has
-            # finished. Wait for the board to stop moving instead.
+            # The count coming back is necessary and not sufficient, for two reasons that
+            # meet here. A CONSUMED card's count returns the instant it leaves hand, before
+            # its effect has resolved. And a card that GENERATES another can have the
+            # generated card restore the count while the played one is still in the Play
+            # pile -- Collision Course made a Debris and was snapshotted in no pile at all,
+            # which generated a test asserting an empty discard against an emulator that
+            # was right. Waiting for the board to stop MOVING answers both.
             time.sleep(0.5)
             again = start_real_game_run.get_state(base_url)
-            if _settle_key(again) == _settle_key(latest):
+            if _card_count(again) >= target and _settle_key(again) == _settle_key(
+                latest
+            ):
                 return again
             latest = again
             continue
@@ -390,6 +407,7 @@ def capture(
     seed: str,
     ascension: int,
     energy: int,
+    stars: int | None,
     target_index: int,
     reuse_run: bool,
     powers: list[str],
@@ -418,6 +436,7 @@ def capture(
         card,
         upgraded,
         energy,
+        stars=stars,
         enchantment=enchantment,
         enchant_amount=enchant_amount,
     )
@@ -534,6 +553,15 @@ def main() -> None:
         help="energy to set before playing, so cost never decides the capture",
     )
     parser.add_argument(
+        "--stars",
+        type=int,
+        default=None,
+        help=(
+            "stars to set before playing, for a Regent card whose STAR cost is more than "
+            "the three Divine Right opens with. Left alone by default"
+        ),
+    )
+    parser.add_argument(
         "--target",
         type=int,
         default=0,
@@ -563,6 +591,7 @@ def main() -> None:
         args.seed,
         args.ascension,
         args.energy,
+        args.stars,
         args.target,
         args.reuse_run,
         args.power,

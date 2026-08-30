@@ -134,6 +134,15 @@ public static class CombatEngine
         state.Energy -= energyToSpend;
         // `SpendResources` takes the stars AFTER the energy.
         state.Stars = Math.Max(0, state.Stars - starsToSpend);
+
+        // `Hook.AfterStarsSpent`, dispatched from `CardModel.SpendStars` and from nowhere
+        // else -- paying a card's star COST is the only thing that counts as spending, so
+        // a card that burns the counter inside its own effect does not pay this.
+        int childOfTheStars = BuffSystem.Get(state.PlayerBuffs, BuffId.ChildOfTheStars);
+        if (starsToSpend > 0 && childOfTheStars > 0)
+        {
+            Effects.CardEffects.GainBlock(state, childOfTheStars * starsToSpend, rng);
+        }
         // What this play actually cost, which is what CardPlay.Resources.EnergyValue
         // reports: an X card is printed at zero and takes the rest of the bar inside its
         // own effect, so the printed cost would tell a relic the play was free.
@@ -879,6 +888,12 @@ public static class CombatEngine
             {
                 BuffSystem.Apply(enemy.Buffs, BuffId.Debilitate, -1);
             }
+
+            // `ConquerorPower.AfterSideTurnEnd`, the same shape.
+            if (BuffSystem.Get(enemy.Buffs, BuffId.Conqueror) > 0)
+            {
+                BuffSystem.Apply(enemy.Buffs, BuffId.Conqueror, -1);
+            }
         }
 
         // Dark Embrace: deferred draw for Ethereal cards exhausted at end of turn.
@@ -937,6 +952,12 @@ public static class CombatEngine
         }
         state.PlayerHpLostThisTurn = 0;
         state.CardsPlayedThisTurn = 0;
+        // `HappenedThisTurn` on the damage history, which Beat Into Shape reads per target.
+        foreach (var enemy in state.Enemies)
+        {
+            enemy.PoweredHitsThisTurn = 0;
+        }
+
         state.ShivsPlayedThisTurn = 0;
 
         // After the energy reset, which is where the game puts it and says why.
@@ -1191,6 +1212,15 @@ public static class CombatEngine
         if (neurosurge > 0)
         {
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Doom, neurosurge);
+        }
+
+        // `StarNextTurnPower.AfterEnergyReset`: the stars arrive at the turn's reset and the
+        // power removes itself, so Convergence pays out exactly once.
+        int starNextTurn = BuffSystem.Get(state.PlayerBuffs, BuffId.StarNextTurn);
+        if (starNextTurn > 0)
+        {
+            Effects.CardEffects.GainStars(state, starNextTurn);
+            BuffSystem.Remove(state.PlayerBuffs, BuffId.StarNextTurn);
         }
 
         // `SummonNextTurnPower.AfterPlayerTurnStart`: summons for its amount and then

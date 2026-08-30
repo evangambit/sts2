@@ -2550,6 +2550,75 @@ public static class CardEffects
         }
     }
 
+    /// <summary>The Regent's Sovereign Blade, a Token the Forge mechanic hands out.</summary>
+    private const int SovereignBladeId = 448;
+
+    /// <summary>
+    /// `ForgeCmd.Forge`: give the player a SOVEREIGN BLADE if they have no un-exhausted
+    /// one, then add this much damage to EVERY blade they hold, exhausted ones included.
+    /// </summary>
+    /// <remarks>
+    /// The growth rides on the copy, as `CardInstance.BonusDamage` does for Rampage, which
+    /// is what lets an exhausted blade keep growing while a fresh one starts at ten.
+    ///
+    /// `Hook.AfterForge` has exactly one listener, `HammerTimePower`, and it forges for the
+    /// OTHER players — nothing at all in a solo run, so there is no hook to dispatch here.
+    /// `SovereignBlade.SetRepeats` has no callers anywhere in the game, so the blade's hit
+    /// count is always one.
+    /// </remarks>
+    internal static void Forge(CombatState state, int amount)
+    {
+        bool anyLive =
+            state.Hand.Any(c => c.DefId == SovereignBladeId)
+            || state.DrawPile.Any(c => c.DefId == SovereignBladeId)
+            || state.DiscardPile.Any(c => c.DefId == SovereignBladeId);
+        if (!anyLive)
+        {
+            AddGeneratedCardToHand(state, SovereignBladeId);
+        }
+
+        foreach (
+            var pile in new[] { state.Hand, state.DrawPile, state.DiscardPile, state.ExhaustPile }
+        )
+        {
+            for (int i = 0; i < pile.Count; i++)
+            {
+                if (pile[i].DefId == SovereignBladeId)
+                {
+                    pile[i] = pile[i] with { BonusDamage = pile[i].BonusDamage + amount };
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Summon Forth: every Sovereign Blade NOT already in hand is moved there --
+    /// `AllCards.OfType&lt;SovereignBlade&gt;().Where(pile is null or not Hand)`, which
+    /// takes them out of the exhaust pile too.
+    /// </summary>
+    /// <summary>
+    /// `ConquerorPower.ModifyDamageMultiplicative`: DOUBLE, and only when
+    /// `cardSource is SovereignBlade`. The card-source gate is why it is applied at the
+    /// blade rather than in `BuffSystem.IncomingDamage`, which cannot see the card.
+    /// </summary>
+    private static int ConqueredDamage(EnemyState target, int amount) =>
+        BuffSystem.Get(target.Buffs, BuffId.Conqueror) > 0 ? amount * 2 : amount;
+
+    private static void PullSovereignBladesToHand(CombatState state)
+    {
+        foreach (var pile in new[] { state.DrawPile, state.DiscardPile, state.ExhaustPile })
+        {
+            for (int i = pile.Count - 1; i >= 0; i--)
+            {
+                if (pile[i].DefId == SovereignBladeId && state.Hand.Count < MaxCardsInHand)
+                {
+                    state.Hand.Add(pile[i]);
+                    pile.RemoveAt(i);
+                }
+            }
+        }
+    }
+
     private static void PrimeRocketPunches(CombatState state)
     {
         foreach (var pile in new[] { state.Hand, state.DrawPile, state.DiscardPile })
@@ -3730,6 +3799,8 @@ public static class CardEffects
         }
 
         totalDamage = damage;
+        // One `DamageReceivedEntry` per hit, which is what Beat Into Shape counts.
+        target.PoweredHitsThisTurn++;
         int absorbed = Math.Min(target.Block, damage);
         target.Block -= absorbed;
         int hpLoss = damage - absorbed;
@@ -4370,10 +4441,15 @@ public static class CardEffects
                 return true;
             }
             case "StrikeDefect":
+            case "WroughtInWar":
+                // 7/9 damage and a Forge of 7/9. Its own case, out of a stack whose body is
+                // three `def.Name ==` branches it never matched.
+                DealDamage(state, Dmg(state, def, upgraded, card));
+                Forge(state, upgraded ? 9 : 7);
+                return true;
             case "AdaptiveStrike":
             case "MomentumStrike":
             case "Synthesis":
-            case "WroughtInWar":
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 if (def.Name == "AdaptiveStrike")
                 {
@@ -5689,10 +5765,30 @@ public static class CardEffects
             case "KinglyKick":
                 DealDamage(state, Dmg(state, def, upgraded, card));
                 return true;
-            case "DefendRegent":
             case "Bulwark":
-            case "CloakOfStars":
+                // 12/15 block and a Forge of 10/13, which the shared block body had none of.
+                GainBlock(state, Blk(def, upgraded, card), rng);
+                Forge(state, upgraded ? 13 : 10);
+                return true;
             case "CosmicIndifference":
+                // 6/9 block, then a card CHOSEN from the DISCARD pile goes on TOP of the
+                // draw pile -- Headbutt's screen, on a card that had neither the number nor
+                // the choice.
+                GainBlock(state, Blk(def, upgraded, card), rng);
+                if (state.DiscardPile.Count > 0)
+                {
+                    OpenCardSelection(
+                        state,
+                        CardSelectionKind.DiscardToDrawPileTop,
+                        state.DiscardPile.Count,
+                        def.Id,
+                        autoPick: state.DiscardPile.Count - 1
+                    );
+                }
+
+                return true;
+            case "DefendRegent":
+            case "CloakOfStars":
             case "IAmInvincible":
             case "ParticleWall":
             case "Reflect":
@@ -5734,14 +5830,26 @@ public static class CardEffects
                 return true;
             }
             case "BeatIntoShape":
-                DealDamage(
-                    state,
-                    Dmg(state, def, upgraded, card) + state.PlayerBlock / Math.Max(1, upgraded ? 3 : 4)
-                );
-                return true;
-            case "CollisionCourse":
+            {
+                // 5/7 damage, then a Forge of CalculationBase 5/7 plus CalculationExtra 5/7
+                // for each powered hit the player has landed ON THIS TARGET this turn --
+                // minus the hits this very attack just made, so it does not count itself.
+                //
+                // The emulator dealt damage scaled by the player's BLOCK and forged nothing.
+                var shaped = FirstEnemy(state);
+                int hitsBefore = shaped?.PoweredHitsThisTurn ?? 0;
                 DealDamage(state, Dmg(state, def, upgraded, card));
-                state.Hand.Add(new CardInstance(532, false, FreeThisTurn: true));
+                int per = upgraded ? 7 : 5;
+                Forge(state, per + per * hitsBefore);
+                return true;
+            }
+            case "CollisionCourse":
+                // 11/15 damage, then a DEBRIS into hand -- `CreateCard<Debris>` through
+                // AddGeneratedCardToCombat, so it is a generated card and Arsenal pays for
+                // it. The emulator added a free VENERATE, which is a different card, free
+                // when it should not be.
+                DealDamage(state, Dmg(state, def, upgraded, card));
+                AddGeneratedCardToHand(state, ST.Debris);
                 return true;
             case "CrashLanding":
                 DealDamage(state, Dmg(state, def, upgraded, card));
@@ -5964,13 +6072,46 @@ public static class CardEffects
                 return true;
             }
             case "SovereignBlade":
-                DealDamageMultiHit(state, Dmg(state, def, upgraded, card), 1, rng);
-                if (state.PlayerBlock > 0)
+            {
+                // Ten damage plus everything forged into THIS copy, once -- `SetRepeats`
+                // has no callers, so the hit count never leaves one. With SeekingEdge it
+                // hits every enemy rather than the target; with Parry it gains that much
+                // block afterwards, from `CalculationBase 0 + Extra 1` per point.
+                //
+                // The emulator hit once for the printed ten and then DOUBLED the player's
+                // block, which is not an effect this card has.
+                int bladeDamage = Dmg(state, def, upgraded, card) + card.BonusDamage;
+                if (BuffSystem.Get(state.PlayerBuffs, BuffId.SeekingEdge) > 0)
                 {
-                    GainBlock(state, state.PlayerBlock, rng);
+                    // `ConquerorPower.ModifyDamageMultiplicative` is gated on
+                    // `cardSource is SovereignBlade`, so it lives here rather than in
+                    // BuffSystem.IncomingDamage -- the same reason Hang's does.
+                    foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToArray())
+                    {
+                        DealDamageToEnemy(state, enemy, ConqueredDamage(enemy, bladeDamage));
+                    }
+                }
+                else
+                {
+                    var bladeTarget = FirstEnemy(state);
+                    if (bladeTarget != null)
+                    {
+                        DealDamageToEnemy(
+                            state,
+                            bladeTarget,
+                            ConqueredDamage(bladeTarget, bladeDamage)
+                        );
+                    }
+                }
+
+                int parry = BuffSystem.Get(state.PlayerBuffs, BuffId.Parry);
+                if (parry > 0)
+                {
+                    GainBlock(state, parry, rng);
                 }
 
                 return true;
+            }
             case "SporeMind":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.NoBlock, 1);
                 return true;
@@ -6082,6 +6223,13 @@ public static class CardEffects
                 TransformRandomCardInHand(state, rng);
                 break;
             case "BigBang":
+                // Draw 1, a star, an energy and a Forge of 5; the upgrade only adds Innate.
+                // The emulator gave 2/3 energy and 2/3 cards and nothing else.
+                DrawCards(state, 1, rng);
+                GainStars(state, 1);
+                GainEnergy(state, 1);
+                Forge(state, 5);
+                break;
             case "BrightestFlame":
             case "Fuel":
                 GainEnergy(state, upgraded ? 3 : 2);
@@ -6104,10 +6252,13 @@ public static class CardEffects
                 break;
             case "ForegoneConclusion":
             case "HiddenCache":
+            case "TheSmith":
+                // Four stars for a Forge of 30/40 -- the biggest single forge in the pool.
+                Forge(state, upgraded ? 40 : 30);
+                break;
             case "Hotfix":
             case "KnowThyPlace":
             case "Spur":
-            case "TheSmith":
             case "UpMySleeve":
                 DrawCards(state, 1, rng);
                 GainEnergy(state, upgraded ? 1 : 0);
@@ -6166,6 +6317,11 @@ public static class CardEffects
                 AddGeneratedCardsToHand(state, 430, upgraded ? 2 : 1);
                 break;
             case "Conqueror":
+                // Forge 3/5, then ConquerorPower 1 on the TARGET: a Sovereign Blade attack
+                // against it lands at double until its side turn ends.
+                Forge(state, upgraded ? 5 : 3);
+                ApplyEnemyDebuff(state, BuffId.Conqueror, 1, rng);
+                break;
             case "Deathbringer":
             case "Eidolon":
             case "FeedingFrenzy":
@@ -6179,6 +6335,12 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
                 break;
             case "Convergence":
+                // Retain the hand, an energy next turn, and a STAR next turn -- three
+                // powers, of which the emulator applied one.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.RetainHand, 1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, 1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.StarNextTurn, upgraded ? 2 : 1);
+                break;
             case "Flanking":
             case "Monologue":
             case "Shadowmeld":
@@ -6268,18 +6430,27 @@ public static class CardEffects
             case "KnifeTrap":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Thorns, upgraded ? 6 : 4);
                 break;
-            case "LegionOfBone":
             case "SummonForth":
+                // Every Sovereign Blade not already in hand is PULLED to hand, then Forge
+                // 8/11. The emulator added a random class card.
+                PullSovereignBladesToHand(state);
+                Forge(state, upgraded ? 11 : 8);
+                break;
+            case "LegionOfBone":
                 AddRandomClassCardToHand(state, rng, freeThisTurn: true);
                 break;
             case "Glimmer":
             case "Glow":
             case "Parse":
             case "Prophesize":
+            case "SpoilsOfBattle":
+                // Forge 5/8, THEN draw two -- the draw does not upgrade.
+                Forge(state, upgraded ? 8 : 5);
+                DrawCards(state, 2, rng);
+                break;
             case "Reflex":
             case "Scourge":
             case "Soul":
-            case "SpoilsOfBattle":
                 DrawCards(state, upgraded ? 2 : 1, rng);
                 break;
             case "GoForTheEyes":
@@ -6323,10 +6494,15 @@ public static class CardEffects
                 MoveDiscardCardsToHand(state, upgraded ? 2 : 1);
                 break;
             case "RefineBlade":
-                UpgradeFirstCardInHand(state);
+                // Forge 9/13 and an energy next turn. The emulator upgraded a card in hand,
+                // which is a different card entirely.
+                Forge(state, upgraded ? 13 : 9);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnEnergy, 1);
                 break;
             case "RoyalGamble":
-                GainEnergy(state, upgraded ? 10 : 9);
+                // `StarsVar(9)` -- nine STARS for five, and it Exhausts. The upgrade adds
+                // Retain, not a bigger payout. The emulator gained nine ENERGY.
+                GainStars(state, 9);
                 break;
             case "Scavenge":
                 ExhaustRandomCardFromHand(state, rng);
@@ -6367,27 +6543,44 @@ public static class CardEffects
                 // Accelerant were sitting on the labels above this one.
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Arsenal, 1);
                 break;
+            case "ChildOfTheStars":
+                // A "BlockForStars" var of 2, upgrading by 1: the power gives that much
+                // Unpowered block PER STAR SPENT. The emulator gave a flat 1/2 Strength.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.ChildOfTheStars, upgraded ? 3 : 2);
+                break;
+            case "Parry":
+                // `PowerVar<ParryPower>(10)` upgrading by 4. The power does nothing itself;
+                // the Sovereign Blade reads it and gains that much block after its attack.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Parry, upgraded ? 14 : 10);
+                break;
+            case "SeekingEdge":
+                // One stack of an inert power plus a Forge of 7/11. The blade reads the
+                // power and hits EVERY enemy.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.SeekingEdge, 1);
+                Forge(state, upgraded ? 11 : 7);
+                break;
             case "Abrasive":
             case "Accelerant":
             case "BulkUp":
             case "Calcify":
-            case "ChildOfTheStars":
             case "Feral":
             case "Friendship":
             case "Furnace":
             case "Genesis":
             case "HammerTime":
             case "Lethality":
+            case "NeutronAegis":
+                // Five stars for `PowerVar<PlatingPower>(8)` upgrading by 3. The emulator
+                // gave a flat Strength from a shared body.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Plating, upgraded ? 11 : 8);
+                break;
             case "MasterPlanner":
             case "MonarchsGaze":
             case "NecroMastery":
             case "Neurosurge":
-            case "NeutronAegis":
             case "PaleBlueDot":
-            case "Parry":
             case "ReaperForm":
             case "Royalties":
-            case "SeekingEdge":
             case "SerpentForm":
             case "Sneaky":
             case "SpectrumShift":

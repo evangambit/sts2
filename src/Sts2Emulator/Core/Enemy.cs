@@ -67,6 +67,13 @@ public sealed class EnemyState
     public Intent CurrentIntent;
     public Intent? SecondaryIntent;
     public List<BuffState> Buffs = [];
+    /// <summary>
+    /// `DamageReceivedEntry`s against this enemy from the player, this turn, from POWERED
+    /// attacks. Beat Into Shape counts them to size its Forge, and it counts damage
+    /// INSTANCES rather than cards -- a multi-hit attack raises it once per hit.
+    /// </summary>
+    public int PoweredHitsThisTurn;
+
     public int MoveIndex;
     public int LastMove = -1; // ID of the last move chosen (to avoid repetition)
 

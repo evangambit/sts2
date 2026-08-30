@@ -535,6 +535,38 @@ public enum BuffId
     /// gives them this much Strength. Any generated card, not only a Status.
     /// </summary>
     Arsenal,
+
+    /// <summary>
+    /// <c>ChildOfTheStarsPower.AfterStarsSpent</c>: this much Unpowered block PER STAR the
+    /// owner spends. The hook fires from <c>CardModel.SpendStars</c> alone — paying a
+    /// card's star cost — and not from every way stars can leave the counter.
+    /// </summary>
+    ChildOfTheStars,
+
+    /// <summary>
+    /// <c>SeekingEdgePower</c>. Its own summary says it "doesn't actually do anything on
+    /// its own": the SOVEREIGN BLADE reads it and hits every enemy instead of one.
+    /// </summary>
+    SeekingEdge,
+
+    /// <summary>
+    /// <c>ParryPower</c>, the same shape: inert by itself, and the Sovereign Blade gains
+    /// this much block after its attack — <c>CalculationBase 0 + Extra 1</c> per point.
+    /// </summary>
+    Parry,
+
+    /// <summary>
+    /// <c>ConquerorPower</c>, a DEBUFF on an enemy: a powered attack from a SOVEREIGN BLADE
+    /// against it lands at DOUBLE — <c>cardSource is SovereignBlade</c> and nothing else.
+    /// Decrements when its owner's side turn ends, so the amount is a turn count.
+    /// </summary>
+    Conqueror,
+
+    /// <summary>
+    /// <c>StarNextTurnPower.AfterEnergyReset</c>: gain this many stars at the start of the
+    /// next turn, then remove itself. The star twin of <see cref="NextTurnEnergy" />.
+    /// </summary>
+    StarNextTurn,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);
