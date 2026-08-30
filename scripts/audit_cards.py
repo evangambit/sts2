@@ -585,6 +585,18 @@ READ: dict[str, tuple[str, str]] = {
         "49d19af65d48",
         "2/3 energy, Exhaust",
     ),
+    "Prolong": (
+        "7508e4fb5d26",
+        "BlockNextTurnPower at the owner's CURRENT block; the upgrade removes Exhaust",
+    ),
+    "Prowess": (
+        "37cb66906f00",
+        "Strength AND Dexterity, 1 each, both upgrading by 1",
+    ),
+    "Purity": (
+        "80e66546919d",
+        "exhaust up to 3/5 CHOSEN cards -- CardSelectorPrefs minimum is ZERO, so it can be declined",
+    ),
     "Pyre": (
         "06ccde0bb08d",
         "PyrePower at EnergyVar(1), upgrading by 1",
@@ -600,6 +612,10 @@ READ: dict[str, tuple[str, str]] = {
     "Rainbow": (
         "8e12f5e76a5e",
         "one of Lightning, Frost, Dark; the upgrade removes Exhaust",
+    ),
+    "Rally": (
+        "4840419816ce",
+        "MultiplayerOnly; 12/17 block to each living ally, so the player alone",
     ),
     "Rampage": (
         "fe99395a9326",

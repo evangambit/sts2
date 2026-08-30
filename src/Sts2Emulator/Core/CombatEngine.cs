@@ -1563,7 +1563,8 @@ public static class CombatEngine
                     Effects.CardEffects.ReopenExhaustSelection(
                         state,
                         selection.SourceCardDefId,
-                        selection.Amount - 1
+                        selection.Amount - 1,
+                        selection.Skippable
                     );
                 }
 

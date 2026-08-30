@@ -1050,7 +1050,13 @@ public static class CardEffects
                         state.Hand.Count,
                         def.Id,
                         autoPick: 0,
-                        amount: upgraded ? 5 : 3
+                        amount: upgraded ? 5 : 3,
+                        // `CardSelectorPrefs(prompt, 0, Cards)` -- the MINIMUM is zero, so
+                        // declining is a legal answer and so is stopping after one. This
+                        // forced the full three, which on a card whose whole use is
+                        // trimming exactly what you want gone is close to the opposite of
+                        // the effect.
+                        skippable: true
                     );
                 }
                 break;
@@ -3003,7 +3009,8 @@ public static class CardEffects
         int candidateCount,
         int sourceCardDefId,
         int autoPick,
-        int amount = 0
+        int amount = 0,
+        bool skippable = false
     ) =>
         OpenCardSelection(
             state,
@@ -3011,7 +3018,8 @@ public static class CardEffects
             [.. Enumerable.Range(0, candidateCount)],
             sourceCardDefId,
             autoPick,
-            amount
+            amount,
+            skippable
         );
 
     /// <summary>
@@ -3025,7 +3033,8 @@ public static class CardEffects
         List<int> candidates,
         int sourceCardDefId,
         int autoPick,
-        int amount = 0
+        int amount = 0,
+        bool skippable = false
     )
     {
         if (candidates.Count == 0)
@@ -3043,6 +3052,7 @@ public static class CardEffects
         {
             Kind = kind,
             Candidates = candidates,
+            Skippable = skippable,
             SourceCardDefId = sourceCardDefId,
             Amount = amount,
         };
@@ -3351,15 +3361,21 @@ public static class CardEffects
     internal static void ReopenExhaustSelection(
         CombatState state,
         int sourceCardDefId,
-        int remaining
+        int remaining,
+        bool skippable = false
     ) =>
+        // `skippable` has to be carried across the reopen. Purity's minimum of zero means
+        // the player may stop after ONE as readily as before any, and a screen that can be
+        // declined at the start and not at the second pick is a screen that forces the
+        // rest of the card once you have used any of it.
         OpenCardSelection(
             state,
             CardSelectionKind.ExhaustFromHandRepeated,
             state.Hand.Count,
             sourceCardDefId,
             autoPick: 0,
-            amount: remaining
+            amount: remaining,
+            skippable: skippable
         );
 
     private static void ResolveSelectionImmediately(

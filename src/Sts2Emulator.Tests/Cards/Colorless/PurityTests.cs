@@ -86,4 +86,79 @@ public class PurityTests
 
         Assert.Null(fight.Pending);
     }
+
+    /// <summary>
+    /// `CardSelectorPrefs(prompt, 0, Cards)` — the MINIMUM is zero, so declining is a legal
+    /// answer. The screen used to demand all three, which on a card whose whole use is
+    /// trimming exactly what you want gone is close to the opposite of the effect.
+    /// </summary>
+    [Fact]
+    public void TheScreenCanBeSkipped()
+    {
+        var fight = Fight
+            .Hand(
+                Card(CL.Purity),
+                Card(IC.StrikeIronclad),
+                Card(IC.DefendIronclad),
+                Card(IC.Bludgeon)
+            )
+            .Energy(3);
+
+        fight.Play();
+
+        Assert.NotNull(fight.State.PendingSelection);
+        Assert.True(fight.State.PendingSelection!.Skippable);
+    }
+
+    /// <summary>Skipping exhausts nothing and closes the screen.</summary>
+    [Fact]
+    public void SkippingExhaustsNothing()
+    {
+        var fight = Fight
+            .Hand(
+                Card(CL.Purity),
+                Card(IC.StrikeIronclad),
+                Card(IC.DefendIronclad),
+                Card(IC.Bludgeon)
+            )
+            .Energy(3);
+        fight.Play();
+
+        // The skip is the action one past the last candidate.
+        int skip = fight.State.PendingSelection!.Candidates.Count;
+        CombatEngine.Step(fight.State, skip, new Random(0));
+
+        Assert.Null(fight.State.PendingSelection);
+        // Purity itself is Exhaust, so it is in there -- and nothing else is.
+        Assert.Single(fight.State.ExhaustPile, c => c.DefId == CL.Purity);
+        Assert.Single(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.Hand.Count);
+    }
+
+    /// <summary>And stopping after ONE is legal too, which is the usual play.</summary>
+    [Fact]
+    public void ItCanStopAfterOne()
+    {
+        var fight = Fight
+            .Hand(
+                Card(CL.Purity),
+                Card(IC.StrikeIronclad),
+                Card(IC.DefendIronclad),
+                Card(IC.Bludgeon)
+            )
+            .Energy(3);
+        fight.Play();
+
+        fight.Choose(0);
+        Assert.NotNull(fight.State.PendingSelection);
+
+        // The candidate list shrinks with each pick, so the skip action moves with it.
+        int skip = fight.State.PendingSelection!.Candidates.Count;
+        CombatEngine.Step(fight.State, skip, new Random(0));
+
+        Assert.Null(fight.State.PendingSelection);
+        // Purity plus the one card that was chosen before stopping.
+        Assert.Equal(2, fight.State.ExhaustPile.Count);
+        Assert.Equal(2, fight.State.Hand.Count);
+    }
 }
