@@ -98,6 +98,13 @@ public static class CombatEngine
         // nothing in the game overrides it, so there is no conversion to model.)
         int starsToSpend = def.HasStarCostX ? state.Stars : Math.Max(0, def.StarCost);
 
+        // `VoidFormPower.TryModifyStarCost` zeroes the star cost of the first N cards a turn
+        // alongside their energy. Both hooks, or the card is half free.
+        if (IsFreeUnderVoidForm(state))
+        {
+            starsToSpend = 0;
+        }
+
         if (
             def.Unplayable
             || energyToSpend > state.Energy
@@ -198,6 +205,13 @@ public static class CombatEngine
         if (spiritOfAsh > 0 && IsEtherealForPowers(state, card))
         {
             Effects.CardEffects.GainBlock(state, spiritOfAsh, rng);
+        }
+
+        // `TheSealedThronePower.BeforeCardPlayed`: a star for every card its owner plays.
+        int sealedThrone = BuffSystem.Get(state.PlayerBuffs, BuffId.TheSealedThrone);
+        if (sealedThrone > 0)
+        {
+            Effects.CardEffects.GainStars(state, sealedThrone);
         }
 
         // `LethalityPower` counts the turn's Attack plays and pays out only while that
@@ -516,6 +530,13 @@ public static class CombatEngine
             }
         }
 
+        // `VoidFormPower.AfterCardPlayed` counts a play only when it is neither an auto-play
+        // nor a repeat, and this is the chosen-play path, so every arrival here counts once.
+        if (BuffSystem.Get(state.PlayerBuffs, BuffId.VoidForm) > 0)
+        {
+            state.VoidFormCardsPlayedThisTurn++;
+        }
+
         IncrementPlayedCardTypeCounters(state, def);
         ApplyAfterCardPlayedPowers(state, def, rng, energySpent);
         Effects.RelicEffects.ApplyAfterCardPlayedRares(state, def, rng);
@@ -523,6 +544,15 @@ public static class CombatEngine
         Effects.RelicEffects.FinishUnsettlingLampCard(state);
         Effects.RelicEffects.ApplyAfterHandEmptied(state, rng);
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
+
+        // `PlayerCmd.EndTurn(canBackOut: false)` called from inside Void Form's OnPlay. Run
+        // once the play has fully resolved rather than mid-effect, and cleared first so a
+        // card played by the enemy turn's own machinery cannot re-enter it.
+        if (state.EndTurnAfterPlay)
+        {
+            state.EndTurnAfterPlay = false;
+            return EndTurn(state, rng);
+        }
 
         bool playerDead = PlayerIsDead(state);
         bool allDead = NoPrimaryEnemyLeft(state);
@@ -1010,6 +1040,8 @@ public static class CombatEngine
         // ── Start of next player turn ─────────────────────────────────────────
         state.Turn++;
         state.PlayerTurn = true;
+        // `VoidFormPower.BeforeSideTurnStart` clears its own count.
+        state.VoidFormCardsPlayedThisTurn = 0;
         // `IceCream.ShouldPlayerResetEnergy` is false from turn two on, so the energy
         // carries instead of refilling.
         if (Effects.RelicEffects.ShouldResetEnergy(state, state.Turn + 1))
@@ -1677,6 +1709,13 @@ public static class CombatEngine
             return 0;
         }
 
+        // `VoidFormPower.TryModifyEnergyCostInCombatLate` -- a Late hook, so it sits with
+        // the other zero-returns rather than with the additive terms.
+        if (IsFreeUnderVoidForm(state))
+        {
+            return 0;
+        }
+
         int cost = card.CostForCombat == int.MinValue ? def.Cost : card.CostForCombat;
 
         // The game says so on the card: base.EnergyCost.UpgradeBy(-1), extracted into
@@ -1745,6 +1784,16 @@ public static class CombatEngine
         }
 
         return cost;
+    }
+
+    /// <summary>
+    /// Whether Void Form is still paying: the first `Amount` cards a turn cost nothing at
+    /// all. Its own count, which auto-plays and repeats do not raise.
+    /// </summary>
+    private static bool IsFreeUnderVoidForm(CombatState state)
+    {
+        int voidForm = BuffSystem.Get(state.PlayerBuffs, BuffId.VoidForm);
+        return voidForm > 0 && state.VoidFormCardsPlayedThisTurn < voidForm;
     }
 
     private static bool IsBlockedBySmoggy(CardDef def, CombatState state)

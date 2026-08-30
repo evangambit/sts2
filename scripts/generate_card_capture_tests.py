@@ -118,6 +118,7 @@ PRESENCE_ONLY_BUFFS = {"ORBIT_POWER": "Orbit"}
 # because that is how a missing power gets noticed at all.
 BUFF_ALIASES = {
     "ENERGY_NEXT_TURN_POWER": "NextTurnEnergy",
+    "DRAW_CARDS_NEXT_TURN_POWER": "NextTurnDraw",
     # Every `: TemporaryStrengthPower` subclass. They add nothing but a sign, and the
     # emulator models them all as the base power -- thirteen classes in the game and one
     # BuffId here, so the mapping has to be spelled out rather than derived from the name.

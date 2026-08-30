@@ -567,6 +567,10 @@ READ: dict[str, tuple[str, str]] = {
         "5d12e05575b0",
         "16/20 damage",
     ),
+    "Glow": (
+        "be94b7c9e4f1",
+        "a star (1/2), a card now, and a card next turn",
+    ),
     "GoldAxe": (
         "40b23415dc9f",
         "damage equals CardPlaysFinished this combat; the upgrade adds Retain",
@@ -606,6 +610,10 @@ READ: dict[str, tuple[str, str]] = {
     "Hemokinesis": (
         "a26ba01b34ce",
         "2 HP unblockable first, then 15/20",
+    ),
+    "HiddenCache": (
+        "09543e7bd582",
+        "a star now and StarNextTurnPower 3/4 for next turn",
     ),
     "HiddenGem": (
         "5a945d8a60b5",
@@ -872,6 +880,10 @@ READ: dict[str, tuple[str, str]] = {
     "Prolong": (
         "7508e4fb5d26",
         "BlockNextTurnPower at the owner's CURRENT block; the upgrade removes Exhaust",
+    ),
+    "Prophesize": (
+        "ce709f690c20",
+        "draw 6/9 -- the shared body it sat in drew 1/2",
     ),
     "Prowess": (
         "37cb66906f00",
@@ -1158,6 +1170,10 @@ READ: dict[str, tuple[str, str]] = {
         "f5fda73d95f0",
         "extra CardReward of 3 from the room's own pool, behind the Fatal gate",
     ),
+    "TheSealedThrone": (
+        "8644e7141677",
+        "3 stars, Ancient: a STAR for every card its owner plays",
+    ),
     "TheSmith": (
         "b9d799312c6c",
         "4 stars for a Forge of 30/40",
@@ -1233,6 +1249,10 @@ READ: dict[str, tuple[str, str]] = {
     "Vicious": (
         "2bf236b729ef",
         "ViciousPower at CardsVar 1/2",
+    ),
+    "VoidForm": (
+        "beb38ba10164",
+        "Ethereal 3-cost: the first two cards each turn cost nothing at all, and it ENDS THE TURN",
     ),
     "Volley": (
         "0fffb46d98dd",

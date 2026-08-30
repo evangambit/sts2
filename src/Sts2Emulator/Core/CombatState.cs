@@ -458,6 +458,20 @@ public sealed class CombatState
     public int PlayedCardStarsSpent;
 
     /// <summary>
+    /// `VoidFormPower`'s own `cardsPlayedThisTurn`, which is not the engine's: it counts
+    /// only plays that are neither auto-plays nor repeats (`!IsAutoPlay &&
+    /// IsLastInSeries`), and it resets at the side turn's START rather than with the rest.
+    /// </summary>
+    public int VoidFormCardsPlayedThisTurn;
+
+    /// <summary>
+    /// `PlayerCmd.EndTurn(canBackOut: false)` called from inside a card's OnPlay — Void Form
+    /// ends the turn as part of playing it. Set during the play and honoured once it has
+    /// finished resolving.
+    /// </summary>
+    public bool EndTurnAfterPlay;
+
+    /// <summary>
     /// `CardGeneratedEntry` count for this player over the whole combat, which Supermassive
     /// spends as its damage scale. Counted at `NoteGeneratedCard`, the same chokepoint
     /// Arsenal and Pillar of Creation pay from.

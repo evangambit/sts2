@@ -660,6 +660,18 @@ public enum BuffId
     /// cost, both every turn.
     /// </summary>
     Tyranny,
+
+    /// <summary>
+    /// <c>TheSealedThronePower.BeforeCardPlayed</c>: a star for every card its owner plays.
+    /// </summary>
+    TheSealedThrone,
+
+    /// <summary>
+    /// <c>VoidFormPower</c>: the first this-many cards played each turn cost NOTHING — both
+    /// <c>TryModifyEnergyCostInCombatLate</c> and <c>TryModifyStarCost</c> return zero until
+    /// the count is spent. Auto-plays do not count towards it.
+    /// </summary>
+    VoidForm,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

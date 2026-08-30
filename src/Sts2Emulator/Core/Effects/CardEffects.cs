@@ -2408,6 +2408,16 @@ public static class CardEffects
 
         for (int i = 0; i < count; i++)
         {
+            // `CardPileCmd.Draw` STOPS at a full hand -- `if (num <= 0) break`, and again on
+            // `hand.Cards.Count >= MaxCardsInHand` -- so the card that would not fit stays in
+            // the DRAW PILE. The emulator used to draw it anyway and put the overflow in the
+            // discard, which is a different card in a different place: a live Prophesize
+            // drew five of its six and left the sixth on top of the pile.
+            if (state.Hand.Count >= MaxCardsInHand)
+            {
+                break;
+            }
+
             if (state.DrawPile.Count == 0)
             {
                 ShuffleDiscardIntoDraw(state, rng);
@@ -2432,16 +2442,12 @@ public static class CardEffects
             {
                 state.AutoPlayQueue.Add(card);
             }
-            else if (state.Hand.Count < MaxCardsInHand)
-            {
-                // Slither.AfterCardDrawn re-rolls the card's cost for this combat, but
-                // only when it actually lands in HAND -- a card that goes to the discard
-                // because the hand is full keeps whatever cost it had.
-                state.Hand.Add(RollSlitherCost(state, card, rng));
-            }
             else
             {
-                state.DiscardPile.Add(card);
+                // Slither.AfterCardDrawn re-rolls the card's cost for this combat, and a
+                // drawn card always lands in HAND now -- the loop breaks at the cap rather
+                // than drawing a card it has nowhere to put.
+                state.Hand.Add(RollSlitherCost(state, card, rng));
             }
 
             // AFTER the card has landed, not next to DrawForIteration above: the hook is
@@ -6414,8 +6420,10 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.ForegoneConclusion, upgraded ? 3 : 2);
                 break;
             case "HiddenCache":
-                DrawCards(state, 1, rng);
-                GainEnergy(state, upgraded ? 1 : 0);
+                // Hidden Cache: StarsVar 1 now and `PowerVar<StarNextTurnPower>(3)` for next
+                // turn. The emulator drew a card and gave energy.
+                GainStars(state, 1);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.StarNextTurn, upgraded ? 4 : 3);
                 break;
             case "KnowThyPlace":
                 // Know Thy Place: Weak 1 and Vulnerable 1 on the TARGET, and it Exhausts
@@ -6625,10 +6633,20 @@ public static class CardEffects
                 Forge(state, upgraded ? 8 : 5);
                 DrawCards(state, 2, rng);
                 break;
-            case "Glimmer":
             case "Glow":
-            case "Parse":
+                // Glow: a star, a card, AND a card next turn -- StarsVar 1 and CardsVar 1,
+                // the second spent twice. The emulator drew and nothing else.
+                GainStars(state, upgraded ? 2 : 1);
+                DrawCards(state, 1, rng);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.NextTurnDraw, 1);
+                break;
             case "Prophesize":
+                // Prophesize: CardsVar 6, upgrading by 3. The emulator drew 1/2, which is
+                // the shared body's number and not this card's.
+                DrawCards(state, upgraded ? 9 : 6, rng);
+                break;
+            case "Glimmer":
+            case "Parse":
                 DrawCards(state, upgraded ? 2 : 1, rng);
                 break;
             case "Reflex":
@@ -6817,12 +6835,22 @@ public static class CardEffects
             case "Speedster":
             case "SpiritOfAsh":
             case "Subroutine":
-            case "TheSealedThrone":
             case "Thunder":
             case "Tracking":
             case "TrashToTreasure":
-            case "VoidForm":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
+                break;
+            case "TheSealedThrone":
+                // The Sealed Throne: three stars, Ancient, one stack -- and the power gives
+                // a STAR for every card its owner plays.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.TheSealedThrone, 1);
+                break;
+            case "VoidForm":
+                // Void Form: an Ethereal 3-cost applying VoidFormPower 2, and the upgrade
+                // only removes Ethereal. The power makes the first two cards each turn cost
+                // NOTHING -- energy and stars both -- and playing it ENDS THE TURN.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.VoidForm, 2);
+                state.EndTurnAfterPlay = true;
                 break;
             case "BlackHole":
                 // Was falling through to a Strength body it has nothing to do with. The
