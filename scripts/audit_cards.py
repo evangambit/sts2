@@ -625,13 +625,41 @@ READ: dict[str, tuple[str, str]] = {
         "ec209d59f6ad",
         "hand into the draw pile, shuffle, then draw CardsVar(4) +2",
     ),
+    "Restlessness": (
+        "afe77c487409",
+        "draw 2/3 and 2/3 energy, and ONLY when it was the last card in hand",
+    ),
+    "RollingBoulder": (
+        "38d50e459556",
+        "RollingBoulderPower 5/10; IncrementAmount 5 is the power's growth",
+    ),
     "Rupture": (
         "165723b123ef",
         "RupturePower 1/2",
     ),
+    "Salvo": (
+        "cbec2fff1d11",
+        "12/16 then RetainHandPower 1",
+    ),
+    "Scrawl": (
+        "45e5038838e0",
+        "draw until the hand is full; the upgrade adds Retain",
+    ),
     "SecondWind": (
         "c58bbda5f4af",
         "the block gain is INSIDE the exhaust loop -- per non-Attack exhausted, not once",
+    ),
+    "SecretTechnique": (
+        "712326758390",
+        "a CHOSEN Skill from the draw pile, minimum 1 so not skippable",
+    ),
+    "SecretWeapon": (
+        "5ffd99f94395",
+        "a CHOSEN Attack from the draw pile, minimum 1 so not skippable",
+    ),
+    "SeekerStrike": (
+        "0b84fd59f9b3",
+        "9/12 then one of THREE draw-pile cards sampled by StableShuffle on CombatCardSelection",
     ),
     "SetupStrike": (
         "e5ed2377e470",
@@ -661,6 +689,10 @@ READ: dict[str, tuple[str, str]] = {
     "Spite": (
         "fec43030abca",
         "5 damage, 2/3 hits if unblocked damage was received this turn",
+    ),
+    "Splash": (
+        "d45d8307477e",
+        "three Attacks from the OTHER characters' pools, canSkip, upgraded if the card is, free this turn",
     ),
     "Stampede": (
         "a9fc2868fdae",

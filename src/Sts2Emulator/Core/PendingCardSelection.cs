@@ -178,4 +178,11 @@ public sealed class PendingCardSelection
     /// nothing else claims that index.
     /// </summary>
     public bool Skippable { get; init; }
+
+    /// <summary>
+    /// Whether a card taken from <see cref="GeneratedCandidates" /> arrives upgraded.
+    /// Splash upgrades what it offers; Discovery's upgrade removes its Exhaust instead and
+    /// leaves the card alone, which is why this cannot be read off the source card.
+    /// </summary>
+    public bool GeneratedUpgraded { get; init; }
 }

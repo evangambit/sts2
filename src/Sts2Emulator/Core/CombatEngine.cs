@@ -1681,7 +1681,7 @@ public static class CombatEngine
                     state.Hand.Add(
                         new CardInstance(
                             selection.GeneratedCandidates[index],
-                            false,
+                            selection.GeneratedUpgraded,
                             FreeThisTurn: true
                         )
                     );

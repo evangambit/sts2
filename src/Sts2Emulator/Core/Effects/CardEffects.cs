@@ -181,7 +181,7 @@ public static class CardEffects
                     DealDamageToEnemy(state, target, Dmg(state, def, upgraded, card));
                 }
 
-                OpenDrawPileSampleSelection(state, def.Id, 3);
+                OpenDrawPileSampleSelection(state, def.Id, 3, rng);
                 break;
             }
 
@@ -796,8 +796,8 @@ public static class CardEffects
                 GainBlock(state, Blk(def, upgraded, card), rng);
                 break;
 
-            case IC.Splash: // 1-cost, approximate generated off-character attack with a free Strike
-                state.Hand.Add(new CardInstance(IC.StrikeIronclad, upgraded));
+            case IC.Splash: // 1-cost, choose one of three OFF-CHARACTER Attacks, free this turn
+                OpenSplashSelection(state, def.Id, upgraded, rng);
                 break;
 
             case IC.Stampede: // 2/1-cost, auto-play random Attacks at play-phase start (tracked)
@@ -3162,18 +3162,41 @@ public static class CardEffects
     /// Seeker Strike: a sample of the draw pile, of which one card comes to hand. The
     /// sample is what the card offers, so it lives in the candidate list.
     /// </summary>
+    /// <summary>
+    /// Seeker Strike's three: a RANDOM sample of the draw pile, offered as a choice.
+    /// </summary>
+    /// <remarks>
+    /// `drawPile.StableShuffle(Rng.CombatCardSelection).Take(3)`. This took the first
+    /// three indices, which is neither random nor a draw from the stream -- the same pair
+    /// of faults as Anointed and Catastrophe (E243). `StableShuffle` sorts by `ModelId`
+    /// before its Fisher-Yates, so the sample does not depend on pile order; the
+    /// candidates are then reported in PILE order, because that is what the selection
+    /// indexes into.
+    /// </remarks>
     private static void OpenDrawPileSampleSelection(
         CombatState state,
         int sourceCardDefId,
-        int sample
+        int sample,
+        Random? rng = null
     )
     {
-        var candidates = Enumerable.Range(0, state.DrawPile.Count).Take(sample).ToList();
-        if (candidates.Count == 0)
+        if (state.DrawPile.Count == 0)
         {
             return;
         }
 
+        var shuffled = Enumerable
+            .Range(0, state.DrawPile.Count)
+            .OrderBy(i => GeneratedData.Cards.Get(state.DrawPile[i].DefId).Entry, StringComparer.Ordinal)
+            .ToList();
+        var selection = CardSelectionRng(state, rng ?? new Random(0));
+        for (int i = shuffled.Count - 1; i > 0; i--)
+        {
+            int j = selection.Next(i + 1);
+            (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
+        }
+
+        var candidates = shuffled.Take(sample).OrderBy(i => i).ToList();
         OpenCardSelection(
             state,
             CardSelectionKind.DrawPileToHand,
@@ -3248,6 +3271,65 @@ public static class CardEffects
     /// lets you pick one to create. The options live on the selection because they are in
     /// no pile until the choice is made.
     /// </summary>
+    /// <summary>
+    /// `Splash`: three Attacks from the OTHER characters' pools, choose one, free this turn.
+    /// </summary>
+    /// <remarks>
+    /// The emulator handed over a plain Ironclad Strike and called it an approximation.
+    /// The card is a choice among three, they come from every character pool EXCEPT the
+    /// player's own, they are Attacks, they are upgraded if the card is, and the screen
+    /// `canSkip`. `GetDistinctForCombat` shuffles the filtered pool and takes three, on
+    /// `Rng.CombatCardGeneration`.
+    ///
+    /// The player is Ironclad wherever the run engine is concerned, so the pool is the
+    /// other four characters'. When character selection lands this wants the run's actual
+    /// character rather than the constant.
+    /// </remarks>
+    private static void OpenSplashSelection(
+        CombatState state,
+        int sourceCardDefId,
+        bool upgraded,
+        Random rng
+    )
+    {
+        // Spans cannot live in an array, so the four pools are added one at a time.
+        var pool = new List<int>();
+        pool.AddRange(CombatGenerationPool(GeneratedData.CardPools.Silent, CardType.Attack));
+        pool.AddRange(CombatGenerationPool(GeneratedData.CardPools.Defect, CardType.Attack));
+        pool.AddRange(CombatGenerationPool(GeneratedData.CardPools.Necrobinder, CardType.Attack));
+        pool.AddRange(CombatGenerationPool(GeneratedData.CardPools.Regent, CardType.Attack));
+
+        if (pool.Count == 0)
+        {
+            return;
+        }
+
+        var generation = CardGenerationRng(state, rng);
+        for (int i = pool.Count - 1; i > 0; i--)
+        {
+            int j = generation.Next(i + 1);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
+        }
+
+        var options = pool.Take(3).ToList();
+        if (state.AutoPlaying)
+        {
+            state.Hand.Add(new CardInstance(options[0], upgraded, FreeThisTurn: true));
+            return;
+        }
+
+        state.PendingSelection = new PendingCardSelection
+        {
+            Kind = CardSelectionKind.GeneratedCardToHand,
+            Candidates = [.. Enumerable.Range(0, options.Count)],
+            GeneratedCandidates = options,
+            SourceCardDefId = sourceCardDefId,
+            // `canSkip: true` on the choose-a-card screen.
+            Skippable = true,
+            GeneratedUpgraded = upgraded,
+        };
+    }
+
     private static void OpenGeneratedCardSelection(
         CombatState state,
         int sourceCardDefId,
