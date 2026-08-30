@@ -122,6 +122,10 @@ READ: dict[str, tuple[str, str]] = {
         "b56e1dbc7bcb",
         "a random potion on Rng.CombatPotionGeneration; the upgrade cuts the cost",
     ),
+    "Alignment": (
+        "a04029cf2105",
+        "3 stars for 2/3 energy",
+    ),
     "AllForOne": (
         "078fa2a6ae3b",
         "every 0-cost Attack/Skill/Power in the DISCARD returns to hand; the filter excludes Status and Curse",
@@ -142,6 +146,10 @@ READ: dict[str, tuple[str, str]] = {
         "c5f41cadb022",
         "FromHandForUpgrade ASKS; upgraded takes every upgradable card with no choice",
     ),
+    "Arsenal": (
+        "e95e87d4c740",
+        "ArsenalPower 1: Strength for every card its owner GENERATES; upgrade adds Innate",
+    ),
     "AscendersBane": (
         "3a372ec07f97",
         "Eternal, Unplayable and Ethereal; CanBeGeneratedByModifiers false",
@@ -149,6 +157,10 @@ READ: dict[str, tuple[str, str]] = {
     "AshenStrike": (
         "30f92abca715",
         "6 + 3/4 per card in the exhaust pile, through the ordinary attack command",
+    ),
+    "AstralPulse": (
+        "7b73931aeb9a",
+        "3 stars for 6/8 damage TWICE at every enemy",
     ),
     "Automation": (
         "71f4eb594f70",

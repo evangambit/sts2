@@ -529,6 +529,12 @@ public enum BuffId
     /// Late hook, so the cards that are made free stay free.
     /// </summary>
     BorrowedTime,
+
+    /// <summary>
+    /// <c>ArsenalPower.AfterCardGeneratedForCombat</c>: every card its owner GENERATES
+    /// gives them this much Strength. Any generated card, not only a Status.
+    /// </summary>
+    Arsenal,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

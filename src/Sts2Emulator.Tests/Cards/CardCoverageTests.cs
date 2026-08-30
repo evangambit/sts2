@@ -21,11 +21,8 @@ public class CardCoverageTests
     private static readonly HashSet<string> Pending =
     [
         "Afterlife",
-        "Alignment",
         "Apotheosis",
         "Apparition",
-        "Arsenal",
-        "AstralPulse",
         "BansheesCry",
         "BeatIntoShape",
         "Beckon",

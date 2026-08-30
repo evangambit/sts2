@@ -2529,6 +2529,27 @@ public static class CardEffects
     /// which is the whole reason to have a chokepoint. Statuses that arrive anywhere but
     /// the discard pile reach neither, and that is a shared gap rather than a new one.
     /// </remarks>
+    /// <summary>
+    /// `Hook.AfterCardGeneratedForCombat`, for the powers that count generated cards
+    /// whatever they are and wherever they land -- today `ArsenalPower`, which pays its
+    /// owner Strength for each one.
+    /// </summary>
+    /// <remarks>
+    /// Called from each of the emulator's generation helpers rather than from one place,
+    /// because card generation is not a single chokepoint here: Statuses go through
+    /// AddGeneratedStatusToDiscard, Souls through AddSoulsToDrawPile, and the rest through
+    /// the two AddGeneratedCard helpers. A generator that reaches none of those -- Shivs
+    /// made inline, say -- does not pay, and that is a known gap rather than a claim.
+    /// </remarks>
+    internal static void NoteGeneratedCard(CombatState state, int count = 1)
+    {
+        int arsenal = BuffSystem.Get(state.PlayerBuffs, BuffId.Arsenal);
+        if (arsenal > 0 && count > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, arsenal * count);
+        }
+    }
+
     private static void PrimeRocketPunches(CombatState state)
     {
         foreach (var pile in new[] { state.Hand, state.DrawPile, state.DiscardPile })
@@ -5657,8 +5678,12 @@ public static class CardEffects
     {
         switch (def.Name)
         {
-            case "StrikeRegent":
             case "AstralPulse":
+                // `TargetingAllOpponents(...).WithHitCount(2)` -- 6/9 damage TWICE at every
+                // enemy, for 3 stars. The emulator hit one enemy once.
+                DealDamageToAllMultiHit(state, Dmg(state, def, upgraded, card), 2);
+                return true;
+            case "StrikeRegent":
             case "Bombardment":
             case "Devastate":
             case "KinglyKick":
@@ -5992,6 +6017,10 @@ public static class CardEffects
         switch (def.Name)
         {
             case "Alignment":
+                // `EnergyVar 2` upgrading by 1, for 3 stars -- 2 and 3, not the 1 and 2 of
+                // the body it was stacked into. Its own case ABOVE that stack.
+                GainEnergy(state, upgraded ? 3 : 2);
+                break;
             case "EnergySurge":
             case "Luminesce":
             case "Supercritical":
@@ -6328,9 +6357,18 @@ public static class CardEffects
                 DealUnpoweredDamageToAll(state, state.Energy * (upgraded ? 6 : 4));
                 state.Energy = 0;
                 break;
+            case "Arsenal":
+                // `PowerVar<ArsenalPower>(1)`; the upgrade adds Innate, not a bigger stack.
+                // The POWER is what pays: every card its owner GENERATES gives them that
+                // much Strength. The emulator gave a flat 1/2 on play, which is the right
+                // stat at the wrong time and never again.
+                //
+                // Its own case ABOVE the stack it left, not inside it: Abrasive and
+                // Accelerant were sitting on the labels above this one.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Arsenal, 1);
+                break;
             case "Abrasive":
             case "Accelerant":
-            case "Arsenal":
             case "BulkUp":
             case "Calcify":
             case "ChildOfTheStars":
@@ -6832,6 +6870,7 @@ public static class CardEffects
     private static void AddGeneratedStatusToDiscard(CombatState state, int statusId, Random rng)
     {
         state.DiscardPile.Add(new CardInstance(statusId, false));
+        NoteGeneratedCard(state);
         PrimeRocketPunches(state);
         int smokestack = BuffSystem.Get(state.PlayerBuffs, BuffId.Smokestack);
         if (smokestack > 0)
@@ -7104,6 +7143,7 @@ public static class CardEffects
         if (state.Hand.Count < MaxCardsInHand)
         {
             state.Hand.Add(new CardInstance(defId, false));
+            NoteGeneratedCard(state);
         }
     }
 
@@ -7143,6 +7183,7 @@ public static class CardEffects
         for (int i = 0; i < count; i++)
         {
             state.BottomDeck(new CardInstance(446, upgraded));
+            NoteGeneratedCard(state);
         }
     }
 
@@ -7899,6 +7940,7 @@ public static class CardEffects
                     EnchantAmount: enchantAmount
                 )
             );
+            NoteGeneratedCard(state);
         }
     }
 
