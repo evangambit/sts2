@@ -126,6 +126,17 @@ public enum CardSelectionKind
     /// candidate list reproduces for free.
     /// </remarks>
     UpgradeInHand = 15,
+
+    /// <summary>
+    /// Seance: a card CHOSEN from the draw pile becomes a Soul, in place.
+    /// <c>CardSelectCmd.FromCombatPile(PileType.Draw, ...)</c> then
+    /// <c>CardCmd.TransformTo&lt;Soul&gt;</c> on each pick.
+    /// </summary>
+    /// <remarks>
+    /// The emulator transformed <c>DrawPile[0]</c>. Which card you spend is the whole
+    /// decision the card offers, and taking the top one is a rule the game does not have.
+    /// </remarks>
+    TransformDrawPileToSoul = 16,
 }
 
 /// <summary>

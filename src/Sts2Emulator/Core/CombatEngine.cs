@@ -1596,6 +1596,16 @@ public static class CombatEngine
 
                 break;
 
+            case CardSelectionKind.TransformDrawPileToSoul:
+                if (index < state.DrawPile.Count)
+                {
+                    // In place: `CardCmd.TransformTo` replaces the card where it sits, so
+                    // the pile order the rest of the turn draws from is unchanged.
+                    state.DrawPile[index] = new CardInstance(446, false); // Soul
+                }
+
+                break;
+
             case CardSelectionKind.DrawPileToHand:
                 if (
                     index < state.DrawPile.Count

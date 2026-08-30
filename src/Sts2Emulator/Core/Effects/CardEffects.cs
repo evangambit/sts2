@@ -5020,9 +5020,35 @@ public static class CardEffects
                 ApplyEnemyDebuff(state, BuffId.SicEm, upgraded ? 4 : 3, rng);
                 return true;
             case "Snap":
+            {
                 DealOstyDamage(state, upgraded ? 10 : 7);
-                AddSoulToDiscard(state, retain: true);
+
+                // `CardSelectCmd.FromHand(..., filter: c => !c.Keywords.Contains(Retain))`
+                // then `CardCmd.ApplyKeyword(chosen, Retain)` -- it makes a card in HAND
+                // Retain. The emulator put a retaining SOUL in the discard pile instead,
+                // which is a different card in a different pile.
+                //
+                // Same screen Well Laid Plans raises, but asked for one and not skippable:
+                // its prefs are `CardSelectorPrefs(prompt, 1)`, a minimum of one.
+                var keepable = new List<int>();
+                for (int i = 0; i < state.Hand.Count; i++)
+                {
+                    if (!state.Hand[i].IsRetained())
+                    {
+                        keepable.Add(i);
+                    }
+                }
+
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.RetainForNextTurn,
+                    keepable,
+                    def.Id,
+                    autoPick: keepable.Count > 0 ? keepable[0] : 0,
+                    amount: 1
+                );
                 return true;
+            }
             case "BlightStrike":
             {
                 var target = FirstEnemy(state);
@@ -5221,12 +5247,28 @@ public static class CardEffects
 
                 return true;
             case "Seance":
-                if (state.DrawPile.Count > 0)
+            {
+                // `CardSelectCmd.FromCombatPile(PileType.Draw, ..., CardsVar 1)` and then
+                // `CardCmd.TransformTo<Soul>` on the pick. The emulator transformed
+                // DrawPile[0] -- which card you spend is the whole decision the card
+                // offers, and taking the top one is a rule the game does not have. The
+                // upgrade drops the COST, not the count.
+                var pile = new List<int>();
+                for (int i = 0; i < state.DrawPile.Count; i++)
                 {
-                    state.DrawPile[0] = new CardInstance(446, false);
+                    pile.Add(i);
                 }
 
+                OpenCardSelection(
+                    state,
+                    CardSelectionKind.TransformDrawPileToSoul,
+                    pile,
+                    def.Id,
+                    autoPick: 0,
+                    amount: 1
+                );
                 return true;
+            }
             case "Transfigure":
                 TransformRandomCardInHand(state, rng);
                 GainEnergy(state, 1);

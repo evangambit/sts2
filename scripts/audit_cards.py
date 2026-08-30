@@ -729,6 +729,10 @@ READ: dict[str, tuple[str, str]] = {
         "45e5038838e0",
         "draw until the hand is full; the upgrade adds Retain",
     ),
+    "Seance": (
+        "86f68be7e66f",
+        "a CHOSEN draw-pile card becomes a Soul in place; the upgrade is a discount, not a second card",
+    ),
     "SecondWind": (
         "c58bbda5f4af",
         "the block gain is INSIDE the exhaust loop -- per non-Attack exhausted, not once",
@@ -780,6 +784,10 @@ READ: dict[str, tuple[str, str]] = {
     "Slimed": (
         "066f790a162e",
         "Exhaust, and it DRAWS 1 on play -- not a do-nothing status",
+    ),
+    "Snap": (
+        "a8b149a8f00c",
+        "OstyDamage 7/10, then a HAND card of your choosing gains Retain -- the select is outside the missing-Osty guard",
     ),
     "Spinner": (
         "2e4bbee2ca95",
