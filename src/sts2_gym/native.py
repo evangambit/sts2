@@ -2,6 +2,7 @@
 
 import ctypes
 import os
+import platform
 import sys
 from pathlib import Path
 
@@ -17,6 +18,25 @@ _REQUIRED_RUN_NATIVE_API_VERSION = 16
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def _build_hint() -> str:
+    """Build the rebuild command for the HOST platform.
+
+    These messages hardcoded `win-x64` and Windows-style backslash paths, so
+    every stale-library error on macOS or Linux told the reader to build for Windows.
+    `scripts/build.sh` already picks the runtime off `uname`, so the advice is one line.
+    """
+    runtime = {
+        "win32": "win-x64",
+        "linux": "linux-x64",
+        "darwin": "osx-arm64" if platform.machine() == "arm64" else "osx-x64",
+    }.get(sys.platform, "win-x64")
+    return (
+        f"Rebuild the native library with `bash scripts/build.sh {runtime}` "
+        f'or `dotnet publish "src/Sts2Emulator/Sts2Emulator.csproj" -c Release '
+        f'-r {runtime} --self-contained -o "out"`.'
+    )
 
 
 def _native_source_paths(repo_root: Path) -> list[Path]:
@@ -43,11 +63,9 @@ def _assert_native_library_is_fresh(path: Path) -> None:
         return
 
     raise RuntimeError(
-        f"{path} is older than {newest_source}. Rebuild the native library with "
-        f"`bash scripts/build.sh win-x64` or `dotnet publish "
-        f'"src\\Sts2Emulator\\Sts2Emulator.csproj" -c Release -r win-x64 '
-        f'--self-contained -o "out"`. Set {_ALLOW_STALE_ENV}=1 only when '
-        "intentionally testing an older native build.",
+        f"{path} is older than {newest_source}. {_build_hint()} "
+        f"Set {_ALLOW_STALE_ENV}=1 only when intentionally testing an older "
+        "native build.",
     )
 
 
@@ -57,10 +75,7 @@ def _assert_native_api_version(lib: ctypes.CDLL, path: Path) -> None:
     except AttributeError as exc:
         raise RuntimeError(
             f"{path} does not export Sts2_NativeApiVersion and is too old for "
-            "these Python bindings. Rebuild the native library with "
-            "`bash scripts/build.sh win-x64` or `dotnet publish "
-            '"src\\Sts2Emulator\\Sts2Emulator.csproj" -c Release -r win-x64 '
-            '--self-contained -o "out"`.',
+            f"these Python bindings. {_build_hint()}",
         ) from exc
 
     version_func.restype = ctypes.c_int
@@ -69,10 +84,7 @@ def _assert_native_api_version(lib: ctypes.CDLL, path: Path) -> None:
     if actual_version != _REQUIRED_NATIVE_API_VERSION:
         raise RuntimeError(
             f"{path} exports native API version {actual_version}, but "
-            f"sts2_gym requires {_REQUIRED_NATIVE_API_VERSION}. Rebuild the "
-            "native library with `bash scripts/build.sh win-x64` or "
-            '`dotnet publish "src\\Sts2Emulator\\Sts2Emulator.csproj" '
-            '-c Release -r win-x64 --self-contained -o "out"`.',
+            f"sts2_gym requires {_REQUIRED_NATIVE_API_VERSION}. {_build_hint()}",
         )
 
     try:
@@ -80,10 +92,7 @@ def _assert_native_api_version(lib: ctypes.CDLL, path: Path) -> None:
     except AttributeError as exc:
         raise RuntimeError(
             f"{path} does not export Sts2Run_NativeApiVersion and is too old "
-            "for these Python bindings. Rebuild the native library with "
-            "`bash scripts/build.sh win-x64` or `dotnet publish "
-            '"src\\Sts2Emulator\\Sts2Emulator.csproj" -c Release -r win-x64 '
-            '--self-contained -o "out"`.',
+            f"for these Python bindings. {_build_hint()}",
         ) from exc
 
     run_version_func.restype = ctypes.c_int
@@ -92,10 +101,8 @@ def _assert_native_api_version(lib: ctypes.CDLL, path: Path) -> None:
     if actual_run_version != _REQUIRED_RUN_NATIVE_API_VERSION:
         raise RuntimeError(
             f"{path} exports run native API version {actual_run_version}, but "
-            f"sts2_gym requires {_REQUIRED_RUN_NATIVE_API_VERSION}. Rebuild "
-            "the native library with `bash scripts/build.sh win-x64` or "
-            '`dotnet publish "src\\Sts2Emulator\\Sts2Emulator.csproj" '
-            '-c Release -r win-x64 --self-contained -o "out"`.',
+            f"sts2_gym requires {_REQUIRED_RUN_NATIVE_API_VERSION}. "
+            f"{_build_hint()}",
         )
 
 
@@ -958,7 +965,10 @@ def run_get_niche_rng_call_count(handle: int) -> int:
 
 
 def run_debug_set_hp(
-    handle: int, hp: int, max_hp: int, obs_buf: ctypes.Array,
+    handle: int,
+    hp: int,
+    max_hp: int,
+    obs_buf: ctypes.Array,
 ) -> None:
     """Soak-only: hand a run extra HP so it can reach the act's boss.
 

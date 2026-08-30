@@ -79,9 +79,12 @@ class ObservationLayoutTests(unittest.TestCase):
         appears anywhere else. This reads them through the native boundary rather than off
         a C# constant, which is the half a C# test cannot cover.
         """
-        # A fresh combat holds no orbs, so every slot reads empty and capacity is the
-        # starting three.
-        self.assertEqual(int(self.obs[native.OBS_ORB_CAPACITY_OFFSET]), 3)
+        # `Sts2CombatEnv` builds an IRONCLAD combat, and `BaseOrbSlotCount` is a
+        # CharacterModel property only `Defect.cs` overrides -- so capacity reads ZERO
+        # here. It read 3 until the emulator stopped handing every character the Defect's
+        # queue, and this assertion went stale with it: the Python suite is not part of
+        # `dotnet test`, so nothing re-ran it for four days.
+        self.assertEqual(int(self.obs[native.OBS_ORB_CAPACITY_OFFSET]), 0)
         slots = [
             int(self.obs[native.OBS_ORB_OFFSET + i * native.OBS_ORB_SLOT_SIZE])
             for i in range(native.OBS_MAX_ORBS)

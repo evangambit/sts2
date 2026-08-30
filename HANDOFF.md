@@ -49,13 +49,19 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 ```bash
 cd ~/Projects/STSS/emulator
 
-# C# unit tests (2248 pass; ~2m on a quiet machine, and see the note below)
+# C# unit tests (3650 pass, 1 skipped; ~2m on a quiet machine, and see the note below)
 dotnet test src/Sts2Emulator.Tests/
 
-# Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib)
+# Build the NativeAOT dylib the Python layer loads (→ out/Sts2Emulator.dylib).
+# scripts/build.sh runs under bash and does NOT read ~/.zshrc, so export DOTNET_ROOT
+# and PATH first or it dies with `dotnet: command not found`.
 bash scripts/build.sh osx-arm64
 
-# Python gym tests (411 pass, 6 skipped) — drives the live dylib via ctypes
+# Python gym tests (492 pass, 6 skipped) — drives the live dylib via ctypes, so BUILD
+# FIRST. This suite is not part of `dotnet test` and is the only thing that crosses the
+# native boundary: when the Defect work stopped handing every character three orb slots,
+# a Python assertion that the Ironclad has three went stale and nothing noticed for four
+# days. Run it after any change to CombatState or the interop layer.
 uv run python -m unittest discover -s tests/python
 
 # Audits (all three are worklists; each has a docstring saying what it cannot see)
@@ -103,7 +109,25 @@ macOS (find `sts2.dll` under any `data_sts2_<platform>` dir; `shasum` fallback).
 **Gotcha:** `src/sts2_gym/native.py` has an mtime freshness guard — if you touch any
 `src/Sts2Emulator` source without rebuilding the dylib, Python calls fail. Re-run
 `scripts/build.sh osx-arm64`, or set `STS2_ALLOW_STALE_NATIVE=1` for intentional stale
-runs.
+runs. The error names the rebuild command for the HOST platform now — it used to tell
+every macOS reader to build `win-x64` with backslash paths, which is the kind of message
+that trains people to stop reading errors.
+
+**Gotcha:** `bash scripts/build.sh` does not read `~/.zshrc`, so in a non-login shell it
+fails with `dotnet: command not found` even though `dotnet` works interactively. Export
+`DOTNET_ROOT` and `PATH` in the same command, as the smoke test at the bottom of this file
+does.
+
+**Gotcha:** the Python suite is not part of `dotnet test`, and it is the only thing that
+crosses the native boundary. When the Defect work stopped handing every character three
+orb slots, a Python assertion that a fresh Ironclad combat has three slots went stale and
+nothing caught it for four days. Run `uv run python -m unittest discover -s tests/python`
+after changes to `CombatState` or the interop layer, not only before a commit.
+
+**Known red:** `bash lint-and-test.sh` has been failing since a `black` version bump that
+wants to reformat a dozen files nobody in this work has touched, including the RL
+worktree's. Keep your own edited files formatted (`uv run black <files>`) and leave the
+rest; do not take the red suite as evidence about your change.
 
 ## The mod (STS2MCP) — build / install / API
 
@@ -2541,12 +2565,13 @@ no game running:
   records the version that was read, and re-flags when the card changes underneath it.
   The number worth watching is `tested but unread`: cards that LOOK covered, which is
   exactly the state Leg Sweep, Predator, Shadow Step and Shadowmeld were in. That
-  burn-down is now the main line of work — **113 left**, down from 194, and
-  **Ironclad is finished**: all 92 read. What remains is Colourless (63), Silent (44)
-  and six odds and ends. The first
-  batch read Ironclad's 18 alphabetically-first cards and found two wrong (E227,
-  E228), so budget roughly one divergence per nine cards, and expect one existing
-  test per divergence to be asserting the wrong behaviour and need rewriting.
+  burn-down is now the main line of work — **30 left**, down from 194. Ironclad, the
+  Defect and the Necrobinder are finished; what remains is the Silent's tail. The rate
+  has held all the way through: Ironclad's first batch found two divergences in eighteen
+  cards, and the Necrobinder's 45 unread cards found twenty-one. Budget roughly one
+  divergence per two to nine cards depending on how much the pool has been captured, and
+  expect one existing test per divergence to be asserting the wrong behaviour and need
+  rewriting.
   `scripts/card_pair.py` dumps source-vs-emulator side by side, which is the only way
   the rate is bearable; use it rather than opening two files per card.
 
@@ -2569,7 +2594,17 @@ no game running:
   card exhausted. Nesting is what these comparisons turn on; it preserves
   indentation now, and that near-miss is why.
 
-- `audit_dead_card_cases.py` — card `case` labels nothing can reach. **175 of them.**
+  And its STRIP LIST is a place a real effect can hide. `CardCmd.PreviewCardPileAdd(...)`
+  is usually a UI call on an already-computed result, so it was dropped — but thirteen
+  cards write their whole effect INSIDE it. Grave Warden read as block and a `CardsVar(1)`
+  nothing touched, so the reading deleted a Soul the emulator was already making, and only
+  the live capture caught it. It now drops only the standalone `PreviewCardPileAdd(x);`
+  form. The general lesson: **a tool that hides part of the source produces confident
+  wrong readings, which is worse than no tool.** When a card declares a var its visible
+  body never reads, open the decompiled file itself before concluding the var is dead.
+
+- `audit_dead_card_cases.py` — card `case` labels nothing can reach. **163 of them**,
+  down from 175 after the Necrobinder read pass cleared twelve.
   `CardEffects` runs several switches in order and each returns when it has handled
   the card, so a second `case` further down is dead. Five cards in the
   tested-but-unread sweep were wrong in the dead copy, two of them because someone
@@ -2677,7 +2712,7 @@ different rules and is not comparable.
 ```bash
 cd ~/Projects/STSS/emulator
 export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
-dotnet test src/Sts2Emulator.Tests/        # 1899 pass
+dotnet test src/Sts2Emulator.Tests/        # 3650 pass, 1 skipped
 bash scripts/build.sh osx-arm64            # → out/Sts2Emulator.dylib
-uv run python -m unittest discover -s tests/python   # 411 pass
+uv run python -m unittest discover -s tests/python   # 492 pass, 6 skipped
 ```

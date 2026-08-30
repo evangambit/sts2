@@ -805,6 +805,62 @@ that moved the value.
 
 C# tests 214 → 445. Ironclad: 92 of 92 cards tested. `Pending` 235 → 123.
 
+### 2026-08-19 to 08-30 — Every character pool, and what reading is worth next to capturing
+
+Twelve days that took the emulator from "one character verified" to all five, plus the
+Colourless pool. The numbers are in HANDOFF.md and every defect is in
+docs/divergence-catalog.md; what belongs here is what the exercise TAUGHT, because the same
+questions come back for relics and events.
+
+**Capture and reading find different things, and the project now has a measurement rather
+than an opinion.** Two pools were captured before anyone read them: the Necrobinder yielded
+36 divergences and the Regent 28. The Defect pool was read and tested first, and capture
+still found three. Then the Necrobinder's unread cards were READ, after their captures had
+all passed, and that found twenty-one more. So neither pass subsumes the other, and the
+failure modes are different in a way that is worth naming:
+
+- What reading catches and capture does not: a card whose wrong body happens to produce the
+  right OBSERVABLE. The capture asserts pile counts, HP, block and the powers the game
+  reported. Undeath cloned a Soul where the game clones itself — the discard pile is two
+  cards deep either way. Time's Up scaled by the wrong counter in a fixture where both
+  readings gave zero.
+- What capture catches and reading does not: a card absent from the extracted DATA (reading
+  a card cannot notice the extractor skipped it), a TIMING question the tests then encode
+  as correct, and anything where the source is genuinely ambiguous about what the game
+  does with the result.
+
+**The tools that hold a reading are as load-bearing as the reading.** `audit_cards.py` and
+`audit_relics.py` key each note to a DIGEST of the source that was read, so a patch makes a
+note go stale rather than silently staying "verified" — a claim about the game with no
+expiry date is not a claim. `audit_shared_card_bodies.py` exists because `CardEffects`
+stacks `case` labels over shared bodies and the same slip happened a dozen times. And a
+tool that hides part of the source produces CONFIDENT WRONG readings, which is worse than
+no tool: `card_pair.py` dropped every line containing `PreviewCardPileAdd(`, thirteen cards
+write their whole effect inside that call, and Grave Warden's reading deleted a Soul the
+emulator was already making correctly.
+
+**A capture that cannot be rebuilt is a finding, not a gap to paper over.** Five fixtures
+live in `tests/fixtures/cards/blocked/`, each with a written reason: an enemy power with no
+BuffId, a card whose damage counts generations while the staging tool generates one, a card
+that ends the turn so there is no settled state to snapshot, a card whose answer depends on
+an RNG stream position, and a card reading combat history a snapshot cannot hold. Inferring
+the missing value would have been right in that fixture and wrong in general.
+
+**Each character's resource was a whole mechanic, not a card list.** The Regent cost STARS
+and the emulator charged none of them, across twenty-one cards; the Forge and its Sovereign
+Blade did not exist. The Defect's orb queue had been handed to every character. The
+Necrobinder's Osty guard — `if (!Osty.CheckMissingWithAnim(Owner))` wraps a card's WHOLE
+body — was missing from five cards. Porting a character means porting the resource first
+and the cards second.
+
+**A capture cannot see a power the emulator INVENTED.** Fixtures asserted the powers the
+game reported, so an emulator that granted an extra one passed clean.
+`Fight.PlayerPowersAre` compares the whole set and caught two cards the moment it existed.
+The general shape: an assertion built from what the oracle said is blind to anything the
+oracle had no reason to mention.
+
+C# tests 445 → 3,650. Cards read against the current source: 454 of 577.
+
 ### Environment quick-reference
 
 ```
@@ -818,13 +874,30 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 
 ### Next up
 
-1. **Verify the remaining card effects** — Ironclad is done and every batch found real
-   defects, so keep going class by class through the 123 in `Pending` (Silent, then
-   Colourless). Relics and powers are the same job, one layer out, and have had no
-   equivalent pass.
-2. **Automate capture over many seeds** using the headless harness, so coverage stops
-   depending on which seeds anyone happened to try.
-3. **Test the `NonInteractiveMode` fix** for the GUI embark crash (mirrors what the
-   game's own `AutoSlayer` does; all 31 call sites are timing/audio, none touch rules).
-4. Then the **AlphaZero layer**: MCTS over the sim (C#), value/policy net (Python) +
+Card coverage is now the finished part rather than the open one. What is left, in the order
+the evidence argues for:
+
+1. **Read the Regent's 28 captured-but-unread cards**, and the Silent's remainder. This is
+   the pass the Necrobinder just had, and it found twenty-one defects on cards whose
+   captures were all green — so the expected yield is known, not hoped for.
+2. **Relics are the next layer with no equivalent pass.** 171 of 296 are modelled and only
+   64 have been read against the source; the other 107 are wired up and were never compared
+   to anything. `audit_relics.py` is the burn-down. Events are one layer out again, with one
+   test to the whole pool's name.
+3. **Automate capture over many seeds** with the headless harness, so coverage stops
+   depending on which seeds anyone happened to try. Related: exposing each named RNG
+   stream's seed and call count from the mod would make the RNG-dependent cards capturable,
+   which is the reason two of the five blocked fixtures are blocked.
+4. **Delete the dead `case` labels.** `audit_dead_card_cases.py` finds 163 arms that
+   nothing can reach. They are not merely untidy — a dead duplicate is where a card gets
+   "fixed" in the copy nothing runs, and a live label sitting in someone else's stack is a
+   card nobody has read.
+5. **Test the `NonInteractiveMode` fix** for the GUI embark crash (mirrors what the game's
+   own `AutoSlayer` does; all 31 call sites are timing/audio, none touch rules).
+6. Then the **AlphaZero layer**: MCTS over the sim (C#), value/policy net (Python) +
    batched inference bridge, then self-play.
+
+The standing question to keep asking before each of those: *what would make this claim go
+stale, and would anything notice?* Every mechanism that has earned its place here —
+extracted data over hand-kept lists, digest-keyed reading notes, the coverage guard, the
+`blocked/` fixtures with written reasons — is an answer to it.
