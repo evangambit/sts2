@@ -3578,18 +3578,18 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventInfestedAutomaton:
+                // Both options add ONE card straight to the deck, rolled from the
+                // CHARACTER'S OWN pool at non-combat odds and filtered: Study takes a
+                // POWER, Touch Core takes anything printed at zero energy that is not an X
+                // card. Neither offers a choice and neither costs anything. The emulator
+                // opened a card-reward screen, or took 10 HP for a random relic.
                 if (action == 0)
                 {
-                    RunRewardGenerator.EnterCardReward(State);
-                    return 0;
+                    AddFilteredPoolCardToDeck(def => def.Type == CardType.Power);
                 }
                 else if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 10);
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
+                    AddFilteredPoolCardToDeck(def => def.Cost == 0 && !def.HasEnergyCostX);
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3676,21 +3676,44 @@ public sealed class RunEngine
                 }
 
                 break;
+            case RunConstants.EventTheLanternKey when State.EventPage == 1:
+                // Keep The Key answers with a page carrying one option, and that option is
+                // the fight -- `EnterCombatWithoutExitingEvent<MysteriousKnightEventEncounter>`
+                // with a LanternKey card as its reward. Dense Vegetation's shape.
+                if (action != 0)
+                {
+                    return -1;
+                }
+
+                State.PendingSpecialCardReward = RunNonCombatEffects.NamedCard("LanternKey");
+                return StartCombatWithDeck(
+                    State.Deck,
+                    RunConstants.MysteriousKnightEncounterId,
+                    State.Relics,
+                    State.PlayerHp,
+                    State.PlayerMaxHp,
+                    State.PotionSlots,
+                    State.Gold,
+                    Math.Max(
+                        0,
+                        State.NormalEncountersVisited + State.EliteEncountersVisited - 1
+                    )
+                );
+
             case RunConstants.EventTheLanternKey:
+                // Return The Key is `GoldVar(100)` flat -- `Gold.BaseValue`, with none of
+                // the jitter Lost Wisp rolls into its own var. Keep The Key opens the fight
+                // page above. The emulator had the two the wrong way round AND wrong: it
+                // handed out the key card and a relic for FREE where the game makes you
+                // beat a knight for the card, and paid a jittered 99 for the other.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.AddCardToDeck(
-                        State,
-                        new CardInstance(RunNonCombatEffects.NamedCard("LanternKey"), false)
-                    );
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, 100);
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(99));
+                    State.EventPage = 1;
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -4340,6 +4363,40 @@ public sealed class RunEngine
         return AdvanceAfterNode(out terminal);
     }
 
+    /// <summary>
+    /// One card rolled from the CHARACTER'S OWN pool at non-combat odds, filtered, and put
+    /// straight into the deck -- Infested Automaton's two options, which are
+    /// `CardFactory.CreateForReward(owner, 1, ForNonCombatWithDefaultOdds(pool, filter))`
+    /// followed by `CardPileCmd.Add(card, PileType.Deck)`.
+    /// </summary>
+    /// <remarks>
+    /// The filter narrows the POOL before the roll, not the result after it: rolling from
+    /// the whole pool and rejecting misses would be a different number of draws on the
+    /// Rewards stream and slide every later roll in the run.
+    /// </remarks>
+    private void AddFilteredPoolCardToDeck(Func<CardDef, bool> allowed)
+    {
+        var pool = new List<int>();
+        foreach (int cardId in RunRewardGenerator.IroncladRewardPool)
+        {
+            if (allowed(GeneratedData.Cards.Get(cardId)))
+            {
+                pool.Add(cardId);
+            }
+        }
+
+        if (pool.Count == 0)
+        {
+            return;
+        }
+
+        int[] rolled = RunRewardGenerator.GenerateEventOfferCards(State, 1, pool.ToArray());
+        if (rolled.Length > 0)
+        {
+            RunNonCombatEffects.AddCardToDeck(State, new CardInstance(rolled[0], false));
+        }
+    }
+
     private int RestHealAmount() =>
         Math.Max(1, (int)(State.PlayerMaxHp * 0.3))
         // Regal Pillow's ModifyRestSiteHealAmount adds its HealVar(15m) to whatever the
@@ -4586,6 +4643,10 @@ public sealed class RunEngine
                 break;
             case RunConstants.EventPunchOff when State.EventPage == 1:
                 // "I Can Take Them" answers with a page whose only option is the fight.
+                SetMask(mask, 0);
+                break;
+            case RunConstants.EventTheLanternKey when State.EventPage == 1:
+                // Keep The Key's page offers only the fight, the same shape as those two.
                 SetMask(mask, 0);
                 break;
             case RunConstants.EventStoneOfAllTime:

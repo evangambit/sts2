@@ -279,6 +279,7 @@ public static class StateCloning
             RewardEnchantIndex = state.RewardEnchantIndex,
             RewardEnchantment = state.RewardEnchantment,
             PendingBonusRelicRewards = [.. state.PendingBonusRelicRewards],
+            PendingSpecialCardReward = state.PendingSpecialCardReward,
             PendingNeowsBonesCurse = state.PendingNeowsBonesCurse,
             PendingHeftyTabletCurse = state.PendingHeftyTabletCurse,
             PendingPotionRewards = [.. state.PendingPotionRewards],

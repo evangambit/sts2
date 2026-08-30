@@ -540,6 +540,14 @@ public static class RunConstants
     /// <summary>The fight Dense Vegetation's Rest wakes up, entered from the event.</summary>
     public const int DenseVegetationEncounterId = 55;
 
+    /// <summary>
+    /// The Lantern Key's `EnterCombatWithoutExitingEvent&lt;MysteriousKnightEventEncounter&gt;`,
+    /// and the three Battleworn Dummy settings. `CombatFactory` has built all four since
+    /// the event encounters were modelled; the events that reach them did not.
+    /// </summary>
+    public const int MysteriousKnightEncounterId = 58;
+    public const int BattlewornDummyEncounterIds0 = 59;
+
     /// <summary>SurroundedPower.Direction.Right, the enum's zero and the player's start.</summary>
     public const int FacingRight = 1;
 

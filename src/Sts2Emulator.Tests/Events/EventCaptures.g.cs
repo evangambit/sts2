@@ -621,6 +621,50 @@ public class EventCaptures
         Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
     }
     /// <summary>
+    /// InfestedAutomaton, 'Study' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void InfestedAutomaton_Option0()
+    {
+        var engine = Open(RunConstants.EventInfestedAutomaton);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false), (185, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// InfestedAutomaton, 'Touch the Core' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void InfestedAutomaton_Option1()
+    {
+        var engine = Open(RunConstants.EventInfestedAutomaton);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false), (13, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
     /// JungleMazeAdventure, 'Solo Quest' -- captured from v0.107.1 (build 23811903).
     /// </summary>
     [Fact]
@@ -1359,6 +1403,52 @@ public class EventCaptures
             [36, 259]);
         Assert.Equal(RunPhase.Event, engine.State.Phase);
         Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// TheLanternKey, 'Return the Key' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void TheLanternKey_Option0()
+    {
+        var engine = Open(RunConstants.EventTheLanternKey);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 199,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// TheLanternKey, 'Keep the Key' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void TheLanternKey_Option1()
+    {
+        var engine = Open(RunConstants.EventTheLanternKey);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        // The game answered with a page of 1: 'Fight'.
+        Assert.Equal(1, OfferedCount(engine));
+        Assert.NotEqual(RunConstants.EventResultPending, engine.State.EventId);
     }
     /// <summary>
     /// TheLegendsWereTrue, 'Nab the Map' -- captured from v0.107.1 (build 23811903).

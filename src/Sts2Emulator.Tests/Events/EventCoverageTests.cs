@@ -49,10 +49,8 @@ public class EventCoverageTests
         // options, so it needs a shop-shaped capture. See scripts/capture_event.py.
         "FakeMerchant",
         "GraveOfTheForgotten",
-        "InfestedAutomaton",
         "RoundTeaParty",
         "Symbiote",
-        "TheLanternKey",
         "Trial",
     ];
 

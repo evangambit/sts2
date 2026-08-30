@@ -405,6 +405,13 @@ public sealed class RunState
     public List<int> PendingBonusRelicRewards = [];
 
     /// <summary>
+    /// A card the next combat's reward screen owes outright, rather than as one of three
+    /// rolled offers -- the game's `SpecialCardReward`. The Lantern Key's knight fight is
+    /// the only one so far: beat it and the key is yours, and it is not a choice.
+    /// </summary>
+    public int PendingSpecialCardReward;
+
+    /// <summary>
     /// Neow's Bones adds its curse only once its two relics have been claimed:
     /// <c>AfterObtained</c> awaits the RewardsSet's <c>Offer()</c> and adds the curse on
     /// the line after. Rolling it up front would be the same two streams in the same order
