@@ -299,6 +299,10 @@ READ: dict[str, tuple[str, str]] = {
         "11bc94552c75",
         "MultiplayerOnly; 1 HP then block equal to the OWNER's block onto the target",
     ),
+    "Discovery": (
+        "c37ed6ee736e",
+        "3 GetDistinctForCombat cards on CombatCardGeneration, choose one free this turn; canSkip NOT modelled",
+    ),
     "Dismantle": (
         "a0cb031ae545",
         "8/10, and TWO hits if the target is Vulnerable",
@@ -318,6 +322,18 @@ READ: dict[str, tuple[str, str]] = {
     "EchoForm": (
         "53673a33b554",
         "ModifyCardPlayCount +1 while the turn's first-in-series plays are under Amount; upgrade removes Ethereal",
+    ),
+    "Entropy": (
+        "2f53842680ef",
+        "EntropyPower at CardsVar(1) flat; the upgrade adds INNATE only",
+    ),
+    "Equilibrium": (
+        "2c5a07c23183",
+        "13/16 block then RetainHandPower 1 -- the block comes from ApplyBaseDamageAndBlock, not the case",
+    ),
+    "EternalArmor": (
+        "1b597260757c",
+        "PlatingPower 9 upgrading by 3",
     ),
     "EvilEye": (
         "7c6b062b5cc4",

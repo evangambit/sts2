@@ -2457,6 +2457,13 @@ no game running:
   whether it already has a test. Howl had both, and a duplicate implementation was
   written and reverted before its own existing test caught the double damage.
 
+  It happened AGAIN on Equilibrium, in a different disguise: its by-name `case`
+  applies only RetainHandPower and looks like it has lost its 13 block — but
+  `ApplyGeneratedCardApproximation` calls `ApplyBaseDamageAndBlock` BEFORE the
+  switch, so every card on that path already has its printed damage and block. A
+  `case` on that path shows only what the card does ON TOP. Check what runs around
+  the case, not just the case.
+
   The tool USED to strip indentation, and Second Wind's block gain then read as
   sitting outside its `foreach` when it is inside — one gain rather than one per
   card exhausted. Nesting is what these comparisons turn on; it preserves
