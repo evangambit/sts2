@@ -123,24 +123,9 @@ public class EliteAndUpgradeRelicTests
         Assert.Equal([true, true, false, false], state.DrawPile.Select(card => card.Upgraded));
     }
 
-    [Fact]
-    public void VenerableTeaSetGivesTwoEnergyOnTheFirstTurn()
-    {
-        var plain = Fight.WithRelics();
-        var withTeaSet = Fight.WithRelics(RelicEffects.VenerableTeaSetActive);
-
-        Assert.Equal(plain.State.Energy + 2, withTeaSet.State.Energy);
-    }
-
-    [Fact]
-    public void TheTeaSetDoesNotPayOutAgainOnLaterTurns()
-    {
-        var plain = Fight.WithRelics();
-        var withTeaSet = Fight.WithRelics(RelicEffects.VenerableTeaSetActive);
-
-        withTeaSet.EndTurn();
-        plain.EndTurn();
-
-        Assert.Equal(plain.State.Energy, withTeaSet.State.Energy);
-    }
+    // Venerable Tea Set's two tests used to live here and drove a synthetic
+    // `VenerableTeaSetActive` relic id that NOTHING IN THE RUN EVER ADDED, so they proved
+    // the seam worked while the relic was inert for the whole run (E393). The armed state
+    // is a counter on the relic now, and the tests live in `VenerableTeaSetTests` beside
+    // the rest site that arms it.
 }

@@ -288,6 +288,20 @@ public static class RunRewardGenerator
             state.PendingBonusRelicRewards.Add(NextRelic(state));
         }
 
+        // `WongosMysteryTicket.TryModifyRewards`: after FIVE combats it pays THREE relics
+        // on the next combat reward screen, then `GaveRelic` retires it for good. The
+        // counter is the combats finished; the emulator parks the spent flag on the same
+        // counter by taking it past the threshold.
+        if (Effects.RelicEffects.WongosTicketPaysOut(state))
+        {
+            Effects.RelicEffects.RetireWongosTicket(state);
+            state.PendingRelicReward = true;
+            for (int i = 0; i < Effects.RelicEffects.WongosTicketRelics; i++)
+            {
+                state.PendingBonusRelicRewards.Add(NextRelic(state));
+            }
+        }
+
         // The CARDS are rolled before the relic. RewardsSet builds gold, potion, card,
         // relic and then populates them in that order, and only sorts by RewardsSetIndex
         // afterwards -- so the order the screen SHOWS them in (relic above the card) is

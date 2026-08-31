@@ -253,6 +253,13 @@ public sealed class RunState
     public List<int>? EventRelicStock;
 
     /// <summary>
+    /// Bing Bong is adding its own clone right now. The game's guard is a `CardsToSkip`
+    /// set the relic checks and removes from; a re-entrancy flag says the same thing for a
+    /// single-player deck and cannot leak an entry the way a set can.
+    /// </summary>
+    public bool AddingBingBongClone;
+
+    /// <summary>
     /// Gold rewards still owed. The reward screen carries one pile at a time, the way it
     /// carries one potion at a time, so anything that offers several -- the Crystal
     /// Sphere can uncover seven -- queues the rest here.

@@ -502,12 +502,18 @@ public class LastingCandyTests
         Assert.Equal(new List<bool> { false, true, false, true }, triggered);
     }
 
-    /// <summary>The declared gap is exactly one relic, and it is this one.</summary>
+    /// <summary>
+    /// The declared gaps are exactly two, and both are declared for a reason that is not
+    /// "nobody got to it": Lasting Candy needs a fourth reward slot, and Fake Snecko Eye
+    /// needs a Confused power the emulator has no model for. Pinned so the list cannot
+    /// quietly become a place to park work.
+    /// </summary>
     [Fact]
-    public void ItIsTheOnlyDeclaredRunGap()
+    public void TheDeclaredRunGapsAreTheTwoKnownOnes()
     {
-        Assert.Single(RelicEffects.UnmodelledInRun);
-        Assert.Equal(RelicEffects.LastingCandy, RelicEffects.UnmodelledInRun[0]);
+        Assert.Equal(2, RelicEffects.UnmodelledInRun.Length);
+        Assert.Contains(RelicEffects.LastingCandy, RelicEffects.UnmodelledInRun);
+        Assert.Contains(RelicEffects.FakeSneckoEye, RelicEffects.UnmodelledInRun);
     }
 }
 

@@ -144,7 +144,22 @@ public static class RunNonCombatEffects
             GainMaxHp(state, 6);
         }
 
-        state.Deck.Add(EnchantedByFresnelLens(state, UpgradedByEggs(state, card)));
+        var landed = EnchantedByFresnelLens(state, UpgradedByEggs(state, card));
+        state.Deck.Add(landed);
+
+        // `BingBong.AfterCardChangedPiles`: every card entering the DECK is CLONED to the
+        // bottom of it -- `clonedBy == null` and a `CardsToSkip` set, which together mean
+        // the clone does not clone itself. The doll's gift doubles a deck it likes and
+        // doubles a curse just as happily.
+        if (
+            Effects.RelicEffects.Has(state.Relics, Effects.RelicEffects.BingBong)
+            && !state.AddingBingBongClone
+        )
+        {
+            state.AddingBingBongClone = true;
+            AddCardToDeck(state, landed);
+            state.AddingBingBongClone = false;
+        }
 
         // `AfterCardChangedPiles` with the destination pile being the DECK. Two relics
         // read it, and both are per-card rather than per-reward: taking three cards in one
@@ -362,6 +377,19 @@ public static class RunNonCombatEffects
             // cornucopia its icon may or may not show is decided by the last byte of the
             // PROFILE's unique id and is purely cosmetic -- it changes `IconBaseName` and
             // nothing else, which is a joke about multiplayer rather than a mechanic.
+            // `FakeMango.AfterObtained`: MaxHpVar(3m) against the real Mango's 14.
+            case Effects.RelicEffects.FakeMango:
+                GainMaxHp(state, 3);
+                break;
+            // `FakeLeesWaffle.AfterObtained`: heal `MaxHp * (HealVar(10) / 100)` -- a
+            // PERCENTAGE, where the real waffle grants 7 flat max HP. Integer-truncated,
+            // the way every decimal-to-int in the damage path is.
+            case Effects.RelicEffects.FakeLeesWaffle:
+                state.PlayerHp = Math.Min(
+                    state.PlayerMaxHp,
+                    state.PlayerHp + state.PlayerMaxHp * 10 / 100
+                );
+                break;
             case RunConstants.RelicLoomingFruit:
                 GainMaxHp(state, 31);
                 break;

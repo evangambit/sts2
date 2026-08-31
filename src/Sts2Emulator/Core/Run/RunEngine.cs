@@ -1177,6 +1177,7 @@ public sealed class RunEngine
                     // `LastingCandy.AfterCombatEnd` counts the fight; the reward screen
                     // that follows is what reads the count.
                     Effects.RelicEffects.CountCombatForLastingCandy(State);
+                    Effects.RelicEffects.CountCombatForWongosTicket(State);
                     RunNonCombatEffects.CountEliteVictoryForSwordOfStone(
                         State,
                         State.LastResolvedRoomType == RunConstants.NodeElite

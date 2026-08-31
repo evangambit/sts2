@@ -1134,6 +1134,9 @@ public static class CombatEngine
         // ── Start of next player turn ─────────────────────────────────────────
         state.Turn++;
         Effects.RelicEffects.TickPaelsLegionCooldown(state);
+        // `PollinousCore.BeforeSideTurnStart` bumps its counter; the hand draw below reads
+        // it, and pays two extra cards on every fourth turn.
+        Effects.RelicEffects.TickPollinousCore(state);
         state.PlayerTurn = true;
         // The turn rolls over: what was "this turn" becomes what History Course reads.
         state.LastAttackOrSkillLastTurn = state.LastAttackOrSkillThisTurn;

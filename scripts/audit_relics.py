@@ -242,6 +242,90 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "BingBong": (
+        "10fe0eb39dd4",
+        "Every card entering the DECK is CLONED to the bottom of it. Written from scratch. The clone must not clone itself -- the game keeps a CardsToSkip set; the emulator uses a re-entrancy flag, which cannot leak an entry. It doubles a curse as happily as anything else.",
+    ),
+    "DaughterOfTheWind": (
+        "597198d06d36",
+        "1 unpowered block per ATTACK played. Written from scratch.",
+    ),
+    "FakeAnchor": (
+        "c4ffaa3eb924",
+        "4 unpowered block at combat start, against the real Anchor's 10. Written from scratch.",
+    ),
+    "FakeBloodVial": (
+        "5b6b01ae6355",
+        "Heal 1 at TURN ONE's start. Written from scratch. A different hook from the real Blood Vial, which heals 2 at COMBAT start, as well as a different number.",
+    ),
+    "FakeHappyFlower": (
+        "fca8a1647e09",
+        "+1 energy every FIVE turns; the real flower is three. Written from scratch, riding the same CountTowards clock.",
+    ),
+    "FakeLeesWaffle": (
+        "b3877df3281e",
+        "Heal MaxHp * 10 / 100 on pickup -- a PERCENTAGE, where the real waffle grants 7 flat max HP. A different mechanic, not just a smaller number. Written from scratch.",
+    ),
+    "FakeMango": (
+        "98ebaffcfa95",
+        "+3 max HP on pickup, against the real Mango's 14. Written from scratch.",
+    ),
+    "FakeMerchantsRug": (
+        "9f4456526abc",
+        "An EMPTY RelicModel -- it declares no behaviour at all. Named in RelicEffects.NoEffectRelics so 'nobody wrote this' is distinguishable from 'there is nothing to write'.",
+    ),
+    "FakeOrichalcum": (
+        "a34efb03f076",
+        "3 unpowered block for ending a turn with none, against the real Orichalcum's 6. Written from scratch. Its VeryEarly/Early hook split exists so Plating cannot rob it of the trigger; the emulator reads block once, which is the same answer.",
+    ),
+    "FakeSneckoEye": (
+        "a3a8feee695c",
+        "Applies ConfusedPower and nothing else -- the real Snecko Eye's downside without its two cards of draw. NOT modelled: Confused re-rolls every card's cost as it is drawn and the emulator has no such power. Declared in RelicEffects.UnmodelledInRun.",
+    ),
+    "FakeStrikeDummy": (
+        "7c00c61396cb",
+        "+1 damage on a Strike-TAGGED card, against the real dummy's 3. Written from scratch, and it moved the real dummy off a card-NAME test onto the extracted tag at the same time.",
+    ),
+    "FakeVenerableTeaSet": (
+        "a109af99b59d",
+        "+1 energy on the first energy reset after a rest site, against the real set's 2. Written from scratch, onto the counter that now arms both.",
+    ),
+    "ForgottenSoul": (
+        "51a6fe2a387e",
+        "1 unpowered damage to ONE random enemy off CombatTargets per card exhausted -- Charon's Ashes' shape at a tenth of the reach. Written from scratch.",
+    ),
+    "LostWisp": (
+        "3e9878601d3e",
+        "8 unpowered damage to every hittable enemy whenever a POWER is played. Written from scratch. The event that grants it was implemented three commits before the relic did anything.",
+    ),
+    "MrStruggles": (
+        "e60707301df2",
+        "Unpowered damage to every enemy equal to the TURN NUMBER at the start of each player turn -- 1, then 2, then 3, climbing all fight. Written from scratch.",
+    ),
+    "PollinousCore": (
+        "9524c09788cd",
+        "Two extra cards on every FOURTH turn's hand draw, through ModifyHandDraw, with AfterModifyingHandDraw resetting the counter. Written from scratch.",
+    ),
+    "RoyalPoison": (
+        "4598d15961da",
+        "4 Unblockable, Unpowered damage to its OWN owner on turn one. Written from scratch -- the tea party's gift bites once a fight, and block does not save you.",
+    ),
+    "StrikeDummy": (
+        "f026030df1d7",
+        "+3 on a Strike-tagged card. Was reading the card NAME behind a comment saying tags were not extracted; they are, and the name agreed on all 22, so this is the same answer written so it stays right.",
+    ),
+    "VenerableTeaSet": (
+        "043da6cf06de",
+        "+2 energy on the first energy reset of the combat after a rest. RE-READ: the effect was right and the ARMING did not exist -- the armed state was a synthetic VenerableTeaSetActive relic id nothing in the run ever added, so the relic was inert for the whole run while two tests drove the marker directly. Now a counter on the relic, set when the run rests.",
+    ),
+    "WongoCustomerAppreciationBadge": (
+        "2914fca90401",
+        "An EMPTY RelicModel, like Fake Merchant's Rug. Named in NoEffectRelics.",
+    ),
+    "WongosMysteryTicket": (
+        "4602c8723aba",
+        "After FIVE combats the next reward screen carries THREE relics, then GaveRelic retires it. Written from scratch -- a one-off, not a tap.",
+    ),
     "BoneTea": (
         "dcec93b0c05b",
         "Turn one, UPGRADE EVERY CARD IN HAND, for ONE combat. Written from scratch. The remaining-combats count is run state, which is what forced the Girya ordering fix.",
@@ -743,10 +827,6 @@ READ: dict[str, tuple[str, str]] = {
         "7 unpowered block every tenth Skill, the tally wrapping rather than resetting per turn; correct.",
     ),
     "Vajra": ("0ffd7a67279d", "Strength at combat start; correct."),
-    "VenerableTeaSet": (
-        "043da6cf06de",
-        "+2 energy on the first energy reset of the combat after a rest; correct.",
-    ),
     "WarPaint": ("6559622ec777", "Two cards off the deck upgraded on pickup; correct."),
     "Whetstone": (
         "8685fefd4317",
@@ -987,10 +1067,6 @@ READ: dict[str, tuple[str, str]] = {
     "RippleBasin": (
         "1a90c07dfd95",
         "BeforeSideTurnEnd, 4 unpowered block if NO Attack was played that turn",
-    ),
-    "StrikeDummy": (
-        "f026030df1d7",
-        "ModifyDamageAdditive +3 on a powered attack from a card tagged CardTag.Strike",
     ),
     "Vambrace": (
         "661865f6a216",

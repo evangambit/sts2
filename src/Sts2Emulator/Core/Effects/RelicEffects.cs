@@ -69,6 +69,51 @@ public static class RelicEffects
     public const int TeaOfDiscourtesy = 259;
     public const int TheBoot = 261;
 
+    // The nineteen behind events the emulator ALREADY runs: the event arm hands the relic
+    // over and the relic does nothing. Fake Merchant's whole stall was built two commits
+    // before any of the nine it sells did anything.
+    public const int FakeAnchor = 76;
+    public const int FakeBloodVial = 77;
+    public const int FakeHappyFlower = 78;
+    public const int FakeLeesWaffle = 79;
+    public const int FakeMango = 80;
+    public const int FakeMerchantsRug = 81;
+    public const int FakeOrichalcum = 82;
+    public const int FakeSneckoEye = 83;
+    public const int FakeStrikeDummy = 84;
+    public const int FakeVenerableTeaSet = 85;
+    public const int BingBong = 18;
+    public const int DaughterOfTheWind = 57;
+    public const int MrStruggles = 157;
+    public const int ForgottenSoul = 90;
+    public const int LostWisp = 141;
+    public const int PollinousCore = 200;
+    public const int RoyalPoison = 223;
+    public const int WongoCustomerAppreciationBadge = 294;
+    public const int WongosMysteryTicket = 295;
+
+    /// <summary>Pollinous Core's `DynamicVar("Turns", 4m)` and `CardsVar(2)`.</summary>
+    public const int PollinousCoreTurns = 4;
+
+    /// <summary>Fake Happy Flower's `DynamicVar("Turns", 5m)` -- the real one is three.</summary>
+    public const int FakeHappyFlowerTurns = 5;
+
+    /// <summary>Wongo's Mystery Ticket: five combats, then three relics.</summary>
+    public const int WongosTicketCombats = 5;
+
+    public const int WongosTicketRelics = 3;
+
+    /// <summary>
+    /// Relics that declare no behaviour at all -- an empty `RelicModel` body. Named so the
+    /// audit can tell "nobody wrote this" from "there is nothing to write", which are the
+    /// same thing from the outside and opposite things to a reader.
+    /// </summary>
+    public static readonly int[] NoEffectRelics =
+    [
+        FakeMerchantsRug,
+        WongoCustomerAppreciationBadge,
+    ];
+
     /// <summary>Bone Tea's `Combats` var: one fight, then it is used up.</summary>
     public const int BoneTeaCombats = 1;
 
@@ -123,7 +168,6 @@ public static class RelicEffects
     public const int StoneCracker = 249;
     public const int TinyMailbox = 265;
     public const int StoneCalendar = 248;
-    public const int VenerableTeaSetActive = 100282;
     public const int Vajra = 279;
     public const int TuningFork = 274;
     public const int VelvetChoker = 281;
@@ -567,6 +611,13 @@ public static class RelicEffects
             CardEffects.GainUnpoweredBlock(state, 10, rng);
         }
 
+        // The fakes are the real relics at a discount, and the discount is the point: 4
+        // block against Anchor's 10.
+        if (HasRelic(state, FakeAnchor))
+        {
+            CardEffects.GainUnpoweredBlock(state, 4, rng);
+        }
+
         if (HasRelic(state, Vajra))
         {
             GainPlayerStrength(state, 1);
@@ -634,9 +685,34 @@ public static class RelicEffects
                 CardEffects.GainEnergy(state, 1);
             }
 
-            if (HasRelic(state, VenerableTeaSetActive))
+            // `VenerableTeaSet.AfterEnergyReset` pays once, on the first energy reset of
+            // the combat after a REST SITE, and clears its own flag. The armed state is a
+            // counter on the relic, set when the run rests -- it used to be a synthetic
+            // `VenerableTeaSetActive` relic id that NOTHING IN THE RUN EVER ADDED, so the
+            // relic was inert for the whole run and its two tests drove the marker
+            // directly. Fake Venerable Tea Set is the same rule at 1 energy.
+            if (SpendRestSiteCharge(state, VenerableTeaSet))
             {
                 CardEffects.GainEnergy(state, 2);
+            }
+
+            if (SpendRestSiteCharge(state, FakeVenerableTeaSet))
+            {
+                CardEffects.GainEnergy(state, 1);
+            }
+
+            // `FakeBloodVial.AfterPlayerTurnStartLate` at TurnNumber <= 1: HealVar(1). The
+            // real Blood Vial heals 2 at COMBAT start; this one is a turn-one heal of one.
+            if (HasRelic(state, FakeBloodVial))
+            {
+                CardEffects.HealPlayer(state, 1);
+            }
+
+            // `RoyalPoison.AfterPlayerTurnStart` at TurnNumber <= 1: 4 damage to its OWN
+            // owner, Unblockable and Unpowered. The tea party's gift bites once a fight.
+            if (HasRelic(state, RoyalPoison))
+            {
+                CardEffects.LoseHp(state, 4);
             }
 
             if (HasRelic(state, Akabeko))
@@ -711,6 +787,19 @@ public static class RelicEffects
             CardEffects.GainEnergy(state, 1);
         }
 
+        // The fake flower is the same clock at five turns instead of three.
+        if (CountTowards(state, FakeHappyFlower, period: FakeHappyFlowerTurns))
+        {
+            CardEffects.GainEnergy(state, 1);
+        }
+
+        // `MrStruggles.AfterPlayerTurnStart`: unpowered damage to every hittable enemy
+        // equal to the TURN NUMBER -- 1 on turn one, 2 on turn two, and it keeps climbing.
+        if (HasRelic(state, MrStruggles))
+        {
+            CardEffects.DealUnpoweredDamageToAll(state, turnNumber);
+        }
+
         if (CountTowards(state, Pendulum, period: 3))
         {
             CardEffects.DrawCards(state, 1, DrawRng(state, rng));
@@ -741,7 +830,33 @@ public static class RelicEffects
     /// after a turn of three cards or fewer.
     /// </summary>
     public static int ExtraHandDraw(CombatState state) =>
-        state.Relics.Any(relic => relic.DefId == Pocketwatch && relic.Counter > 0) ? 3 : 0;
+        (state.Relics.Any(relic => relic.DefId == Pocketwatch && relic.Counter > 0) ? 3 : 0)
+        // `PollinousCore.ModifyHandDraw`: CardsVar(2) on the turn its counter reaches
+        // `Turns` (4), and `AfterModifyingHandDraw` resets it to zero. The counter is
+        // bumped in `BeforeSideTurnStart`, so this is every fourth turn.
+        + (
+            state.Relics.Any(relic =>
+                relic.DefId == PollinousCore && relic.Counter == PollinousCoreTurns
+            )
+                ? 2
+                : 0
+        );
+
+    /// <summary>Pollinous Core's per-turn tick, and the reset once it has paid.</summary>
+    internal static void TickPollinousCore(CombatState state)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == PollinousCore);
+        if (index < 0)
+        {
+            return;
+        }
+
+        int seen = state.Relics[index].Counter;
+        state.Relics[index] = state.Relics[index] with
+        {
+            Counter = seen >= PollinousCoreTurns ? 1 : seen + 1,
+        };
+    }
 
     /// <summary>
     /// `RingOfTheSnake.ModifyHandDraw` and `BagOfPreparation.ModifyHandDraw`: `CardsVar(2)`
@@ -806,6 +921,19 @@ public static class RelicEffects
         if (HasRelic(state, IvoryTile) && energySpent >= 3)
         {
             CardEffects.GainEnergy(state, 1);
+        }
+
+        // `DaughterOfTheWind.AfterCardPlayed`: BlockVar(1m, Unpowered) per ATTACK played.
+        if (def.Type == CardType.Attack && HasRelic(state, DaughterOfTheWind))
+        {
+            CardEffects.GainUnpoweredBlock(state, 1, rng);
+        }
+
+        // `LostWisp.AfterCardPlayed`: 8 unpowered damage to every hittable enemy whenever
+        // a POWER is played. The wisp is a Power-deck relic and does nothing else.
+        if (def.Type == CardType.Power && HasRelic(state, LostWisp))
+        {
+            CardEffects.DealUnpoweredDamageToAll(state, 8);
         }
 
         // `HelicalDart.AfterCardPlayed`: a card tagged Shiv applies
@@ -1105,6 +1233,15 @@ public static class RelicEffects
             CardEffects.GainUnpoweredBlock(state, 6, rng);
         }
 
+        // The fake pays 3 where Orichalcum pays 6, on the same "ended the turn with no
+        // block" test. Its `BeforeSideTurnEndVeryEarly`/`BeforeSideTurnEnd` split exists so
+        // Plating cannot rob it of the trigger; the emulator reads block once, here, which
+        // is the same answer because Plating's grant happens on the enemy boundary.
+        if (HasRelic(state, FakeOrichalcum) && state.PlayerBlock == 0)
+        {
+            CardEffects.GainUnpoweredBlock(state, 3, rng);
+        }
+
         if (HasRelic(state, CloakClasp) && state.Hand.Count > 0)
         {
             // BlockVar(1m, Unpowered) per card left in hand.
@@ -1165,13 +1302,21 @@ public static class RelicEffects
             bonus += 3;
         }
 
-        // StrikeDummy: `cardSource.Tags.Contains(CardTag.Strike)`. Tags are not extracted,
-        // so the NAME stands in -- and here it is exact in both directions: all 22 cards
-        // the source tags contain "Strike", and no untagged card does. `EndsWith` is the
-        // trap, because the basic strikes are StrikeSilent, StrikeDefect and friends.
-        if (HasRelic(state, StrikeDummy) && def.Name.Contains("Strike", StringComparison.Ordinal))
+        // StrikeDummy: `cardSource.Tags.Contains(CardTag.Strike)`. This read the card's
+        // NAME behind a comment saying tags were not extracted -- they are now, and the
+        // name agreed with the tag on all 22 cards, so this is the same answer written so
+        // it stays right. Fake Strike Dummy is the same rule at 1 instead of 3.
+        if (def.StrikeTag)
         {
-            bonus += 3;
+            if (HasRelic(state, StrikeDummy))
+            {
+                bonus += 3;
+            }
+
+            if (HasRelic(state, FakeStrikeDummy))
+            {
+                bonus += 1;
+            }
         }
 
         return bonus;
@@ -1266,15 +1411,6 @@ public static class RelicEffects
         if (turnNumber == 2 && HasRelic(state, Candelabra))
         {
             CardEffects.GainEnergy(state, 2);
-        }
-
-        // `VenerableTeaSet.AfterEnergyReset` pays once, on the first energy reset of the
-        // combat after a rest site, and clears its own flag. The run arms it on entering
-        // the rest site; the existing VenerableTeaSetActive id is that armed marker.
-        if (turnNumber == 1 && HasRelic(state, VenerableTeaSetActive))
-        {
-            CardEffects.GainEnergy(state, 2);
-            state.Relics.RemoveAll(relic => relic.DefId == VenerableTeaSetActive);
         }
 
         _ = rng;
@@ -1382,7 +1518,14 @@ public static class RelicEffects
     /// modelled and pinned by <c>LastingCandyTests</c> so the remaining work is the screen
     /// alone.
     /// </remarks>
-    public static readonly int[] UnmodelledInRun = [LastingCandy];
+    /// <remarks>
+    /// <b>Fake Snecko Eye</b> applies `ConfusedPower` and nothing else -- the real Snecko
+    /// Eye's downside without its two cards of draw. Confused re-rolls every card's cost
+    /// as it is drawn, and the emulator models no such power: it is a card-cost mechanic
+    /// rather than a relic, and it would need a per-copy cost roll on the draw path that
+    /// nothing else in the game asks for. The relic is inert until Confused exists.
+    /// </remarks>
+    public static readonly int[] UnmodelledInRun = [LastingCandy, FakeSneckoEye];
 
     /// <summary>
     /// `LastingCandy.IsInTriggeringCombat`: `CombatsSeen > 0 &amp;&amp; CombatsSeen % 2 == 0`,
@@ -1418,7 +1561,14 @@ public static class RelicEffects
     /// Nib's ten -- and carrying those into the run would have the next fight start
     /// part-way through them.
     /// </remarks>
-    private static readonly int[] RunCounterRelics = [BoneTea, EmberTea, TeaOfDiscourtesy];
+    private static readonly int[] RunCounterRelics =
+    [
+        BoneTea,
+        EmberTea,
+        TeaOfDiscourtesy,
+        VenerableTeaSet,
+        FakeVenerableTeaSet,
+    ];
 
     /// <summary>Writes the combat's remaining counts back onto the run's relics.</summary>
     public static void CarryRunCountersBack(CombatState combat, List<RelicInstance> runRelics)
@@ -1433,6 +1583,74 @@ public static class RelicEffects
                 {
                     Counter = combat.Relics[inCombat].Counter,
                 };
+            }
+        }
+    }
+
+    /// <summary>
+    /// `WongosMysteryTicket`: five combats finished, and it has not paid yet.
+    /// </summary>
+    /// <remarks>
+    /// `CombatsFinished` counts in `AfterCombatEnd` and `TryModifyRewards` fires on the
+    /// screen that follows, so the FIFTH fight's rewards are the ones that carry the three
+    /// relics. `GaveRelic` then retires it -- the ticket is a one-off, not a tap.
+    /// </remarks>
+    public static bool WongosTicketPaysOut(Run.RunState state)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == WongosMysteryTicket);
+        return index >= 0 && state.Relics[index].Counter == WongosTicketCombats;
+    }
+
+    /// <summary>Counts a finished combat towards the ticket.</summary>
+    public static void CountCombatForWongosTicket(Run.RunState state)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == WongosMysteryTicket);
+        if (index >= 0 && state.Relics[index].Counter <= WongosTicketCombats)
+        {
+            state.Relics[index] = state.Relics[index] with
+            {
+                Counter = state.Relics[index].Counter + 1,
+            };
+        }
+    }
+
+    /// <summary>Past the threshold is the spent flag -- `GaveRelic`, held as a number.</summary>
+    public static void RetireWongosTicket(Run.RunState state)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == WongosMysteryTicket);
+        if (index >= 0)
+        {
+            state.Relics[index] = state.Relics[index] with
+            {
+                Counter = WongosTicketCombats + 1,
+            };
+        }
+    }
+
+    /// <summary>
+    /// A tea set armed by the last rest site spends its charge and answers true.
+    /// </summary>
+    private static bool SpendRestSiteCharge(CombatState state, int relicId)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == relicId);
+        if (index < 0 || state.Relics[index].Counter <= 0)
+        {
+            return false;
+        }
+
+        state.Relics[index] = state.Relics[index] with { Counter = 0 };
+        return true;
+    }
+
+    /// <summary>Arms both tea sets, on entering a rest site.</summary>
+    public static void ArmTeaSetsAtRestSite(Run.RunState state)
+    {
+        foreach (int relicId in new[] { VenerableTeaSet, FakeVenerableTeaSet })
+        {
+            int index = state.Relics.FindIndex(relic => relic.DefId == relicId);
+            if (index >= 0)
+            {
+                state.Relics[index] = state.Relics[index] with { Counter = 1 };
             }
         }
     }
@@ -1737,6 +1955,17 @@ public static class RelicEffects
             CardEffects.DealUnpoweredDamageToAll(state, 3);
         }
 
+        // `ForgottenSoul.AfterCardExhausted`: 1 unpowered damage to ONE random enemy off
+        // CombatTargets -- Charon's Ashes' shape at a tenth of the reach.
+        if (HasRelic(state, ForgottenSoul))
+        {
+            var target = CardEffects.RandomLivingEnemyFor(state, rng ?? new Random(0));
+            if (target is not null)
+            {
+                CardEffects.DealUnpoweredDamage(state, target, 1);
+            }
+        }
+
         int index = state.Relics.FindIndex(relic => relic.DefId == JossPaper);
         if (index < 0)
         {
@@ -1960,6 +2189,13 @@ public static class RelicEffects
         // `EternalFeather.AfterRoomEntered(room is RestSiteRoom)`: HealVar(3) per
         // CardsVar(5) cards in the deck, integer division -- 12 cards is two, not two and
         // a bit.
+        // Both tea sets arm on entering a rest site and pay on the next combat's first
+        // energy reset.
+        if (isRestSite)
+        {
+            ArmTeaSetsAtRestSite(state);
+        }
+
         if (isRestSite && Has(state.Relics, EternalFeather))
         {
             int heal = state.Deck.Count / 5 * 3;

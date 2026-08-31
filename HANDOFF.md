@@ -1161,6 +1161,32 @@ the copying code carried a comment naming Girya as the reason it existed. The in
 recorded; the ordering defeated it. Worth remembering when adding anything else that reads
 a counter at combat start.
 
+### Testing the seam is not testing the relic
+
+Venerable Tea Set never paid out once in a real run (E393). Its armed state was a synthetic
+`VenerableTeaSetActive` relic id, and nothing anywhere in the run added it — the relic was
+inert from the first floor to the last. It had two tests, both green, and both handed the
+marker straight to `Fight.WithRelics`. They proved the effect fired when the marker was
+present, which was never. The audit's READ note said "correct", and it was: the EFFECT was
+right and the wiring did not exist, and reading the relic's source could not tell you that.
+
+The tell, in hindsight, is that a test names a synthetic id the game does not have. Any
+time the emulator invents a marker to stand for a state the game keeps on the object,
+something has to set it, and the test that drives it directly cannot say whether anything
+does. The second read of the marker was dead code too — behind `turnNumber == 1` in a
+function only ever called from turn two — which is the same fact showing up twice.
+
+Worth a sweep at some point: every synthetic id above 100000 in `RelicEffects`, and every
+`state.X = true` flag a relic reads, asked the same question — **who sets this, and is
+there a test that gets there without setting it by hand?**
+
+The same batch produced E395, which is duller and cheaper to prevent: four relic id
+constants were simply wrong numbers, transcribed from a stale reading in one sitting. A
+constant off by a few is a relic that never fires and a relic that fires for the wrong
+reason. Nothing in the suite could see it, because the tests around a relic drive its
+constant. `RelicConstantTests` now compares every constant to the extracted table in both
+directions; it is four lines of test for a defect class that had no other guard.
+
 ### Hive's encounter tags, and why a missing tag is worse than a wrong order
 
 Seven act-2 captures now agree with the emulator on which ancient act 2 opens on. Five did
