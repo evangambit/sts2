@@ -881,12 +881,10 @@ the evidence argues for:
    Curses, Statuses, Tokens, Minions and event cards. Lower value per card than a
    character pool, but Statuses and Curses are what half the game's punishment mechanics
    are made of.
-2. **The 56 relics still unmodelled**, and the shape of what is left has changed: **50 of
-   the 56 belong to the eight Act 2+ ancients** (Darv, Orobas, Pael, Tezcatara, Nonupeipe,
-   Tanx, Vakuu, The Architect), none of which the emulator models — Neow is the only
-   ancient it runs. That is one piece of work, not fifty: model the ancients and the
-   relics follow. Everything an Act 1 run can be handed is done, and so is every relic
-   behind an event the emulator can run at all. Two things to plan around. First: **budget for the hook, not for the relic** —
+2. **The 56 relics still unmodelled** — see *The ancient relics* below, which plans them
+   out. The short version: 50 of the 56 belong to the eight Act 2+ ancients, **none of
+   them is reachable in Act 1**, and the cost is seven missing mechanics rather than
+   fifty relic bodies. Two things to plan around. First: **budget for the hook, not for the relic** —
    of the 48 written in this pass, eight needed a hook the emulator did not have, and
    three of those hooks were defects in their own right (`LoseHp` never dispatching
    `AfterDamageReceived`, E384; player Strength with twenty-eight call sites and no door,
@@ -914,3 +912,76 @@ The standing question to keep asking before each of those: *what would make this
 stale, and would anything notice?* Every mechanism that has earned its place here —
 extracted data over hand-kept lists, digest-keyed reading notes, the coverage guard, the
 `blocked/` fixtures with written reasons — is an answer to it.
+
+
+## 7. The ancient relics
+
+Fifty of the fifty-six unmodelled relics belong to the eight ancients. This plans that out.
+Written after the reading pass that closed everything an Act 1 run can be handed, so the
+sizing below is measured rather than guessed — the hook each relic needs was read off its
+source, not estimated from its name.
+
+### Three findings that changed the shape of it
+
+**The ancients are further along than "not modelled."** `RunPhase.Ancient`, `State.Ancient`,
+`RunConstants.AncientsFor(act)` and `ApplyAncientChoice` all exist, and **Orobas, Pael and
+Tezcatara already have option generators** in `RunNonCombatEffects.GenerateAncientOptions`
+that hand relics over through `ApplyRelicPickup`. What is missing for those three is the
+relic EFFECTS, not the ancient. Darv sits in `RunMapGenerator.SharedAncientPool` and falls
+through to `_ => []`. The Architect grants no relics at all and is out of scope here.
+
+**None of the fifty is reachable in Act 1.** Orobas, Pael and Tezcatara are Hive (Act 2);
+Nonupeipe, Tanx and Vakuu are Glory (Act 3); Darv is a shared ancient the emulator's fixed
+profile leaves out. So this is building for an act the emulator does not run. That is a
+legitimate thing to do — it is what the six Act 2 events turned out to be worth, where five
+of the six were placeholders wrong in every particular — but it should be a knowing choice
+rather than a default one.
+
+**Byrdpip IS reachable in Act 1**, through a chain no reachability query can see: Byrdonis
+Nest (Act 1, modelled) gives the Byrdonis Egg card, the egg adds a HATCH option at a rest
+site, and taking it grants the relic. That is the third distinct hole in the "what can this
+run be handed" predicate, and each has been a different shape — pool membership (E389),
+relic-replaces-relic (E389), and now event → card → rest-site option → relic. It is
+independent of the ancients and worth doing on its own.
+
+### The tiers
+
+| Tier | Scope | Relics | Reachable today |
+| --- | --- | --- | --- |
+| **A** | ~~Byrdpip: the HATCH rest-site option and the relic; teach the predicate this chain~~ **DONE** (E397) | 1 | **Yes** |
+| **B** | Darv: an option generator, plus its eight | 8 | No — shared-ancient profile |
+| **C** | Orobas / Pael / Tezcatara relics; their options already generate | 15 (+4 via Touch of Orobas) | No — Act 2 |
+| **D** | Nonupeipe / Tanx / Vakuu: three option generators, plus relics | 27 | No — Act 3 |
+
+Darv's generator is the small part: one relic from each filtered set, shuffled, take three
+— or take two and add Dusty Tome on a coin flip. Three options, which is exactly the event
+action space.
+
+### The real cost is seven mechanics, not fifty relics
+
+This is the lesson of the last two passes stated in advance: **budget for the hook, not for
+the relic.** Roughly 23 of the 50 are an `AfterObtained` or a hook that already exists. The
+rest need one of these, and the mechanic is the work:
+
+| Mechanic | Needed by | Notes |
+| --- | --- | --- |
+| **Confused** — every card's cost re-rolled as it is drawn | Snecko Eye, Fake Snecko Eye | Its ONLY two sources in the whole game, both Act 2. Zero Act 1 value. Unblocks a declared gap in `RelicEffects.UnmodelledInRun`. |
+| **Extra turns** (`ShouldTakeExtraTurn`) | Pael's Eye | An engine concept, not a relic. The largest single item here. |
+| **Relic transformation** | Archaic Tooth, Touch of Orobas | 173 and 162 lines; each rewrites a STARTER relic into one of four others, which is where four of the six "no granter" relics come from. |
+| `ModifyCardPlayCount` | Throwing Axe | |
+| Star-cost modification | Brilliant Scarf | Alongside `TryModifyEnergyCostInCombatLate`. |
+| `TryModifyCardRewardAlternatives` | Pael's Wing | A reward screen concept the emulator has no shape for — compare Lasting Candy's fourth slot (E392). |
+| Pets beyond Osty | Byrdpip | **Not needed.** The Byrdpip pet is 9999 HP, an invisible health bar and a `NOTHING_MOVE` state machine that returns a completed task — it is an animation anchor for Byrd Swoop, and modelling it would be modelling nothing. |
+
+### Recommendation
+
+**Do Tier A, then take the 66 unread cards before Tiers B–D.** Curses and Statuses are Act 1
+content a run meets constantly, they sit in `Pending` with no tests, and three passes now
+say unread things are wrong about half the time. Tiers B–D are worth doing when Act 2 is on
+the table; doing them first means fifty relics whose correctness nothing can exercise —
+which is the condition that let five of the six Act 2 events stay placeholders for so long.
+
+If relics are the priority anyway, **Tier B is the best of the three**: its eight are the
+deck-warping relics people build runs around, it is the only tier that becomes Act 1
+reachable the moment shared ancients are switched on, and its option generator is an
+afternoon.

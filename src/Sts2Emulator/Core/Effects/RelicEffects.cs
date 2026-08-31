@@ -91,6 +91,7 @@ public static class RelicEffects
     public const int RoyalPoison = 223;
     public const int WongoCustomerAppreciationBadge = 294;
     public const int WongosMysteryTicket = 295;
+    public const int Byrdpip = 38;
 
     /// <summary>Pollinous Core's `DynamicVar("Turns", 4m)` and `CardsVar(2)`.</summary>
     public const int PollinousCoreTurns = 4;

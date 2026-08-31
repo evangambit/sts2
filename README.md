@@ -114,7 +114,7 @@ character's own resource is modelled: the Necrobinder's **Osty** pet, the Regent
 and **Forge/Sovereign Blade**, and the Defect's **orb queue** and Focus.
 
 Beyond cards: 240 of 296 relics, **every one of them read against the source** — including
-all 130 an Act 1 run can actually end up holding, and every relic behind an event the
+all 131 an Act 1 run can actually end up holding, and every relic behind an event the
 emulator can run at all — plus 111 monsters with their movesets, the event pool, potions,
 shops, rest sites, map routing and Neow.
 
@@ -154,9 +154,10 @@ wrong in every particular, which is the argument for testing them: unreachable i
 untested, and a placeholder reads as finished code until someone opens the source beside it.
 
 This is not yet a full game emulator. Exact Neow/shop/reward/event odds and expanded trace
-parity are still future work. The 56 relics with no implementation at all are the largest
-remaining surface, and **50 of them belong to the eight Act 2+ ancients**, which the
-emulator does not model at all — Neow is the only ancient it runs. That claim is computed
+parity are still future work. The 55 relics with no implementation at all are the largest
+remaining surface, and **50 of them belong to the eight Act 2+ ancients** — none reachable
+in Act 1, and costing seven missing mechanics rather than fifty relic bodies. `PLAN.md` §7
+plans that out. That claim is computed
 rather than asserted: `scripts/audit_relics.py --reachable` works out what an Act 1 run can
 actually be handed, after a version of it that meant something narrower let fourteen
 obtainable relics be called unreachable (E389).

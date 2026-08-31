@@ -157,6 +157,18 @@ public static class RunConstants
     /// player's grab bag, which is the same queue and the same end an elite reward uses.
     /// </summary>
     public const int RestDigAction = 5;
+
+    /// <summary>
+    /// `ByrdonisEgg.TryModifyRestSiteOptions` adds `HatchRestSiteOption`, which grants the
+    /// Byrdpip relic. Offered whenever the DECK holds an egg -- the option comes from the
+    /// CARD, not from a relic, which makes it the only rest option in the game a card can
+    /// put there.
+    /// </summary>
+    /// <remarks>
+    /// Six, not three: three is `RewardSkipAction`, which the rest site borrows for its
+    /// own leave. The gap at three is why the rest options run 0, 1, 2, 4, 5.
+    /// </remarks>
+    public const int RestHatchAction = 6;
     public const int ShopRemoveAction = 13;
     public const int ShopSkipAction = 14;
     public const int EventSkipAction = 3;

@@ -377,6 +377,22 @@ public static class RunNonCombatEffects
             // cornucopia its icon may or may not show is decided by the last byte of the
             // PROFILE's unique id and is purely cosmetic -- it changes `IconBaseName` and
             // nothing else, which is a joke about multiplayer rather than a mechanic.
+            // `Byrdpip.AfterObtained`: every BYRDONIS EGG in the deck becomes a Byrd
+            // Swoop. That is the relic's whole mechanic -- the pet it also summons is
+            // 9999 HP with an invisible health bar and a `NOTHING_MOVE` state machine
+            // that returns a completed task, an animation anchor for the card and nothing
+            // the rules can see. Its `Skin` roll is off `new Rng(Owner, Id)`, a stream of
+            // its own, so it spends none of the run's.
+            case Effects.RelicEffects.Byrdpip:
+                for (int i = 0; i < state.Deck.Count; i++)
+                {
+                    if (state.Deck[i].DefId == ByrdonisEggCard)
+                    {
+                        state.Deck[i] = new CardInstance(ByrdSwoopCard, Upgraded: false);
+                    }
+                }
+
+                break;
             // `FakeMango.AfterObtained`: MaxHpVar(3m) against the real Mango's 14.
             case Effects.RelicEffects.FakeMango:
                 GainMaxHp(state, 3);
@@ -1670,6 +1686,12 @@ public static class RunNonCombatEffects
 
     /// <summary>A card an event names outright -- Wood Carvings' Peck and Toric Toughness.</summary>
     public static int NamedCard(string name) => ResolveCard(name);
+
+    /// <summary>Byrdonis Nest's quest card, which is what puts HATCH on a rest site.</summary>
+    public static int ByrdonisEggCard => ResolveCard("ByrdonisEgg");
+
+    /// <summary>What the egg becomes: a 0-cost, 14-damage Attack.</summary>
+    public static int ByrdSwoopCard => ResolveCard("ByrdSwoop");
 
     /// <summary>Circlet, the fallback relic -- the only stackable one in the game.</summary>
     public static int CircletRelic => ResolveRelic("Circlet");

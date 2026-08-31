@@ -569,6 +569,17 @@ public sealed class RunEngine
                     }
                 }
 
+                // `ByrdonisEgg.TryModifyRestSiteOptions`: an egg in the DECK adds HATCH.
+                // The only rest option a CARD puts there rather than a relic, so it reads
+                // the deck rather than the relic list.
+                if (
+                    State.Deck.Any(card => card.DefId == RunNonCombatEffects.ByrdonisEggCard)
+                    && !RestOptionSpent(RunConstants.RestHatchAction)
+                )
+                {
+                    SetMask(mask, RunConstants.RestHatchAction);
+                }
+
                 SetMask(mask, RunConstants.RewardSkipAction);
                 break;
 
@@ -2136,6 +2147,19 @@ public sealed class RunEngine
             // queue and the same END an elite reward pulls from, so a dug relic is one the
             // run will not offer again.
             RunNonCombatEffects.ApplyRelicPickup(State, RunRewardGenerator.NextRelic(State));
+            FinishRestOption(action);
+            return 0;
+        }
+
+        if (
+            action == RunConstants.RestHatchAction
+            && State.Deck.Any(card => card.DefId == RunNonCombatEffects.ByrdonisEggCard)
+        )
+        {
+            // `HatchRestSiteOption.OnSelect` is `RelicCmd.Obtain<Byrdpip>` and nothing
+            // else -- the egg's transformation is the RELIC's `AfterObtained`, so it lands
+            // however the relic is obtained rather than only through the rest site.
+            RunNonCombatEffects.ApplyRelicPickup(State, Effects.RelicEffects.Byrdpip);
             FinishRestOption(action);
             return 0;
         }

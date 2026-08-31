@@ -217,7 +217,40 @@ def act_one_relics(relics: dict[str, int]) -> set[str]:
         for successor in re.findall(r"RelicCmd\.Replace\([^)]*?Relic<(\w+)>", path.read_text(encoding="utf-8")):
             reachable.add(successor)
 
+    reachable |= _reachable_through_cards(allowed, event_text)
     return reachable & set(relics)
+
+
+CARDS = REPO / "decompiled" / "MegaCrit.Sts2.Core.Models.Cards"
+RESTSITE = REPO / "decompiled" / "MegaCrit.Sts2.Core.Entities.RestSite"
+
+
+def _reachable_through_cards(allowed: set[str], event_text: dict[str, str]) -> set[str]:
+    """Relics an Act 1 event reaches through a CARD it hands out.
+
+    Byrdpip is the case: Byrdonis Nest gives the Byrdonis Egg, the egg's
+    `TryModifyRestSiteOptions` adds `HatchRestSiteOption`, and taking that grants the
+    relic. Three hops, and the event's own source never says "Byrdpip" -- so a query that
+    only reads event sources calls the relic unreachable, which is what happened.
+
+    This is the THIRD distinct hole in this predicate: pool membership and
+    relic-replaces-relic were the first two. Each was a different shape, which is the
+    argument for computing reachability from the graph rather than listing it.
+    """
+    rest_options = {
+        p.stem: p.read_text(encoding="utf-8") for p in RESTSITE.glob("*.cs")
+    }
+    out: set[str] = set()
+    for card in CARDS.glob("*.cs"):
+        named = re.compile(rf"(?<![A-Za-z0-9_]){card.stem}(?![A-Za-z0-9_])")
+        if not any(named.search(event_text[e]) for e in allowed if e in event_text):
+            continue
+        text = card.read_text(encoding="utf-8")
+        for option in re.findall(r"new (\w*RestSiteOption)\(", text):
+            body = rest_options.get(option, "")
+            out.update(re.findall(r"RelicCmd\.Obtain<(\w+)>", body))
+
+    return out
 
 
 def starter_relics() -> dict[str, str]:
@@ -242,6 +275,10 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "Byrdpip": (
+        "9caa3a1b78bc",
+        "Every BYRDONIS EGG in the deck becomes a Byrd Swoop -- the relic's whole mechanic. The pet it also summons is 9999 HP with an invisible health bar and a NOTHING_MOVE state machine returning a completed task: an animation anchor for the card, and nothing the rules can see. Its Skin roll is off `new Rng(Owner, Id)`, a stream of its own, so it spends none of the run's. Reached through Byrdonis Nest -> the egg card -> the HATCH rest option, a chain no query over event sources can see.",
+    ),
     "BingBong": (
         "10fe0eb39dd4",
         "Every card entering the DECK is CLONED to the bottom of it. Written from scratch. The clone must not clone itself -- the game keeps a CardsToSkip set; the emulator uses a re-entrancy flag, which cannot leak an entry. It doubles a curse as happily as anything else.",
