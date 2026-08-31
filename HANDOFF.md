@@ -1187,6 +1187,30 @@ reason. Nothing in the suite could see it, because the tests around a relic driv
 constant. `RelicConstantTests` now compares every constant to the extracted table in both
 directions; it is four lines of test for a defect class that had no other guard.
 
+### A test that reaches its subject through the subject's own constant
+
+Six relic constants in `RunConstants` named ids that do not exist -- 1332, 1363, 1394,
+1399, 1510, 1533 (E398). Six `switch` arms in `ApplyRelicPickup` were therefore
+unreachable, and the code read as finished. That is worse than E395's wrong numbers,
+because a wrong number at least points somewhere.
+
+The part worth carrying is why the suite could not see it.
+`AncientAstrolabeAndEmptyCage_ResolveSelectionFollowUps` set
+`NeowOptions = [RunConstants.RelicAstrolabe, ...]` and stepped, so the test and the arm
+agreed on a phantom and were wrong together, green. **A test that reaches its subject
+through the same constant the subject is keyed on cannot tell you the constant is right** --
+it is Venerable Tea Set's lesson (E393) in a different costume, and both were found in the
+same week. The check that catches this class is not a better test of the relic; it is a
+test of the CONSTANT against the extracted table, which is four lines and now covers both
+files plus "names an id that exists at all".
+
+When the ids were fixed, all six arms turned out to be wrong as well as dead (E399) --
+Pandora's Box on card ids and the wrong stream, Calling Bell handing over rolled relics
+instead of one of each rarity on a screen, Dusty Tome adding a random card, Astrolabe and
+Empty Cage picking the player's cards for them. That is not a coincidence: an arm nothing
+can reach is an arm nobody has ever seen run, so it is exactly where a plausible-looking
+guess survives.
+
 ### Hive's encounter tags, and why a missing tag is worse than a wrong order
 
 Seven act-2 captures now agree with the emulator on which ancient act 2 opens on. Five did

@@ -2461,7 +2461,7 @@ public static class CardEffects
                 break;
             }
 
-            var card = GrowKinglyCardOnDraw(state.DrawPile[0]);
+            var card = ConfuseCostOnDraw(state, GrowKinglyCardOnDraw(state.DrawPile[0]));
             state.RemoveFromDrawPileAt(0);
             state.CardsDrawnThisCombat++;
             if (!fromHandDraw)
@@ -2816,6 +2816,35 @@ public static class CardEffects
             state.Hand.Add(new CardInstance(id, upgraded));
             NoteGeneratedCard(state);
         }
+    }
+
+    /// <summary>
+    /// `ConfusedPower.AfterCardDrawn`: the card's cost for the rest of the combat is
+    /// re-rolled to 0..3 as it is drawn. Snecko Eye's, and the only other source in the
+    /// game is Fake Snecko Eye -- which gives the Confused and none of the draw.
+    /// </summary>
+    /// <remarks>
+    /// `card.EnergyCost.Canonical &lt; 0` is skipped, which is the X-cost cards: their
+    /// printed cost is negative and a rolled number would make them ordinary. The roll is
+    /// `Rng.CombatEnergyCosts.NextInt(4)` -- its own stream, so it does not disturb the
+    /// draw or generation ones -- and it lands on `CostForCombat`, which is exactly
+    /// `EnergyCost.SetThisCombat`.
+    /// </remarks>
+    internal static CardInstance ConfuseCostOnDraw(CombatState state, CardInstance card)
+    {
+        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Confused) <= 0)
+        {
+            return card;
+        }
+
+        var def = GeneratedData.Cards.Get(card.DefId);
+        if (def.Cost < 0 || def.HasEnergyCostX)
+        {
+            return card;
+        }
+
+        // The same stream Slither re-rolls from, and the same fallback.
+        return card with { CostForCombat = (state.EnergyCostRng as Random ?? new Random(0)).Next(4) };
     }
 
     /// <summary>

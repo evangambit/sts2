@@ -275,6 +275,42 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "Astrolabe": (
+        "0d89d1a6f69a",
+        "THREE cards the player picks, each transformed off Rng.Niche and then UPGRADED -- the upgrade lands on the NEW card, between the create and the transform. Its arm ran down a legacy TransformSelectedDeckIndex sentinel that transformed the first three cards ITSELF, and could never run anyway: RelicAstrolabe was 1332, which is not a relic id.",
+    ),
+    "BlackStar": (
+        "2eab5756c076",
+        "One more relic on the rewards of an ELITE room, and no other. The ROOM type rather than the encounter, like Sling of Courage. Written from scratch.",
+    ),
+    "CallingBell": (
+        "288d408b1761",
+        "A Curse of the Bell and THREE relics on a rewards screen, one of each rarity -- RelicReward(Common), (Uncommon), (Rare). The arm handed over three ROLLED pool relics directly: no screen, no rarities, three draws off the wrong end of the queue. RelicCallingBell was 1363, so none of it ever ran.",
+    ),
+    "DustyTome": (
+        "662840ba6bfd",
+        "An UPGRADED copy of the ANCIENT-rarity card SetupForPlayer picked -- the character's own pool filtered to Ancient minus Archaic Tooth's eleven transcendence cards, off PlayerRng.Rewards. The Ironclad's Ancient cards are Break and Corruption and Break is a transcendence card, so it is always Corruption off one draw. The arm added a random reward card on UpFront.",
+    ),
+    "EmptyCage": (
+        "c69b97946b15",
+        "TWO cards the player picks, removed. Same legacy sentinel as Astrolabe and the same phantom id, 1399.",
+    ),
+    "PandorasBox": (
+        "d2ed6c01f612",
+        "Every BASIC Strike or Defend that is REMOVABLE, transformed off Rng.Niche. The arm matched Ironclad's two card IDS on the Transformations stream -- wrong filter, wrong stream, and nothing at all for another character. The set has to be taken before transforming: TransformCardAt removes and appends, so a forward walk skips half of them and finds its own replacements.",
+    ),
+    "PrismaticGem": (
+        "f64a3fd19936",
+        "+1 max energy AND card rewards rolled from every character's pool. Card rewards ONLY -- the hook refuses a shop, a custom pool, a colourless-only one and anything without IsCardReward. The arm added a random card on pickup, a different relic entirely, behind the phantom id 1533.",
+    ),
+    "RunicPyramid": (
+        "242df9cc357e",
+        "ShouldFlush is false for its owner on EVERY turn, with no clock -- the hand is simply never discarded. The Ringing Triangle is the same hook with a turn-one guard, which is why they share SkipsHandFlush. Ethereal cards still exhaust.",
+    ),
+    "SneckoEye": (
+        "fc91b603409b",
+        "Confused, and TWO more cards every hand draw -- no turn guard, so it rides ExtraOpeningHandDraw as well as ExtraHandDraw, the only relic that has to. Confused re-rolls each drawn card's cost to 0..3 off the run's combat_energy_costs stream, skipping X-cost cards, and it has to be applied before the OPENING hand is dealt.",
+    ),
     "Byrdpip": (
         "9caa3a1b78bc",
         "Every BYRDONIS EGG in the deck becomes a Byrd Swoop -- the relic's whole mechanic. The pet it also summons is 9999 HP with an invisible health bar and a NOTHING_MOVE state machine returning a completed task: an animation anchor for the card, and nothing the rules can see. Its Skin roll is off `new Rng(Owner, Id)`, a stream of its own, so it spends none of the run's. Reached through Byrdonis Nest -> the egg card -> the HATCH rest option, a chain no query over event sources can see.",

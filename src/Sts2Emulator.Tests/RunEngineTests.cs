@@ -1304,15 +1304,27 @@ public class RunEngineTests
         astrolabe.Reset("0");
         astrolabe.State.NeowOptions = [RunConstants.RelicAstrolabe, 0, 0];
 
+        int deckBefore = astrolabe.State.Deck.Count;
         int status = astrolabe.Step(0, -1, out _, out _, out _);
         Assert.Equal(0, status);
         Assert.Equal(RunPhase.TransformSelect, astrolabe.State.Phase);
 
-        status = astrolabe.Step(0, -1, out _, out bool terminal, out _);
-        Assert.Equal(0, status);
+        // THREE picks, not one. This used to resolve in a single step because the relic
+        // ran down a legacy `TransformSelectedDeckIndex` sentinel that transformed the
+        // first three cards ITSELF -- and the test agreed with it, because both used the
+        // same `RelicAstrolabe` constant, which was 1332 and is not a relic id at all.
+        bool terminal = false;
+        for (int pick = 0; pick < 3; pick++)
+        {
+            Assert.Equal(RunPhase.TransformSelect, astrolabe.State.Phase);
+            status = astrolabe.Step(0, -1, out _, out terminal, out _);
+            Assert.Equal(0, status);
+        }
+
         Assert.False(terminal);
-        Assert.Equal(RunPhase.Map, astrolabe.State.Phase);
+        Assert.Equal(deckBefore, astrolabe.State.Deck.Count);
         Assert.Contains(astrolabe.State.Deck, card => card.Upgraded);
+        Assert.Equal(RunPhase.Ancient, astrolabe.State.Phase);
 
         var cage = new RunEngine();
         cage.Reset("0");
@@ -1326,9 +1338,6 @@ public class RunEngineTests
         // Confirming the pickup opens the removal screen and takes nothing yet: the cage
         // removes TWO cards and the PLAYER picks both. It used to take them itself, by a
         // preference order the emulator invented, which is the whole of the relic.
-        status = cage.Step(0, -1, out _, out terminal, out _);
-        Assert.Equal(0, status);
-        Assert.Equal(RunPhase.TransformSelect, cage.State.Phase);
         Assert.Equal(deckSize, cage.State.Deck.Count);
 
         // The screen stays up for the second pick.

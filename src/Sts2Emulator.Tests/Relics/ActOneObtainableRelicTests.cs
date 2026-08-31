@@ -503,17 +503,16 @@ public class LastingCandyTests
     }
 
     /// <summary>
-    /// The declared gaps are exactly two, and both are declared for a reason that is not
-    /// "nobody got to it": Lasting Candy needs a fourth reward slot, and Fake Snecko Eye
-    /// needs a Confused power the emulator has no model for. Pinned so the list cannot
-    /// quietly become a place to park work.
+    /// One declared gap left, and it is declared for a reason that is not "nobody got to
+    /// it": Lasting Candy needs a fourth card-reward slot, which is an action-space
+    /// change. Fake Snecko Eye left the list when Confused arrived with Snecko Eye.
+    /// Pinned so the list cannot quietly become a place to park work.
     /// </summary>
     [Fact]
-    public void TheDeclaredRunGapsAreTheTwoKnownOnes()
+    public void LastingCandyIsTheOnlyDeclaredRunGap()
     {
-        Assert.Equal(2, RelicEffects.UnmodelledInRun.Length);
-        Assert.Contains(RelicEffects.LastingCandy, RelicEffects.UnmodelledInRun);
-        Assert.Contains(RelicEffects.FakeSneckoEye, RelicEffects.UnmodelledInRun);
+        Assert.Single(RelicEffects.UnmodelledInRun);
+        Assert.Equal(RelicEffects.LastingCandy, RelicEffects.UnmodelledInRun[0]);
     }
 }
 

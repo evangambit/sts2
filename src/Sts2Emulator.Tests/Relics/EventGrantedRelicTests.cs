@@ -193,11 +193,14 @@ public class FakeRelicTests
         Assert.Equal(plain.State.PlayerHp, rug.State.PlayerHp);
     }
 
-    /// <summary>Fake Snecko Eye needs Confused, which the emulator has no model for.</summary>
+    /// <summary>
+    /// Fake Snecko Eye WAS a declared gap, waiting on Confused. Confused arrived with
+    /// Snecko Eye (Tier B), so the fake is modelled now -- see `DarvRelicTests`.
+    /// </summary>
     [Fact]
-    public void FakeSneckoEyeIsADeclaredGap()
+    public void FakeSneckoEyeIsNoLongerAGap()
     {
-        Assert.Contains(RelicEffects.FakeSneckoEye, RelicEffects.UnmodelledInRun);
+        Assert.DoesNotContain(RelicEffects.FakeSneckoEye, RelicEffects.UnmodelledInRun);
     }
 }
 

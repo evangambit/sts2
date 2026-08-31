@@ -680,6 +680,18 @@ public enum BuffId
     /// the count is spent. Auto-plays do not count towards it.
     /// </summary>
     VoidForm,
+
+    /// <summary>
+    /// `ConfusedPower`: every card the owner draws has its cost for the rest of the combat
+    /// re-rolled to 0..3. `PowerStackType.Single`, so it does not stack -- a second
+    /// application changes nothing.
+    /// </summary>
+    /// <remarks>
+    /// Only two things in the game apply it, and both are relics an Act 1 run cannot
+    /// reach: Snecko Eye, which pays two extra cards a turn for it, and Fake Snecko Eye,
+    /// which pays nothing.
+    /// </remarks>
+    Confused,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

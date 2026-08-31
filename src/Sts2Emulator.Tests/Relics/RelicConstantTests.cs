@@ -26,34 +26,72 @@ public class RelicConstantTests
         RegexOptions.Compiled
     );
 
-    [Fact]
-    public void EveryIdConstantMatchesTheExtractedTable()
+    /// <summary>
+    /// Both files that name relics by id. `RunConstants` matters as much as `RelicEffects`
+    /// and was missed the first time: six of its ids were FABRICATED -- 1332, 1363, 1394,
+    /// 1399, 1510, 1533, none of which is a relic at all -- so five relics had written
+    /// implementations that nothing could ever reach.
+    /// </summary>
+    public static TheoryData<string> Files() =>
+        new()
+        {
+            "src/Sts2Emulator/Core/Effects/RelicEffects.cs",
+            "src/Sts2Emulator/Core/Run/RunConstants.cs",
+        };
+
+    [Theory]
+    [MemberData(nameof(Files))]
+    public void EveryIdConstantMatchesTheExtractedTable(string relativePath)
     {
         var table = GeneratedData
             .Relics.All.ToArray()
             .ToDictionary(def => def.Name, def => def.Id);
         string source = System.IO.File.ReadAllText(
-            System.IO.Path.Combine(
-                RepoRoot(),
-                "src",
-                "Sts2Emulator",
-                "Core",
-                "Effects",
-                "RelicEffects.cs"
-            )
+            System.IO.Path.Combine(RepoRoot(), relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar))
         );
 
         var wrong = Declaration
             .Matches(source)
-            .Where(m => table.ContainsKey(m.Groups[1].Value))
-            .Where(m => table[m.Groups[1].Value] != int.Parse(m.Groups[2].Value))
-            .Select(m =>
-                $"{m.Groups[1].Value} = {m.Groups[2].Value}, table says {table[m.Groups[1].Value]}"
-            )
+            // `RunConstants` prefixes them; `RelicEffects` does not.
+            .Select(m => (Name: StripRelicPrefix(m.Groups[1].Value), Value: int.Parse(m.Groups[2].Value)))
+            .Where(pair => table.ContainsKey(pair.Name))
+            .Where(pair => table[pair.Name] != pair.Value)
+            .Select(pair => $"{pair.Name} = {pair.Value}, table says {table[pair.Name]}")
             .ToList();
 
         Assert.True(wrong.Count == 0, string.Join("; ", wrong));
     }
+
+    /// <summary>
+    /// A `Relic`-prefixed constant whose value is not a relic id at all. Every one of
+    /// these was a relic somebody implemented and nothing could reach.
+    /// </summary>
+    [Fact]
+    public void NoRelicConstantNamesAnIdThatDoesNotExist()
+    {
+        var ids = GeneratedData.Relics.All.ToArray().Select(def => def.Id).ToHashSet();
+        string source = System.IO.File.ReadAllText(
+            System.IO.Path.Combine(
+                RepoRoot(),
+                System.IO.Path.Combine("src", "Sts2Emulator", "Core", "Run", "RunConstants.cs")
+            )
+        );
+
+        var phantom = Declaration
+            .Matches(source)
+            .Where(m => m.Groups[1].Value.StartsWith("Relic", System.StringComparison.Ordinal))
+            .Where(m => m.Groups[1].Value != "RelicSlotSize")
+            .Where(m => !ids.Contains(int.Parse(m.Groups[2].Value)))
+            .Select(m => $"{m.Groups[1].Value} = {m.Groups[2].Value}")
+            .ToList();
+
+        Assert.True(phantom.Count == 0, string.Join("; ", phantom));
+    }
+
+    private static string StripRelicPrefix(string name) =>
+        name.StartsWith("Relic", System.StringComparison.Ordinal) && name.Length > 5
+            ? name["Relic".Length..]
+            : name;
 
     /// <summary>
     /// And the reverse: two names must not share an id. A copy-pasted constant that kept

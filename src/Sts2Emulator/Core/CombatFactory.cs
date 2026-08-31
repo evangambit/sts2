@@ -429,10 +429,17 @@ public static class CombatFactory
 
         for (int i = 0; i < handDraw && state.DrawPile.Count > 0; i++)
         {
-            // Through the same roll the ordinary draw path uses: the opening hand is a
+            // Through the same rolls the ordinary draw path uses: the opening hand IS a
             // draw, so a Slither-enchanted card in it costs what the stream says rather
-            // than what it is printed at.
-            state.Hand.Add(CardEffects.RollSlitherCost(state, state.DrawPile[0], rng));
+            // than what it is printed at -- and a Confused player has this hand's costs
+            // re-rolled too, because `BeforeCombatStart` puts the power up before the
+            // first card is dealt.
+            state.Hand.Add(
+                CardEffects.ConfuseCostOnDraw(
+                    state,
+                    CardEffects.RollSlitherCost(state, state.DrawPile[0], rng)
+                )
+            );
             state.RemoveFromDrawPileAt(0);
         }
 

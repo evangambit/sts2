@@ -718,26 +718,45 @@ public static class RunNonCombatEffects
                 state.Gold = 0;
                 break;
             case RunConstants.RelicPandorasBox:
-                TransformAllMatching(state, 472);
-                TransformAllMatching(state, 131);
+                // `Cards.Where(c.IsBasicStrikeOrDefend && c.IsRemovable)`, transformed off
+                // `Rng.Niche`. This matched Ironclad's two card IDS on the Transformations
+                // stream -- wrong filter, wrong stream, and for any other character it
+                // found nothing at all. The TAG is what the game reads, and Ascender's
+                // Bane fails `IsRemovable` rather than the tag.
+                PandorasBoxTransform(state);
                 break;
             case RunConstants.RelicCallingBell:
+                // A Curse of the Bell and THREE relics on a rewards SCREEN, one of each
+                // rarity: `RelicReward(Common)`, `RelicReward(Uncommon)`, `RelicReward(Rare)`.
+                // The emulator handed over three ROLLED pool relics directly -- no screen,
+                // no rarities, and three draws off the wrong end of the queue.
                 AddCardToDeck(
                     state,
                     new CardInstance(NamedCard("CurseOfTheBell"), Upgraded: false)
                 );
-                ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
-                ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
-                ApplyRelicPickup(state, RunRewardGenerator.NextRelic(state));
-                break;
+                state.PendingBonusRelicRewards.Add(
+                    RunRewardGenerator.NextShopRelicOfRarity(state, RelicRarity.Common)
+                );
+                state.PendingBonusRelicRewards.Add(
+                    RunRewardGenerator.NextShopRelicOfRarity(state, RelicRarity.Uncommon)
+                );
+                state.PendingBonusRelicRewards.Add(
+                    RunRewardGenerator.NextShopRelicOfRarity(state, RelicRarity.Rare)
+                );
+                return RunFollowUp.BonusRelicRewards;
             case RunConstants.RelicDustyTome:
+                // An UPGRADED copy of the ANCIENT-rarity card the relic was set up with --
+                // `SetupForPlayer` picks it off `PlayerRng.Rewards` from the character's
+                // own pool, filtered to Ancient rarity minus Archaic Tooth's transcendence
+                // cards. For the Ironclad that pool is Break and Corruption, and Break is
+                // a transcendence card -- so it is always CORRUPTION, off one draw.
+                //
+                // The emulator added a random card off the whole reward pool on the UpFront
+                // stream: wrong card, wrong pool, wrong stream.
                 AddCardToDeck(
                     state,
-                    new CardInstance(RandomRewardCard(state.Rng.UpFront), Upgraded: true)
+                    new CardInstance(DustyTomeCard(state), Upgraded: true)
                 );
-                break;
-            case RunConstants.RelicPrismaticGem:
-                AddRandomRewardCard(state, state.Rng.UpFront);
                 break;
             case RunConstants.RelicNewLeaf:
                 // CardsVar(1) through CardSelectCmd.FromDeckForTransformation, then
@@ -750,11 +769,30 @@ public static class RunNonCombatEffects
                     ? RunFollowUp.TransformSelect
                     : RunFollowUp.None;
             case RunConstants.RelicAstrolabe:
-                state.TransformSelectedDeckIndex = -3;
-                return RunFollowUp.TransformSelect;
+                // THREE cards the player picks, each transformed off `Rng.Niche` and then
+                // UPGRADED. The legacy path transformed the first three cards in the deck
+                // and upgraded whatever landed last, which is neither a choice nor the
+                // right cards.
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.TransformToRandomUpgraded,
+                    0,
+                    count: 3,
+                    returnTo: SelectionReturn.Map
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
             case RunConstants.RelicEmptyCage:
-                state.TransformSelectedDeckIndex = -2;
-                return RunFollowUp.TransformSelect;
+                // TWO cards the player picks, removed.
+                return BeginDeckSelection(
+                    state,
+                    DeckSelection.Remove,
+                    0,
+                    count: 2,
+                    returnTo: SelectionReturn.Map
+                )
+                    ? RunFollowUp.TransformSelect
+                    : RunFollowUp.None;
 
             // `Orrery.AfterObtained` offers FIVE CardRewards at once -- a whole screen each,
             // not five cards on one. The count field Prayer Wheel added carries them.
@@ -1354,6 +1392,7 @@ public static class RunNonCombatEffects
                 state.PendingSelectionArg
             ),
             DeckSelection.TransformToRandom => true,
+            DeckSelection.TransformToRandomUpgraded => true,
             _ => false,
         };
     }
@@ -1420,6 +1459,17 @@ public static class RunNonCombatEffects
                         ? state.Rng.Niche
                         : EventRng(state, state.PendingSelectionEventEntry)
                 );
+                break;
+            case DeckSelection.TransformToRandomUpgraded:
+                // Astrolabe: the roll is off `Rng.Niche`, and the UPGRADE lands on the new
+                // card -- `CardCmd.Upgrade(cardModel)` happens between the create and the
+                // transform, so an unupgradable roll simply arrives unupgraded.
+                TransformCardAt(state, deckIndex, state.Rng.Niche);
+                if (RunConstants.IsRunCardUpgradable(state.Deck[^1]))
+                {
+                    state.Deck[^1] = state.Deck[^1] with { Upgraded = true };
+                }
+
                 break;
             case DeckSelection.Remove:
             case DeckSelection.RemoveUpgradable:
@@ -2446,6 +2496,7 @@ public static class RunNonCombatEffects
         var rng = EventStream(state, ancient);
         return ancient switch
         {
+            RunConstants.AncientDarv => DarvOptions(state, rng),
             RunConstants.AncientOrobas => OrobasOptions(state, rng),
             RunConstants.AncientPael => PaelOptions(state, rng),
             RunConstants.AncientTezcatara => TezcataraOptions(state, rng),
@@ -2523,6 +2574,55 @@ public static class RunNonCombatEffects
     /// Strike — which every starting deck does, and keeps doing unless every Strike is
     /// removed or transformed.
     /// </summary>
+    /// <summary>
+    /// Darv: one relic from each set whose filter passes, shuffled, and the first three --
+    /// or the first two plus Dusty Tome, on a coin flip.
+    /// </summary>
+    /// <remarks>
+    /// The draw order is what makes this reproducible, and it is not obvious: ONE
+    /// `NextItem` per surviving set FIRST (even for the seven sets that hold a single
+    /// relic, which still spend a draw), then the shuffle, then `NextBool` for the tome.
+    /// Reordering any of those gives a different three from the same seed.
+    ///
+    /// `UnstableShuffle` is Fisher-Yates over the list as built, so the set order in
+    /// `DarvSingleRelicSets` is part of the answer.
+    ///
+    /// Pandora's Box drops out for a run whose modifiers clear the deck; the emulator
+    /// models no such modifier, so its filter is always true here and is written as a
+    /// comment rather than a condition that can never fire.
+    /// </remarks>
+    private static int[] DarvOptions(RunState state, GameRng rng)
+    {
+        var offered = new List<int>();
+        foreach (int relicId in RunConstants.DarvSingleRelicSets)
+        {
+            // `Rng.NextItem` over a one-element array is still a draw.
+            offered.Add(rng.NextItem(new[] { relicId }));
+        }
+
+        // `CurrentActIndex == 1` and `== 2`. The emulator runs act index 0, so neither
+        // set's filter passes and neither spends a draw -- which is the whole reason the
+        // act has to be asked rather than assumed.
+        if (state.CurrentActIndex == 1)
+        {
+            offered.Add(rng.NextItem(RunConstants.DarvActOneSet.ToArray()));
+        }
+
+        if (state.CurrentActIndex == 2)
+        {
+            offered.Add(rng.NextItem(RunConstants.DarvActTwoSet.ToArray()));
+        }
+
+        rng.Shuffle(offered);
+
+        if (rng.NextBool())
+        {
+            return [.. offered.Take(2), RunConstants.DarvDustyTome];
+        }
+
+        return [.. offered.Take(3)];
+    }
+
     private static int[] TezcataraOptions(RunState state, GameRng rng)
     {
         var pool1 = RunConstants.TezcataraPool1.ToArray().ToList();
@@ -2862,6 +2962,62 @@ public static class RunNonCombatEffects
         {
             TransformCardAt(state, index, state.PlayerRng.Transformations);
         }
+    }
+
+    /// <summary>
+    /// `PandorasBox.AfterObtained`: every BASIC Strike or Defend the deck holds that is
+    /// removable, transformed off `Rng.Niche`.
+    /// </summary>
+    private static void PandorasBoxTransform(RunState state)
+    {
+        // The set is taken FIRST, then transformed. `TransformCardAt` removes the card and
+        // appends the replacement, so a forward walk over a shifting list skips half of
+        // them -- and the appended replacements are themselves candidates for the walk to
+        // find, which a `where` over the live deck would keep transforming.
+        var targets = state
+            .Deck.Where(card =>
+            {
+                var def = GeneratedData.Cards.Get(card.DefId);
+                return def.Rarity == CardRarity.Basic
+                    && (def.StrikeTag || def.DefendTag)
+                    && IsRemovableCard(card);
+            })
+            .ToList();
+
+        foreach (var target in targets)
+        {
+            int index = state.Deck.IndexOf(target);
+            if (index >= 0)
+            {
+                TransformCardAt(state, index, state.Rng.Niche);
+            }
+        }
+    }
+
+    /// <summary>
+    /// `DustyTome.SetupForPlayer`: an ANCIENT-rarity card from the player's own pool,
+    /// minus Archaic Tooth's transcendence cards, off `PlayerRng.Rewards`.
+    /// </summary>
+    /// <remarks>
+    /// The Ironclad's Ancient cards are Break and Corruption, and Break is one of the
+    /// eleven transcendence cards -- so the filtered list is a single card and the draw
+    /// always lands on Corruption. The draw is still made: skipping it would shift every
+    /// later value on the Rewards stream.
+    /// </remarks>
+    private static int DustyTomeCard(RunState state)
+    {
+        var candidates = GeneratedData
+            .CardPools.Ironclad.ToArray()
+            .Where(id =>
+                GeneratedData.Cards.Get(id).Rarity == CardRarity.Ancient
+                && !RunConstants.TranscendenceCardNames.Contains(
+                    GeneratedData.Cards.Get(id).Name
+                )
+            )
+            .ToArray();
+        return candidates.Length == 0
+            ? RandomRewardCard(state.Rng.UpFront)
+            : state.PlayerRng.Rewards.NextItem(candidates);
     }
 
     private static void TransformAllMatching(RunState state, int cardId)

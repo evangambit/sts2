@@ -93,6 +93,17 @@ public static class RelicEffects
     public const int WongosMysteryTicket = 295;
     public const int Byrdpip = 38;
 
+    // Darv's eight -- Tier B of PLAN.md §7. Deck-warpers, all Ancient rarity.
+    public const int Astrolabe = 8;
+    public const int BlackStar = 20;
+    public const int CallingBell = 39;
+    public const int DustyTome = 69;
+    public const int EmptyCage = 74;
+    public const int PandorasBox = 185;
+    public const int RunicPyramid = 227;
+    public const int SneckoEye = 243;
+    public const int PrismaticGem = 208;
+
     /// <summary>Pollinous Core's `DynamicVar("Turns", 4m)` and `CardsVar(2)`.</summary>
     public const int PollinousCoreTurns = 4;
 
@@ -257,6 +268,9 @@ public static class RelicEffects
         VelvetChoker,
         PhilosophersStone,
         BlessedAntler,
+        // `PrismaticGem.ModifyMaxEnergy`: EnergyVar(1). Its OTHER half widens the card
+        // reward pool -- see `WidensCardRewardsToEveryPool`.
+        PrismaticGem,
     ];
 
     /// <summary>The game's DynamicVar("Cards", 6) on Velvet Choker.</summary>
@@ -370,6 +384,18 @@ public static class RelicEffects
 
     public static void ApplyBeforeOpeningHand(CombatState state, Random rng)
     {
+        // `SneckoEye.BeforeCombatStart` and `FakeSneckoEye.BeforeCombatStart` both apply
+        // ConfusedPower at 1. `PowerStackType.Single`, so holding both is still one.
+        //
+        // Applied HERE rather than in `ApplyCombatStart`, because the opening hand is
+        // dealt between the two and Confused has to be up before it: the game's
+        // `BeforeCombatStart` runs ahead of the first draw, so the opening hand is the
+        // first thing whose costs get re-rolled.
+        if (HasRelic(state, SneckoEye) || HasRelic(state, FakeSneckoEye))
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Confused, 1);
+        }
+
         if (HasRelic(state, BlessedAntler))
         {
             // BeforeHandDraw on turn one: three Dazed into the draw pile at
@@ -832,6 +858,10 @@ public static class RelicEffects
     /// </summary>
     public static int ExtraHandDraw(CombatState state) =>
         (state.Relics.Any(relic => relic.DefId == Pocketwatch && relic.Counter > 0) ? 3 : 0)
+        // `SneckoEye.ModifyHandDraw`: CardsVar(2), every turn and unconditionally. The two
+        // cards are what pays for the Confused; Fake Snecko Eye gives the Confused and no
+        // cards at all.
+        + (HasRelic(state, SneckoEye) ? 2 : 0)
         // `PollinousCore.ModifyHandDraw`: CardsVar(2) on the turn its counter reaches
         // `Turns` (4), and `AfterModifyingHandDraw` resets it to zero. The counter is
         // bumped in `BeforeSideTurnStart`, so this is every fourth turn.
@@ -887,6 +917,11 @@ public static class RelicEffects
     /// is, in `ApplyCombatStart`.
     /// </remarks>
     public static int ExtraOpeningHandDraw(CombatState state) =>
+        // `SneckoEye.ModifyHandDraw` has NO turn guard, so unlike Ring of the Snake's pair
+        // it pays on turn one AND every turn after. It therefore appears here and in
+        // `ExtraHandDraw`, which is the only relic that has to.
+        (HasRelic(state, SneckoEye) ? 2 : 0)
+        +
         (HasRelic(state, RingOfTheSnake) ? 2 : 0)
         + (HasRelic(state, BagOfPreparation) ? 2 : 0)
         + (HasRelic(state, BoomingConch) && state.IsEliteCombat ? 2 : 0)
@@ -1519,14 +1554,7 @@ public static class RelicEffects
     /// modelled and pinned by <c>LastingCandyTests</c> so the remaining work is the screen
     /// alone.
     /// </remarks>
-    /// <remarks>
-    /// <b>Fake Snecko Eye</b> applies `ConfusedPower` and nothing else -- the real Snecko
-    /// Eye's downside without its two cards of draw. Confused re-rolls every card's cost
-    /// as it is drawn, and the emulator models no such power: it is a card-cost mechanic
-    /// rather than a relic, and it would need a per-copy cost roll on the draw path that
-    /// nothing else in the game asks for. The relic is inert until Confused exists.
-    /// </remarks>
-    public static readonly int[] UnmodelledInRun = [LastingCandy, FakeSneckoEye];
+    public static readonly int[] UnmodelledInRun = [LastingCandy];
 
     /// <summary>
     /// `LastingCandy.IsInTriggeringCombat`: `CombatsSeen > 0 &amp;&amp; CombatsSeen % 2 == 0`,
@@ -2239,6 +2267,23 @@ public static class RelicEffects
         Has(state.Relics, DingyRug);
 
     /// <summary>
+    /// `PrismaticGem.ModifyCardRewardCreationOptions`: a card REWARD rolls from every
+    /// character's pool at once, not just the player's.
+    /// </summary>
+    /// <remarks>
+    /// Card REWARDS only -- the hook refuses anything without `IsCardReward`, anything
+    /// with `NoCardPoolModifications`, anything on a custom pool, and anything already
+    /// colourless-only. So a shop, an event's own offer and a combat generator all keep
+    /// their pools; this is the reward screen and nothing else.
+    ///
+    /// The emulator's arm added a random reward card ON PICKUP, which is a different
+    /// relic entirely -- and it never ran, because the id constant behind it was 1533 and
+    /// no relic has that id.
+    /// </remarks>
+    public static bool WidensCardRewardsToEveryPool(Run.RunState state) =>
+        Has(state.Relics, PrismaticGem);
+
+    /// <summary>
     /// `WingCharm.TryModifyCardRewardOptionsLate`: ONE option on the screen, rolled on
     /// `Rng.Niche` from those that can take it, gains the Swift enchantment.
     /// </summary>
@@ -2260,7 +2305,11 @@ public static class RelicEffects
     /// retained whole rather than discarded.
     /// </summary>
     internal static bool SkipsHandFlush(CombatState state, int turnNumber) =>
-        turnNumber <= 1 && HasRelic(state, RingingTriangle);
+        (turnNumber <= 1 && HasRelic(state, RingingTriangle))
+        // `RunicPyramid.ShouldFlush` is false for its owner on EVERY turn, with no clock
+        // at all -- the hand is simply never discarded. The Ringing Triangle's turn-one
+        // version is the same hook with a guard.
+        || HasRelic(state, RunicPyramid);
 
     /// <summary>
     /// `MiniatureTent.ShouldDisableRemainingRestSiteOptions` returns false — so taking one

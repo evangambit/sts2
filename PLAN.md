@@ -949,7 +949,7 @@ independent of the ancients and worth doing on its own.
 | Tier | Scope | Relics | Reachable today |
 | --- | --- | --- | --- |
 | **A** | ~~Byrdpip: the HATCH rest-site option and the relic; teach the predicate this chain~~ **DONE** (E397) | 1 | **Yes** |
-| **B** | Darv: an option generator, plus its eight | 8 | No — shared-ancient profile |
+| **B** | ~~Darv: an option generator, plus its eight~~ **DONE** (E398–E400) | 8 | No — shared-ancient profile |
 | **C** | Orobas / Pael / Tezcatara relics; their options already generate | 15 (+4 via Touch of Orobas) | No — Act 2 |
 | **D** | Nonupeipe / Tanx / Vakuu: three option generators, plus relics | 27 | No — Act 3 |
 
@@ -965,7 +965,7 @@ rest need one of these, and the mechanic is the work:
 
 | Mechanic | Needed by | Notes |
 | --- | --- | --- |
-| **Confused** — every card's cost re-rolled as it is drawn | Snecko Eye, Fake Snecko Eye | Its ONLY two sources in the whole game, both Act 2. Zero Act 1 value. Unblocks a declared gap in `RelicEffects.UnmodelledInRun`. |
+| ~~**Confused**~~ **DONE** with Tier B (E400) | Snecko Eye, Fake Snecko Eye | Smaller than it looked: a cost re-roll on the draw path off an existing stream. It also closed Fake Snecko Eye's declared gap. |
 | **Extra turns** (`ShouldTakeExtraTurn`) | Pael's Eye | An engine concept, not a relic. The largest single item here. |
 | **Relic transformation** | Archaic Tooth, Touch of Orobas | 173 and 162 lines; each rewrites a STARTER relic into one of four others, which is where four of the six "no granter" relics come from. |
 | `ModifyCardPlayCount` | Throwing Axe | |

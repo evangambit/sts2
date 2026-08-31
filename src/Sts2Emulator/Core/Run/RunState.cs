@@ -18,6 +18,13 @@ public enum DeckSelection
     /// <summary>Transform the chosen card into a rolled one (CardCmd.TransformToRandom).</summary>
     TransformToRandom,
 
+    /// <summary>
+    /// Transform the chosen card into a rolled one and then UPGRADE it. Astrolabe's:
+    /// `CreateRandomCardForTransform`, `CardCmd.Upgrade`, then `CardCmd.Transform` -- the
+    /// upgrade lands on the NEW card before it goes in, not on the old one.
+    /// </summary>
+    TransformToRandomUpgraded,
+
     /// <summary>Remove the chosen card from the deck.</summary>
     Remove,
 

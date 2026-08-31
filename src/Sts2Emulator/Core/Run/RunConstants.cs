@@ -458,6 +458,41 @@ public static class RunConstants
     public const string AncientNeow = "NEOW";
 
     public const string AncientDarv = "DARV";
+
+    /// <summary>
+    /// Darv's `_validRelicSets`, one entry per set, in DECLARATION order. Seven of the
+    /// nine sets hold a single relic; the last two hold two apiece and are gated on the
+    /// act, so they live in their own constants below.
+    /// </summary>
+    /// <remarks>
+    /// Order is load-bearing. The event picks one relic from each set whose filter passes,
+    /// shuffles THAT list, and takes from the front -- so a list assembled in any other
+    /// order draws a different three from the same stream position, the same way the Relic
+    /// Trader's shelf does.
+    /// </remarks>
+    public static ReadOnlySpan<int> DarvSingleRelicSets =>
+    [
+        8, // Astrolabe
+        20, // BlackStar
+        39, // CallingBell
+        74, // EmptyCage
+        185, // PandorasBox
+        227, // RunicPyramid
+        243, // SneckoEye
+    ];
+
+    /// <summary>Pandora's Box is skipped by a run whose modifiers clear the deck.</summary>
+    public static readonly int DarvPandorasBox = 185;
+
+    /// <summary>The set offered only at `CurrentActIndex == 1`.</summary>
+    public static ReadOnlySpan<int> DarvActOneSet => [70, 245];
+
+    /// <summary>The set offered only at `CurrentActIndex == 2`.</summary>
+    public static ReadOnlySpan<int> DarvActTwoSet =>
+        [196, 281];
+
+    /// <summary>Dusty Tome, which replaces the third option on a coin flip.</summary>
+    public static readonly int DarvDustyTome = 69;
     public const string AncientNonupeipe = "NONUPEIPE";
     public const string AncientTanx = "TANX";
     public const string AncientVakuu = "VAKUU";
@@ -574,13 +609,33 @@ public static class RunConstants
     /// player to a node the map does not connect to before it is used up.
     /// </summary>
     public const int WingedBootsTravels = 3;
-    public const int RelicPrismaticGem = 1533;
+    public const int RelicPrismaticGem = 208;
 
-    public const int RelicAstrolabe = 1332;
-    public const int RelicCallingBell = 1363;
-    public const int RelicDustyTome = 1394;
-    public const int RelicEmptyCage = 1399;
-    public const int RelicPandorasBox = 1510;
+    public const int RelicAstrolabe = 8;
+    public const int RelicCallingBell = 39;
+    public const int RelicDustyTome = 69;
+    public const int RelicEmptyCage = 74;
+    public const int RelicPandorasBox = 185;
+
+    /// <summary>
+    /// `ArchaicTooth.TranscendenceCards` -- the eleven a starter card can become. Dusty
+    /// Tome excludes them when picking its Ancient card, so a run cannot be handed the
+    /// same card by both relics.
+    /// </summary>
+    public static readonly string[] TranscendenceCardNames =
+    [
+        "Bash",
+        "Break",
+        "Doubt",
+        "Dualcast",
+        "FallingStar",
+        "MeteorShower",
+        "Neutralize",
+        "Protector",
+        "Quadcast",
+        "Suppress",
+        "Unleash",
+    ];
 
     /// <summary>Looming Fruit's `MaxHpVar(31m)`, paid on pickup.</summary>
     public const int RelicLoomingFruit = 138;

@@ -292,6 +292,17 @@ public static class RunRewardGenerator
         // on the next combat reward screen, then `GaveRelic` retires it for good. The
         // counter is the combats finished; the emulator parks the spent flag on the same
         // counter by taking it past the threshold.
+        // `BlackStar.TryModifyRewards`: one more relic on the rewards of an ELITE room,
+        // and no other. The room type rather than the encounter, like Sling of Courage.
+        if (
+            state.LastResolvedRoomType == RunConstants.NodeElite
+            && HasRelic(state, Effects.RelicEffects.BlackStar)
+        )
+        {
+            state.PendingRelicReward = true;
+            state.PendingBonusRelicRewards.Add(NextRelic(state));
+        }
+
         if (Effects.RelicEffects.WongosTicketPaysOut(state))
         {
             Effects.RelicEffects.RetireWongosTicket(state);
@@ -792,6 +803,22 @@ public static class RunRewardGenerator
         int[] pool = Effects.RelicEffects.AddsColourlessToCardRewards(state)
             ? [.. IroncladRewardPool.ToArray(), .. GeneratedData.CardPools.Colorless.ToArray()]
             : IroncladRewardPool.ToArray();
+
+        // `PrismaticGem.ModifyCardRewardCreationOptions` unions EVERY character's pool
+        // into a card reward's. Card rewards only -- the hook refuses a shop, a custom
+        // pool and a colourless-only one -- so it goes here rather than beside the pool
+        // itself.
+        if (Effects.RelicEffects.WidensCardRewardsToEveryPool(state))
+        {
+            pool =
+            [
+                .. pool,
+                .. GeneratedData.CardPools.Silent.ToArray(),
+                .. GeneratedData.CardPools.Defect.ToArray(),
+                .. GeneratedData.CardPools.Necrobinder.ToArray(),
+                .. GeneratedData.CardPools.Regent.ToArray(),
+            ];
+        }
 
         state.RewardEnchantIndex = -1;
         var blacklist = new List<int>();
