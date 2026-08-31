@@ -102,6 +102,34 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "BrightestFlame": (
+        "ccc0a50e6e54",
+        "0-cost, EnergyVar(2) upgrading to 3, CardsVar(2) which does NOT upgrade, and LoseMaxHp(1) -- the price the card is built around, missing entirely. Its draw was being upgraded too; only Fuel's is. LoseMaxHp deals the excess as Unblockable damage rather than clamping, so at full health it costs a point of current HP with the cap.",
+    ),
+    "DualWield": (
+        "ea0e2f16a87d",
+        "1-cost, CardSelectCmd.FromHand filtered to ATTACK or POWER, then CardsVar(1) clones of the chosen card -- one, or two upgraded. The emulator duplicated the FIRST card in hand whatever it was, two or three times: no choice, no filter, wrong count in both directions.",
+    ),
+    "Entrench": (
+        "ab3fb3872d35",
+        "2-cost, doubles the block you have -- `GainBlock(Block, Unpowered | Move)`. UNPOWERED, so Dexterity does not ride the doubling; it was going through the powered path and paying Dexterity twice on a card whose whole point is the block already there. Upgrade cuts the cost.",
+    ),
+    "Fuel": (
+        "1b80d720a343",
+        "0-cost Token, Exhaust: EnergyVar(1) flat and CardsVar(1) upgrading to 2. It was stacked with Brightest Flame and given ITS numbers -- two or three of each.",
+    ),
+    "Relax": (
+        "103e642ce9a7",
+        "3-cost Ancient, Exhaust: 15 block, then DrawCardsNextTurnPower(2) and EnergyNextTurnPower(2), all three upgrading; correct -- the draw and energy are NEXT turn, which the emulator already had.",
+    ),
+    "RipAndTear": (
+        "9efd92702939",
+        "1-cost, 7 damage x2 at RANDOM opponents, re-rolled per hit; correct.",
+    ),
+    "Stack": (
+        "5075ce1856b0",
+        "1-cost, block equal to the DISCARD pile's size, `CalculationBase(0)` upgrading to 3; correct, and `ValueProp.Move` means Dexterity does apply -- unlike Entrench above.",
+    ),
     "Apotheosis": (
         "e6b681bf7ffe",
         "2-cost Skill, Exhaust + Innate, upgrade cuts the cost. Upgrades every card in `AllCards` EXCEPT itself -- and AllCards is Hand, Draw, Discard, EXHAUST and Play. The exhaust pile was missing, which matters because cards come back from it (Howl From Beyond, Bombardment, Secret Technique) and one that comes back upgraded is a different card.",

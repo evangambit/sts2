@@ -192,6 +192,13 @@ public enum CardSelectionKind
     /// answer is "which card do I want another of", not "which card do I give up".
     /// </remarks>
     CloneColorlessInHand = 24,
+
+    /// <summary>
+    /// Dual Wield: the player picks an ATTACK OR POWER in hand, and `Amount` clones of it
+    /// are added to hand. The filter and the choice are the card -- it used to duplicate
+    /// whatever happened to be first.
+    /// </summary>
+    DualWield = 25,
 }
 
 /// <summary>

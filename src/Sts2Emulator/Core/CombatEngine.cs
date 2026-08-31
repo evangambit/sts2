@@ -2303,6 +2303,35 @@ public static class CombatEngine
 
                 break;
 
+            case CardSelectionKind.DualWield:
+                // `CardsVar(1)` CLONES of the chosen card into hand -- the whole card, as
+                // Clone Colourless does above, and the original stays where it is.
+                if (index < state.Hand.Count)
+                {
+                    var chosen = state.Hand[index];
+                    for (int copy = 0; copy < selection.Amount; copy++)
+                    {
+                        if (state.Hand.Count >= Effects.CardEffects.MaxCardsInHand)
+                        {
+                            break;
+                        }
+
+                        state.Hand.Add(
+                            chosen with
+                            {
+                                FreeThisTurn = false,
+                                FreeUntilPlayed = false,
+                                RetainThisTurn = false,
+                                SlyThisTurn = false,
+                                PlayedThisTurn = false,
+                            }
+                        );
+                        Effects.CardEffects.NoteGeneratedCard(state);
+                    }
+                }
+
+                break;
+
             case CardSelectionKind.UpgradeInHand:
                 if (index < state.Hand.Count)
                 {

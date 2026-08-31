@@ -4751,6 +4751,31 @@ public static class CardEffects
         HealPlayer(state, amount);
     }
 
+    /// <summary>
+    /// `CreatureCmd.LoseMaxHp`: the cap falls, and if current HP is now ABOVE the new cap
+    /// the excess is dealt as Unblockable, Unpowered damage rather than silently clamped.
+    /// The floor is 1, not 0 -- the command will not kill by shrinking.
+    /// </summary>
+    /// <remarks>
+    /// The damage matters: it is a real hit, so it dispatches `AfterDamageReceived` and
+    /// everything that listens. A clamp would move the number and tell nobody.
+    /// </remarks>
+    public static void LoseMaxHp(CombatState state, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        int newMax = Math.Max(1, state.PlayerMaxHp - amount);
+        if (state.PlayerHp > newMax)
+        {
+            LoseHp(state, state.PlayerHp - newMax);
+        }
+
+        state.PlayerMaxHp = newMax;
+    }
+
     // Deals unblockable, unpowered HP loss to the player and triggers Rupture.
     public static void LoseHp(CombatState state, int amount)
     {
@@ -7361,9 +7386,20 @@ public static class CardEffects
                 Forge(state, 5);
                 break;
             case "BrightestFlame":
-            case "Fuel":
+                // 0-cost: EnergyVar(2) upgrading to 3, CardsVar(2) which does NOT upgrade,
+                // and `LoseMaxHp(1)` -- the price the card is built around, and it was
+                // missing entirely. Its draw was also being upgraded, which only Fuel's is.
                 GainEnergy(state, upgraded ? 3 : 2);
-                DrawCards(state, upgraded ? 3 : 2, rng);
+                DrawCards(state, 2, rng);
+                LoseMaxHp(state, 1);
+                break;
+
+            case "Fuel":
+                // EnergyVar(1) -- flat, no upgrade -- and CardsVar(1) upgrading to 2. It
+                // was stacked with Brightest Flame and given ITS numbers: two or three of
+                // each, where Fuel is one energy and one card.
+                GainEnergy(state, 1);
+                DrawCards(state, upgraded ? 2 : 1, rng);
                 break;
             case "BladeDance":
                 AddGeneratedCardsToHand(state, 430, upgraded ? 4 : 3);
@@ -7571,7 +7607,11 @@ public static class CardEffects
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Focus, upgraded ? 2 : 1);
                 break;
             case "DualWield":
-                DuplicateFirstCardInHand(state, upgraded ? 3 : 2);
+                // `CardSelectCmd.FromHand` filtered to Attack or Power, then `CardsVar(1)`
+                // CLONES of the chosen card -- one, or two upgraded. The emulator
+                // duplicated the FIRST card in hand whatever it was, twice or three times:
+                // no choice, no filter, and the wrong count in both directions.
+                OpenDualWieldSelection(state, upgraded ? 2 : 1, rng);
                 break;
             case "Dualcast":
                 ApplyOrbLikeValue(state, "Zap", upgraded, rng);
@@ -7592,7 +7632,11 @@ public static class CardEffects
                 ApplyEnemyDebuff(state, BuffId.Weak, upgraded ? 3 : 2, rng);
                 break;
             case "Entrench":
-                GainBlock(state, state.PlayerBlock, rng);
+                // `GainBlock(Block, ValueProp.Unpowered | Move)` -- UNPOWERED, so Dexterity
+                // does not apply to the doubling. It was going through the powered path,
+                // which paid Dexterity twice on a card whose whole point is the block you
+                // already have.
+                GainUnpoweredBlock(state, state.PlayerBlock, rng);
                 break;
             case "Envenom":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Envenom, 1);
@@ -9801,6 +9845,41 @@ public static class CardEffects
             CardGenerationRng(state, rng).Next(_generatedClassPool.Length)
         ];
         state.Hand.Add(new CardInstance(defId, false, FreeThisTurn: freeThisTurn));
+    }
+
+    /// <summary>
+    /// Dual Wield: the player picks an Attack or a Power in hand, and gets that many
+    /// CLONES of it added to hand.
+    /// </summary>
+    /// <remarks>
+    /// A clone rather than a fresh card off the id: `CreateClone` copies the whole card,
+    /// so an enchanted or grown copy is duplicated as it stands -- the same distinction
+    /// Anger's self-copy turns on.
+    /// </remarks>
+    private static void OpenDualWieldSelection(CombatState state, int copies, Random rng)
+    {
+        var candidates = Enumerable
+            .Range(0, state.Hand.Count)
+            .Where(i =>
+                GeneratedData.Cards.Get(state.Hand[i].DefId).Type
+                    is CardType.Attack
+                        or CardType.Power
+            )
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        OpenCardSelection(
+            state,
+            CardSelectionKind.DualWield,
+            candidates,
+            sourceCardDefId: 0,
+            autoPick: candidates[0],
+            amount: copies
+        );
+        _ = rng;
     }
 
     private static void DuplicateFirstCardInHand(CombatState state, int count)
