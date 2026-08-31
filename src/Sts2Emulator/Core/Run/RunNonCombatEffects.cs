@@ -62,8 +62,88 @@ public static class RunNonCombatEffects
     /// of their type joins the deck already upgraded. Every deck addition goes through
     /// here so an event, a shop and a card reward all agree.
     /// </summary>
+    /// <summary>
+    /// `MawBank.AfterRoomEntered`: GoldVar(12) on entering a room, every room, until the
+    /// player buys ANYTHING from a merchant -- `AfterItemPurchased` with `goldSpent > 0`
+    /// sets `HasItemBeenBought` and the bank is used up for good.
+    /// </summary>
+    /// <remarks>
+    /// The counter is the spent flag, so it survives combats the way the teas' does. The
+    /// gold goes through `GainGold`, which is the run's chokepoint -- Bloody Idol and the
+    /// rest read a gain however it arrives.
+    /// </remarks>
+    public static void PayMawBank(RunState state)
+    {
+        int index = state.Relics.FindIndex(relic =>
+            relic.DefId == Effects.RelicEffects.MawBank
+        );
+        if (index >= 0 && state.Relics[index].Counter == 0)
+        {
+            GainGold(state, 12);
+        }
+    }
+
+    /// <summary>Any purchase closes the bank, whatever it cost.</summary>
+    public static void CloseMawBank(RunState state, int goldSpent)
+    {
+        if (goldSpent <= 0)
+        {
+            return;
+        }
+
+        int index = state.Relics.FindIndex(relic =>
+            relic.DefId == Effects.RelicEffects.MawBank
+        );
+        if (index >= 0)
+        {
+            state.Relics[index] = state.Relics[index] with { Counter = 1 };
+        }
+    }
+
+    /// <summary>
+    /// `SwordOfStone.AfterCombatVictory`: five ELITE wins and `RelicCmd.Replace` swaps it
+    /// for Sword of Jade, which is Strength 3 at the top of every fight thereafter.
+    /// </summary>
+    /// <remarks>
+    /// Five, not three -- `DynamicVar("Elites", 5m)`. A REPLACEMENT rather than a second
+    /// relic: the stone is gone, and the relic list keeps its length.
+    /// </remarks>
+    public static void CountEliteVictoryForSwordOfStone(RunState state, bool wasElite)
+    {
+        if (!wasElite)
+        {
+            return;
+        }
+
+        int index = state.Relics.FindIndex(relic =>
+            relic.DefId == Effects.RelicEffects.SwordOfStone
+        );
+        if (index < 0)
+        {
+            return;
+        }
+
+        int elites = state.Relics[index].Counter + 1;
+        state.Relics[index] = state.Relics[index] with { Counter = elites };
+        if (elites >= Effects.RelicEffects.SwordOfStoneElites)
+        {
+            state.Relics[index] = new RelicInstance(Effects.RelicEffects.SwordOfJade);
+        }
+    }
+
     public static void AddCardToDeck(RunState state, CardInstance card)
     {
+        // `DarkstonePeriapt.AfterCardChangedPiles` fires on a CURSE entering the DECK, so
+        // it pays for every curse however it arrives -- an event's Decay, a Neow drawback,
+        // a Normality. Read before the add so the max HP lands with the card.
+        if (
+            GeneratedData.Cards.Get(card.DefId).Type == CardType.Curse
+            && Effects.RelicEffects.Has(state.Relics, Effects.RelicEffects.DarkstonePeriapt)
+        )
+        {
+            GainMaxHp(state, 6);
+        }
+
         state.Deck.Add(EnchantedByFresnelLens(state, UpgradedByEggs(state, card)));
 
         // `AfterCardChangedPiles` with the destination pile being the DECK. Two relics
@@ -760,7 +840,17 @@ public static class RunNonCombatEffects
 
     private static int StartingRelicCounter(int relicId)
     {
-        return relicId == RunConstants.RelicSilverCrucible ? 3 : 0;
+        // The three teas count DOWN the combats they have left, and that count is run
+        // state: the relic is one object for the whole run, so it has to arrive charged
+        // rather than be charged by the first fight it sees.
+        return relicId switch
+        {
+            RunConstants.RelicSilverCrucible => 3,
+            Effects.RelicEffects.BoneTea => Effects.RelicEffects.BoneTeaCombats,
+            Effects.RelicEffects.EmberTea => Effects.RelicEffects.EmberTeaCombats,
+            Effects.RelicEffects.TeaOfDiscourtesy => Effects.RelicEffects.TeaOfDiscourtesyCombats,
+            _ => 0,
+        };
     }
 
     /// <summary>

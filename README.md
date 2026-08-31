@@ -113,9 +113,9 @@ All five character pools have been captured card-by-card against the live game. 
 character's own resource is modelled: the Necrobinder's **Osty** pet, the Regent's **stars**
 and **Forge/Sovereign Blade**, and the Defect's **orb queue** and Focus.
 
-Beyond cards: 207 of 296 relics, **every one of them read against the source** — including
-all 156 an ordinary run can actually be handed — plus 111 monsters with their movesets, the
-event pool, potions, shops, rest sites, map routing and Neow.
+Beyond cards: 221 of 296 relics, **every one of them read against the source** — including
+all 130 an Act 1 run can actually end up holding — plus 111 monsters with their movesets,
+the event pool, potions, shops, rest sites, map routing and Neow.
 
 ### What is verified, and how
 
@@ -153,9 +153,12 @@ wrong in every particular, which is the argument for testing them: unreachable i
 untested, and a placeholder reads as finished code until someone opens the source beside it.
 
 This is not yet a full game emulator. Exact Neow/shop/reward/event odds and expanded trace
-parity are still future work. The 89 relics with no implementation at all are the largest
-remaining surface, and every one of them belongs to an act or a pool this emulator's Act 1
-run cannot reach.
+parity are still future work. The 75 relics with no implementation at all are the largest
+remaining surface; they sit behind Act 2+ events, the shared events gated on
+`CurrentActIndex`, or the Act 2+ ancients. That claim is now computed rather than asserted
+— `scripts/audit_relics.py --reachable` works out what an Act 1 run can actually be handed,
+after a version of it that meant something narrower let fourteen obtainable relics be
+called unreachable (E389).
 
 ## Requirements
 

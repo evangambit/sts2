@@ -364,6 +364,19 @@ public static class CombatEngine
         // forget it.
         card = card with { PlayedThisTurn = true };
 
+        // `RazorTooth.AfterCardPlayed` upgrades the Attack or Skill that was just played,
+        // on the COPY -- so it lands in the discard pile upgraded and comes back that way.
+        // Applied here, before the placement branches, because there are four of them and
+        // each one builds its own `card with { ... }`.
+        if (
+            !card.Upgraded
+            && Run.RunConstants.IsRunCardUpgradable(card)
+            && Effects.RelicEffects.UpgradesPlayedCard(state, def)
+        )
+        {
+            card = card with { Upgraded = true };
+        }
+
         // Corruption: Skills exhaust instead of discard.
         bool corruptedSkill =
             def.Type == CardType.Skill && BuffSystem.Get(state.PlayerBuffs, BuffId.Corruption) > 0;
@@ -571,7 +584,7 @@ public static class CombatEngine
             state.VoidFormCardsPlayedThisTurn++;
         }
 
-        IncrementPlayedCardTypeCounters(state, def);
+        IncrementPlayedCardTypeCounters(state, def, card);
 
         // `MakeItSo.AfterCardPlayedLate`: playing a SKILL counts the Skills played this
         // turn, and on every third one every Make It So NOT already in hand comes back to
@@ -1122,6 +1135,9 @@ public static class CombatEngine
         state.Turn++;
         Effects.RelicEffects.TickPaelsLegionCooldown(state);
         state.PlayerTurn = true;
+        // The turn rolls over: what was "this turn" becomes what History Course reads.
+        state.LastAttackOrSkillLastTurn = state.LastAttackOrSkillThisTurn;
+        state.LastAttackOrSkillThisTurn = null;
         // `VoidFormPower.BeforeSideTurnStart` clears its own count.
         state.VoidFormCardsPlayedThisTurn = 0;
         // `IceCream.ShouldPlayerResetEnergy` is false from turn two on, so the energy
@@ -1142,6 +1158,18 @@ public static class CombatEngine
 
         // After the energy reset, which is where the game puts it and says why.
         Effects.RelicEffects.ApplyBoundPhylacteryTurnStart(state, state.Turn + 1);
+
+        // `HistoryCourse.AfterAutoPrePlayPhaseEntered`: from turn TWO on, a DUPE of the
+        // last Attack or Skill played last turn is auto-played. Queued rather than played
+        // inline, so it goes through the same drain every other auto-play does.
+        if (
+            state.Turn + 1 > 1
+            && Effects.RelicEffects.Has(state.Relics, Effects.RelicEffects.HistoryCourse)
+            && state.LastAttackOrSkillLastTurn is { } encore
+        )
+        {
+            state.AutoPlayQueue.Add(encore);
+        }
 
         Effects.CardEffects.TriggerAllOrbAfterTurnStartPassives(state, rng);
 
@@ -1192,6 +1220,10 @@ public static class CombatEngine
         else if (BuffSystem.Get(state.PlayerBuffs, BuffId.Barricade) == 0 && blur == 0)
         {
             state.PlayerBlock = 0;
+            // `Hook.AfterBlockCleared`, which Sparkling Rouge answers on turn three only.
+            // Barricade and Blur keep the block, and the hook does not fire when it is
+            // not cleared -- so a Barricade run never gets the Rouge's Strength.
+            Effects.RelicEffects.ApplyAfterBlockCleared(state, state.Turn + 1);
         }
 
         if (blur > 0)
@@ -3828,7 +3860,11 @@ public static class CombatEngine
         Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
     }
 
-    private static void IncrementPlayedCardTypeCounters(CombatState state, CardDef def)
+    private static void IncrementPlayedCardTypeCounters(
+        CombatState state,
+        CardDef def,
+        CardInstance? played = null
+    )
     {
         state.CardPlaysThisTurn++;
         state.CardsPlayedThisCombat++;
@@ -3842,6 +3878,14 @@ public static class CombatEngine
         if (def.Type == CardType.Attack || def.Type == CardType.Skill)
         {
             state.AttackOrSkillCardsPlayedThisTurn++;
+            // The `CardPlaysFinished` row History Course reads next turn. Recorded here,
+            // where the game records it -- after the card has resolved -- and NOT for a
+            // card the relic itself duped, which its `!e.CardPlay.Card.IsDupe` filter
+            // excludes. `AutoPlaying` is the emulator's word for the same thing.
+            if (!state.AutoPlaying)
+            {
+                state.LastAttackOrSkillThisTurn = played ?? new CardInstance(def.Id, false);
+            }
         }
     }
 

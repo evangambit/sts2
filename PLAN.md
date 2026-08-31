@@ -881,12 +881,16 @@ the evidence argues for:
    Curses, Statuses, Tokens, Minions and event cards. Lower value per card than a
    character pool, but Statuses and Curses are what half the game's punishment mechanics
    are made of.
-2. **The 89 relics still unmodelled**, all of them behind an act or a pool this Act 1 run
-   cannot reach. The 34 reachable ones are done, and what that pass cost is the thing to
-   plan around: five of the thirty-four needed a hook the emulator did not have, and two
-   of those hooks turned out to be defects in their own right — `LoseHp` never dispatching
-   `AfterDamageReceived` (E384), and player Strength having twenty-eight call sites and no
-   door (E385). **Budget for the hook, not for the relic.**
+2. **The 75 relics still unmodelled**, behind Act 2+ events, the shared events gated on
+   `CurrentActIndex`, or the Act 2+ ancients. Everything an Act 1 run can be handed is
+   done. Two things to plan around. First: **budget for the hook, not for the relic** —
+   of the 48 written in this pass, eight needed a hook the emulator did not have, and
+   three of those hooks were defects in their own right (`LoseHp` never dispatching
+   `AfterDamageReceived`, E384; player Strength with twenty-eight call sites and no door,
+   E385; relic counters arriving after the combat-start hooks that read them, E390).
+   Second: **check what a filter actually filters before quoting it.** "156/156 reachable"
+   came off a flag that meant "not in the event pool", and fourteen obtainable relics were
+   called unreachable on the strength of it (E389).
 3. **Automate capture over many seeds** with the headless harness, so coverage stops
    depending on which seeds anyone happened to try. Related: exposing each named RNG
    stream's seed and call count from the mod would make the RNG-dependent cards capturable,

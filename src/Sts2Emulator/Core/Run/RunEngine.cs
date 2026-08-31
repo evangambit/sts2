@@ -236,7 +236,8 @@ public sealed class RunEngine
             EncounterRngSeed(encounterId),
             nicheSkipCount: 0,
             aiRng,
-            State.CompletedCombatRoomsBeforeCurrent
+            State.CompletedCombatRoomsBeforeCurrent,
+            runRelics
         );
         // Sling of Courage reads the ROOM, not the encounter, so the room type travels
         // with the combat.
@@ -246,24 +247,6 @@ public sealed class RunEngine
         State.TookUnblockedDamageThisCombat = false;
 
         Effects.RelicEffects.RestoreUsedUpRelics(combat, State.UsedUpRelics);
-
-        // The combat is handed relic IDS, so every instance starts with a zero counter --
-        // but a relic's counter is run state in the game, where the relic is one object
-        // for the whole run. Girya's lifts are the case that made this matter: a combat
-        // that cannot see them applies no Strength at all.
-        foreach (var runRelic in runRelics)
-        {
-            if (runRelic.Counter == 0)
-            {
-                continue;
-            }
-
-            int index = combat.Relics.FindIndex(relic => relic.DefId == runRelic.DefId);
-            if (index >= 0)
-            {
-                combat.Relics[index] = combat.Relics[index] with { Counter = runRelic.Counter };
-            }
-        }
 
         State.ActiveCombat = combat;
         State.ActiveCombatRng = combatRng;
@@ -279,6 +262,7 @@ public sealed class RunEngine
         State.UnknownMapPointsVisited++;
         State.CurrentNodeType = resolvedNodeType;
         State.LastResolvedRoomType = resolvedNodeType;
+        RunNonCombatEffects.PayMawBank(State);
 
         // `Planisphere.AfterRoomEntered` asks about `CurrentMapPoint.PointType`, not about
         // the room -- so it pays out on whatever the "?" turned out to be, a fight
@@ -1085,6 +1069,13 @@ public sealed class RunEngine
                 return -1;
             }
 
+            // `MawBank.AfterRoomEntered(RunState.BaseRoom == room)` -- the room the player
+            // just walked into, whatever kind it is. Fired here rather than inside the
+            // switch because every branch below either starts a combat or changes phase,
+            // and the bank does not care which. The unknown-node path pays through
+            // `EnterUnknownMapPoint`, which resolves to a room of its own.
+            RunNonCombatEffects.PayMawBank(State);
+
             switch (nodeType)
             {
                 case RunConstants.NodeNormal:
@@ -1180,6 +1171,16 @@ public sealed class RunEngine
                 if (result.PlayerWon)
                 {
                     RunNonCombatEffects.TriggerFishingRod(State);
+                    // `SwordOfStone.AfterCombatVictory(room.RoomType == Elite)`: five
+                    // elites and it becomes Sword of Jade. Counted on the VICTORY rather
+                    // than on entering the room, so fleeing or dying does not count.
+                    // `LastingCandy.AfterCombatEnd` counts the fight; the reward screen
+                    // that follows is what reads the count.
+                    Effects.RelicEffects.CountCombatForLastingCandy(State);
+                    RunNonCombatEffects.CountEliteVictoryForSwordOfStone(
+                        State,
+                        State.LastResolvedRoomType == RunConstants.NodeElite
+                    );
 
                     // `EnterCombatWithoutExitingEvent(..., shouldResumeAfterCombat: true)`:
                     // the room was never the combat's, so the event pays instead of the
@@ -1558,6 +1559,7 @@ public sealed class RunEngine
         State.ResumeEventDummyEscaped = State.ActiveCombat.BattlewornDummyRanOutOfTime;
 
         Effects.RelicEffects.CollectUsedUpRelics(State.ActiveCombat, State.UsedUpRelics);
+        Effects.RelicEffects.CarryRunCountersBack(State.ActiveCombat, State.Relics);
         CarryGoopyGrowthToTheDeck(State.ActiveCombat);
         State.PlayerHp = Math.Max(0, State.ActiveCombat.PlayerHp);
         State.PlayerMaxHp = Math.Max(1, State.ActiveCombat.PlayerMaxHp);
@@ -1831,6 +1833,27 @@ public sealed class RunEngine
         {
             RunNonCombatEffects.GainMaxHp(State, 5);
         }
+
+        // `DreamCatcher.TryModifyRestSiteHealRewards`: resting also offers a card, from
+        // the MONSTER room's creation options -- an ordinary combat reward, three wide,
+        // bolted onto the sleep.
+        if (Effects.RelicEffects.Has(State.Relics, Effects.RelicEffects.DreamCatcher))
+        {
+            Array.Clear(State.RewardCards);
+            Array.Clear(State.RewardUpgraded);
+            var offer = RunRewardGenerator.GenerateEventOfferCards(
+                State,
+                State.RewardCards.Length,
+                RunRewardGenerator.IroncladRewardPool
+            );
+            for (int i = 0; i < State.RewardCards.Length && i < offer.Length; i++)
+            {
+                State.RewardCards[i] = offer[i];
+            }
+
+            State.RewardCardPending = true;
+            State.Phase = RunPhase.CardReward;
+        }
     }
 
     private void OfferPotionRewards(params int[] potionIds)
@@ -1883,6 +1906,9 @@ public sealed class RunEngine
             }
 
             State.Gold -= cost;
+            // `MawBank.AfterItemPurchased`: any merchant purchase with
+            // `goldSpent > 0` closes the bank for the rest of the run.
+            RunNonCombatEffects.CloseMawBank(State, cost);
             RunNonCombatEffects.AddCardToDeck(State, new CardInstance(cardId, Upgraded: false));
             State.ShopCards[action] = 0;
         }
@@ -1897,6 +1923,7 @@ public sealed class RunEngine
             }
 
             State.Gold -= cost;
+            RunNonCombatEffects.CloseMawBank(State, cost);
             if (State.Relics.All(relic => relic.DefId != relicId))
             {
                 State.Relics.Add(new RelicInstance(relicId));
@@ -1919,6 +1946,7 @@ public sealed class RunEngine
             }
 
             State.Gold -= cost;
+            RunNonCombatEffects.CloseMawBank(State, cost);
             State.ShopPotions[index] = 0;
         }
         else if (action == RunConstants.ShopRemoveAction)
@@ -1951,6 +1979,7 @@ public sealed class RunEngine
             }
 
             State.Gold -= cost;
+            RunNonCombatEffects.CloseMawBank(State, cost);
             State.ShopRemovalsUsed++;
             State.ShopRemovalUsedThisVisit = true;
         }

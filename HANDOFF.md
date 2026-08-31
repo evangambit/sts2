@@ -1132,6 +1132,35 @@ reading of both relics is wrong. And Big Hat does nothing for an Ironclad or a S
 gap, and it is only visible if the filter is computed from the pool rather than
 hard-coded.
 
+### A filter whose name is a claim
+
+`audit_relics.py --reachable` meant "not in `EventRelicPool`". It was read, and reported,
+as "reachable by an Act 1 run" — a different question, because events happen in Act 1. On
+the strength of it the project claimed every unmodelled relic was behind an act gate, and
+fourteen were obtainable that day: three out of the ordinary shop and chest queue, eleven
+handed over by events the emulator itself already runs (E389).
+
+Two smaller bugs hid inside the same helper. `relic_pools` used `setdefault`, keeping the
+first pool file alphabetically, so the three relics in BOTH `EventRelicPool` and
+`SharedRelicPool` were filed as event-only and dropped. And when the replacement was
+written, its slice of `AllSharedEvents` ran on into `AllSharedAncients` — whose sole entry
+is `AncientEvent<Darv>()`, which matches `Event<(\w+)>` — and eight boss-flavoured relics
+briefly came back reachable. Darv is a shared ANCIENT, and `GetUnlockedAncients` returns
+`AllAncients`, which for Act 1 is Neow alone.
+
+The flag now computes the real answer: the shared pool, plus anything an Act 1 event names,
+plus anything a reachable relic replaces itself into. **A derived number is only as honest
+as the predicate under it, and a predicate with a persuasive name will be quoted as a
+claim.** Every headline in this repo that says "N of M" is worth the same question: what
+exactly is in M?
+
+The same check found E390. Relic counters are run state — Girya's lifts, a tea's remaining
+combats — and the run copied them into the combat AFTER `CombatFactory.Reset` returned,
+while `ApplyCombatStart` reads them inside it. Three lifts applied no Strength at all, and
+the copying code carried a comment naming Girya as the reason it existed. The intent was
+recorded; the ordering defeated it. Worth remembering when adding anything else that reads
+a counter at combat start.
+
 ### Hive's encounter tags, and why a missing tag is worse than a wrong order
 
 Seven act-2 captures now agree with the emulator on which ancient act 2 opens on. Five did

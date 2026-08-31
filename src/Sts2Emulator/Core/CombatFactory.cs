@@ -317,7 +317,8 @@ public static class CombatFactory
         int? encounterRngSeed = null,
         int nicheSkipCount = 0,
         Random? aiRng = null,
-        int completedCombatRoomsBeforeCurrent = -1
+        int completedCombatRoomsBeforeCurrent = -1,
+        IReadOnlyList<RelicInstance>? runRelics = null
     )
     {
         state.PlayerMaxHp = Math.Max(1, playerMaxHp);
@@ -348,7 +349,19 @@ public static class CombatFactory
             state.PotionSlots[i] = potionIds[i];
         }
 
-        state.Relics = relicIds.ToArray().Select(id => new RelicInstance(id)).ToList();
+        // A relic's counter is RUN state in the game, where the relic is one object for
+        // the whole run -- Girya's lifts, a tea's remaining combats. The run hands them
+        // over HERE, before `ApplyCombatStart` runs, because that is where they are read.
+        // The run engine used to copy them in after this call returned, which is after
+        // every combat-start hook had already asked and been told zero: three lifts on a
+        // Girya applied no Strength at all.
+        state.Relics = relicIds
+            .ToArray()
+            .Select(id => new RelicInstance(
+                id,
+                runRelics?.FirstOrDefault(relic => relic.DefId == id).Counter ?? 0
+            ))
+            .ToList();
         state.Turn = 0;
         state.PlayerTurn = true;
         state.SkillPlayedWhileSmoggy = false;

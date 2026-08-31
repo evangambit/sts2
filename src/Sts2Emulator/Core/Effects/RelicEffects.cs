@@ -51,6 +51,37 @@ public static class RelicEffects
     public const int Metronome = 152;
     public const int LoomingFruit = 138;
     public const int FresnelLens = 92;
+
+    // The fourteen an Act 1 run can be handed and that still did nothing, found when
+    // `--reachable` turned out to mean "not in the event pool" rather than "reachable".
+    public const int BoneTea = 25;
+    public const int DarkstonePeriapt = 55;
+    public const int DreamCatcher = 67;
+    public const int EmberTea = 72;
+    public const int HandDrill = 109;
+    public const int HistoryCourse = 113;
+    public const int LastingCandy = 130;
+    public const int MawBank = 146;
+    public const int RazorTooth = 213;
+    public const int SparklingRouge = 246;
+    public const int SwordOfJade = 255;
+    public const int SwordOfStone = 256;
+    public const int TeaOfDiscourtesy = 259;
+    public const int TheBoot = 261;
+
+    /// <summary>Bone Tea's `Combats` var: one fight, then it is used up.</summary>
+    public const int BoneTeaCombats = 1;
+
+    /// <summary>Ember Tea's: five fights of Strength 2.</summary>
+    public const int EmberTeaCombats = 5;
+
+    /// <summary>Tea of Discourtesy's: one fight, and its `DazedCount` of two.</summary>
+    public const int TeaOfDiscourtesyCombats = 1;
+
+    public const int TeaOfDiscourtesyDazed = 2;
+
+    /// <summary>Sword of Stone's `DynamicVar("Elites", 5m)` -- five, not three.</summary>
+    public const int SwordOfStoneElites = 5;
     public const int BloodVial = 23;
     public const int BoomingConch = 29;
     public const int BronzeScales = 35;
@@ -483,6 +514,46 @@ public static class RelicEffects
         if (HasRelic(state, PowerCell))
         {
             CardEffects.MoveZeroCostDrawCardsToHandForPowerCell(state, 2, rng);
+        }
+
+        // ── The three teas, and Sword of Jade ──────────────────────────────────
+        // Each tea counts DOWN the combats it has left, and the count is run state: the
+        // combat is handed the relic already charged (see CombatFactory.Reset), spends
+        // one here, and the run reads the remainder back at the end of the fight.
+
+        // `BoneTea.AfterSideTurnStart` at TurnNumber <= 1: UPGRADE EVERY CARD IN HAND.
+        // One combat only.
+        if (SpendTeaCombat(state, BoneTea))
+        {
+            for (int i = 0; i < state.Hand.Count; i++)
+            {
+                state.Hand[i] = state.Hand[i] with { Upgraded = true };
+            }
+        }
+
+        // `EmberTea.AfterRoomEntered(CombatRoom)`: Strength 2, for five combats.
+        if (SpendTeaCombat(state, EmberTea))
+        {
+            GainPlayerStrength(state, 2);
+        }
+
+        // `TeaOfDiscourtesy.BeforeCombatStart`: two Dazed into the DRAW pile at random
+        // positions. One combat, and it is the price the Tea Master's free tea charges.
+        if (SpendTeaCombat(state, TeaOfDiscourtesy))
+        {
+            CardEffects.AddCardToDrawPileRandomly(
+                state,
+                ST.Dazed,
+                TeaOfDiscourtesyDazed,
+                state.ShuffleRng ?? rng
+            );
+        }
+
+        // `SwordOfJade.AfterRoomEntered(CombatRoom)`: Strength 3, every fight, forever.
+        // What Sword of Stone becomes after five elites.
+        if (HasRelic(state, SwordOfJade))
+        {
+            GainPlayerStrength(state, 3);
         }
 
         if (HasRelic(state, BloodVial))
@@ -1240,6 +1311,149 @@ public static class RelicEffects
         }
 
         state.EtherealExhaustsThisTurn = 0;
+    }
+
+    /// <summary>
+    /// `HandDrill.AfterDamageGiven`: Vulnerable 2 on an enemy whose block this hit broke.
+    /// </summary>
+    internal static void ApplyAfterBlockBroken(CombatState state, EnemyState target)
+    {
+        if (HasRelic(state, HandDrill) && target.Hp > 0)
+        {
+            BuffSystem.Apply(target.Buffs, BuffId.Vulnerable, 2);
+        }
+    }
+
+    /// <summary>
+    /// `TheBoot.ModifyHpLostAfterOstyLate`: 1..4 becomes 5. Not a bonus -- a FLOOR, so it
+    /// does nothing to a hit that already lands for five or more, and nothing at all to a
+    /// hit that landed for zero.
+    /// </summary>
+    /// <remarks>
+    /// The var is named `DamageMinimum` and the relic also declares a `DamageThreshold` of
+    /// 4 that its code never reads -- the comparison is `amount >= DamageMinimum`, so the
+    /// threshold is display text. Transcribing the threshold instead would give the same
+    /// answer here and a different one the day either number moves.
+    /// </remarks>
+    internal static int BootDamageFloor(CombatState state, int hpLost) =>
+        HasRelic(state, TheBoot) && hpLost >= 1 && hpLost < BootDamageMinimum
+            ? BootDamageMinimum
+            : hpLost;
+
+    private const int BootDamageMinimum = 5;
+
+    /// <summary>
+    /// `RazorTooth.AfterCardPlayed`: an Attack or Skill the player plays is UPGRADED, if
+    /// it can be. Permanently for the combat, on the copy that was played -- so it lands
+    /// in the discard pile upgraded and comes back that way.
+    /// </summary>
+    internal static bool UpgradesPlayedCard(CombatState state, CardDef def) =>
+        HasRelic(state, RazorTooth) && def.Type is CardType.Attack or CardType.Skill;
+
+    /// <summary>
+    /// `SparklingRouge.AfterBlockCleared` on TURN THREE only: Strength 1 and Dexterity 1,
+    /// once, and then never again for the whole combat.
+    /// </summary>
+    /// <remarks>
+    /// `TurnNumber == 3` is exact -- not "from turn three". Block clears at the start of
+    /// the player's turn, so this is the moment turn three begins.
+    /// </remarks>
+    internal static void ApplyAfterBlockCleared(CombatState state, int turnNumber)
+    {
+        if (turnNumber == 3 && HasRelic(state, SparklingRouge))
+        {
+            GainPlayerStrength(state, 1);
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, 1);
+        }
+    }
+
+    /// <summary>
+    /// Relics the run can hold whose effect is NOT modelled, and why. Declared rather than
+    /// left implicit, the way <c>Enchantments.InertInCombat</c> is: an unmodelled relic
+    /// that nothing names reads exactly like a modelled one.
+    /// </summary>
+    /// <remarks>
+    /// <b>Lasting Candy</b> ADDS a fourth option to the card-reward screen on every second
+    /// combat -- `options.Add(...)`, not a swap. The emulator's screen is three slots
+    /// (<c>RunState.RewardCards</c>) and <c>RunConstants.RewardSkipAction</c> is 3, so a
+    /// fourth card and the skip would be the same action. Widening it is an ACTION-SPACE
+    /// change: it renumbers the reward screen for every trained policy and for the Python
+    /// bridge, which is not something to slip in beside a relic. Its trigger clock is
+    /// modelled and pinned by <c>LastingCandyTests</c> so the remaining work is the screen
+    /// alone.
+    /// </remarks>
+    public static readonly int[] UnmodelledInRun = [LastingCandy];
+
+    /// <summary>
+    /// `LastingCandy.IsInTriggeringCombat`: `CombatsSeen > 0 &amp;&amp; CombatsSeen % 2 == 0`,
+    /// where `CombatsSeen` counts up in `AfterCombatEnd` -- so the reward screen of the
+    /// second, fourth and sixth fights is the one that gets the extra Power.
+    /// </summary>
+    public static bool LastingCandyOffersAPower(Run.RunState state)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == LastingCandy);
+        return index >= 0 && state.Relics[index].Counter > 0 && state.Relics[index].Counter % 2 == 0;
+    }
+
+    /// <summary>Counts the fight the player has just finished.</summary>
+    public static void CountCombatForLastingCandy(Run.RunState state)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == LastingCandy);
+        if (index >= 0)
+        {
+            state.Relics[index] = state.Relics[index] with
+            {
+                Counter = state.Relics[index].Counter + 1,
+            };
+        }
+    }
+
+    /// <summary>
+    /// Relics whose counter is RUN state and that a COMBAT can move: the three teas
+    /// spend a combat each fight, so the remainder has to travel home.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately a short list rather than "copy every counter back". Most counters are
+    /// per-combat tallies -- Shuriken's three attacks, Joss Paper's five exhausts, Pen
+    /// Nib's ten -- and carrying those into the run would have the next fight start
+    /// part-way through them.
+    /// </remarks>
+    private static readonly int[] RunCounterRelics = [BoneTea, EmberTea, TeaOfDiscourtesy];
+
+    /// <summary>Writes the combat's remaining counts back onto the run's relics.</summary>
+    public static void CarryRunCountersBack(CombatState combat, List<RelicInstance> runRelics)
+    {
+        foreach (int relicId in RunCounterRelics)
+        {
+            int inCombat = combat.Relics.FindIndex(relic => relic.DefId == relicId);
+            int inRun = runRelics.FindIndex(relic => relic.DefId == relicId);
+            if (inCombat >= 0 && inRun >= 0)
+            {
+                runRelics[inRun] = runRelics[inRun] with
+                {
+                    Counter = combat.Relics[inCombat].Counter,
+                };
+            }
+        }
+    }
+
+    /// <summary>
+    /// A tea with combats left spends one and answers true. `IsUsedUp` is
+    /// `CombatsLeft &lt;= 0`, so a spent tea is inert but still occupies a relic slot.
+    /// </summary>
+    private static bool SpendTeaCombat(CombatState state, int relicId)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == relicId);
+        if (index < 0 || state.Relics[index].Counter <= 0)
+        {
+            return false;
+        }
+
+        state.Relics[index] = state.Relics[index] with
+        {
+            Counter = state.Relics[index].Counter - 1,
+        };
+        return true;
     }
 
     /// <summary>

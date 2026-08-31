@@ -21,8 +21,13 @@ The number worth watching is `modelled but unread`, for the reason `audit_cards.
 exists: a relic someone wrote from a wrong reading behaves wrongly forever, and one
 written from a right reading of an old source drifts silently when the game moves.
 
-`--reachable` narrows to the relics an ordinary run can actually be handed. Event-pool
-relics need their event to be walked first, so they are real but further away.
+`--reachable` narrows to the relics an ACT 1 run can actually end up holding: the shared
+pool (shops, chests, combat rewards), plus anything an Act 1 event names, plus anything a
+reachable relic replaces itself with. It used to mean "not in EventRelicPool", which is a
+different question and a misleading answer -- events happen in Act 1, and the flag was also
+dropping the three relics that are in the shared pool AND the event pool. Reporting
+"156/156 reachable" off the old filter is how fourteen obtainable relics were called
+unreachable.
 
     uv run python scripts/audit_relics.py
     uv run python scripts/audit_relics.py --unmodelled --reachable
@@ -122,15 +127,97 @@ def used_constants(
     return used
 
 
-def relic_pools() -> dict[str, str]:
-    pools: dict[str, str] = {}
+def relic_pools() -> dict[str, set[str]]:
+    """Relic -> EVERY pool that lists it.
+
+    A set, not a single name. This used to `setdefault` the first pool file in alphabetical
+    order, which silently filed the three relics that are in BOTH `EventRelicPool` and
+    `SharedRelicPool` -- Lasting Candy, Razor Tooth, Sparkling Rouge -- as event-only, and
+    `--reachable` then dropped them. They come out of the ordinary relic queue like any
+    other shop or chest relic.
+    """
+    pools: dict[str, set[str]] = {}
     for f in sorted(POOLS.glob("*.cs")):
         for name in re.findall(
             r"ModelDb\.Relic<(\w+)>\(\)",
             f.read_text(encoding="utf-8"),
         ):
-            pools.setdefault(name, f.stem)
+            pools.setdefault(name, set()).add(f.stem)
     return pools
+
+
+ACTS = REPO / "decompiled" / "MegaCrit.Sts2.Core.Models.Acts"
+EVENTS = REPO / "decompiled" / "MegaCrit.Sts2.Core.Models.Events"
+MODELDB = REPO / "decompiled" / "MegaCrit.Sts2.Core.Models" / "ModelDb.cs"
+ENGINE_EVENTS = REPO / "src" / "Sts2Emulator" / "Core" / "Run" / "RunNonCombatEffects.cs"
+
+#: The two Act 1 variants. A run draws one of them, so either counts as reachable.
+ACT_ONE = ("Overgrowth", "Underdocks")
+
+
+def _listed_events(text: str, marker: str) -> set[str]:
+    r"""The `Event<X>()` names inside ONE declaration.
+
+    Bounded by the next member declaration, not by the next `});`. The array literal these
+    lists use closes with `\n\t});` only some of the time, and slicing to the first one
+    ran `AllSharedEvents` straight on into `AllSharedAncients` -- whose sole entry is
+    `AncientEvent<Darv>()`, which matches `Event<(\w+)>`. Darv is an ancient and not an Act 1
+    one, and eight boss-flavoured relics came back "reachable" on the strength of it.
+    """
+    start = text.index(marker)
+    rest = text[start + len(marker) :]
+    end = re.search(r"\n\t(?:public|private|protected|internal|///)", rest)
+    return set(re.findall(r"(?<!Ancient)Event<(\w+)>", rest[: end.start() if end else len(rest)]))
+
+
+def act_one_events() -> set[str]:
+    """Every event an Act 1 run can be shown.
+
+    The act's own `AllEvents` plus `ModelDb.AllSharedEvents`, minus the shared ones whose
+    `IsAllowed` refuses `CurrentActIndex 0` -- the emulator already keeps that list, and
+    reading it here rather than re-deriving keeps the two answers from drifting.
+
+    Ancients are NOT in this: `AllAncients` is a separate list, and Act 1's is Neow alone.
+    """
+    events: set[str] = _listed_events(MODELDB.read_text(encoding="utf-8"), "AllSharedEvents =>")
+    for act in ACT_ONE:
+        events |= _listed_events((ACTS / f"{act}.cs").read_text(encoding="utf-8"), "AllEvents =>")
+
+    engine = ENGINE_EVENTS.read_text(encoding="utf-8")
+    gated = re.search(r"ActTwoAndLaterEvents\s*=\s*\[(.*?)\];", engine, re.DOTALL)
+    return events - set(re.findall(r"RunConstants\.Event(\w+)", gated.group(1)))
+
+
+def act_one_relics(relics: dict[str, int]) -> set[str]:
+    """Relics an ordinary Act 1 run can end up holding.
+
+    Three routes, and leaving any of them out is how "reachable" stops meaning reachable:
+
+      * the ordinary queue -- anything in `SharedRelicPool`, which is shops, chests and
+        combat rewards;
+      * an Act 1 EVENT that names the relic in its own source;
+      * a relic another reachable relic REPLACES itself with, which is Sword of Stone
+        turning into Sword of Jade after three elites.
+    """
+    pools = relic_pools()
+    reachable = {name for name, ps in pools.items() if "SharedRelicPool" in ps}
+
+    allowed = act_one_events()
+    event_text = {p.stem: p.read_text(encoding="utf-8") for p in EVENTS.glob("*.cs")}
+    for name in relics:
+        pattern = re.compile(rf"(?<![A-Za-z0-9_]){name}(?![A-Za-z0-9_])")
+        if any(pattern.search(event_text[e]) for e in allowed if e in event_text):
+            reachable.add(name)
+
+    # `RelicCmd.Replace(this, ModelDb.Relic<X>())` -- one relic becoming another.
+    for name in list(reachable):
+        path = RELICS / f"{name}.cs"
+        if not path.exists():
+            continue
+        for successor in re.findall(r"RelicCmd\.Replace\([^)]*?Relic<(\w+)>", path.read_text(encoding="utf-8")):
+            reachable.add(successor)
+
+    return reachable & set(relics)
 
 
 def starter_relics() -> dict[str, str]:
@@ -155,6 +242,62 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "BoneTea": (
+        "dcec93b0c05b",
+        "Turn one, UPGRADE EVERY CARD IN HAND, for ONE combat. Written from scratch. The remaining-combats count is run state, which is what forced the Girya ordering fix.",
+    ),
+    "DarkstonePeriapt": (
+        "9ad6ca9c8fa6",
+        "+6 max HP for every CURSE entering the deck, by any route -- the hook is AfterCardChangedPiles on the deck pile, not an event's gift. Written from scratch.",
+    ),
+    "DreamCatcher": (
+        "9099a590b9e9",
+        "Resting also offers a card reward, from the MONSTER room's creation options. Written from scratch.",
+    ),
+    "EmberTea": (
+        "ba150ecffb95",
+        "Strength 2 at the top of a fight, for FIVE fights. Written from scratch.",
+    ),
+    "HandDrill": (
+        "ee77171035f9",
+        "Vulnerable 2 on an enemy whose block the hit BROKE -- block that was there, and a hit that got through it. Written from scratch; needed the block-before value, which the damage path was discarding.",
+    ),
+    "HistoryCourse": (
+        "7827cef548bb",
+        "From turn two, auto-play a DUPE of the last Attack or Skill played LAST turn. Written from scratch. The !IsDupe clause is the one that matters: without it the relic latches onto one card forever off a single play.",
+    ),
+    "LastingCandy": (
+        "638d3311d43c",
+        "Every SECOND combat's reward screen gains an extra Power option. The CLOCK is modelled; the extra option is not -- the screen is three slots and RewardSkipAction is 3, so a fourth card is an action-space change. Declared in RelicEffects.UnmodelledInRun with the reason.",
+    ),
+    "MawBank": (
+        "f16f7f6245a5",
+        "12 gold on entering a room, EVERY room, until any merchant purchase with goldSpent > 0 closes it for the run. Written from scratch.",
+    ),
+    "RazorTooth": (
+        "39ec087d73b0",
+        "The Attack or Skill just played is upgraded, on the copy -- so it lands in the discard pile upgraded and comes back that way. Written from scratch.",
+    ),
+    "SparklingRouge": (
+        "45e9bf4e3b9d",
+        "Strength 1 and Dexterity 1 when block clears on TURN THREE exactly -- not from turn three on. Written from scratch; a Barricade run never gets it, because block never clears.",
+    ),
+    "SwordOfJade": (
+        "2f648392eecc",
+        "Strength 3 at the top of every fight. What Sword of Stone becomes. Written from scratch.",
+    ),
+    "SwordOfStone": (
+        "3eb34a92814a",
+        "FIVE elite VICTORIES, not three -- DynamicVar('Elites', 5m) -- and RelicCmd.Replace swaps it for Sword of Jade. Written from scratch. A replacement, so the relic list keeps its length, and it counts wins rather than rooms entered.",
+    ),
+    "TeaOfDiscourtesy": (
+        "fd60754de0d3",
+        "Two Dazed into the draw pile at random positions, for ONE combat. Written from scratch -- the price the Tea Master's free tea charges.",
+    ),
+    "TheBoot": (
+        "02385c555d6b",
+        "A powered attack by the player or their pet that would take 1..4 off an enemy takes 5. A FLOOR on HP LOST, so it neither punches through block nor lowers a bigger hit. Written from scratch. Its DamageThreshold var of 4 is display text -- the comparison reads DamageMinimum.",
+    ),
     "BigHat": (
         "e9dc5b461163",
         "Two DISTINCT Ethereal cards from the player's OWN pool into hand on turn one. Written from scratch. The Ironclad pool has no Ethereal card at all, and neither does the Silent's, so `readOnlyList.Count > 0` is false and a Rare relic does nothing for two of the five characters -- the emulator runs one of them.",
@@ -871,11 +1014,11 @@ def unread_names(reachable: bool = False) -> list[str]:
     sources = engine_sources()
     consts = id_constants(sources, relics)
     used = used_constants(sources, consts, relics)
-    pools = relic_pools()
+    obtainable = act_one_relics(relics)
 
     names = []
     for name in sorted(relics):
-        if reachable and pools.get(name) == "EventRelicPool":
+        if reachable and name not in obtainable:
             continue
         path = RELICS / f"{name}.cs"
         if not path.exists() or name not in used:
@@ -920,6 +1063,7 @@ def main() -> None:
     starters = starter_relics()
 
     read: list[str] = []
+    obtainable = act_one_relics(relics)
     unread: list[str] = []
     declared: list[str] = []
     unmodelled: list[str] = []
@@ -929,7 +1073,7 @@ def main() -> None:
     for name in sorted(relics):
         if args.relic and name != args.relic:
             continue
-        if args.reachable and pools.get(name) == "EventRelicPool":
+        if args.reachable and name not in obtainable:
             continue
 
         path = RELICS / f"{name}.cs"

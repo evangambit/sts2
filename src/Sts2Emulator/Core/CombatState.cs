@@ -390,6 +390,22 @@ public sealed class CombatState
     public int AttackCardsPlayedThisTurn;
     public int AttackOrSkillCardsPlayedThisTurn;
     public int CardPlaysThisTurn;
+
+    /// <summary>
+    /// The last Attack or Skill the player finished playing THIS turn, and the one they
+    /// finished last turn. History Course reads the second at the start of every turn from
+    /// two onwards and auto-plays a DUPE of it.
+    /// </summary>
+    /// <remarks>
+    /// Two fields rather than a history list because that is all anything asks for. The
+    /// game queries `CardPlaysFinished.LastOrDefault(HappenedLastPlayerTurn &amp;&amp;
+    /// Attack-or-Skill &amp;&amp; !IsDupe)` -- the `!IsDupe` matters: the dupe History Course
+    /// itself plays must not become next turn's answer, or the relic would latch onto one
+    /// card forever.
+    /// </remarks>
+    public CardInstance? LastAttackOrSkillThisTurn;
+
+    public CardInstance? LastAttackOrSkillLastTurn;
     public int CardsPlayedThisCombat;
     public int DrawnCardsSinceAutomationProc;
 

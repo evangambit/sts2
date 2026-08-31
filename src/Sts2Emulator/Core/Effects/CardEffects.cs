@@ -3047,6 +3047,10 @@ public static class CardEffects
     internal static EnemyState? RandomLivingEnemyFor(CombatState state, Random rng) =>
         RandomLivingEnemy(state, rng);
 
+    /// <summary>The POWERED-attack path against one enemy, for callers outside this file.</summary>
+    internal static void DealPoweredDamage(CombatState state, EnemyState target, int amount) =>
+        DealDamageToEnemy(state, target, amount);
+
     /// <summary>Unpowered damage to one enemy, for callers outside this file.</summary>
     internal static void DealUnpoweredDamage(CombatState state, EnemyState target, int amount) =>
         DealUnpoweredDamageToEnemy(state, target, amount);
@@ -4236,9 +4240,25 @@ public static class CardEffects
         totalDamage = damage;
         // One `DamageReceivedEntry` per hit, which is what Beat Into Shape counts.
         target.PoweredHitsThisTurn++;
+        int blockBefore = target.Block;
         int absorbed = Math.Min(target.Block, damage);
         target.Block -= absorbed;
         int hpLoss = damage - absorbed;
+
+        // `HandDrill.AfterDamageGiven` on `result.WasBlockBroken`: the hit has to have
+        // GONE THROUGH block that was actually there. A target with no block to start
+        // with did not have it broken, and a hit that fails to get through does not
+        // count either -- which is why this reads the block BEFORE the absorb.
+        if (blockBefore > 0 && target.Block == 0 && hpLoss > 0)
+        {
+            RelicEffects.ApplyAfterBlockBroken(state, target);
+        }
+
+        // `TheBoot.ModifyHpLostAfterOstyLate`: a powered attack by the player or their
+        // pet that would take between 1 and 4 off an enemy takes 5 instead. The floor is
+        // on HP LOST, after block and after the pet redirect -- so it does not turn a
+        // fully blocked hit into damage, and it does not lower a bigger one.
+        hpLoss = RelicEffects.BootDamageFloor(state, hpLoss);
 
         int hardened = BuffSystem.Get(target.Buffs, BuffId.HardenedShell);
         if (hardened > 0)
