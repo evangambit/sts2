@@ -7260,9 +7260,15 @@ public static class CardEffects
                 DiscardFirstCardsFromHand(state, 1);
                 break;
             case "Apotheosis":
+                // `PlayerCombatState.AllCards` is Hand, Draw, Discard, EXHAUST and Play --
+                // five piles, and the exhaust one was missing. It is not a technicality:
+                // cards come back from exhaust (Howl From Beyond, Bombardment, Secret
+                // Technique, the Necrobinder's recursion), and one that comes back
+                // upgraded is a different card.
                 UpgradeAllCardsInHand(state);
                 UpgradePile(state.DrawPile);
                 UpgradePile(state.DiscardPile);
+                UpgradePile(state.ExhaustPile);
                 break;
             case "Apparition":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Intangible, 1);
@@ -7435,11 +7441,28 @@ public static class CardEffects
                 // next reader is not told a lie about a card they cannot reach.
                 AddColorlessCardsToHand(state, 1, rng, upgraded);
                 break;
+            // `GlimpseBeyond` and `WhiteNoise` used to be labelled here too. Both are
+            // handled correctly in `ApplyDefectCard` and `ApplyNecrobinderCard`, which run
+            // BEFORE this function -- so those labels were dead, and worse than dead:
+            // anyone reading this stack would have attributed the shared body to them.
             case "Distraction":
-            case "GlimpseBeyond":
+                // ONE random SKILL from the character's own pool, free THIS TURN, into
+                // HAND. The upgrade cuts the COST, not the count -- the shared body took
+                // `upgraded` as its free-this-turn flag, so an unupgraded Distraction gave
+                // a card that was not free and the filter was ignored entirely.
+                AddDistinctPoolCardToHand(state, CardType.Skill, 1, rng, freeThisTurn: true);
+                break;
+
             case "Metamorphosis":
-            case "WhiteNoise":
-                AddRandomClassCardToHand(state, rng, upgraded);
+                // THREE random ATTACKS (five upgraded) into the DRAW PILE at random
+                // positions, free for the whole COMBAT. Not one card, not into hand, and
+                // not free for a turn: three of the four things the shared body did.
+                AddDistinctPoolCardsToDrawPile(
+                    state,
+                    CardType.Attack,
+                    upgraded ? 5 : 3,
+                    rng
+                );
                 break;
             case "Burst":
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.OneTwoPunch, upgraded ? 2 : 1);
@@ -9694,6 +9717,77 @@ public static class CardEffects
             int defId = _colorlessPool[CardGenerationRng(state, rng).Next(_colorlessPool.Length)];
             state.Hand.Add(new CardInstance(defId, false));
         }
+    }
+
+    /// <summary>
+    /// `CardFactory.GetDistinctForCombat` over the character's own pool filtered to one
+    /// TYPE, into hand.
+    /// </summary>
+    private static void AddDistinctPoolCardToHand(
+        CombatState state,
+        CardType type,
+        int count,
+        Random rng,
+        bool freeThisTurn
+    )
+    {
+        foreach (int id in DistinctPoolCards(state, type, count, rng))
+        {
+            if (state.Hand.Count >= MaxCardsInHand)
+            {
+                return;
+            }
+
+            state.Hand.Add(new CardInstance(id, false, FreeThisTurn: freeThisTurn));
+            NoteGeneratedCard(state);
+        }
+    }
+
+    /// <summary>
+    /// The same, into the DRAW pile at `CardPilePosition.Random` and free for the whole
+    /// combat -- `SetToFreeThisCombat`, which is `CostForCombat = 0` rather than the
+    /// one-turn flag.
+    /// </summary>
+    private static void AddDistinctPoolCardsToDrawPile(
+        CombatState state,
+        CardType type,
+        int count,
+        Random rng
+    )
+    {
+        var placementRng = state.ShuffleRng ?? rng;
+        foreach (int id in DistinctPoolCards(state, type, count, rng))
+        {
+            state.InsertIntoDrawPile(
+                placementRng.Next(state.DrawPile.Count + 1),
+                new CardInstance(id, false, CostForCombat: 0)
+            );
+            NoteGeneratedCard(state);
+        }
+    }
+
+    /// <summary>Shuffle the filtered pool, take `count` -- the distinct-generation shape.</summary>
+    private static List<int> DistinctPoolCards(
+        CombatState state,
+        CardType type,
+        int count,
+        Random rng
+    )
+    {
+        var pool = CombatGenerationPool(GeneratedData.CardPools.Ironclad, type);
+        if (pool.Count == 0 || count <= 0)
+        {
+            return [];
+        }
+
+        var stream = CardGenerationRng(state, rng);
+        for (int i = pool.Count - 1; i > 0; i--)
+        {
+            int j = stream.Next(i + 1);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
+        }
+
+        return pool.Take(count).ToList();
     }
 
     private static void AddRandomClassCardToHand(CombatState state, Random rng, bool freeThisTurn)

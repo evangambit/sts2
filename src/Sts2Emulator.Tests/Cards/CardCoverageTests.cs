@@ -20,7 +20,6 @@ public class CardCoverageTests
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
-        "Apotheosis",
         "Apparition",
         "BlackHole",
         "BrightestFlame",
@@ -30,7 +29,6 @@ public class CardCoverageTests
         "Debris",
         "Defile",
         "Disintegration",
-        "Distraction",
         "DualWield",
         "Enlightenment",
         "Enthralled",
@@ -41,7 +39,6 @@ public class CardCoverageTests
         "Fuel",
         "HelloWorld",
         "Luminesce",
-        "Metamorphosis",
         "MinionDiveBomb",
         "MinionSacrifice",
         "Outmaneuver",

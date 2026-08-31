@@ -102,6 +102,26 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "Apotheosis": (
+        "e6b681bf7ffe",
+        "2-cost Skill, Exhaust + Innate, upgrade cuts the cost. Upgrades every card in `AllCards` EXCEPT itself -- and AllCards is Hand, Draw, Discard, EXHAUST and Play. The exhaust pile was missing, which matters because cards come back from it (Howl From Beyond, Bombardment, Secret Technique) and one that comes back upgraded is a different card.",
+    ),
+    "Apparition": (
+        "27f9d7dbb6c3",
+        "1-cost, Intangible 1, Ethereal + Exhaust, and the upgrade REMOVES Ethereal rather than changing a number; correct, and the upgrade is carried by the extracted EtherealRemovedWhenUpgraded flag.",
+    ),
+    "Caltrops": (
+        "060ba6b62cb6",
+        "1-cost Power, Thorns 3 upgrading to 5; correct.",
+    ),
+    "Distraction": (
+        "24b13c54e506",
+        "1-cost, ONE random SKILL from the character's own pool, free THIS TURN, into HAND; upgrade cuts the cost. It shared a body with three other cards that added one card of ANY type and passed `upgraded` as the free-this-turn flag -- so the filter was ignored and an unupgraded Distraction gave a card that was not free.",
+    ),
+    "Metamorphosis": (
+        "d834ed4ee9b2",
+        "2-cost, THREE random ATTACKS (five upgraded, `CardsVar(3)` upgrading by 2) into the DRAW PILE at random positions, free for the whole COMBAT. The shared body gave one card of any type, into hand, free only when upgraded -- four things wrong.",
+    ),
     "ByrdSwoop": (
         "2983c17b5bef",
         "0-cost, 14 damage, +4 upgraded. What the Byrdonis Egg becomes. Plain attack; correct in the shared damage body.",
@@ -474,7 +494,10 @@ READ: dict[str, tuple[str, str]] = {
         "a64ea6f955a7",
         "Osty 12/16, and free for the turn once Osty has swung; had no cost hook.",
     ),
-    "GlimpseBeyond": ("53de3cacd223", "3/4 Souls into the draw pile; correct."),
+    "GlimpseBeyond": (
+        "53de3cacd223",
+        "3/4 Souls into the draw pile at random positions; correct -- it is handled in ApplyNecrobinderCard. It ALSO carried a label in the generated-approximation stack, which was dead (that dispatch runs later) and misleading: a reader of that stack would have credited it with adding one random class card to hand. Label removed.",
+    ),
     "GraveWarden": (
         "86a184cfa05c",
         "Block 8/11 and one Soul to the draw pile; correct. `card_pair.py` hid the Soul inside a PreviewCardPileAdd line and the reading briefly deleted it.",
