@@ -411,6 +411,12 @@ public sealed class RunState
     public bool PendingRelicReward;
 
     /// <summary>
+    /// Lava Rock's `HasTriggered`: its two boss-room relics are once per RUN, and it
+    /// disables itself afterwards.
+    /// </summary>
+    public bool LavaRockTriggered;
+
+    /// <summary>
     /// Relic rewards still owed, each already rolled. The screen carries one at a time,
     /// the way it carries one potion at a time, so anything past the first waits here.
     /// </summary>

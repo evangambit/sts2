@@ -155,6 +155,48 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "Ectoplasm": (
+        "ff4aca149d60",
+        "+1 max energy and all gold gains zeroed; both halves correct.",
+    ),
+    "ElectricShrymp": (
+        "e6e0f97ae5c0",
+        "One CHOSEN deck card enchanted with IMBUED; correct -- the source's local is named `canonicalMomentum` and its TYPE is Imbued, so the name is a MegaCrit copy-paste and reading it would have got the wrong enchantment.",
+    ),
+    "FishingRod": (
+        "cedf09ce1f1d",
+        "Every third MONSTER-room combat, one random upgradable deck card upgraded off Rng.Niche; correct.",
+    ),
+    "GlassEye": (
+        "66024c334ef1",
+        "Five card rewards on one screen -- Common, Common, Uncommon, Uncommon, Rare -- each offering three at Uniform odds; correct.",
+    ),
+    "GoldenPearl": ("56dc7bd27793", "150 gold on pickup; correct."),
+    "HeftyTablet": (
+        "796600817581",
+        "Three RARE cards from the owner's pool on a skippable choose-a-card screen, and its Injury lands with whichever is taken; correct.",
+    ),
+    "Kaleidoscope": (
+        "481ff0ec6990",
+        "Two card rewards from the OTHER characters' pools; correct.",
+    ),
+    "LargeCapsule": (
+        "c42c6a7e9f61",
+        "Two relics off the pool front, plus a Basic Strike and Defend for the character; correct for the Ironclad, which is the only character a run models.",
+    ),
+    "LavaRock": (
+        "e59da0a26598",
+        "TWO relic rewards added to the ACT-1 BOSS room, once per run. It had no effect at all -- an id constant and nothing behind it.",
+    ),
+    "LeafyPoultice": (
+        "9ced28bfa596",
+        "Lose 12 max HP, then TRANSFORM the first BASIC Strike-tagged and first BASIC Defend-tagged card. It matched Ironclad's two card ids rather than the tags, so it found nothing for any other character.",
+    ),
+    "LostCoffer": ("9b3c15ab1cd7", "A custom reward screen on pickup; correct."),
+    "NewLeaf": (
+        "4df3dac6ba68",
+        "One CHOSEN deck card transformed at random off Rng.Niche; correct.",
+    ),
     "AlchemicalCoffer": (
         "2f97e5a40e58",
         "+4 potion slots then four potions off CombatPotionGeneration, slots first so they all fit; correct.",

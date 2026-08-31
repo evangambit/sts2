@@ -273,6 +273,21 @@ public static class RunRewardGenerator
         // the run never earned, and its pickup upgraded two attacks in the deck.
         state.PendingRelicReward = state.CurrentNodeType is RunConstants.NodeElite;
 
+        // `LavaRock.TryModifyRewards` adds `DynamicVar("Relics", 2)` RelicRewards to the
+        // ACT-1 BOSS room, once per run, and disables itself. The emulator's run ends at
+        // that boss, so this is the only room it can ever fire in -- and it had no effect
+        // at all: the relic was an id constant and nothing else.
+        if (
+            state.CurrentNodeType == RunConstants.NodeBoss
+            && HasRelic(state, RunConstants.RelicLavaRock)
+            && !state.LavaRockTriggered
+        )
+        {
+            state.LavaRockTriggered = true;
+            state.PendingRelicReward = true;
+            state.PendingBonusRelicRewards.Add(NextRelic(state));
+        }
+
         // The CARDS are rolled before the relic. RewardsSet builds gold, potion, card,
         // relic and then populates them in that order, and only sorts by RewardsSetIndex
         // afterwards -- so the order the screen SHOWS them in (relic above the card) is

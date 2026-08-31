@@ -91,3 +91,71 @@ public class BoomingConchTests
         Assert.Equal(plain.State.Energy + 1, conch.State.Energy);
     }
 }
+
+/// <summary>
+/// `LavaRock.TryModifyRewards` adds `DynamicVar("Relics", 2)` relic rewards to the ACT-1
+/// BOSS room, once per run, and disables itself.
+/// </summary>
+/// <remarks>
+/// The emulator's run ends at that boss, so this is the only room it can ever fire in —
+/// and it had no effect at all: the relic was an id constant with nothing behind it.
+/// </remarks>
+public class LavaRockTests
+{
+    private static RunEngine AtBoss(bool withRock)
+    {
+        var engine = new RunEngine();
+        engine.Reset("NXV45HW43K");
+        if (withRock)
+        {
+            engine.State.Relics.Add(new RelicInstance(RunConstants.RelicLavaRock));
+        }
+
+        engine.State.CurrentNodeType = RunConstants.NodeBoss;
+        RunRewardGenerator.GenerateCombatRewards(engine.State);
+        return engine;
+    }
+
+    [Fact]
+    public void TheBossRoomOwesTwoRelics()
+    {
+        var plain = AtBoss(withRock: false);
+        var rock = AtBoss(withRock: true);
+
+        Assert.False(plain.State.PendingRelicReward);
+        Assert.Empty(plain.State.PendingBonusRelicRewards);
+
+        // One on the screen and one queued behind it — two rewards, one at a time.
+        Assert.True(rock.State.PendingRelicReward);
+        Assert.Single(rock.State.PendingBonusRelicRewards);
+    }
+
+    /// <summary>Once per run: `HasTriggered` disables it.</summary>
+    [Fact]
+    public void ItFiresOnlyOnce()
+    {
+        var engine = AtBoss(withRock: true);
+        engine.State.PendingBonusRelicRewards.Clear();
+        engine.State.PendingRelicReward = false;
+
+        RunRewardGenerator.GenerateCombatRewards(engine.State);
+
+        Assert.Empty(engine.State.PendingBonusRelicRewards);
+        Assert.False(engine.State.PendingRelicReward);
+    }
+
+    /// <summary>And only at a BOSS — an ordinary combat owes nothing.</summary>
+    [Fact]
+    public void AnOrdinaryCombatOwesNothing()
+    {
+        var engine = new RunEngine();
+        engine.Reset("NXV45HW43K");
+        engine.State.Relics.Add(new RelicInstance(RunConstants.RelicLavaRock));
+        engine.State.CurrentNodeType = RunConstants.NodeNormal;
+
+        RunRewardGenerator.GenerateCombatRewards(engine.State);
+
+        Assert.Empty(engine.State.PendingBonusRelicRewards);
+        Assert.False(engine.State.LavaRockTriggered);
+    }
+}

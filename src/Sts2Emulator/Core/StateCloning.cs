@@ -280,6 +280,7 @@ public static class StateCloning
             RewardEnchantIndex = state.RewardEnchantIndex,
             RewardEnchantment = state.RewardEnchantment,
             PendingBonusRelicRewards = [.. state.PendingBonusRelicRewards],
+            LavaRockTriggered = state.LavaRockTriggered,
             PendingSpecialCardReward = state.PendingSpecialCardReward,
             ResumeEventId = state.ResumeEventId,
             ResumeEventPage = state.ResumeEventPage,

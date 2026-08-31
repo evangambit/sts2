@@ -532,8 +532,11 @@ public static class RunNonCombatEffects
             case RunConstants.RelicLeafyPoultice:
                 state.PlayerMaxHp = Math.Max(1, state.PlayerMaxHp - 12);
                 state.PlayerHp = Math.Min(state.PlayerHp, state.PlayerMaxHp);
-                TransformFirstCardMatching(state, 472);
-                TransformFirstCardMatching(state, 131);
+                // The first BASIC card tagged Strike and the first tagged Defend -- the
+                // real tags, not Ironclad's two ids, which found nothing for any other
+                // character. Both transformed together off `PlayerRng.Transformations`.
+                TransformFirstTaggedBasic(state, strike: true);
+                TransformFirstTaggedBasic(state, strike: false);
                 break;
             case RunConstants.RelicPrecariousShears:
                 // CardsVar(2) through the same removal screen, then DamageVar(16). The
@@ -2512,6 +2515,22 @@ public static class RunNonCombatEffects
 
         state.Deck.RemoveAt(deckIndex);
         AddCardToDeck(state, new CardInstance(rng.NextItem(pool), Upgraded: false));
+    }
+
+    /// <summary>
+    /// Leafy Poultice: the first BASIC card carrying `CardTag.Strike`, or `CardTag.Defend`.
+    /// </summary>
+    private static void TransformFirstTaggedBasic(RunState state, bool strike)
+    {
+        int index = state.Deck.FindIndex(card =>
+        {
+            var def = GeneratedData.Cards.Get(card.DefId);
+            return def.Rarity == CardRarity.Basic && (strike ? def.StrikeTag : def.DefendTag);
+        });
+        if (index >= 0)
+        {
+            TransformCardAt(state, index, state.PlayerRng.Transformations);
+        }
     }
 
     public static void TransformFirstCardMatching(RunState state, int cardId)
