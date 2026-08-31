@@ -40,7 +40,6 @@ public class EventCoverageTests
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
-        "Amalgamator",
         "BattlewornDummy",
         "ColorfulPhilosophers",
         "ColossalFlower",

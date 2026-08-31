@@ -1104,9 +1104,25 @@ public static class RunNonCombatEffects
             // OFFER an Eternal card for removal. Seven curses carry it, Ascender's Bane
             // among them, and the emulator let a run delete every one.
             DeckSelection.Remove => !GeneratedData.Cards.Get(card.DefId).Eternal,
+            DeckSelection.RemoveTaggedBasic => IsRemovableTaggedBasic(
+                card,
+                state.PendingSelectionArg
+            ),
             DeckSelection.TransformToRandom => true,
             _ => false,
         };
+    }
+
+    /// <summary>
+    /// Amalgamator's `IsValid(tag, card)`: the tag, BASIC rarity, and removable.
+    /// </summary>
+    /// <param name="tag">0 for `CardTag.Strike`, 1 for `CardTag.Defend`.</param>
+    private static bool IsRemovableTaggedBasic(CardInstance card, int tag)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return (tag == 0 ? def.StrikeTag : def.DefendTag)
+            && def.Rarity == CardRarity.Basic
+            && !def.Eternal;
     }
 
     /// <summary>
@@ -1162,6 +1178,7 @@ public static class RunNonCombatEffects
                 break;
             case DeckSelection.Remove:
             case DeckSelection.RemoveUpgradable:
+            case DeckSelection.RemoveTaggedBasic:
                 state.Deck.RemoveAt(deckIndex);
                 break;
             default:

@@ -33,6 +33,18 @@ public enum DeckSelection
     RemoveUpgradable,
 
     /// <summary>
+    /// Amalgamator: remove BASIC cards carrying one tag, and the tag is in
+    /// <c>PendingSelectionArg</c> -- 0 for Strike, 1 for Defend.
+    /// </summary>
+    /// <remarks>
+    /// `IsValid(tag, c)` is `c.Tags.Contains(tag) &amp;&amp; c.Rarity == Basic &amp;&amp; c.IsRemovable`,
+    /// so it is narrower than a plain removal in two directions at once: the tag, and
+    /// Basic rarity. Ultimate Strike is Strike-tagged and would be offered by the tag
+    /// alone, which would let the event eat its own reward.
+    /// </remarks>
+    RemoveTaggedBasic,
+
+    /// <summary>
     /// Dolly's Mirror: the chosen card is COPIED into the deck, not changed.
     /// </summary>
     /// <remarks>

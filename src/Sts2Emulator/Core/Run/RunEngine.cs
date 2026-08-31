@@ -3456,20 +3456,59 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventAmalgamator:
-                if (action == 0)
+            {
+                // TWO cards the player picks, removed, and ONE named card put in their
+                // place: `FromDeckForRemoval(count: 2, filter: IsValid(tag, c))` then
+                // `CardPileCmd.Add(UltimateStrike)`. `IsValid` is the TAG plus BASIC rarity
+                // plus removable, so the filter is narrower than a plain removal in two
+                // directions -- Ultimate Strike is Strike-tagged, and without the rarity
+                // clause the event could eat its own reward.
+                //
+                // The emulator TRANSFORMED two Ironclad Strikes into random cards off the
+                // Transformations stream. Wrong effect, wrong stream, wrong card, no
+                // choice -- and it matched Ironclad's Strike id rather than the tag, so for
+                // every other character it found nothing and silently did nothing.
+                if (action is not (0 or 1))
                 {
-                    TransformTwoMatchingCards(Effects.IC.StrikeIronclad);
-                }
-                else if (action == 1)
-                {
-                    TransformTwoMatchingCards(Effects.IC.DefendIronclad);
-                }
-                else if (action != RunConstants.EventSkipAction)
-                {
-                    return -1;
+                    if (action != RunConstants.EventSkipAction)
+                    {
+                        return -1;
+                    }
+
+                    break;
                 }
 
-                break;
+                bool strikes = action == 0;
+                if (
+                    !RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.RemoveTaggedBasic,
+                        strikes ? 0 : 1,
+                        count: 2,
+                        followUpCard: RunNonCombatEffects.NamedCard(
+                            strikes ? "UltimateStrike" : "UltimateDefend"
+                        ),
+                        followUpCount: 1
+                    )
+                )
+                {
+                    // Nothing to offer: the game still awaits an empty selection and adds
+                    // the card below it, the way Field Of Man-Sized Holes does.
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(
+                            RunNonCombatEffects.NamedCard(
+                                strikes ? "UltimateStrike" : "UltimateDefend"
+                            ),
+                            false
+                        )
+                    );
+                    break;
+                }
+
+                State.Phase = RunPhase.TransformSelect;
+                return 0;
+            }
             case RunConstants.EventBugslayer:
                 // Both options ADD A NAMED CARD to the deck and nothing else --
                 // `AddAndPreview<Exterminate>` and `AddAndPreview<Squash>`. There is no

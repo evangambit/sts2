@@ -117,6 +117,48 @@ public class EventCaptures
         Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
     }
     /// <summary>
+    /// Amalgamator, 'Combine Strikes' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void Amalgamator_Option0()
+    {
+        var engine = Open(RunConstants.EventAmalgamator);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
+    }
+    /// <summary>
+    /// Amalgamator, 'Combine Defends' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void Amalgamator_Option1()
+    {
+        var engine = Open(RunConstants.EventAmalgamator);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
+    }
+    /// <summary>
     /// AromaOfChaos, 'Let Go' -- captured from v0.107.1 (build 23811903).
     /// </summary>
     [Fact]

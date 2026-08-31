@@ -383,6 +383,14 @@ def extract_cards() -> str:
         # many of them the deck holds, so the tag has to be data rather than a comment.
         if "CardTag.OstyAttack" in text:
             flags.append("OstyAttack: true")
+        # CardTag.Strike / CardTag.Defend. `Card.cs` stood these in with an entry-slug
+        # prefix test and said so in a comment: true for Basic cards, where the tag and the
+        # name agree, and wrong past them -- Perfected Strike is tagged Strike and is not
+        # Basic. Amalgamator filters the deck on the real tag, so the real tag is extracted.
+        if "CardTag.Strike" in text:
+            flags.append("StrikeTag: true")
+        if "CardTag.Defend" in text:
+            flags.append("DefendTag: true")
         # CardModel.MaxUpgradeLevel. The base is 1; the cards that override it all
         # override it to 0, which is what IsUpgradable reads to refuse an upgrade.
         if "MaxUpgradeLevel => 0" in text:
