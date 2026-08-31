@@ -43,6 +43,29 @@ FOLDERS = {
 # ApplyDefectCard and its siblings, which switch on def.Name.
 CONST_CASE_RE = re.compile(rf"case ({'|'.join(FOLDERS)})\.(\w+)\s*:")
 NAME_CASE_RE = re.compile(r'case "(\w+)"\s*:')
+# A third shape: `case 546: // Cascade`. Raw ids are rare and deliberate -- a card with no
+# constant, or one whose constant would collide -- and they were INVISIBLE here, so their
+# cards were reported as unimplemented and sat in `Pending` looking deferred.
+ID_CASE_RE = re.compile(r"case (\d+)\s*:")
+
+# ...but only ABOVE this marker. Below it sits a block of ~309 raw-id labels that all fall
+# through to `ApplyGeneratedCardApproximation`, which is a generic stand-in rather than an
+# implementation. Counting those as implemented would mark most of the game done and
+# demand a test class for each, which is the opposite of what this file is for.
+APPROXIMATION_MARKER = "-- Remaining generated cards"
+
+COMMENT_RE = re.compile(r"//[^\n]*|/\*.*?\*/", re.DOTALL)
+
+
+def without_comments(source: str) -> str:
+    """The file with comments stripped.
+
+    Not cosmetic: this file's comments discuss the code, so a sentence like "the
+    `case SI.X:` arms and the by-NAME fallback" was scraped as a card called X, and the
+    coverage gate then demanded an `XTests` class for a card that does not exist. Prose
+    about the pattern must not be read as the pattern.
+    """
+    return COMMENT_RE.sub("", source)
 
 
 def implemented_cards() -> dict[str, str]:
@@ -52,12 +75,28 @@ def implemented_cards() -> dict[str, str]:
     used for powers, so `case "ReanimatePower"` would otherwise be reported as a card
     nobody had tested.
     """
-    source = CARD_EFFECTS.read_text(encoding="utf-8")
+    raw_source = CARD_EFFECTS.read_text(encoding="utf-8")
+    source = without_comments(raw_source)
     cards = {name: cls for cls, name in CONST_CASE_RE.findall(source)}
 
-    known = set(json.loads(ID_MAP.read_text(encoding="utf-8"))["cards"])
+    id_map = json.loads(ID_MAP.read_text(encoding="utf-8"))["cards"]
+    known = set(id_map)
     for name in NAME_CASE_RE.findall(source):
         if name in known and name not in cards:
+            cards[name] = ""
+
+    by_id = {int(card_id): name for name, card_id in id_map.items()}
+    # Located in the RAW text, because the marker is itself a comment -- then the same
+    # cut applied to the stripped text, which is shorter but in the same order.
+    marker = raw_source.find(APPROXIMATION_MARKER)
+    real_arms = (
+        source
+        if marker < 0
+        else without_comments(raw_source[:marker])
+    )
+    for raw in ID_CASE_RE.findall(real_arms):
+        name = by_id.get(int(raw))
+        if name is not None and name not in cards:
             cards[name] = ""
     return cards
 

@@ -102,6 +102,50 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "BadLuck": (
+        "02137afba50d",
+        "Unplayable, Eternal. At turn end in HAND, 13 Unblockable+Unpowered -- block does not save you, and Eternal means it cannot be removed. Written from scratch; the turn-end list named four cards and this was not one.",
+    ),
+    "Beckon": (
+        "a85cd64c3795",
+        "Costs 1, Status. At turn end in hand, 6 Unblockable+Unpowered. Already modelled, beside the four-card list rather than in it; folded into the one chokepoint now.",
+    ),
+    "Burn": (
+        "01accf98c5e6",
+        "Unplayable. At turn end in hand, DamageVar(2) blockable and unpowered; correct.",
+    ),
+    "Debt": (
+        "21904208b16f",
+        "Unplayable. At turn end in hand, `Min(GoldVar(10), Owner.Gold)` gold -- it cannot put the run into debt, which is the joke. Written from scratch, and the only turn-end card that touches gold rather than HP.",
+    ),
+    "Decay": (
+        "9fa293c51e14",
+        "Unplayable. At turn end in hand, DamageVar(2) blockable and unpowered -- Burn's twin as a Curse. Written from scratch.",
+    ),
+    "Doubt": (
+        "b13d11376e21",
+        "Unplayable. At turn end in hand, Weak 1, with SkipNextDurationTick set when the player did not already have Weak -- so a fresh stack survives the tick moments later instead of expiring in the same breath. Written from scratch.",
+    ),
+    "Infection": (
+        "413589cde4e3",
+        "Unplayable Status. At turn end in hand, DamageVar(3) blockable and unpowered; correct.",
+    ),
+    "Regret": (
+        "44d983355712",
+        "Unplayable. At turn end in hand, damage equal to the SIZE OF THE HAND -- snapshotted in BeforeSideTurnEnd and spent in the turn-end hook, so it is the hand as the sequence began. Unblockable and Unpowered. Written from scratch.",
+    ),
+    "Shame": (
+        "0239c6477001",
+        "Unplayable. At turn end in hand, Frail 1, with the same fresh-stack grace as Doubt. Written from scratch.",
+    ),
+    "Toxic": (
+        "e87272a9dd7c",
+        "Costs 1, Exhaust. At turn end in hand, DamageVar(5) blockable and unpowered; correct.",
+    ),
+    "Wither": (
+        "845a28054f82",
+        "Unplayable Status. At turn end in hand, DamageVar(3) blockable and unpowered. Its `FakeUpgrade` grows the damage by 3 a time and nothing in a solo run calls it; correct.",
+    ),
     "Acrobatics": ("bcc58ace2ee0", "Draw 3/4 then discard a CHOSEN card; correct."),
     "BouncingFlask": (
         "766f4097ab21",

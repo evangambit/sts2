@@ -3,12 +3,94 @@ namespace Sts2Emulator.Core.Effects;
 public static class CardEffects
 {
     /// <summary>
-    /// Statuses that damage whoever is holding them when the turn ends. The game marks
-    /// these with HasTurnEndInHandEffect and damages for the card's own damage value;
-    /// Beckon also fires at turn end but loses HP directly, so it is handled separately.
+    /// `CardModel.OnTurnEndInHand`: what a card does to its holder while it sits in hand
+    /// at the end of the turn. ELEVEN cards have one.
     /// </summary>
-    public static bool BurnsHolderAtTurnEnd(int defId) =>
-        defId is ST.Burn or ST.Infection or ST.Toxic or ST.Wither;
+    /// <remarks>
+    /// This used to be a hand-kept list of FOUR ids that all "damage for the card's own
+    /// damage value", with Beckon handled beside it as a fifth. Six were missing, and the
+    /// shape was wrong as well as the membership: Debt takes GOLD, Doubt applies Weak,
+    /// Shame applies Frail, and Regret's damage is the size of the hand rather than a
+    /// number on the card. `HasTurnEndInHandEffect` is extracted now, so which cards
+    /// belong is data and only what they DO is written here.
+    ///
+    /// `cardsInHand` is Regret's: it snapshots `Pile.Cards.Count` in `BeforeSideTurnEnd`
+    /// and spends it here, so the count is the hand as the turn-end sequence BEGAN --
+    /// before anything else in this loop has left.
+    /// </remarks>
+    internal static void ApplyTurnEndInHand(
+        CombatState state,
+        CardDef def,
+        int cardsInHand,
+        Random? rng
+    )
+    {
+        if (!def.TurnEndInHand)
+        {
+            return;
+        }
+
+        switch (def.Id)
+        {
+            // The five that deal the card's own DamageVar, blockable and unpowered.
+            case ST.Burn:
+            case ST.Infection:
+            case ST.Toxic:
+            case ST.Wither:
+            case ST.Decay:
+                DealDamageToPlayer(state, def.BaseDamage);
+                break;
+
+            // Beckon and Bad Luck lose HP directly -- Unblockable and Unpowered, so block
+            // does not save you. Not uncappable, though: Intangible caps HP lost by any
+            // route, which `LoseHp` honours.
+            case ST.Beckon:
+                LoseHp(state, 6);
+                break;
+            case ST.BadLuck:
+                LoseHp(state, 13);
+                break;
+
+            // `Min(GoldVar(10), Owner.Gold)` -- it cannot put the run into debt, which is
+            // the joke.
+            case ST.Debt:
+                state.PlayerGold = Math.Max(0, state.PlayerGold - Math.Min(10, state.PlayerGold));
+                break;
+
+            // Doubt and Shame apply a DURATION debuff and set `SkipNextDurationTick` when
+            // the player did not already have it -- so a fresh stack survives the tick
+            // that happens moments later, and a stack landing on an existing one does not.
+            case ST.Doubt:
+                ApplyDurationDebuffToPlayer(state, BuffId.Weak, 1);
+                break;
+            case ST.Shame:
+                ApplyDurationDebuffToPlayer(state, BuffId.Frail, 1);
+                break;
+
+            // Regret's damage is the size of the hand, snapshotted before the turn-end
+            // sequence started. Unblockable and Unpowered.
+            case ST.Regret:
+                LoseHp(state, cardsInHand);
+                break;
+        }
+
+        _ = rng;
+    }
+
+    /// <summary>
+    /// `PowerCmd.Apply` of a duration debuff to the player, with the game's one-tick
+    /// grace: a stack that was not already there sets `SkipNextDurationTick`, so it
+    /// survives the tick at the end of this same turn.
+    /// </summary>
+    /// <remarks>
+    /// Nothing extra is needed for `SkipNextDurationTick`: the tick a moment later
+    /// compares against `PlayerDebuffsAtRoundStart`, taken before this turn began, and a
+    /// stack that is not in it is passed over. A stack landing on one that IS in the
+    /// snapshot ticks normally -- which is exactly the game's `!alreadyHasWeak` guard,
+    /// arrived at from the other direction.
+    /// </remarks>
+    private static void ApplyDurationDebuffToPlayer(CombatState state, BuffId id, int amount) =>
+        BuffSystem.Apply(state.PlayerBuffs, id, amount);
 
     /// <summary>
     /// Resolves a card, with the Defend tag hoisted out of it.

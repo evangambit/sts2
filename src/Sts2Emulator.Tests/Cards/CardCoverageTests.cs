@@ -22,10 +22,8 @@ public class CardCoverageTests
     [
         "Apotheosis",
         "Apparition",
-        "Beckon",
         "BlackHole",
         "BrightestFlame",
-        "Burn",
         "ByrdSwoop",
         "Caltrops",
         "Cascade",
@@ -43,7 +41,6 @@ public class CardCoverageTests
         "FranticEscape",
         "Fuel",
         "HelloWorld",
-        "Infection",
         "Luminesce",
         "Maul",
         "Metamorphosis",
@@ -62,10 +59,8 @@ public class CardCoverageTests
         "Stack",
         "SweepingGaze",
         "ToricToughness",
-        "Toxic",
         "Whistle",
         "Wish",
-        "Wither",
         "Wound",
     ];
 

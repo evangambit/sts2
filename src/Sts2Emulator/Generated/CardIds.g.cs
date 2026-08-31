@@ -285,4 +285,10 @@ public static class ST
     public const int Sloth = 10038;
     public const int WasteAway = 10041;
     public const int Soot = 10039;
+    public const int BadLuck = 10021;
+    public const int Debt = 10025;
+    public const int Decay = 10026;
+    public const int Doubt = 10027;
+    public const int Regret = 10036;
+    public const int Shame = 10037;
 }

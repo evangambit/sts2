@@ -395,6 +395,13 @@ def extract_cards() -> str:
         # was just played from, and Vitruvian Minion doubles both damage and block from a
         # Minion-tagged card -- neither is answerable from the card's name, and Blade of
         # Ink's Shivs and Knife Trap's replays are the reason.
+        # CardModel.HasTurnEndInHandEffect. Eleven cards fire while sitting in hand at the
+        # end of the turn, and `CardEffects` kept a hand-written list of FOUR of them --
+        # plus a fifth handled beside it. The six it missed are not all damage either:
+        # Debt takes gold, Doubt applies Weak, Shame applies Frail. Extracted so the
+        # question "does this card do something at turn end" stops being a list.
+        if "HasTurnEndInHandEffect => true" in text:
+            flags.append("TurnEndInHand: true")
         if "CardTag.Shiv" in text:
             flags.append("ShivTag: true")
         if "CardTag.Minion" in text:

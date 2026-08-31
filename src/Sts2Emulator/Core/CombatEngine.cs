@@ -766,6 +766,10 @@ public static class CombatEngine
         {
             retainHand = Math.Max(retainHand, 1);
         }
+        // `Regret.BeforeSideTurnEnd` snapshots `Pile.Cards.Count` and spends it in its own
+        // turn-end hook, so its damage is the hand as this sequence BEGAN rather than
+        // whatever is left by the time the loop reaches it.
+        int handAtTurnEnd = state.Hand.Count;
         var nextHand = new List<CardInstance>();
         foreach (var card in state.Hand)
         {
@@ -784,23 +788,10 @@ public static class CombatEngine
                 continue;
             }
 
-            // Status card end-of-turn effects. Burn, Infection, Toxic and Wither all burn
-            // their holder for the card's own damage value, so they read it from the card
-            // rather than repeating four literals that the extractor already carries.
-            if (Effects.CardEffects.BurnsHolderAtTurnEnd(def.Id))
-            {
-                Effects.CardEffects.DealDamageToPlayer(state, def.BaseDamage);
-            }
-            else if (def.Id == Effects.ST.Beckon)
-            {
-                // Beckon is unblockable -- but not uncappable: Intangible caps the HP
-                // lost by any route, which is what its second hook is for.
-                state.PlayerHp = Math.Max(
-                    0,
-                    state.PlayerHp - BuffSystem.CapHpLoss(6, state.PlayerBuffs)
-                );
-                Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);
-            }
+            // `CardModel.OnTurnEndInHand`, for the eleven cards that have one. This was a
+            // hand-kept list of four "burn the holder" statuses plus Beckon beside it; six
+            // were missing, and three of those do something other than damage.
+            Effects.CardEffects.ApplyTurnEndInHand(state, def, handAtTurnEnd, rng);
 
             // Hand Trick's Sly lasts a single TURN, so a card that survives into the
             // next hand does not carry the grant with it. Note this cleanup does NOT go

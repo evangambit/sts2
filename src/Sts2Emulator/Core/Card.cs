@@ -124,6 +124,9 @@ public readonly record struct CardDef(
     bool DefendTag = false,
     // CardTag.Shiv: Helical Dart reads it off the card just played. Blade of Ink's Shivs
     // and Knife Trap's replays are all tagged, so this cannot be "id == 430".
+    // CardModel.HasTurnEndInHandEffect: the card does something to its holder while it
+    // sits in hand at the end of the turn. Eleven cards, and only five were modelled.
+    bool TurnEndInHand = false,
     bool ShivTag = false,
     // CardTag.Minion: Vitruvian Minion doubles both the damage and the block of a
     // Minion-tagged card.
