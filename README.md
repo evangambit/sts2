@@ -131,7 +131,7 @@ Three independent mechanisms, because they catch different things:
    rounding, what a power sees mid-effect. Five fixtures that cannot be rebuilt live in
    `tests/fixtures/cards/blocked/`, each with a written reason.
 3. **Source audits.** `audit_cards.py` and `audit_relics.py` track which cards and relics
-   have actually been _read_ against the current source, keyed by a digest of that source so
+   have actually been *read* against the current source, keyed by a digest of that source so
    a note goes stale the moment the game patches. Every card with a test suite has now been
    read — the number that matters is "tested but unread", cards that LOOK covered, and it
    is zero. `audit_shared_card_bodies.py` catches the
