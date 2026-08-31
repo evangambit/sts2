@@ -338,6 +338,10 @@ public readonly record struct CardInstance(
     // its owner picks just before the hand is flushed. Single-turn like Hand Trick's Sly:
     // it survives one flush and is cleared as the card lands in the next hand.
     bool RetainThisTurn = false,
+    // `EnergyCost.SetThisTurnOrUntilPlayed(n)`: a cost that lasts the turn rather than the
+    // combat. Enlightenment's unupgraded half is the only source, and it sets 1 rather
+    // than 0 -- which is why a `FreeThisTurn` flag cannot stand in for it.
+    int CostThisTurn = int.MinValue,
     // `EnergyCost.SetUntilPlayed(0)`, which Rocket Punch does to ITSELF when its owner
     // generates a Status card. Unlike FreeThisTurn this survives the turn boundary and is
     // spent by the play rather than by the clock.

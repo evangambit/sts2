@@ -102,6 +102,46 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "Debris": (
+        "d2165304ef91",
+        "1-cost Status, Exhaust, and OnPlay returns immediately -- a card you pay one energy to be rid of. The empty arm is correct.",
+    ),
+    "Enlightenment": (
+        "3b02252de2a0",
+        "0-cost, Exhaust: sets every card in HAND to cost ONE, `reduceOnly` -- `SetThisCombat` upgraded, `SetThisTurnOrUntilPlayed` otherwise. The emulator made the whole hand FREE and ignored the upgrade: a strictly better card, for the wrong duration. Needed a CostThisTurn field, since a free-for-the-turn flag cannot express 'costs 1 this turn'.",
+    ),
+    "Enthralled": (
+        "7d981a0045f3",
+        "2-cost Curse, Eternal: `ShouldPlay` is false for every card in hand except itself, so you must play it before anything else. Already modelled in `IsBlockedByEnthralled`; correct.",
+    ),
+    "FeedingFrenzy": (
+        "1257ad6c5a3d",
+        "0-cost, `FeedingFrenzyPower : TemporaryStrengthPower` at PowerVar<StrengthPower>(5) upgrading by 2 -- five Strength or seven, TAKEN BACK at end of turn. It sat in a six-card stack giving permanent Strength 1 or 2: wrong number and wrong duration, in opposite directions.",
+    ),
+    "HelloWorld": (
+        "8819f3b0db56",
+        "1-cost Power, `HelloWorldPower(1)` -- ALWAYS one, the upgrade adds INNATE. The power adds that many distinct COMMON cards from the character's own pool to hand each turn. The emulator applied `InfiniteBlades`, which makes SHIVS, at `upgraded ? 2 : 1`: wrong power and wrong amount.",
+    ),
+    "Luminesce": (
+        "783cdf7764b4",
+        "0-cost Token, Exhaust + Retain: EnergyVar(2) upgrading by 1. It shared `upgraded ? 2 : 1` with Supercritical and Wisp; only Luminesce actually ran that body, and only Luminesce was wrong.",
+    ),
+    "Outmaneuver": (
+        "77cb94a34117",
+        "1-cost, EnergyVar(2) upgrading to 3 as `EnergyNextTurnPower`; correct.",
+    ),
+    "Supercritical": (
+        "f347dfeb9219",
+        "0-cost Rare, Exhaust: EnergyVar(4) upgrading by 2. Handled correctly in ApplyDefectCard -- its label in the shared energy stack was DEAD, and removing it is why this reads correct rather than as a quarter of its value.",
+    ),
+    "ToricToughness": (
+        "d200c4178a30",
+        "2-cost, 5 block AND `ToricToughnessPower(2)`: for the next two turns, the same block again when block clears. The power half was missing, which is most of the card. Its Amount is the TURN COUNT, so the block lives in a BlockVar set by SetBlock -- and SetBlock records what was GAINED, so Dexterity rides the repeats.",
+    ),
+    "Wisp": (
+        "4efd9f2a0a9c",
+        "0-cost, Exhaust, EnergyVar(1) -- and the upgrade adds RETAIN rather than energy, so the number does not move. Handled correctly in ApplyNecrobinderCard; its label in the shared energy stack was dead.",
+    ),
     "BrightestFlame": (
         "ccc0a50e6e54",
         "0-cost, EnergyVar(2) upgrading to 3, CardsVar(2) which does NOT upgrade, and LoseMaxHp(1) -- the price the card is built around, missing entirely. Its draw was being upgraded too; only Fuel's is. LoseMaxHp deals the excess as Unblockable damage rather than clamping, so at full health it costs a point of current HP with the cap.",

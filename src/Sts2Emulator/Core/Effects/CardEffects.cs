@@ -2966,6 +2966,39 @@ public static class CardEffects
     }
 
     /// <summary>
+    /// Hello World's: that many DISTINCT COMMON cards from the character's own pool, into
+    /// hand, off `CombatCardGeneration`.
+    /// </summary>
+    internal static void AddDistinctCommonCardsToHand(CombatState state, int count, Random rng)
+    {
+        var pool = CombatGenerationPool(GeneratedData.CardPools.Ironclad)
+            .Where(id => GeneratedData.Cards.Get(id).Rarity == CardRarity.Common)
+            .ToList();
+        if (pool.Count == 0 || count <= 0)
+        {
+            return;
+        }
+
+        var stream = CardGenerationRng(state, rng);
+        for (int i = pool.Count - 1; i > 0; i--)
+        {
+            int j = stream.Next(i + 1);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
+        }
+
+        foreach (int id in pool.Take(count))
+        {
+            if (state.Hand.Count >= MaxCardsInHand)
+            {
+                return;
+            }
+
+            state.Hand.Add(new CardInstance(id, false));
+            NoteGeneratedCard(state);
+        }
+    }
+
+    /// <summary>
     /// Big Hat's two: distinct ETHEREAL cards from the player's OWN character pool.
     /// </summary>
     /// <remarks>
@@ -7104,10 +7137,26 @@ public static class CardEffects
                 // yourself redirects your damage to yourself: nothing. Block and no more.
                 GainBlock(state, Blk(def, upgraded, card), rng);
                 return true;
+            case "ToricToughness":
+                // 5 block now, AND `ToricToughnessPower(2)` -- for the next two turns, the
+                // same amount again when block clears. The power half was missing, which is
+                // most of a 2-cost card. `SetBlock` records what was GAINED, so the repeats
+                // match the first grant rather than the printed five.
+                //
+                // Its own arm, ABOVE the stack: splitting a label out of a stack leaves the
+                // labels above it falling into whatever body replaced theirs, which is how
+                // Lift, Rally and The Gambit briefly started handing out Toric Toughness.
+                {
+                    int toric = GainBlock(state, Blk(def, upgraded, card), rng);
+                    BuffSystem.Apply(state.PlayerBuffs, BuffId.ToricToughness, 2);
+                    state.ToricToughnessBlock = toric;
+                }
+
+                return true;
+
             case "Lift":
             case "Rally":
             case "TheGambit":
-            case "ToricToughness":
             case "MinionSacrifice":
                 // `Blk` cannot see the relics, so Vitruvian Minion's block half is applied
                 // at the one card it can reach: Minion Sacrifice is the only Minion-tagged
@@ -7254,9 +7303,15 @@ public static class CardEffects
                 break;
             case "EnergySurge":
             case "Luminesce":
-            case "Supercritical":
-            case "Wisp":
-                GainEnergy(state, upgraded ? 2 : 1);
+                // `EnergyVar(2)` upgrading by 1. It shared `upgraded ? 2 : 1` with
+                // Supercritical (4, upgrading by 2) and Wisp (1, upgrading to Retain
+                // rather than to more energy) -- three cards, three different vars, one
+                // number. Those two are handled in `ApplyDefectCard` and
+                // `ApplyNecrobinderCard`, which run FIRST, so their labels here were dead
+                // and their real arms were right all along; only Luminesce ran this body,
+                // and only Luminesce was wrong. Labels removed rather than corrected: a
+                // dead duplicate is where a card gets "fixed" in the copy nothing runs.
+                GainEnergy(state, upgraded ? 3 : 2);
                 break;
             case "BorrowedTime":
                 GainEnergy(state, upgraded ? 3 : 2);
@@ -7505,7 +7560,25 @@ public static class CardEffects
                 break;
             case "BulletTime":
             case "Enlightenment":
-                MakeHandFreeThisTurn(state);
+                // `SetThisCombat(1, reduceOnly)` upgraded, `SetThisTurnOrUntilPlayed(1,
+                // reduceOnly)` otherwise. ONE, not zero -- the emulator made the whole hand
+                // FREE, which is a strictly better card, and it ignored the upgrade, which
+                // is the difference between one turn and the whole combat.
+                for (int i = 0; i < state.Hand.Count; i++)
+                {
+                    var held = state.Hand[i];
+                    int current = CombatEngine.EffectiveCost(held, state);
+                    if (current <= 1)
+                    {
+                        // `reduceOnly` -- it never raises a cost.
+                        continue;
+                    }
+
+                    state.Hand[i] = upgraded
+                        ? held with { CostForCombat = 1 }
+                        : held with { CostThisTurn = 1 };
+                }
+
                 break;
             case "CalculatedGamble":
                 DiscardFirstCardsFromHand(state, state.Hand.Count);
@@ -7557,6 +7630,14 @@ public static class CardEffects
             case "Deathbringer":
             case "Eidolon":
             case "FeedingFrenzy":
+                // `FeedingFrenzyPower : TemporaryStrengthPower` at `PowerVar<StrengthPower>(5m)`
+                // upgrading by 2 -- so FIVE Strength, or seven, and it is TAKEN BACK at the
+                // end of the turn. It was in a stack giving permanent Strength 1 or 2:
+                // wrong number and wrong duration, in opposite directions.
+                RelicEffects.GainPlayerStrength(state, upgraded ? 7 : 5);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryStrength, upgraded ? 7 : 5);
+                break;
+
             case "NoEscape":
             case "Oblivion":
             case "SharedFate":
@@ -7958,7 +8039,12 @@ public static class CardEffects
             case "CreativeAi":
             case "FanOfKnives":
             case "HelloWorld":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.InfiniteBlades, upgraded ? 2 : 1);
+                // `HelloWorldPower(1)` -- ALWAYS one, and the upgrade adds the INNATE
+                // keyword rather than a second stack. The power adds that many distinct
+                // COMMON cards from the character's own pool to hand each turn; it was
+                // applying `InfiniteBlades`, which makes SHIVS, at `upgraded ? 2 : 1`.
+                // Wrong power and wrong amount.
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.HelloWorld, 1);
                 break;
             case "CrescentSpear":
                 {

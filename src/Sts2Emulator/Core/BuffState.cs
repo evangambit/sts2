@@ -698,6 +698,20 @@ public enum BuffId
     /// the discard, and the power is spent doing it.
     /// </summary>
     Rebound,
+
+    /// <summary>
+    /// `HelloWorldPower.BeforeHandDraw`: that many DISTINCT COMMON cards from the owner's
+    /// own pool, into hand, every turn. Not Shivs -- it had been stacked onto
+    /// `InfiniteBlades`, which is a different power entirely.
+    /// </summary>
+    HelloWorld,
+
+    /// <summary>
+    /// `ToricToughnessPower`: a COUNTER of turns, not an amount. When block clears it
+    /// grants `ToricToughnessBlock` again and decrements -- the amount lives beside it
+    /// because `Amount` is spent tracking the turns.
+    /// </summary>
+    ToricToughness,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

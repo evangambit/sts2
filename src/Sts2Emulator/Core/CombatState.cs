@@ -374,6 +374,13 @@ public sealed class CombatState
     public int PlayedCardCostBump;
 
     /// <summary>
+    /// The block a Toric Toughness will hand back when block clears. The power's own
+    /// `Amount` is the TURN COUNT -- the game keeps the block in a `BlockVar` set by
+    /// `SetBlock`, because the counter slot is taken.
+    /// </summary>
+    public int ToricToughnessBlock;
+
+    /// <summary>
     /// The run's <c>combat_energy_costs</c> stream, which Slither re-rolls its cost from
     /// every time it is drawn. Null falls back to the combat rng, as the other streams do.
     /// </summary>

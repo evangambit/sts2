@@ -815,12 +815,22 @@ public static class CombatEngine
                         FreeThisTurn = false,
                         SlyThisTurn = false,
                         RetainThisTurn = false,
+                        // "This turn or until played" ends with the turn, for a card that
+                        // was retained as much as for one that was discarded.
+                        CostThisTurn = int.MinValue,
                     }
                 );
             }
             else
             {
-                state.DiscardPile.Add(card with { FreeThisTurn = false, SlyThisTurn = false });
+                state.DiscardPile.Add(
+                    card with
+                    {
+                        FreeThisTurn = false,
+                        SlyThisTurn = false,
+                        CostThisTurn = int.MinValue,
+                    }
+                );
             }
         }
         state.Hand.Clear();
@@ -1214,6 +1224,15 @@ public static class CombatEngine
         else if (BuffSystem.Get(state.PlayerBuffs, BuffId.Barricade) == 0 && blur == 0)
         {
             state.PlayerBlock = 0;
+            // `ToricToughnessPower.AfterBlockCleared`: the block comes straight back, and
+            // the counter -- which is TURNS, not an amount -- ticks down.
+            int toric = BuffSystem.Get(state.PlayerBuffs, BuffId.ToricToughness);
+            if (toric > 0)
+            {
+                Effects.CardEffects.GainUnpoweredBlock(state, state.ToricToughnessBlock, rng);
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.ToricToughness, -1);
+            }
+
             // `Hook.AfterBlockCleared`, which Sparkling Rouge answers on turn three only.
             // Barricade and Blur keep the block, and the hook does not fire when it is
             // not cleared -- so a Barricade run never gets the Rouge's Strength.
@@ -1412,6 +1431,14 @@ public static class CombatEngine
         if (infiniteBlades > 0)
         {
             Effects.CardEffects.AddGeneratedCardsToHand(state, 430, infiniteBlades);
+        }
+
+        // `HelloWorldPower.BeforeHandDraw`, the same boundary as the Shivs above and for
+        // the same reason: the cards take their slots before the five are drawn.
+        int helloWorld = BuffSystem.Get(state.PlayerBuffs, BuffId.HelloWorld);
+        if (helloWorld > 0)
+        {
+            Effects.CardEffects.AddDistinctCommonCardsToHand(state, helloWorld, rng);
         }
 
         int creativeAi = BuffSystem.Get(state.PlayerBuffs, BuffId.CreativeAi);
@@ -1833,6 +1860,13 @@ public static class CombatEngine
         }
 
         int cost = card.CostForCombat == int.MinValue ? def.Cost : card.CostForCombat;
+
+        // `SetThisTurnOrUntilPlayed` sits on top of the combat-long cost and under the
+        // free-for-the-turn flags above. Enlightenment sets it to 1, not 0.
+        if (card.CostThisTurn != int.MinValue)
+        {
+            cost = Math.Min(cost, card.CostThisTurn);
+        }
 
         // The game says so on the card: base.EnergyCost.UpgradeBy(-1), extracted into
         // CardDef.UpgradeCost. This used to be three hand-written id lists covering
