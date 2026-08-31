@@ -877,11 +877,17 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 Card coverage is now the finished part rather than the open one. What is left, in the order
 the evidence argues for:
 
-1. **The 66 cards still unread**, which are also the 66 still in `Pending` with no tests:
-   Curses, Statuses, Tokens, Minions and event cards. Lower value per card than a
-   character pool, but Statuses and Curses are what half the game's punishment mechanics
-   are made of.
-2. **The 56 relics still unmodelled** — see *The ancient relics* below, which plans them
+1. **The 43 cards still unread.** Note they are NOT the same set as `CardCoverageTests.Pending`
+   any more, and were never quite: the gate's membership comes from `case` labels in
+   `CardEffects.cs` alone, so eighteen cards are in neither list (E405). Fixing that means
+   deciding what the gate should mean -- every card in the game, with `Pending` as the
+   burn-down, rather than every card with a `case` label. Worth doing before the next
+   coverage claim is quoted.
+2. **The remaining Tokens, Minions and event cards.** The Curses and Statuses are done —
+   three of them had real combat rules nothing modelled (E404) and the rest were keywords
+   the extracted data already had right. Lower value per card than a character pool from
+   here on.
+3. **The 46 relics still unmodelled** — see *The ancient relics* below, which plans them
    out. The short version: 50 of the 56 belong to the eight Act 2+ ancients, **none of
    them is reachable in Act 1**, and the cost is seven missing mechanics rather than
    fifty relic bodies. Two things to plan around. First: **budget for the hook, not for the relic** —

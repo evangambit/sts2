@@ -1211,6 +1211,28 @@ Empty Cage picking the player's cards for them. That is not a coincidence: an ar
 can reach is an arm nobody has ever seen run, so it is exactly where a plausible-looking
 guess survives.
 
+### The coverage gate has a blind spot, and it is where the work moved
+
+`CardCoverageTests` is supposed to fail when a card gains an implementation without
+gaining tests. Its membership comes from `generate_card_coverage.py`, which scrapes `case`
+labels out of **`CardEffects.cs` alone** — so a card implemented anywhere else is in
+neither `ImplementedCards` nor `Pending`, and the gate is silent about it (E405).
+
+Eighteen cards are currently invisible. The curses of E404 are the clearest case: Void's
+rule lives in the draw path rather than a `case`, Normality's in `RelicEffects` beside
+Velvet Choker, Guilty's in `RunNonCombatEffects`, and the keyword-only ones have no code
+at all. All of them are modelled and tested; none of them the gate can see.
+
+This bit me directly and is worth the warning: I reported that slice as taking `Pending`
+from 42 to 32, and it went 42 to 41, because nine of the ten names I removed had never
+been on the list. **A burn-down list can only shrink by the number of things that were on
+it** — check the before and after rather than counting what you deleted.
+
+The fix is not a bug fix, it is a decision about what the gate means: membership should be
+every card in the game, with `Pending` as the burn-down, rather than every card with a
+`case` label in one file. That is a small change to the generator and a large one to the
+number, so it wants doing deliberately and before the next coverage figure is quoted.
+
 ### Hive's encounter tags, and why a missing tag is worse than a wrong order
 
 Seven act-2 captures now agree with the emulator on which ancient act 2 opens on. Five did
