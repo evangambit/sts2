@@ -1965,7 +1965,19 @@ public static class CombatEngine
     /// agent was offered an action the real game does not have.
     /// </remarks>
     private static bool IsPlayableNow(CombatState state, CardDef def) =>
-        def.Name != "GrandFinale" || state.DrawPile.Count == 0;
+        def.Name switch
+        {
+            // Grand Finale is the Silent's: playable only with an empty draw pile.
+            "GrandFinale" => state.DrawPile.Count == 0,
+            // `Clash.IsPlayable`: every card in HAND must be an Attack -- itself included,
+            // and it is one. A single Skill in hand makes it unplayable, which is the whole
+            // deckbuilding constraint the card exists for. It was stacked into a plain
+            // damage body and so could be played from any hand at all.
+            "Clash" => state.Hand.All(handCard =>
+                GeneratedData.Cards.Get(handCard.DefId).Type == CardType.Attack
+            ),
+            _ => true,
+        };
 
     public static int[] ValidActions(CombatState state)
     {
@@ -3721,6 +3733,15 @@ public static class CombatEngine
         // 429 is ShiningStrike, which returns itself to the TOP of the draw pile. Its own
         // `!Keywords.Contains(Exhaust)` guard needs no code: this branch sits after the
         // exhaust one, so a Shining Strike that has been given Exhaust never reaches it.
+        // `ReboundPower.ModifyCardPlayResultPileTypeAndPosition` sends a card bound for the
+        // DISCARD to the top of the DRAW pile instead, and is spent doing it -- so it moves
+        // the NEXT card played after Rebound itself, once.
+        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Rebound) > 0)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Rebound, -1);
+            return true;
+        }
+
         return def.Id == 429
             || nostalgia > state.AttackOrSkillCardsPlayedThisTurn
                 && (def.Type == CardType.Attack || def.Type == CardType.Skill);

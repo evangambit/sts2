@@ -2909,6 +2909,34 @@ public static class CardEffects
     }
 
     /// <summary>
+    /// Maul's growth: `AllCards.OfType&lt;Maul&gt;()` raised by `Increase`, so it reaches
+    /// EVERY copy the player owns rather than only the one just played.
+    /// </summary>
+    /// <remarks>
+    /// Rampage's growth is the other shape -- it raises its OWN copy through
+    /// `PlayedCardBonusDamage`, so two Rampages grow on separate schedules. Two cards, two
+    /// readings of "this card gets stronger", and the difference is visible only in a deck
+    /// holding two of them.
+    /// </remarks>
+    private static void GrowEveryCopy(CombatState state, int defId, int amount)
+    {
+        foreach (var pile in new[] { state.Hand, state.DrawPile, state.DiscardPile, state.ExhaustPile })
+        {
+            for (int i = 0; i < pile.Count; i++)
+            {
+                if (pile[i].DefId == defId)
+                {
+                    pile[i] = pile[i] with { BonusDamage = pile[i].BonusDamage + amount };
+                }
+            }
+        }
+
+        // The copy being played is not in any pile right now; its growth rides the same
+        // field the play path writes back.
+        state.PlayedCardBonusDamage += amount;
+    }
+
+    /// <summary>
     /// `ConfusedPower.AfterCardDrawn`: the card's cost for the rest of the combat is
     /// re-rolled to 0..3 as it is drawn. Snecko Eye's, and the only other source in the
     /// game is Fake Snecko Eye -- which gives the Confused and none of the draw.
@@ -6979,11 +7007,35 @@ public static class CardEffects
     {
         switch (def.Name)
         {
+            case "Maul":
+                // FIVE damage TWICE -- `WithHitCount(2)` -- and every play raises the
+                // damage of EVERY Maul the player owns by `DynamicVar("Increase", 1m)`,
+                // upgrading to 2. It was stacked into the plain-damage body below, which
+                // hit once and grew nothing: half the damage and none of the card.
+                //
+                // The growth is `AllCards.OfType<Maul>()`, so it reaches every copy rather
+                // than only the one played -- Rampage's growth on the OTHER shape, which
+                // is why this cannot ride `PlayedCardBonusDamage` alone.
+                DealDamageMultiHit(
+                    state,
+                    Dmg(state, def, upgraded, card) + card.BonusDamage,
+                    2,
+                    rng
+                );
+                GrowEveryCopy(state, def.Id, upgraded ? 2 : 1);
+                return true;
+
+            case "Rebound":
+                // 9 damage AND `ReboundPower(1)`, which sends the NEXT card played to the
+                // TOP OF THE DRAW PILE instead of the discard. The power was missing
+                // entirely -- the card was stacked into the plain-damage body.
+                DealDamage(state, Dmg(state, def, upgraded, card));
+                BuffSystem.Apply(state.PlayerBuffs, BuffId.Rebound, 1);
+                return true;
+
             case "ByrdSwoop":
             case "Clash":
             case "GiantRock":
-            case "Maul":
-            case "Rebound":
             case "Squash":
             case "UltimateStrike":
             case "TagTeam":

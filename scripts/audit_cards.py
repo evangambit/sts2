@@ -102,6 +102,50 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "ByrdSwoop": (
+        "2983c17b5bef",
+        "0-cost, 14 damage, +4 upgraded. What the Byrdonis Egg becomes. Plain attack; correct in the shared damage body.",
+    ),
+    "ByrdonisEgg": (
+        "51697303a29f",
+        "Quest, Unplayable, cost -1. Its whole effect is TryModifyRestSiteOptions adding HATCH -- the only rest option a CARD puts on the screen. Written from scratch with Byrdpip (E397).",
+    ),
+    "Clash": (
+        "b250b15e04f9",
+        "0-cost, 14 damage, and `IsPlayable` is EVERY card in hand being an Attack -- itself included, and it is one. It was stacked into a plain-damage body, so any hand could play it and the whole deckbuilding constraint was gone. Split out.",
+    ),
+    "Exterminate": (
+        "2c31a7e2a006",
+        "1-cost, 3 damage x4 to ALL enemies, upgrading the damage rather than the count; correct.",
+    ),
+    "Maul": (
+        "b91ae8805165",
+        "1-cost, FIVE damage TWICE, and every play raises the damage of EVERY Maul the player owns by Increase(1, upgrading to 2). It was stacked into a plain-damage body: one hit and no growth, so half the damage and none of the card. Note the growth reaches all copies, where Rampage's reaches only its own -- two readings of 'this card gets stronger'.",
+    ),
+    "MinionDiveBomb": (
+        "d40c7686790c",
+        "0-cost, 13 damage, Exhaust, Minion-tagged. Plain attack; correct.",
+    ),
+    "MinionSacrifice": (
+        "03350d3732b2",
+        "0-cost, 8 block, Exhaust, Minion-tagged -- the only Minion card that gains block, which is what makes Vitruvian Minion's block half reachable; correct.",
+    ),
+    "MinionStrike": (
+        "25d35e1adcfe",
+        "0-cost, 6 damage AND draw 1, Exhaust, tagged Strike AND Minion; correct.",
+    ),
+    "Peck": (
+        "5f48047fa29e",
+        "1-cost, 2 damage x3, upgrading the COUNT to 4 rather than the damage; correct.",
+    ),
+    "Rebound": (
+        "5013369937c6",
+        "1-cost, 9 damage AND ReboundPower, which sends the next card bound for the discard to the TOP of the draw pile and is spent doing it. The power was missing -- the card was in a plain-damage stack. It has no guard against its own source, so Rebound recycles ITSELF, and AfterSideTurnEnd removes it so an unspent one does not carry over.",
+    ),
+    "Squash": (
+        "4302881e7a22",
+        "1-cost, 10 damage and Vulnerable 2, both upgrading; correct.",
+    ),
     "Clumsy": (
         "49abf07a482c",
         "Unplayable + Ethereal, and nothing else -- it exhausts itself at end of turn, so it costs one draw and leaves. Keywords only; both extracted correctly.",

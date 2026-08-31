@@ -692,6 +692,12 @@ public enum BuffId
     /// which pays nothing.
     /// </remarks>
     Confused,
+
+    /// <summary>
+    /// `ReboundPower`: the next card played goes to the TOP OF THE DRAW PILE instead of
+    /// the discard, and the power is spent doing it.
+    /// </summary>
+    Rebound,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

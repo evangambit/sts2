@@ -131,7 +131,11 @@ public static class BuffSystem
                 // creature, so an Intangible the player gains this turn ticks tonight.
                 // TaintedPower.AfterSideTurnEnd REMOVES itself outright rather than
                 // decrementing, so a round's worth of Skills is paid for once.
+                // `ReboundPower.AfterSideTurnEnd` removes itself outright too, so an
+                // unspent Rebound does not carry into the next turn -- the card is "the
+                // next card THIS turn", not the next card ever.
                 case BuffId.Tainted:
+                case BuffId.Rebound:
                     buffs.RemoveAt(i);
                     break;
 
