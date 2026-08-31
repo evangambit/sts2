@@ -48,6 +48,10 @@ public class EventOutcomeTests
             RunPhase.Treasure => "treasure",
             RunPhase.TransformSelect => "card_select",
             RunPhase.CrystalSphere => "crystal_sphere",
+            // An event that fights without leaving the event is still in a Monster ROOM
+            // as far as the mod is concerned -- Battleworn Dummy's three settings, The
+            // Lantern Key's knight. No map node was taken, so this is not "battle".
+            RunPhase.Combat => "monster",
             _ => "unknown",
         };
 

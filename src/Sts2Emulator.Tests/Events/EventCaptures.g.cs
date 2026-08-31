@@ -201,6 +201,69 @@ public class EventCaptures
         Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
     }
     /// <summary>
+    /// BattlewornDummy, 'Setting 1' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void BattlewornDummy_Option0()
+    {
+        var engine = Open(RunConstants.EventBattlewornDummy);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Combat, engine.State.Phase);
+    }
+    /// <summary>
+    /// BattlewornDummy, 'Setting 2' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void BattlewornDummy_Option1()
+    {
+        var engine = Open(RunConstants.EventBattlewornDummy);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Combat, engine.State.Phase);
+    }
+    /// <summary>
+    /// BattlewornDummy, 'Setting 3' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void BattlewornDummy_Option2()
+    {
+        var engine = Open(RunConstants.EventBattlewornDummy);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(2, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Combat, engine.State.Phase);
+    }
+    /// <summary>
     /// BrainLeech, 'Share Knowledge' -- captured from v0.107.1 (build 23811903).
     /// </summary>
     [Fact]

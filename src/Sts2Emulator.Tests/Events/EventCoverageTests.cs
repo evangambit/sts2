@@ -40,7 +40,6 @@ public class EventCoverageTests
     /// </summary>
     private static readonly HashSet<string> Pending =
     [
-        "BattlewornDummy",
         "ColorfulPhilosophers",
         "ColossalFlower",
         // No option-list capture exists for this one: it presents as its own

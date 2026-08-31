@@ -167,10 +167,16 @@ public class ScrollsTests
 /// </summary>
 internal static class PunchingBag
 {
+    /// <param name="timeLimit">
+    /// The Battle Friends carry `BattlewornDummyTimeLimitPower` at 3 and escape when it
+    /// runs out; the Architect just stands there. Passing 0 means "no clock", which is
+    /// what every other punching bag in the game is.
+    /// </param>
     public static void StandsThereAndNeverActs(
         CombatFactory.ActOneEncounter encounter,
         int defId,
-        int hp
+        int hp,
+        int timeLimit = 0
     )
     {
         var fight = Fight.Encounter(encounter);
@@ -180,17 +186,35 @@ internal static class PunchingBag
         Assert.Equal(hp, bag.MaxHp);
         Assert.Equal(hp, bag.Hp);
 
-        for (int turn = 0; turn < 5; turn++)
+        Assert.Equal(timeLimit, BuffSystem.Get(bag.Buffs, BuffId.BattlewornDummyTimeLimit));
+
+        // It stands there doing nothing for as long as it is allowed to. This used to run
+        // five turns and assert `Assert.Empty(bag.Buffs)` throughout -- written from an
+        // emulator that had no clock at all, which is how the absence of the whole
+        // mechanic got pinned as correct for the Battle Friends.
+        int quietTurns = timeLimit > 0 ? timeLimit - 1 : 5;
+        for (int turn = 0; turn < quietTurns; turn++)
         {
             fight.EndTurn();
             Assert.Equal(IntentType.Unknown, bag.CurrentIntent.Type);
             Assert.Equal(0, bag.Block);
-            Assert.Empty(bag.Buffs);
+            Assert.Equal(hp, bag.Hp);
+            Assert.False(bag.Escaped);
         }
 
-        // And it is still whole: nothing about ending five turns beside it hurt it, and
-        // nothing it did hurt the player -- which is the entire contract of a dummy.
-        Assert.Equal(hp, bag.Hp);
+        if (timeLimit == 0)
+        {
+            Assert.Empty(bag.Buffs);
+            return;
+        }
+
+        // The last turn ends it: the dummy ESCAPES rather than dying, which is what tells
+        // the event it ran out of time and owes nothing.
+        fight.EndTurn();
+
+        Assert.True(bag.Escaped);
+        Assert.Equal(0, bag.Hp);
+        Assert.True(fight.State.BattlewornDummyRanOutOfTime);
     }
 }
 
@@ -217,7 +241,8 @@ public class BattlewornDummy1Tests
         PunchingBag.StandsThereAndNeverActs(
             CombatFactory.ActOneEncounter.BattlewornDummy1,
             KE.BattleFriendV1,
-            75
+            75,
+            timeLimit: 3
         );
 }
 
@@ -228,7 +253,8 @@ public class BattlewornDummy2Tests
         PunchingBag.StandsThereAndNeverActs(
             CombatFactory.ActOneEncounter.BattlewornDummy2,
             KE.BattleFriendV2,
-            150
+            150,
+            timeLimit: 3
         );
 }
 
@@ -239,6 +265,7 @@ public class BattlewornDummy3Tests
         PunchingBag.StandsThereAndNeverActs(
             CombatFactory.ActOneEncounter.BattlewornDummy3,
             KE.BattleFriendV3,
-            300
+            300,
+            timeLimit: 3
         );
 }

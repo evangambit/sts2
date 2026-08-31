@@ -1157,6 +1157,16 @@ public sealed class RunEngine
                 if (result.PlayerWon)
                 {
                     RunNonCombatEffects.TriggerFishingRod(State);
+
+                    // `EnterCombatWithoutExitingEvent(..., shouldResumeAfterCombat: true)`:
+                    // the room was never the combat's, so the event pays instead of the
+                    // fight. `ShouldGiveRewards => false` on the encounter is the same
+                    // statement from the other side.
+                    if (State.ResumeEventId != 0)
+                    {
+                        return ResumeEventAfterCombat(out terminal);
+                    }
+
                     RunRewardGenerator.GenerateCombatRewards(State);
                     terminal = false;
                 }
@@ -1514,6 +1524,10 @@ public sealed class RunEngine
         {
             return;
         }
+
+        // Carried out of the combat before it is dropped: the event that resumes reads the
+        // ENCOUNTER's `RanOutOfTime`, and by then there is no encounter left to read.
+        State.ResumeEventDummyEscaped = State.ActiveCombat.BattlewornDummyRanOutOfTime;
 
         Effects.RelicEffects.CollectUsedUpRelics(State.ActiveCombat, State.UsedUpRelics);
         CarryGoopyGrowthToTheDeck(State.ActiveCombat);
@@ -3816,10 +3830,30 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventBattlewornDummy:
+                // Three settings, and each one is a FIGHT: a Battle Friend of 75, 150 or
+                // 300 HP that never attacks and escapes after three of its own turns.
+                // Beat the clock and the event pays -- a potion, two upgrades, or a relic;
+                // miss it and the dummy walks off with the reward.
+                //
+                // The emulator paid 40/60/80 gold and a card, with no fight at all, which
+                // is the whole event: it is a damage check against a timer.
                 if (action is >= 0 and <= 2)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(40 + action * 20));
-                    AddEventRewardCard(upgraded: action == 2);
+                    State.ResumeEventId = RunConstants.EventBattlewornDummy;
+                    State.ResumeEventPage = action;
+                    return StartCombatWithDeck(
+                        State.Deck,
+                        RunConstants.BattlewornDummyEncounterIds0 + action,
+                        State.Relics,
+                        State.PlayerHp,
+                        State.PlayerMaxHp,
+                        State.PotionSlots,
+                        State.Gold,
+                        Math.Max(
+                            0,
+                            State.NormalEncountersVisited + State.EliteEncountersVisited - 1
+                        )
+                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -4601,6 +4635,59 @@ public sealed class RunEngine
                     return 0;
                 }
 
+                break;
+        }
+
+        return AdvanceAfterNode(out terminal);
+    }
+
+    /// <summary>
+    /// The event picks back up where the fight interrupted it -- `EventModel.Resume(room)`.
+    /// </summary>
+    /// <remarks>
+    /// Battleworn Dummy is the only event that does this so far, and its Resume is a
+    /// switch on which setting was fought, skipped entirely if the dummy ran out of time.
+    /// The rewards are not the fight's: `ShouldGiveRewards => false` on the encounter, so
+    /// nothing goes through `GenerateCombatRewards`.
+    /// </remarks>
+    private int ResumeEventAfterCombat(out bool terminal)
+    {
+        int eventId = State.ResumeEventId;
+        int setting = State.ResumeEventPage;
+        bool escaped = State.ResumeEventDummyEscaped;
+        State.ResumeEventId = 0;
+        State.ResumeEventPage = 0;
+        State.ResumeEventDummyEscaped = false;
+
+        if (eventId != RunConstants.EventBattlewornDummy || escaped)
+        {
+            // Ran out of time: the dummy walks off and the event finishes with nothing.
+            return AdvanceAfterNode(out terminal);
+        }
+
+        switch (setting)
+        {
+            case 0:
+                // Setting 1: a POTION, rolled off the Rewards stream from the character's
+                // own pool concatenated with the shared one.
+                RunRewardGenerator.AddPotion(
+                    State,
+                    RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
+                );
+                break;
+
+            case 1:
+                // Setting 2: two upgradable deck cards upgraded, off the EVENT's stream.
+                RunNonCombatEffects.UpgradeRandomDeckCardsForEvent(
+                    State,
+                    2,
+                    RunNonCombatEffects.EventStream(State, "BATTLEWORN_DUMMY")
+                );
+                break;
+
+            default:
+                // Setting 3: a relic off the front of the pool.
+                RunNonCombatEffects.ApplyRelicPickup(State, RunRewardGenerator.NextRelic(State));
                 break;
         }
 

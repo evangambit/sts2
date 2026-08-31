@@ -113,6 +113,14 @@ public enum BuffId
     Rampart, // Living Shield: block Turret Operators at player turn start
     CurlUp, // Louse Progenitor: block once after taking powered card damage
     Infested, // Phrog Parasite: spawn Wrigglers when killed
+
+    /// <summary>
+    /// `BattlewornDummyTimeLimitPower`, on the Battleworn Dummy's Battle Friend: a counter
+    /// that decrements at the end of every one of its own side turns, and at 1 flags the
+    /// encounter as RAN OUT OF TIME and makes the dummy ESCAPE. Three turns to kill it,
+    /// and failing costs the event's reward rather than the run.
+    /// </summary>
+    BattlewornDummyTimeLimit,
     PainfulStabs, // Test Subject: every hit that lands unblocked adds a Wound
     Nemesis, // Test Subject phase 3: toggles Intangible at the end of every enemy turn
     Soar, // Owl Magistrate: halves powered attack damage against it while it flies

@@ -121,6 +121,26 @@ public static class RunNonCombatEffects
     /// The card type to filter to, or null for ANY upgradable card -- Fragrant Mushroom's
     /// `Deck.Where(c => c.IsUpgradable)` has no type filter where War Paint's does.
     /// </param>
+    /// <summary>
+    /// The same StableShuffle-and-take as the pickup relics', off a stream the CALLER
+    /// names -- Battleworn Dummy upgrades off the event's own Rng, not `Rng.Niche`.
+    /// </summary>
+    public static void UpgradeRandomDeckCardsForEvent(RunState state, int count, GameRng rng)
+    {
+        var candidates = Enumerable
+            .Range(0, state.Deck.Count)
+            .Where(index => RunConstants.IsRunCardUpgradable(state.Deck[index]))
+            .ToList();
+
+        candidates.Sort((left, right) => state.Deck[left].DefId.CompareTo(state.Deck[right].DefId));
+        rng.Shuffle(candidates);
+
+        foreach (int index in candidates.Take(count))
+        {
+            state.Deck[index] = state.Deck[index] with { Upgraded = true };
+        }
+    }
+
     private static void UpgradeRandomDeckCards(RunState state, CardType? type, int count)
     {
         var candidates = Enumerable

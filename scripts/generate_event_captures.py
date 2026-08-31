@@ -48,6 +48,10 @@ PHASE = {
     "rewards": "RelicReward",
     "crystal_sphere": "CrystalSphere",
     "battle": "Combat",
+    # An event that starts a fight without leaving the event -- Battleworn Dummy's three
+    # settings, The Lantern Key's knight. The mod reports the room type, and for these the
+    # room is still a Monster room even though no map node was taken.
+    "monster": "Combat",
     "map": "Map",
     "shop": "Shop",
 }

@@ -424,6 +424,24 @@ public sealed class RunState
     public int PendingSpecialCardReward;
 
     /// <summary>
+    /// The event to return to when the current combat ends, or 0. The game's
+    /// `EnterCombatWithoutExitingEvent(..., shouldResumeAfterCombat: true)`: the room is
+    /// still the event's, and the fight's outcome is an input to what the event pays.
+    /// </summary>
+    /// <remarks>
+    /// Only the Battleworn Dummy uses it so far, and its `Resume` reads the ENCOUNTER --
+    /// which setting was fought, and whether the dummy ran out of time. The setting is
+    /// `ResumeEventPage`, and the escape is `CombatState.BattlewornDummyRanOutOfTime`,
+    /// carried across by <see cref="ResumeEventDummyEscaped"/> because the combat state is
+    /// gone by the time the event resumes.
+    /// </remarks>
+    public int ResumeEventId;
+
+    public int ResumeEventPage;
+
+    public bool ResumeEventDummyEscaped;
+
+    /// <summary>
     /// Neow's Bones adds its curse only once its two relics have been claimed:
     /// <c>AfterObtained</c> awaits the RewardsSet's <c>Offer()</c> and adds the curse on
     /// the line after. Rolling it up front would be the same two streams in the same order

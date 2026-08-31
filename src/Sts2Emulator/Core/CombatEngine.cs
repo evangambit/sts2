@@ -1078,6 +1078,30 @@ public static class CombatEngine
         // lasts the turn it was played and no longer.
         BuffSystem.Remove(state.PlayerBuffs, BuffId.NoEnergyGain);
 
+        // `BattlewornDummyTimeLimitPower.AfterSideTurnEnd`: the dummy's counter ticks at
+        // the end of its OWN side turn, and at 1 it flags the encounter and escapes rather
+        // than decrementing to nothing. Three turns to kill it.
+        foreach (var enemy in state.Enemies)
+        {
+            int limit = BuffSystem.Get(enemy.Buffs, BuffId.BattlewornDummyTimeLimit);
+            if (limit <= 0 || enemy.Hp <= 0)
+            {
+                continue;
+            }
+
+            if (limit > 1)
+            {
+                BuffSystem.Apply(enemy.Buffs, BuffId.BattlewornDummyTimeLimit, -1);
+                continue;
+            }
+
+            // Zeroing the HP is how the emulator takes a creature out of a fight; the
+            // flag is what tells the event this was an escape and not a kill.
+            enemy.Hp = 0;
+            enemy.Escaped = true;
+            state.BattlewornDummyRanOutOfTime = true;
+        }
+
         // ── Start of next player turn ─────────────────────────────────────────
         state.Turn++;
         state.PlayerTurn = true;

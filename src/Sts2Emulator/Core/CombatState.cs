@@ -47,6 +47,12 @@ public sealed class CombatState
     public bool FatGremlinEscaped;
 
     /// <summary>
+    /// The Battleworn Dummy's Battle Friend outlasted its `BattlewornDummyTimeLimitPower`
+    /// and escaped, so the event pays nothing. The encounter's own `RanOutOfTime`.
+    /// </summary>
+    public bool BattlewornDummyRanOutOfTime;
+
+    /// <summary>
     /// <c>GremlinMercNormal.GoldWasStolen</c>: the merc died having taken something.
     /// <c>SurprisePower.AfterDeath</c> only marks it when the total is above zero.
     /// </summary>
