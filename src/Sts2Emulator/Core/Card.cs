@@ -230,6 +230,13 @@ public enum Enchantment
     /// keywords to the card, permanently. It has no play-time behaviour of its own.
     /// </summary>
     RoyallyApproved,
+
+    /// <summary>
+    /// `PerfectFit.ModifyShuffleOrder`: the card goes to the FRONT of the draw pile on
+    /// every reshuffle except the initial one, so it is the next card drawn after any
+    /// shuffle mid-combat. Field Of Man-Sized Holes is the only source.
+    /// </summary>
+    PerfectFit,
 }
 
 /// <summary>
@@ -457,6 +464,10 @@ public static class Enchantments
 
             // Slither.CanEnchant also refuses an X-cost card.
             Enchantment.Slither => !def.HasEnergyCostX,
+
+            // `PerfectFit` has no `CanEnchant` override of its own, so the base rule is
+            // the only one: any card the enchantment system will take.
+            Enchantment.PerfectFit => true,
 
             // Imbued.CanEnchantCardType: skills.
             Enchantment.Imbued => def.Type == CardType.Skill,

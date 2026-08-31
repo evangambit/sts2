@@ -3081,6 +3081,26 @@ public static class CardEffects
         }
 
         ShufflePile(state.DrawPile, state.ShuffleRng ?? rng);
+
+        // `PerfectFit.ModifyShuffleOrder` runs AFTER the shuffle and moves its card to the
+        // front -- `!isInitialShuffle`, so the opening deal is exempt and this path, which
+        // only ever runs mid-combat, is not.
+        //
+        // One hook per enchanted card, each doing `Remove` then `Insert(0)`, so walking the
+        // pile in order REVERSES two of them: the second one found ends up in front of the
+        // first. That is the game's own sequence rather than a choice made here.
+        for (int i = 0; i < state.DrawPile.Count; i++)
+        {
+            if (state.DrawPile[i].Enchantment != Enchantment.PerfectFit)
+            {
+                continue;
+            }
+
+            var fitted = state.DrawPile[i];
+            state.DrawPile.RemoveAt(i);
+            state.DrawPile.Insert(0, fitted);
+        }
+
         state.ForgetDrawOrder();
         state.DiscardPile.Clear();
         MoveStratagemCardsToHandAfterShuffle(state);

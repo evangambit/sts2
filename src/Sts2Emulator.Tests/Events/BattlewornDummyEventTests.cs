@@ -1,5 +1,6 @@
 using System.Linq;
 using Sts2Emulator.Core;
+using Sts2Emulator.Core.Effects;
 using Sts2Emulator.Core.Run;
 using Xunit;
 
@@ -128,5 +129,88 @@ public class BattlewornDummyEventTests
         Assert.Equal(relics, engine.State.Relics.Count);
         Assert.Equal(gold, engine.State.Gold);
         Assert.NotEqual(RunPhase.Combat, engine.State.Phase);
+    }
+}
+
+/// <summary>
+/// `PerfectFit`, the enchantment Field Of Man-Sized Holes hands out. Its whole rule is
+/// `ModifyShuffleOrder`: the card goes to the FRONT of the draw pile on every reshuffle
+/// except the initial one.
+/// </summary>
+/// <remarks>
+/// The emulator did not model it, and the event's second option carried an admitted TODO
+/// — 12 HP and a relic, invented and belonging to no option of that event. A live capture
+/// caught it as 64 HP in the game against 52 here.
+/// </remarks>
+public class PerfectFitTests
+{
+    private const int Strike = 472;
+    private const int Defend = 131;
+
+    [Fact]
+    public void TheEnchantedCardIsFirstAfterAReshuffle()
+    {
+        var fight = Fight.Hand().Energy(9).Enemy(hp: 200).Seed(4);
+        fight.State.DrawPile.Clear();
+        for (int i = 0; i < 5; i++)
+        {
+            fight.State.DiscardPile.Add(new CardInstance(Strike, false));
+        }
+
+        fight.State.DiscardPile.Add(
+            new CardInstance(Defend, false) { Enchantment = Enchantment.PerfectFit }
+        );
+
+        CardEffects.ShuffleDiscardIntoDraw(fight.State, new System.Random(0));
+
+        Assert.Equal(Enchantment.PerfectFit, fight.State.DrawPile[0].Enchantment);
+    }
+
+    /// <summary>
+    /// Two of them both reach the front, and the one found LATER in the shuffled pile ends
+    /// up in front — one hook per card, each `Remove` then `Insert(0)`, so the sequence
+    /// reverses them. The game's order, not a choice made here.
+    /// </summary>
+    [Fact]
+    public void TwoOfThemBothReachTheFront()
+    {
+        var fight = Fight.Hand().Energy(9).Enemy(hp: 200).Seed(4);
+        fight.State.DrawPile.Clear();
+        fight.State.DiscardPile.Add(
+            new CardInstance(Strike, false) { Enchantment = Enchantment.PerfectFit }
+        );
+        fight.State.DiscardPile.Add(
+            new CardInstance(Defend, false) { Enchantment = Enchantment.PerfectFit }
+        );
+        for (int i = 0; i < 4; i++)
+        {
+            fight.State.DiscardPile.Add(new CardInstance(Strike, false));
+        }
+
+        CardEffects.ShuffleDiscardIntoDraw(fight.State, new System.Random(0));
+
+        Assert.Equal(Enchantment.PerfectFit, fight.State.DrawPile[0].Enchantment);
+        Assert.Equal(Enchantment.PerfectFit, fight.State.DrawPile[1].Enchantment);
+    }
+
+    /// <summary>Enter Your Hole enchants a CHOSEN card and costs nothing.</summary>
+    [Fact]
+    public void EnterYourHoleEnchantsOneChosenCardForFree()
+    {
+        var engine = new RunEngine();
+        engine.Reset("NXV45HW43K");
+        engine.State.Phase = RunPhase.Event;
+        engine.State.EventId = RunConstants.EventFieldOfManSizedHoles;
+        int hp = engine.State.PlayerHp;
+        int relics = engine.State.Relics.Count;
+
+        engine.Step(1, -1, out _, out _, out _);
+        Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
+
+        engine.Step(0, -1, out _, out _, out _);
+
+        Assert.Equal(hp, engine.State.PlayerHp);
+        Assert.Equal(relics, engine.State.Relics.Count);
+        Assert.Contains(engine.State.Deck, c => c.Enchantment == Enchantment.PerfectFit);
     }
 }

@@ -663,7 +663,15 @@ public static class CombatEngine
             Effects.CardEffects.EvokeLastOrb(state, rng);
         }
 
+        // ── AutoPostPlay ──────────────────────────────────────────────────────
+        // `CombatManager.EndPlayerTurnPhaseOneInternal` runs the whole of
+        // `Hook.AfterAutoPostPlayPhaseEntered` the moment the player ends the turn --
+        // before `BeforeTurnEnd`, before the hand flush and before the enemies act. Both
+        // of these are that hook, so they sit ahead of the `AfterSideTurnEnd` work below
+        // (Shadowmeld, DoubleDamage, TemporaryStrength) that would otherwise be gone
+        // before their damage was rolled.
         AutoPlayStampedeAttacks(state, rng);
+        AutoPlayHowlsFromExhaust(state, rng);
 
         Effects.RelicEffects.ApplyEndOfPlayerTurn(state, rng);
         Effects.RelicEffects.ApplyBeforeEndOfPlayerTurnShared(state, rng);
@@ -1561,7 +1569,6 @@ public static class CombatEngine
         // hook, which is the plain `AfterAutoPrePlayPhaseEntered`.
         AutoPlayBombardmentsFromExhaust(state, rng);
         AutoPlayMayhemCards(state, rng);
-        AutoPlayHowlsFromExhaust(state, rng);
 
         // Enemies choose their next intent.
         EnemyAI.ChooseIntents(state.Enemies, state.Turn, rng, state.AiRng, state.AscensionLevel);
@@ -3098,11 +3105,28 @@ public static class CombatEngine
     }
 
     /// <summary>
-    /// Howl From Beyond replays itself out of the exhaust pile.
-    /// HowlFromBeyond.AfterAutoPostPlayPhaseEntered auto-plays the card whenever it is
-    /// sitting in the owner's exhaust pile as the play phase begins, so exhausting it is
-    /// not the end of it. The copy stays exhausted and fires again next turn.
+    /// `HowlFromBeyond.AfterAutoPostPlayPhaseEntered` auto-plays the card whenever it is
+    /// sitting in the owner's EXHAUST pile as the play phase ENDS, so being exhausted is
+    /// not the end of it: it swings once more, free, before the enemies act.
     /// </summary>
+    /// <remarks>
+    /// Bombardment's shape with two differences, and both of them matter.
+    ///
+    /// The phase is `AfterAutoPostPlayPhaseEntered`, the END of the play phase, where
+    /// Bombardment's is `AfterAutoPrePlayPhaseEnteredEarly`, the start of the next one.
+    /// Against an enemy about to die that is the difference between killing it before its
+    /// attack lands and after.
+    ///
+    /// And Howl does NOT exhaust itself. It declares no `CanonicalKeywords` -- only an
+    /// `ExtraHoverTips` naming the keyword, the same way Havoc does -- so
+    /// `GetResultPileTypeForCardPlay` sends it to the DISCARD pile, both when the player
+    /// plays it and when this replays it. `CardCmd.AutoPlay(choiceContext, this, null)`
+    /// takes no `forceExhaust`, unlike the `AutoPlayFromDrawPile` that Havoc uses to
+    /// exhaust what it plays. So the replay fires once per trip to the exhaust pile and
+    /// spends the card, where Bombardment's Exhaust keyword returns it to the pile and
+    /// fires every turn for the rest of the combat. Something ELSE has to exhaust Howl --
+    /// Havoc, an exhaust-from-hand effect -- or the hook never sees it at all.
+    /// </remarks>
     private static void AutoPlayHowlsFromExhaust(CombatState state, Random rng)
     {
         foreach (
@@ -3114,6 +3138,11 @@ public static class CombatEngine
                 return;
             }
 
+            // `CardCmd.AutoPlay` MOVES the card: out of the exhaust pile, into Play, then
+            // to its result pile -- the discard, for a card with no Exhaust keyword.
+            // Leaving it in place while auto-playing it keeps the exhausted copy AND adds
+            // a discarded one, so the card would swing every turn forever.
+            RemoveFirstMatchingCard(state.ExhaustPile, card);
             AutoPlay(state, card, rng);
         }
     }
@@ -3125,8 +3154,10 @@ public static class CombatEngine
     /// exhausting it is the point rather than the cost. The emulator had a plain attack.
     /// </summary>
     /// <remarks>
-    /// Howl From Beyond's shape with a different phase: Howl is
-    /// `AfterAutoPostPlayPhaseEntered`, at the END of the play phase.
+    /// Howl From Beyond's shape with a different phase AND a different result pile: Howl
+    /// is `AfterAutoPostPlayPhaseEntered`, at the END of the play phase, and carries no
+    /// Exhaust keyword, so its replay spends it into the discard. See
+    /// <see cref="AutoPlayHowlsFromExhaust" />.
     /// </remarks>
     private static void AutoPlayBombardmentsFromExhaust(CombatState state, Random rng)
     {

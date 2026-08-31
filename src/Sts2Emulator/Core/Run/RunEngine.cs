@@ -3613,16 +3613,23 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    // TODO: EnterYourHole is FromDeckForEnchantment with PerfectFit, an
-                    // enchantment the emulator does not model yet (it moves its card to the
-                    // front of the draw pile on every reshuffle EXCEPT the initial one).
-                    // The 12 HP and a relic below are invented and belong to no option of
-                    // this event; they are left in place only so the branch answers at all.
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 12);
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
+                    // Enter Your Hole is `FromDeckForEnchantment(PerfectFit, 1)` and
+                    // nothing else -- one card the player picks, enchanted. It costs no HP
+                    // and pays no relic; the 12 HP and a relic that used to stand here were
+                    // invented, admitted as such in a TODO, and belonged to no option of
+                    // this event. A live capture caught them: 64 HP in the game, 52 here.
+                    if (
+                        RunNonCombatEffects.BeginDeckSelection(
+                            State,
+                            DeckSelection.Enchant,
+                            (int)Enchantment.PerfectFit,
+                            count: 1
+                        )
+                    )
+                    {
+                        State.Phase = RunPhase.TransformSelect;
+                        return 0;
+                    }
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {

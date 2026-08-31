@@ -960,7 +960,7 @@ READ: dict[str, tuple[str, str]] = {
     ),
     "HowlFromBeyond": (
         "b16c87857714",
-        "16/21 to all, and AfterAutoPostPlayPhaseEntered replays it from EXHAUST every turn",
+        "16/21 to all. NO CanonicalKeywords -- the Exhaust is an ExtraHoverTips, as Havoc's is -- so it discards itself; AfterAutoPostPlayPhaseEntered replays it from EXHAUST at the END of the play phase, and that AutoPlay takes no forceExhaust, so the replay spends it into the discard. Once per trip to the pile, not every turn.",
     ),
     "HuddleUp": (
         "4f3af10da7dc",

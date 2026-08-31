@@ -145,9 +145,9 @@ is what a second pass over the same pool is worth.
 
 This is not yet a full game emulator. Exact Neow/shop/reward/event odds, the 125 unmodelled
 relics, and expanded trace parity are still future work. The nearest gaps: 49 event-pool relics that are
-wired up and unread, and events — which have plenty of tests (58 modelled, 118 live
-fixtures, ~300 test methods and their own coverage gate) but no READING ledger, so nothing
-records that any of them was compared to its source.
+wired up and unread, and six act-2 events the emulator cannot yet reach. Every event an
+ordinary run CAN reach has now been read against its source, implemented and captured —
+51 of 57 events carry live fixtures, and the six that do not are the unreachable ones.
 
 ## Requirements
 

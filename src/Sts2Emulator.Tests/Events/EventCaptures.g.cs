@@ -682,6 +682,48 @@ public class EventCaptures
         Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
     }
     /// <summary>
+    /// FieldOfManSizedHoles, 'Resist' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void FieldOfManSizedHoles_Option0()
+    {
+        var engine = Open(RunConstants.EventFieldOfManSizedHoles);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
+    }
+    /// <summary>
+    /// FieldOfManSizedHoles, 'Enter Your Hole' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void FieldOfManSizedHoles_Option1()
+    {
+        var engine = Open(RunConstants.EventFieldOfManSizedHoles);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
+    }
+    /// <summary>
     /// HungryForMushrooms, 'Big Mushroom' -- captured from v0.107.1 (build 23811903).
     /// </summary>
     [Fact]
@@ -1031,6 +1073,50 @@ public class EventCaptures
         Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
     }
     /// <summary>
+    /// Reflections, 'Touch a Mirror' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void Reflections_Option0()
+    {
+        var engine = Open(RunConstants.EventReflections);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, true), (472, false), (472, false), (472, true), (131, true), (131, true), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// Reflections, 'Shatter' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void Reflections_Option1()
+    {
+        var engine = Open(RunConstants.EventReflections);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false), (472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false), (10021, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
     /// RelicTrader, 'Proceed' -- captured from v0.107.1 (build 23811903).
     /// </summary>
     [Fact]
@@ -1267,6 +1353,49 @@ public class EventCaptures
             [36]);
         Assert.Equal(RunPhase.Event, engine.State.Phase);
         Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// SpiritGrafter, 'Let It In' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void SpiritGrafter_Option0()
+    {
+        var engine = Open(RunConstants.EventSpiritGrafter);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 80, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false), (303, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// SpiritGrafter, 'Rejection' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void SpiritGrafter_Option1()
+    {
+        var engine = Open(RunConstants.EventSpiritGrafter);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
     }
     /// <summary>
     /// StoneOfAllTime, 'Push' -- captured from v0.107.1 (build 23811903).
@@ -1641,6 +1770,30 @@ public class EventCaptures
             [36, 172]);
         Assert.Equal(RunPhase.Event, engine.State.Phase);
         Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// TinkerTime, 'Accept' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void TinkerTime_Option0()
+    {
+        var engine = Open(RunConstants.EventTinkerTime);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        // The game answered with a page of 2: 'Gadget', 'Weapon'.
+        Assert.Equal(2, OfferedCount(engine));
+        Assert.NotEqual(RunConstants.EventResultPending, engine.State.EventId);
     }
     /// <summary>
     /// TrashHeap, 'Dive In' -- captured from v0.107.1 (build 23811903).
@@ -2053,5 +2206,27 @@ public class EventCaptures
             [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
             [36]);
         Assert.Equal(RunPhase.TransformSelect, engine.State.Phase);
+    }
+    /// <summary>
+    /// ZenWeaver, 'Breathing Techniques' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void ZenWeaver_Option0()
+    {
+        var engine = Open(RunConstants.EventZenWeaver);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 49,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false), (165, false), (165, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
     }
 }
