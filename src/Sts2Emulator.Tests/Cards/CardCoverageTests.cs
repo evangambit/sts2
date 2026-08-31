@@ -30,21 +30,17 @@ public class CardCoverageTests
         "Disintegration",
         "Enthralled",
         "Exterminate",
-        "FranticEscape",
         "MinionDiveBomb",
         "MinionSacrifice",
         "Outmaneuver",
         "Peck",
         "Relax",
         "RipAndTear",
-        "Soul",
         "SpoilsMap",
-        "SporeMind",
         "Squash",
         "Stack",
         "SweepingGaze",
         "Whistle",
-        "Wish",
     ];
 
     [Fact]

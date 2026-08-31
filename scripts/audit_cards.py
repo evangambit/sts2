@@ -102,6 +102,54 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "Cascade": (
+        "c1b2abb765be",
+        "X-cost Rare: auto-play X cards (X+1 upgraded) off the TOP of the draw pile, `forceExhaust: false`. Correct -- and it is one of the raw-id `case 546:` arms the coverage generator could not see until E403.",
+    ),
+    "Disintegration": (
+        "e2ceda2a1892",
+        "Status, PowerVar<DisintegrationPower>(6). Applied by the Knowledge Demon's `OnChosen`, not by playing the card, and the emulator does that at the demon's screen; the card itself is inert. Correct.",
+    ),
+    "FranticEscape": (
+        "6e00d958ff98",
+        "1-cost Status: raises the Sandpit on the enemy HOLDING it -- `Enemies.FirstOrDefault(HasPower<SandpitPower>())` -- and adds 1 to its own cost for the combat. The emulator targeted the FIRST enemy, so with the sandpit anywhere but the front it raised the wrong creature's power and the escape never progressed.",
+    ),
+    "LanternKey": (
+        "f3126c61e4be",
+        "Quest, Unplayable. At `CurrentActIndex == 2` it makes every `?` room an Event and forces the next event to be War Historian Repy. Act 3 only, so inert in Act 1 -- correct, and the emulator's empty arm says so.",
+    ),
+    "MindRot": (
+        "8a9cf16c9656",
+        "Status, PowerVar<MindRotPower>(1), applied by the Knowledge Demon's OnChosen rather than by play; correct.",
+    ),
+    "Sloth": (
+        "b35da3dfdbda",
+        "Status, PowerVar<SlothPower>(3), applied by the Knowledge Demon's OnChosen rather than by play; correct.",
+    ),
+    "Soul": (
+        "caa378999af5",
+        "0-cost Token, Exhaust: `CardsVar(2)` upgrading by 1 -- draw TWO, or three. It was drawing one.",
+    ),
+    "SpoilsMap": (
+        "e47cb1055657",
+        "Quest, Unplayable, GoldVar(600). Its `ModifyGeneratedMap` replaces act TWO's map with a SpoilsActMap; act 1 is untouched, so the empty arm is correct.",
+    ),
+    "SporeMind": (
+        "47f6999118b7",
+        "1-cost Curse with Exhaust and NO OnPlay AT ALL -- the whole card is paying one energy to be rid of it, Debris's shape as a curse. The emulator applied `NoBlock`, which is invented and one of the harshest debuffs in the game.",
+    ),
+    "SweepingGaze": (
+        "72d747d157ec",
+        "0-cost Token, Ethereal + Exhaust, OstyAttack-tagged: OstyDamageVar(10) upgrading by 5, one hit at a random opponent, and nothing when the pet is gone; correct.",
+    ),
+    "WasteAway": (
+        "c7cec1b4168c",
+        "Status, PowerVar<WasteAwayPower>(1), applied by the Knowledge Demon's OnChosen rather than by play; correct.",
+    ),
+    "Wish": (
+        "e64c267ed8a5",
+        "0-cost Ancient, Exhaust: a TUTOR -- `CardSelectCmd.FromCombatPile(PileType.Draw)` takes one chosen card from the draw pile into hand, and the upgrade adds RETAIN. The emulator paid GOLD, which is not something this card does and not something a combat card generally does.",
+    ),
     "Debris": (
         "d2165304ef91",
         "1-cost Status, Exhaust, and OnPlay returns immediately -- a card you pay one energy to be rid of. The empty arm is correct.",

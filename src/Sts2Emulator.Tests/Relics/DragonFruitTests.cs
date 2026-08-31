@@ -119,23 +119,26 @@ public class DragonFruitTests
     }
 
     /// <summary>
-    /// Gold gained mid-combat is the same hook. Wish is the reachable one: the combat
-    /// chokepoint has to fire it too, or the relic works everywhere except the two places
-    /// a card hands you gold.
+    /// Gold gained mid-combat is the same hook. Hand of Greed is the reachable one: the
+    /// combat chokepoint has to fire it too, or the relic works everywhere except the
+    /// place a card hands you gold. (This test used to use Wish, which paid gold only
+    /// because E418 had it modelled as a gold card -- it is a tutor.)
     /// </summary>
     [Fact]
     public void GoldGainedInCombatCountsToo()
     {
-        const int wish = 541;
         var fight = Fight.WithRelics(RelicEffects.DragonFruit);
-        fight.State.Hand = [new CardInstance(wish, false)];
+        fight.State.Hand = [new CardInstance(CL.HandOfGreed, false)];
         fight.State.Energy = 3;
         fight.State.PlayerHp = 50;
+        // Fatal on the front enemy is what pays out; the rest keep the combat open so no
+        // end-of-combat reward gold can be mistaken for the relic's hook.
+        fight.State.Enemies[0].Hp = 5;
         int maxHpBefore = fight.State.PlayerMaxHp;
 
         fight.Play(0);
 
-        Assert.Equal(25, fight.State.PlayerGold);
+        Assert.Equal(20, fight.State.PlayerGold);
         Assert.Equal(maxHpBefore + 1, fight.State.PlayerMaxHp);
         Assert.Equal(51, fight.State.PlayerHp);
     }
