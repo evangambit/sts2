@@ -438,5 +438,4 @@ public class TheHuntTests
         Assert.Equal(0, fight.State.ExtraCardRewards);
         Assert.Equal(0, BuffSystem.Get(fight.State.PlayerBuffs, BuffId.TheHunt));
     }
-
 }

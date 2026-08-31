@@ -86,10 +86,7 @@ public class ByrdpipTests
             engine.State.Deck,
             card => card.DefId == RunNonCombatEffects.ByrdonisEggCard
         );
-        Assert.Contains(
-            engine.State.Deck,
-            card => card.DefId == RunNonCombatEffects.ByrdSwoopCard
-        );
+        Assert.Contains(engine.State.Deck, card => card.DefId == RunNonCombatEffects.ByrdSwoopCard);
     }
 
     /// <summary>
@@ -110,10 +107,7 @@ public class ByrdpipTests
 
         RunNonCombatEffects.ApplyRelicPickup(engine.State, RelicEffects.Byrdpip);
 
-        Assert.Equal(
-            3,
-            engine.State.Deck.Count(c => c.DefId == RunNonCombatEffects.ByrdSwoopCard)
-        );
+        Assert.Equal(3, engine.State.Deck.Count(c => c.DefId == RunNonCombatEffects.ByrdSwoopCard));
         Assert.DoesNotContain(
             engine.State.Deck,
             c => c.DefId == RunNonCombatEffects.ByrdonisEggCard

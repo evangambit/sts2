@@ -231,18 +231,14 @@ public class GuiltyTests
         engine.Reset("NXV45HW43K");
         for (int i = 0; i < count; i++)
         {
-            engine.State.Deck.Add(
-                new CardInstance(RunNonCombatEffects.NamedCard("Guilty"), false)
-            );
+            engine.State.Deck.Add(new CardInstance(RunNonCombatEffects.NamedCard("Guilty"), false));
         }
 
         return engine;
     }
 
     private static int GuiltiesIn(RunEngine engine) =>
-        engine.State.Deck.Count(card =>
-            card.DefId == RunNonCombatEffects.NamedCard("Guilty")
-        );
+        engine.State.Deck.Count(card => card.DefId == RunNonCombatEffects.NamedCard("Guilty"));
 
     [Fact]
     public void ItLeavesAfterFiveCombats()
@@ -275,9 +271,7 @@ public class GuiltyTests
         }
 
         // A second Guilty arrives three combats in, and starts from zero.
-        engine.State.Deck.Add(
-            new CardInstance(RunNonCombatEffects.NamedCard("Guilty"), false)
-        );
+        engine.State.Deck.Add(new CardInstance(RunNonCombatEffects.NamedCard("Guilty"), false));
 
         for (int combat = 0; combat < 2; combat++)
         {

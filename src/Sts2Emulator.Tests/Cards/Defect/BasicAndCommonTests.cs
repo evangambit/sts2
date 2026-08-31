@@ -403,10 +403,7 @@ public class ClawTests
         Assert.Equal(200 - damage - (damage + increase), fight.Enemy0.Hp);
 
         fight.Play();
-        Assert.Equal(
-            200 - damage - (damage + increase) - (damage + increase * 2),
-            fight.Enemy0.Hp
-        );
+        Assert.Equal(200 - damage - (damage + increase) - (damage + increase * 2), fight.Enemy0.Hp);
     }
 }
 

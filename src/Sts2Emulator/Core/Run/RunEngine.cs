@@ -1122,7 +1122,7 @@ public sealed class RunEngine
                     );
                     State.RestOptionsTaken = 0;
                     State.RestOptionsTaken = 0;
-            State.Phase = RunPhase.Rest;
+                    State.Phase = RunPhase.Rest;
                     break;
                 case RunConstants.NodeShop:
                     State.LastResolvedRoomType = RunConstants.NodeShop;
@@ -2128,9 +2128,7 @@ public sealed class RunEngine
         }
         if (action == RunConstants.RestLiftAction && GiryaLiftsLeft() > 0)
         {
-            int index = State.Relics.FindIndex(relic =>
-                relic.DefId == Effects.RelicEffects.Girya
-            );
+            int index = State.Relics.FindIndex(relic => relic.DefId == Effects.RelicEffects.Girya);
             State.Relics[index] = State.Relics[index] with
             {
                 Counter = State.Relics[index].Counter + 1,
@@ -2266,11 +2264,17 @@ public sealed class RunEngine
                 if (action == 0)
                 {
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 18);
-                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.JungleMazeSoloGold(State));
+                    RunNonCombatEffects.GainGold(
+                        State,
+                        RunNonCombatEffects.JungleMazeSoloGold(State)
+                    );
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.JungleMazeJoinForcesGold(State));
+                    RunNonCombatEffects.GainGold(
+                        State,
+                        RunNonCombatEffects.JungleMazeJoinForcesGold(State)
+                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -2351,12 +2355,18 @@ public sealed class RunEngine
             case RunConstants.EventSunkenTreasury:
                 if (action == 0)
                 {
-                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.SunkenTreasurySmallChestGold(State));
+                    RunNonCombatEffects.GainGold(
+                        State,
+                        RunNonCombatEffects.SunkenTreasurySmallChestGold(State)
+                    );
                 }
                 else if (action == 1)
                 {
                     // The big chest is paid for with Greed.
-                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.SunkenTreasuryLargeChestGold(State));
+                    RunNonCombatEffects.GainGold(
+                        State,
+                        RunNonCombatEffects.SunkenTreasuryLargeChestGold(State)
+                    );
                     RunNonCombatEffects.AddCardToDeck(
                         State,
                         new CardInstance(RunNonCombatEffects.NamedCard("Greed"), Upgraded: false)
@@ -2495,7 +2505,10 @@ public sealed class RunEngine
                     // flat 80, which is inside the range and so looked right in every
                     // capture that never checked the number.
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 8);
-                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.DenseVegetationGold(State));
+                    RunNonCombatEffects.GainGold(
+                        State,
+                        RunNonCombatEffects.DenseVegetationGold(State)
+                    );
                 }
                 else if (action == 1)
                 {
@@ -2595,7 +2608,10 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.GainGold(State, RunNonCombatEffects.SunkenStatueGold(State));
+                    RunNonCombatEffects.GainGold(
+                        State,
+                        RunNonCombatEffects.SunkenStatueGold(State)
+                    );
                     State.PlayerHp = Math.Max(0, State.PlayerHp - 7);
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -3881,10 +3897,7 @@ public sealed class RunEngine
                     State.PlayerMaxHp,
                     State.PotionSlots,
                     State.Gold,
-                    Math.Max(
-                        0,
-                        State.NormalEncountersVisited + State.EliteEncountersVisited - 1
-                    )
+                    Math.Max(0, State.NormalEncountersVisited + State.EliteEncountersVisited - 1)
                 );
 
             case RunConstants.EventTheLanternKey:
@@ -4373,9 +4386,7 @@ public sealed class RunEngine
             State.PotionSlots[slot] = 0;
             // The rug first, then the shelf in slot order -- the order the rewards list
             // is built in, which is the order the screen offers them.
-            State.PendingBonusRelicRewards.Add(
-                RunNonCombatEffects.NamedRelic("FakeMerchantsRug")
-            );
+            State.PendingBonusRelicRewards.Add(RunNonCombatEffects.NamedRelic("FakeMerchantsRug"));
             State.PendingBonusRelicRewards.AddRange(stall.Where(relicId => relicId != 0));
             return StartCombatWithDeck(
                 State.Deck,
@@ -4814,7 +4825,14 @@ public sealed class RunEngine
                     State,
                     new CardInstance(RunNonCombatEffects.NamedCard("Shame"), false)
                 );
-                if (RunNonCombatEffects.BeginDeckSelection(State, DeckSelection.Upgrade, 0, count: 2))
+                if (
+                    RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.Upgrade,
+                        0,
+                        count: 2
+                    )
+                )
                 {
                     State.Phase = RunPhase.TransformSelect;
                     return 0;

@@ -85,7 +85,8 @@ public class ReapTests
     [Fact]
     public void ItHitsOnlyTheTarget()
     {
-        var fight = Fight.Hand(new CardInstance(NB.Reap, false))
+        var fight = Fight
+            .Hand(new CardInstance(NB.Reap, false))
             .Energy(9)
             .Enemy(hp: 500)
             .Enemy(hp: 500);
@@ -102,7 +103,8 @@ public class FearTests
     [Fact]
     public void ItHitsAndMakesTheTargetVulnerable()
     {
-        var fight = Fight.Hand(new CardInstance(NB.Fear, false))
+        var fight = Fight
+            .Hand(new CardInstance(NB.Fear, false))
             .Energy(9)
             .Enemy(hp: 500)
             .Enemy(hp: 500);
@@ -133,7 +135,8 @@ public class ScourgeTests
     [Fact]
     public void ItDoomsTheTargetAndDraws()
     {
-        var fight = Fight.Hand(new CardInstance(NB.Scourge, false))
+        var fight = Fight
+            .Hand(new CardInstance(NB.Scourge, false))
             .Energy(9)
             .Enemy(hp: 500)
             .Enemy(hp: 500);
@@ -324,7 +327,8 @@ public class EndOfDaysTests
     [Fact]
     public void ItDoomsEveryoneAndKillsTheDoomed()
     {
-        var fight = Fight.Hand(new CardInstance(NB.EndOfDays, false))
+        var fight = Fight
+            .Hand(new CardInstance(NB.EndOfDays, false))
             .Energy(9)
             .Enemy(hp: 20)
             .Enemy(hp: 500);
@@ -343,7 +347,8 @@ public class NegativePulseTests
     [Fact]
     public void ItBlocksAndDoomsEveryone()
     {
-        var fight = Fight.Hand(new CardInstance(NB.NegativePulse, false))
+        var fight = Fight
+            .Hand(new CardInstance(NB.NegativePulse, false))
             .Energy(9)
             .Enemy(hp: 500)
             .Enemy(hp: 500);
@@ -374,7 +379,8 @@ public class HighFiveTests
     [Fact]
     public void ItHitsEveryoneAndMakesThemVulnerable()
     {
-        var fight = Fight.Hand(new CardInstance(NB.HighFive, false))
+        var fight = Fight
+            .Hand(new CardInstance(NB.HighFive, false))
             .Energy(9)
             .Enemy(hp: 500)
             .Enemy(hp: 500);

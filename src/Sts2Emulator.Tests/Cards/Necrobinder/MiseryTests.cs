@@ -17,7 +17,8 @@ public class MiseryTests
 
     private static Fight Spread(bool upgraded = false)
     {
-        var fight = Fight.Hand(new CardInstance(Misery, upgraded))
+        var fight = Fight
+            .Hand(new CardInstance(Misery, upgraded))
             .Energy(9)
             .Enemy(hp: 200, buffs: [new BuffState(BuffId.Weak, 2), new BuffState(BuffId.Doom, 9)])
             .Enemy(hp: 200)
@@ -73,7 +74,8 @@ public class MiseryTests
     [Fact]
     public void ACleanTargetSpreadsNothing()
     {
-        var fight = Fight.Hand(new CardInstance(Misery, false))
+        var fight = Fight
+            .Hand(new CardInstance(Misery, false))
             .Energy(9)
             .Enemy(hp: 200)
             .Enemy(hp: 200);
@@ -88,7 +90,11 @@ public class MiseryTests
     [Fact]
     public void ItNeedsNoOstyAndHitsOnlyTheTarget()
     {
-        var fight = Fight.Hand(new CardInstance(Misery, false)).Energy(9).Enemy(hp: 200).Enemy(hp: 200);
+        var fight = Fight
+            .Hand(new CardInstance(Misery, false))
+            .Energy(9)
+            .Enemy(hp: 200)
+            .Enemy(hp: 200);
 
         fight.Play();
 

@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using Sts2Emulator.Core;
 using Sts2Emulator.Core.Effects;
-using static Sts2Emulator.Tests.TestDeck;
 using Xunit;
+using static Sts2Emulator.Tests.TestDeck;
 
 namespace Sts2Emulator.Tests;
 
@@ -35,10 +35,7 @@ public class BulletTimeXCostTests
     [Fact]
     public void TheXCardStillSpendsTheEnergy()
     {
-        var fight = Fight
-            .Hand(Card(SI.BulletTime), Card(SI.Malaise))
-            .Energy(9)
-            .Enemy(hp: 200);
+        var fight = Fight.Hand(Card(SI.BulletTime), Card(SI.Malaise)).Energy(9).Enemy(hp: 200);
 
         fight.Play();
         int before = fight.State.Energy;
@@ -62,19 +59,31 @@ public class PinpointCostTests
     {
         var fight = Fight.Hand().Energy(9).Enemy(hp: 200);
 
-        Assert.Equal(3, CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State));
+        Assert.Equal(
+            3,
+            CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State)
+        );
     }
 
     [Fact]
     public void EachSkillTakesOneOffIt()
     {
-        var fight = Fight.Hand(Card(SI.DefendSilent), Card(SI.DefendSilent)).Energy(9).Enemy(hp: 200);
+        var fight = Fight
+            .Hand(Card(SI.DefendSilent), Card(SI.DefendSilent))
+            .Energy(9)
+            .Enemy(hp: 200);
 
         fight.Play();
-        Assert.Equal(2, CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State));
+        Assert.Equal(
+            2,
+            CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State)
+        );
 
         fight.Play();
-        Assert.Equal(1, CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State));
+        Assert.Equal(
+            1,
+            CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State)
+        );
     }
 
     /// <summary>ATTACKS do not — the hook filters on `Card.Type == Skill`.</summary>
@@ -85,7 +94,10 @@ public class PinpointCostTests
 
         fight.Play(0, target: 0);
 
-        Assert.Equal(3, CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State));
+        Assert.Equal(
+            3,
+            CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State)
+        );
     }
 
     /// <summary>`AddThisTurn`, so it is full price again next turn.</summary>
@@ -97,7 +109,10 @@ public class PinpointCostTests
 
         fight.EndTurn();
 
-        Assert.Equal(3, CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State));
+        Assert.Equal(
+            3,
+            CombatEngine.EffectiveCost(new CardInstance(SI.Pinpoint, false), fight.State)
+        );
     }
 
     /// <summary>

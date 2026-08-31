@@ -471,15 +471,15 @@ public static class RunConstants
     /// Trader's shelf does.
     /// </remarks>
     public static ReadOnlySpan<int> DarvSingleRelicSets =>
-    [
-        8, // Astrolabe
-        20, // BlackStar
-        39, // CallingBell
-        74, // EmptyCage
-        185, // PandorasBox
-        227, // RunicPyramid
-        243, // SneckoEye
-    ];
+        [
+            8, // Astrolabe
+            20, // BlackStar
+            39, // CallingBell
+            74, // EmptyCage
+            185, // PandorasBox
+            227, // RunicPyramid
+            243, // SneckoEye
+        ];
 
     /// <summary>Pandora's Box is skipped by a run whose modifiers clear the deck.</summary>
     public static readonly int DarvPandorasBox = 185;
@@ -488,8 +488,7 @@ public static class RunConstants
     public static ReadOnlySpan<int> DarvActOneSet => [70, 245];
 
     /// <summary>The set offered only at `CurrentActIndex == 2`.</summary>
-    public static ReadOnlySpan<int> DarvActTwoSet =>
-        [196, 281];
+    public static ReadOnlySpan<int> DarvActTwoSet => [196, 281];
 
     /// <summary>Dusty Tome, which replaces the third option on a coin flip.</summary>
     public static readonly int DarvDustyTome = 69;
@@ -578,6 +577,7 @@ public static class RunConstants
     public const int RelicLeesWaffle = 135;
     public const int RelicLostCoffer = 140;
     public const int RelicMango = 144;
+
     // The two Hungry For Mushrooms relics. Both are `HasUponPickupEffect`; neither has any
     // combat behaviour modelled yet (they are in the 125 the emulator does not model), but
     // the pickup half is the event's whole payload and belongs with the relic.

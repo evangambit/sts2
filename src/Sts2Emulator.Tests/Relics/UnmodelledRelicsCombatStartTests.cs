@@ -122,8 +122,7 @@ public class TurnOneOpenerRelicTests
         Assert.Equal(2, added.Select(card => card.DefId).Distinct().Count());
         Assert.All(
             added,
-            card =>
-                Assert.Contains(card.DefId, GeneratedData.CardPools.Colorless.ToArray())
+            card => Assert.Contains(card.DefId, GeneratedData.CardPools.Colorless.ToArray())
         );
     }
 
@@ -191,14 +190,12 @@ public class TurnOneOpenerRelicTests
             fight.State.DrawPile.Add(new CardInstance(shiv, false));
         }
 
-        fight.State.DrawPile.Add(new CardInstance(GeneratedData.Cards.FindId("Bash")!.Value, false));
+        fight.State.DrawPile.Add(
+            new CardInstance(GeneratedData.Cards.FindId("Bash")!.Value, false)
+        );
         int handBefore = fight.State.Hand.Count;
 
-        CardEffects.MoveZeroCostDrawCardsToHandForPowerCell(
-            fight.State,
-            2,
-            new System.Random(0)
-        );
+        CardEffects.MoveZeroCostDrawCardsToHandForPowerCell(fight.State, 2, new System.Random(0));
 
         // A MOVE, not a generation: two out of the pile, two into hand.
         Assert.Equal(handBefore + 2, fight.State.Hand.Count);
@@ -229,11 +226,7 @@ public class TurnOneOpenerRelicTests
         fight.State.DrawPile.Add(new CardInstance(xCost, false));
         int handBefore = fight.State.Hand.Count;
 
-        CardEffects.MoveZeroCostDrawCardsToHandForPowerCell(
-            fight.State,
-            2,
-            new System.Random(0)
-        );
+        CardEffects.MoveZeroCostDrawCardsToHandForPowerCell(fight.State, 2, new System.Random(0));
 
         Assert.Equal(handBefore, fight.State.Hand.Count);
         Assert.Single(fight.State.DrawPile);

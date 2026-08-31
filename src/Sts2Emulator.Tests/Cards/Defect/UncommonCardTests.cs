@@ -238,7 +238,10 @@ public class FeralTests
     [Fact]
     public void AZeroCostAttackComesBack()
     {
-        var fight = DefectFight.Hand(Card(Feral), Card(SI.Slice), Card(SI.Slice)).Energy(3).Enemy(hp: 200);
+        var fight = DefectFight
+            .Hand(Card(Feral), Card(SI.Slice), Card(SI.Slice))
+            .Energy(3)
+            .Enemy(hp: 200);
         fight.Play();
 
         fight.Play(fight.State.Hand.FindIndex(c => c.DefId == SI.Slice));
@@ -717,7 +720,10 @@ public class SmokestackTests
     [InlineData(true, 7)]
     public void AGeneratedStatusHitsEveryEnemy(bool upgraded, int damage)
     {
-        var fight = DefectFight.Hand(Card(Smokestack, upgraded), Card(GunkUp)).Energy(9).Enemy(hp: 200);
+        var fight = DefectFight
+            .Hand(Card(Smokestack, upgraded), Card(GunkUp))
+            .Energy(9)
+            .Enemy(hp: 200);
         fight.Enemy(hp: 200);
         fight.Play();
 
@@ -876,7 +882,10 @@ public class SynthesisTests
     [InlineData(true, 20)]
     public void HitsThenTheNextPowerIsFree(bool upgraded, int damage)
     {
-        var fight = DefectFight.Hand(Card(Synthesis, upgraded), Card(Capacitor)).Energy(3).Enemy(hp: 200);
+        var fight = DefectFight
+            .Hand(Card(Synthesis, upgraded), Card(Capacitor))
+            .Energy(3)
+            .Enemy(hp: 200);
 
         fight.Play();
         Assert.Equal(200 - damage, fight.Enemy0.Hp);
@@ -893,7 +902,10 @@ public class SynthesisTests
     [Fact]
     public void ItDoesNotDiscountAnAttack()
     {
-        var fight = DefectFight.Hand(Card(Synthesis), Card(SI.StrikeSilent)).Energy(3).Enemy(hp: 200);
+        var fight = DefectFight
+            .Hand(Card(Synthesis), Card(SI.StrikeSilent))
+            .Energy(3)
+            .Enemy(hp: 200);
         fight.Play();
 
         int before = fight.State.Energy;

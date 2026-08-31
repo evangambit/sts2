@@ -260,10 +260,7 @@ public class RazorToothAndRougeTests
 
         fight.Play(0);
 
-        Assert.DoesNotContain(
-            fight.State.AllCards(),
-            card => card.DefId == power && card.Upgraded
-        );
+        Assert.DoesNotContain(fight.State.AllCards(), card => card.DefId == power && card.Upgraded);
     }
 
     /// <summary>
@@ -381,10 +378,7 @@ public class RunLevelActOneRelicTests
         var engine = Run("DarkstonePeriapt");
         int max = engine.State.PlayerMaxHp;
 
-        RunNonCombatEffects.AddCardToDeck(
-            engine.State,
-            new CardInstance(IC.StrikeIronclad, false)
-        );
+        RunNonCombatEffects.AddCardToDeck(engine.State, new CardInstance(IC.StrikeIronclad, false));
 
         Assert.Equal(max, engine.State.PlayerMaxHp);
     }

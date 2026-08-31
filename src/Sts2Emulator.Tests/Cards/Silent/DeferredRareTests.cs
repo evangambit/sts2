@@ -296,7 +296,8 @@ public class BladeOfInkTests
     [Fact]
     public void TheBonusIsTheEnchantmentsOwnNumberNotItsAmount()
     {
-        var fight = Fight.Hand(Card(SI.Shiv) with { Enchantment = Enchantment.Inky, EnchantAmount = 5 })
+        var fight = Fight
+            .Hand(Card(SI.Shiv) with { Enchantment = Enchantment.Inky, EnchantAmount = 5 })
             .Energy(3)
             .Enemy(hp: 60);
 

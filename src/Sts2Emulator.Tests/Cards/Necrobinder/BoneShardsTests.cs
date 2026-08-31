@@ -17,7 +17,8 @@ public class BoneShardsTests
 
     private static Fight WithOsty(bool upgraded = false, int ostyHp = 10)
     {
-        var fight = Fight.Hand(new CardInstance(BoneShards, upgraded))
+        var fight = Fight
+            .Hand(new CardInstance(BoneShards, upgraded))
             .Energy(9)
             .Enemy(hp: 200)
             .Enemy(hp: 200);

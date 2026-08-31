@@ -208,7 +208,15 @@ public class RainbowRingTests
         var fight = Fight.WithRelics(RelicEffects.RainbowRing);
         fight.State.PlayerHp = 999;
         fight.State.Energy = 99;
-        fight.State.Hand = [Card(SI.Slice), Card(SI.DefendSilent), Card(IC.Inflame), Card(SI.Slice), Card(SI.DefendSilent), Card(IC.Inflame)];
+        fight.State.Hand =
+        [
+            Card(SI.Slice),
+            Card(SI.DefendSilent),
+            Card(IC.Inflame),
+            Card(SI.Slice),
+            Card(SI.DefendSilent),
+            Card(IC.Inflame),
+        ];
 
         fight.Play();
         fight.Play();
@@ -269,7 +277,14 @@ public class SturdyClampTests
         var fight = Fight.WithRelics(RelicEffects.SturdyClamp);
         fight.State.PlayerHp = 999;
         fight.State.Enemies.Clear();
-        fight.State.Enemies.Add(new EnemyState { DefId = 16, Hp = 200, MaxHp = 200 });
+        fight.State.Enemies.Add(
+            new EnemyState
+            {
+                DefId = 16,
+                Hp = 200,
+                MaxHp = 200,
+            }
+        );
         fight.State.PlayerBlock = 6;
 
         fight.EndTurn();

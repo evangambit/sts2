@@ -244,4 +244,3 @@ public class OstyDamageSinkTests
         Assert.Equal(1, fight.State.UnblockedDamageHitCount);
     }
 }
-

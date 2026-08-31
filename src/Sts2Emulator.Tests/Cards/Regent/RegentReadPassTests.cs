@@ -162,10 +162,7 @@ public class CrashLandingTests
     [Fact]
     public void ItHitsEveryEnemy()
     {
-        var fight = RegentBoard.WithStars(
-            Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500),
-            9
-        );
+        var fight = RegentBoard.WithStars(Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500), 9);
 
         fight.PlayCard(RG.CrashLanding);
 
@@ -233,7 +230,6 @@ public class MeteorShowerTests
         Assert.Equal(479, fight.Enemy0.Hp);
         Assert.Equal(479, fight.Enemy1.Hp);
     }
-
 }
 
 // Comet and Gamma Blast keep the single-target body Meteor Shower was stacked onto, which
@@ -244,10 +240,7 @@ public class CometTests
     [Fact]
     public void ItHitsAndDebuffsTheTargetOnly()
     {
-        var fight = RegentBoard.WithStars(
-            Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500),
-            9
-        );
+        var fight = RegentBoard.WithStars(Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500), 9);
 
         fight.PlayCard(RG.Comet);
 
@@ -273,10 +266,7 @@ public class GammaBlastTests
     [Fact]
     public void ItHitsAndDebuffsTheTargetOnly()
     {
-        var fight = RegentBoard.WithStars(
-            Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500),
-            9
-        );
+        var fight = RegentBoard.WithStars(Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500), 9);
 
         fight.PlayCard(RG.GammaBlast);
 
@@ -315,7 +305,10 @@ public class KinglyKickTests
     {
         var fight = RG.Fresh();
 
-        Assert.Equal(4, CombatEngine.EffectiveCost(new CardInstance(RG.KinglyKick, false), fight.State));
+        Assert.Equal(
+            4,
+            CombatEngine.EffectiveCost(new CardInstance(RG.KinglyKick, false), fight.State)
+        );
     }
 
     [Fact]
@@ -342,7 +335,10 @@ public class KinglyKickTests
         var fight = WithItInTheDrawPile();
         CardEffects.DrawCards(fight.State, 1, new System.Random(0));
 
-        Assert.Equal(4, CombatEngine.EffectiveCost(new CardInstance(RG.KinglyKick, false), fight.State));
+        Assert.Equal(
+            4,
+            CombatEngine.EffectiveCost(new CardInstance(RG.KinglyKick, false), fight.State)
+        );
     }
 
     [Fact]
@@ -499,10 +495,7 @@ public class SevenStarsTests
     [Fact]
     public void ItHitsEveryEnemySevenTimes()
     {
-        var fight = RegentBoard.WithStars(
-            Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500),
-            9
-        );
+        var fight = RegentBoard.WithStars(Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500), 9);
 
         fight.PlayCard(RG.SevenStars);
 
@@ -515,8 +508,14 @@ public class SevenStarsTests
     {
         var fight = RG.Fresh();
 
-        Assert.Equal(2, CombatEngine.EffectiveCost(new CardInstance(RG.SevenStars, false), fight.State));
-        Assert.Equal(1, CombatEngine.EffectiveCost(new CardInstance(RG.SevenStars, true), fight.State));
+        Assert.Equal(
+            2,
+            CombatEngine.EffectiveCost(new CardInstance(RG.SevenStars, false), fight.State)
+        );
+        Assert.Equal(
+            1,
+            CombatEngine.EffectiveCost(new CardInstance(RG.SevenStars, true), fight.State)
+        );
 
         fight.PlayCard(RG.SevenStars, upgraded: true);
         Assert.Equal(451, fight.Enemy0.Hp);
@@ -730,7 +729,10 @@ public class ManifestAuthorityTests
     public void ItGainsSevenBlockAndEightUpgraded()
     {
         Assert.Equal(7, RG.Fresh().PlayCard(RG.ManifestAuthority).State.PlayerBlock);
-        Assert.Equal(8, RG.Fresh().PlayCard(RG.ManifestAuthority, upgraded: true).State.PlayerBlock);
+        Assert.Equal(
+            8,
+            RG.Fresh().PlayCard(RG.ManifestAuthority, upgraded: true).State.PlayerBlock
+        );
     }
 
     [Fact]
@@ -816,10 +818,7 @@ public class DevastateTests
     [Fact]
     public void ItHitsOneEnemyForThirty()
     {
-        var fight = RegentBoard.WithStars(
-            Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500),
-            9
-        );
+        var fight = RegentBoard.WithStars(Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500), 9);
 
         fight.PlayCard(RGOk.Devastate);
 
@@ -842,10 +841,7 @@ public class FallingStarTests
     [Fact]
     public void ItHitsAndDebuffsTheTargetOnly()
     {
-        var fight = RegentBoard.WithStars(
-            Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500),
-            9
-        );
+        var fight = RegentBoard.WithStars(Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500), 9);
 
         fight.PlayCard(RGOk.FallingStar);
 
@@ -1069,10 +1065,7 @@ public class CelestialMightTests
     [Fact]
     public void ItHitsOneEnemyThreeTimes()
     {
-        var fight = RegentBoard.WithStars(
-            Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500),
-            9
-        );
+        var fight = RegentBoard.WithStars(Fight.Hand().Energy(9).Enemy(hp: 500).Enemy(hp: 500), 9);
 
         fight.PlayCard(RGOk.CelestialMight);
 

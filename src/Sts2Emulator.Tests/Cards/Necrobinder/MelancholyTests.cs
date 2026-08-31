@@ -54,11 +54,7 @@ public class MelancholyTests
     [Fact]
     public void ACopyInTheDrawPileGetsCheaperToo()
     {
-        var fight = Fight
-            .Hand()
-            .Energy(9)
-            .Draw(new CardInstance(Melancholy, false))
-            .Enemy(hp: 3);
+        var fight = Fight.Hand().Energy(9).Draw(new CardInstance(Melancholy, false)).Enemy(hp: 3);
         fight.State.Hand.Add(new CardInstance(Strike, false));
 
         fight.Play(0, target: 0);

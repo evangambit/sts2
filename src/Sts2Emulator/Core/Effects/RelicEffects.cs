@@ -202,15 +202,18 @@ public static class RelicEffects
     public const int Vambrace = 280;
     public const int VenerableTeaSet = 282;
     public const int AmethystAubergine = 3;
+
     // The shared pool's rares.
     public const int BeatingRemnant = 11;
     public const int Girya = 100;
     public const int GamblingChip = 97;
+
     // The four Starter relics, one per character. Every run of that character holds one.
     public const int BoundPhylactery = 30;
     public const int CrackedCore = 52;
     public const int DivineRight = 64;
     public const int RingOfTheSnake = 221;
+
     // The shop pool.
     public const int BeltBuckle = 14;
     public const int Cauldron = 42;
@@ -932,8 +935,7 @@ public static class RelicEffects
         // it pays on turn one AND every turn after. It therefore appears here and in
         // `ExtraHandDraw`, which is the only relic that has to.
         (HasRelic(state, SneckoEye) ? 2 : 0)
-        +
-        (HasRelic(state, RingOfTheSnake) ? 2 : 0)
+        + (HasRelic(state, RingOfTheSnake) ? 2 : 0)
         + (HasRelic(state, BagOfPreparation) ? 2 : 0)
         + (HasRelic(state, BoomingConch) && state.IsEliteCombat ? 2 : 0)
         // Big Mushroom's `ModifyHandDraw` SUBTRACTS its `CardsVar(2)` on turn one: the
@@ -1447,7 +1449,11 @@ public static class RelicEffects
     /// `MercuryHourglass.AfterPlayerTurnStart` and `Candelabra.AfterSideTurnStart`, both of
     /// which fire at the start of the player's turn.
     /// </summary>
-    internal static void ApplyStartOfPlayerTurnShared(CombatState state, int turnNumber, Random? rng)
+    internal static void ApplyStartOfPlayerTurnShared(
+        CombatState state,
+        int turnNumber,
+        Random? rng
+    )
     {
         if (HasRelic(state, MercuryHourglass))
         {
@@ -1575,7 +1581,9 @@ public static class RelicEffects
     public static bool LastingCandyOffersAPower(Run.RunState state)
     {
         int index = state.Relics.FindIndex(relic => relic.DefId == LastingCandy);
-        return index >= 0 && state.Relics[index].Counter > 0 && state.Relics[index].Counter % 2 == 0;
+        return index >= 0
+            && state.Relics[index].Counter > 0
+            && state.Relics[index].Counter % 2 == 0;
     }
 
     /// <summary>Counts the fight the player has just finished.</summary>
@@ -1660,10 +1668,7 @@ public static class RelicEffects
         int index = state.Relics.FindIndex(relic => relic.DefId == WongosMysteryTicket);
         if (index >= 0)
         {
-            state.Relics[index] = state.Relics[index] with
-            {
-                Counter = WongosTicketCombats + 1,
-            };
+            state.Relics[index] = state.Relics[index] with { Counter = WongosTicketCombats + 1 };
         }
     }
 
@@ -1781,8 +1786,7 @@ public static class RelicEffects
             .Where(i =>
             {
                 var def = GeneratedData.Cards.Get(state.Hand[i].DefId);
-                return !def.HasEnergyCostX
-                    && CombatEngine.EffectiveCost(state.Hand[i], state) > 0;
+                return !def.HasEnergyCostX && CombatEngine.EffectiveCost(state.Hand[i], state) > 0;
             })
             .ToList();
         if (candidates.Count == 0)
@@ -1792,10 +1796,7 @@ public static class RelicEffects
 
         var selection = CardEffects.CardSelectionRngFor(state, rng);
         int chosen = candidates[selection.Next(candidates.Count)];
-        state.Hand[chosen] = state.Hand[chosen] with
-        {
-            CostBump = state.Hand[chosen].CostBump - 1,
-        };
+        state.Hand[chosen] = state.Hand[chosen] with { CostBump = state.Hand[chosen].CostBump - 1 };
     }
 
     /// <summary>
@@ -1876,8 +1877,7 @@ public static class RelicEffects
     /// OWNER applies. Additive on the amount GIVEN, so it lands once per application
     /// rather than once per stack.
     /// </summary>
-    public static int ExtraPoisonGiven(CombatState state) =>
-        HasRelic(state, SneckoSkull) ? 1 : 0;
+    public static int ExtraPoisonGiven(CombatState state) => HasRelic(state, SneckoSkull) ? 1 : 0;
 
     /// <summary>
     /// `RuinedHelmet.TryModifyPowerAmountReceived`: the FIRST positive Strength the player

@@ -39,8 +39,7 @@ public class OrbObservationTests
         );
         Assert.Equal(CombatObservation.OrbCapacityOffset + 1, CombatObservation.OrbOffset);
         Assert.Equal(
-            CombatObservation.OrbOffset
-                + CombatObservation.MaxOrbs * CombatObservation.OrbSlotSize,
+            CombatObservation.OrbOffset + CombatObservation.MaxOrbs * CombatObservation.OrbSlotSize,
             CombatObservation.ObsSize
         );
     }

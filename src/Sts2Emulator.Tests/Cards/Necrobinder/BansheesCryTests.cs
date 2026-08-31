@@ -21,7 +21,8 @@ public class BansheesCryTests
     [Fact]
     public void ItHitsEveryEnemyForThirtyThree()
     {
-        var fight = Fight.Hand(new CardInstance(BansheesCry, false))
+        var fight = Fight
+            .Hand(new CardInstance(BansheesCry, false))
             .Energy(9)
             .Enemy(hp: 200)
             .Enemy(hp: 200);
@@ -38,8 +39,14 @@ public class BansheesCryTests
     {
         var fight = Fight.Hand().Energy(9).Enemy(hp: 200);
 
-        Assert.Equal(9, CombatEngine.EffectiveCost(new CardInstance(BansheesCry, false), fight.State));
-        Assert.Equal(7, CombatEngine.EffectiveCost(new CardInstance(BansheesCry, true), fight.State));
+        Assert.Equal(
+            9,
+            CombatEngine.EffectiveCost(new CardInstance(BansheesCry, false), fight.State)
+        );
+        Assert.Equal(
+            7,
+            CombatEngine.EffectiveCost(new CardInstance(BansheesCry, true), fight.State)
+        );
 
         fight.State.Hand.Add(new CardInstance(BansheesCry, true));
         fight.Play();
@@ -50,15 +57,22 @@ public class BansheesCryTests
     [Fact]
     public void EachEtherealPlayTakesTwoOffTheCost()
     {
-        var fight = Fight.Hand(new CardInstance(Defy, false), new CardInstance(Defy, false))
+        var fight = Fight
+            .Hand(new CardInstance(Defy, false), new CardInstance(Defy, false))
             .Energy(9)
             .Enemy(hp: 200);
 
         fight.Play();
-        Assert.Equal(7, CombatEngine.EffectiveCost(new CardInstance(BansheesCry, false), fight.State));
+        Assert.Equal(
+            7,
+            CombatEngine.EffectiveCost(new CardInstance(BansheesCry, false), fight.State)
+        );
 
         fight.Play();
-        Assert.Equal(5, CombatEngine.EffectiveCost(new CardInstance(BansheesCry, false), fight.State));
+        Assert.Equal(
+            5,
+            CombatEngine.EffectiveCost(new CardInstance(BansheesCry, false), fight.State)
+        );
     }
 
     /// <summary>A card that is not Ethereal does nothing to the price.</summary>
@@ -69,7 +83,10 @@ public class BansheesCryTests
 
         fight.Play();
 
-        Assert.Equal(9, CombatEngine.EffectiveCost(new CardInstance(BansheesCry, false), fight.State));
+        Assert.Equal(
+            9,
+            CombatEngine.EffectiveCost(new CardInstance(BansheesCry, false), fight.State)
+        );
     }
 
     /// <summary>

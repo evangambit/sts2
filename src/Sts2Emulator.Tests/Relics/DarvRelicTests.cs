@@ -124,10 +124,7 @@ public class DarvRelicTests
         fight.State.PlayerMaxHp = 900;
         // Ethereal cards EXHAUST at end of turn whether the hand is retained or not, so
         // Ascender's Bane leaves however strong the retain is.
-        var handBefore = fight
-            .State.Hand.Where(c => !c.IsEthereal())
-            .Select(c => c.DefId)
-            .ToList();
+        var handBefore = fight.State.Hand.Where(c => !c.IsEthereal()).Select(c => c.DefId).ToList();
 
         fight.EndTurn();
 
@@ -216,10 +213,7 @@ public class DarvRelicTests
     public void AnXCostCardKeepsItsCost()
     {
         var fight = Fight.WithRelics(RelicEffects.SneckoEye);
-        int xCost = GeneratedData
-            .Cards.All.ToArray()
-            .First(def => def.HasEnergyCostX)
-            .Id;
+        int xCost = GeneratedData.Cards.All.ToArray().First(def => def.HasEnergyCostX).Id;
         fight.State.DrawPile.Clear();
         fight.State.DrawPile.Add(new CardInstance(xCost, false));
         fight.State.Hand.Clear();

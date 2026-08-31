@@ -140,7 +140,13 @@ public class SeekerStrikeTests
         var fight = Fight.Hand(Card(CL.SeekerStrike)).Energy(3).Enemy(hp: 200);
         var stream = new CountingRandom(5);
         fight.State.CardSelectionRng = stream;
-        fight.State.DrawPile = [Card(IC.StrikeIronclad), Card(IC.Bludgeon), Card(IC.Cinder), Card(IC.Anger)];
+        fight.State.DrawPile =
+        [
+            Card(IC.StrikeIronclad),
+            Card(IC.Bludgeon),
+            Card(IC.Cinder),
+            Card(IC.Anger),
+        ];
 
         fight.Play();
 

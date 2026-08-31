@@ -91,7 +91,11 @@ public class FeedTests
             .Hand(new CardInstance(IC.Feed, false))
             .Energy(3)
             .Enemy(hp: 1, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25))
-            .Enemy(hp: 40, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25));
+            .Enemy(
+                hp: 40,
+                defId: KE.DecimillipedeSegment,
+                buffs: new BuffState(BuffId.Reattach, 25)
+            );
         int earlyMaxHp = early.State.PlayerMaxHp;
         early.Play(0);
         Assert.Equal(earlyMaxHp, early.State.PlayerMaxHp);
@@ -100,7 +104,11 @@ public class FeedTests
             .Hand(new CardInstance(IC.Feed, false))
             .Energy(3)
             .Enemy(hp: 1, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25))
-            .Enemy(hp: 0, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25));
+            .Enemy(
+                hp: 0,
+                defId: KE.DecimillipedeSegment,
+                buffs: new BuffState(BuffId.Reattach, 25)
+            );
         int lastMaxHp = last.State.PlayerMaxHp;
         last.Play(0);
         Assert.Equal(lastMaxHp + 3, last.State.PlayerMaxHp);

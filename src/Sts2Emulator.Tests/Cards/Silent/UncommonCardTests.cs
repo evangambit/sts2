@@ -532,7 +532,10 @@ public class WellLaidPlansTests
         fight.EndTurn();
 
         Assert.NotNull(fight.Pending);
-        Assert.Contains(SI.Backstab, fight.Pending!.Candidates.Select(i => fight.State.Hand[i].DefId));
+        Assert.Contains(
+            SI.Backstab,
+            fight.Pending!.Candidates.Select(i => fight.State.Hand[i].DefId)
+        );
     }
 
     /// <summary>

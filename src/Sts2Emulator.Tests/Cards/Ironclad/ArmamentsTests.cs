@@ -104,10 +104,7 @@ public class ArmamentsTests
     public void AnAlreadyUpgradedHandRaisesNoScreen()
     {
         var fight = Fight
-            .Hand(
-                new CardInstance(IC.Armaments, false),
-                new CardInstance(IC.StrikeIronclad, true)
-            )
+            .Hand(new CardInstance(IC.Armaments, false), new CardInstance(IC.StrikeIronclad, true))
             .Energy(3);
 
         fight.Play(0);

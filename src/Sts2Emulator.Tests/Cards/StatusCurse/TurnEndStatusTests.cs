@@ -25,8 +25,7 @@ public class TurnEndStatusTests
     /// </summary>
     private static Fight Holding(params int[] cardIds)
     {
-        var fight = Fight.Hand(cardIds.Select(id => new CardInstance(id, false)).ToArray())
-            .Enemy();
+        var fight = Fight.Hand(cardIds.Select(id => new CardInstance(id, false)).ToArray()).Enemy();
         fight.State.PlayerHp = 900;
         fight.State.PlayerMaxHp = 900;
         return fight;

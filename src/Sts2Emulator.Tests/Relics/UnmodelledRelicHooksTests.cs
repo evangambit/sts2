@@ -71,7 +71,11 @@ public class DiscardAndExhaustRelicTests
         var fight = Fight.WithRelics(RelicEffects.CharonsAshes);
         var before = fight.State.Enemies.Select(enemy => enemy.Hp).ToList();
 
-        CardEffects.ExhaustCard(fight.State, new CardInstance(430, false), rng: new System.Random(0));
+        CardEffects.ExhaustCard(
+            fight.State,
+            new CardInstance(430, false),
+            rng: new System.Random(0)
+        );
 
         for (int i = 0; i < fight.State.Enemies.Count; i++)
         {

@@ -28,7 +28,11 @@ public class LavaLampTests
 
         var upgradable = Enumerable
             .Range(0, clean.State.RewardCards.Length)
-            .Where(i => RunConstants.IsRunCardUpgradable(new CardInstance(clean.State.RewardCards[i], false)))
+            .Where(i =>
+                RunConstants.IsRunCardUpgradable(
+                    new CardInstance(clean.State.RewardCards[i], false)
+                )
+            )
             .ToList();
 
         Assert.NotEmpty(upgradable);

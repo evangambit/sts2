@@ -228,7 +228,10 @@ public static class CombatEngine
         // Its own power, not part of the chain above: `VeilpiercerPower.BeforeCardPlayed`
         // fires on any Ethereal card, so an Ethereal Attack spends a stack of this AND a
         // stack of FreeAttackPower.
-        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Veilpiercer) > 0 && IsEtherealForPowers(state, card))
+        if (
+            BuffSystem.Get(state.PlayerBuffs, BuffId.Veilpiercer) > 0
+            && IsEtherealForPowers(state, card)
+        )
         {
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Veilpiercer, -1);
         }
@@ -362,7 +365,10 @@ public static class CombatEngine
         // lands in -- read by Fetch, which draws only the first time a given copy is played
         // in a turn. Stamped here rather than in each branch below so no destination can
         // forget it.
-        card = card with { PlayedThisTurn = true };
+        card = card with
+        {
+            PlayedThisTurn = true,
+        };
 
         // `RazorTooth.AfterCardPlayed` upgrades the Attack or Skill that was just played,
         // on the COPY -- so it lands in the discard pile upgraded and comes back that way.
@@ -401,9 +407,10 @@ public static class CombatEngine
                     // remember.
                     BonusDamage = card.BonusDamage + state.PlayedCardBonusDamage,
                     BonusBlock = card.BonusBlock + state.PlayedCardBonusBlock,
-                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
-                        ? state.PlayedCardCostForCombat
-                        : card.CostForCombat,
+                    CostForCombat =
+                        state.PlayedCardCostForCombat != int.MinValue
+                            ? state.PlayedCardCostForCombat
+                            : card.CostForCombat,
                     // SetUntilPlayed -- and this is the play, so it is spent.
                     FreeUntilPlayed = false,
                 },
@@ -421,9 +428,10 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
-                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
-                        ? state.PlayedCardCostForCombat
-                        : card.CostForCombat,
+                    CostForCombat =
+                        state.PlayedCardCostForCombat != int.MinValue
+                            ? state.PlayedCardCostForCombat
+                            : card.CostForCombat,
                     // SetUntilPlayed -- and this is the play, so it is spent.
                     FreeUntilPlayed = false,
                 }
@@ -441,15 +449,19 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
-                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
-                        ? state.PlayedCardCostForCombat
-                        : card.CostForCombat,
+                    CostForCombat =
+                        state.PlayedCardCostForCombat != int.MinValue
+                            ? state.PlayedCardCostForCombat
+                            : card.CostForCombat,
                     // SetUntilPlayed -- and this is the play, so it is spent.
                     FreeUntilPlayed = false,
                 }
             );
         }
-        else if (ReturnsToHandAfterPlay(def) && state.Hand.Count < Effects.CardEffects.MaxCardsInHand)
+        else if (
+            ReturnsToHandAfterPlay(def)
+            && state.Hand.Count < Effects.CardEffects.MaxCardsInHand
+        )
         {
             // `GetResultPileTypeForCardPlay` returning Hand where it would otherwise be
             // Discard: Particle Wall comes back. The override only redirects the DISCARD
@@ -464,9 +476,10 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
-                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
-                        ? state.PlayedCardCostForCombat
-                        : card.CostForCombat,
+                    CostForCombat =
+                        state.PlayedCardCostForCombat != int.MinValue
+                            ? state.PlayedCardCostForCombat
+                            : card.CostForCombat,
                     FreeUntilPlayed = false,
                 }
             );
@@ -482,9 +495,10 @@ public static class CombatEngine
                     EnchantSpent = card.EnchantSpent || state.PlayedCardEnchantSpent,
                     EnchantAmount = card.EnchantAmount + (state.PlayedCardEnchantGrew ? 1 : 0),
                     CostBump = card.CostBump + state.PlayedCardCostBump,
-                    CostForCombat = state.PlayedCardCostForCombat != int.MinValue
-                        ? state.PlayedCardCostForCombat
-                        : card.CostForCombat,
+                    CostForCombat =
+                        state.PlayedCardCostForCombat != int.MinValue
+                            ? state.PlayedCardCostForCombat
+                            : card.CostForCombat,
                     // SetUntilPlayed -- and this is the play, so it is spent.
                     FreeUntilPlayed = false,
                     SlyForCombat = card.SlyForCombat || MasterPlannerMarks(state, def),
@@ -1951,7 +1965,10 @@ public static class CombatEngine
             }
         }
 
-        if (def.Type == CardType.Power && BuffSystem.Get(state.PlayerBuffs, BuffId.FreePowerPower) > 0)
+        if (
+            def.Type == CardType.Power
+            && BuffSystem.Get(state.PlayerBuffs, BuffId.FreePowerPower) > 0
+        )
         {
             return 0;
         }
@@ -2188,7 +2205,10 @@ public static class CombatEngine
                 {
                     // `CardCmd.ApplyKeyword(card, Ethereal)` -- the per-copy grant, the same
                     // one Call of the Void's power hands out.
-                    state.Hand[index] = state.Hand[index] with { EtherealForCombat = true };
+                    state.Hand[index] = state.Hand[index] with
+                    {
+                        EtherealForCombat = true,
+                    };
                 }
 
                 break;
@@ -2319,7 +2339,10 @@ public static class CombatEngine
                 // enchantment included, and the original stays where it was. Combat-local
                 // state does not travel: a copy made free for the turn is a copy of the
                 // card, not of the discount.
-                if (index < state.Hand.Count && state.Hand.Count < Effects.CardEffects.MaxCardsInHand)
+                if (
+                    index < state.Hand.Count
+                    && state.Hand.Count < Effects.CardEffects.MaxCardsInHand
+                )
                 {
                     var original = state.Hand[index];
                     state.Hand.Add(

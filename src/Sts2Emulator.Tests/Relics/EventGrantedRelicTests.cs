@@ -250,9 +250,7 @@ public class VenerableTeaSetTests
     {
         var plain = Fight.WithRelics();
         var teaSet = Fight.WithRelics(RelicEffects.VenerableTeaSet);
-        int index = teaSet.State.Relics.FindIndex(r =>
-            r.DefId == RelicEffects.VenerableTeaSet
-        );
+        int index = teaSet.State.Relics.FindIndex(r => r.DefId == RelicEffects.VenerableTeaSet);
         teaSet.State.Relics[index] = teaSet.State.Relics[index] with { Counter = 1 };
         teaSet.State.Energy = plain.State.Energy;
 
@@ -267,9 +265,7 @@ public class VenerableTeaSetTests
     public void TheFakeTeaSetPoursOne()
     {
         var fight = Fight.WithRelics(RelicEffects.FakeVenerableTeaSet);
-        int index = fight.State.Relics.FindIndex(r =>
-            r.DefId == RelicEffects.FakeVenerableTeaSet
-        );
+        int index = fight.State.Relics.FindIndex(r => r.DefId == RelicEffects.FakeVenerableTeaSet);
         fight.State.Relics[index] = fight.State.Relics[index] with { Counter = 1 };
         int before = fight.State.Energy;
 
@@ -339,10 +335,7 @@ public class DollRoomAndEventRelicTests
         engine.State.Relics.Add(new RelicInstance(RelicEffects.BingBong));
         int before = engine.State.Deck.Count;
 
-        RunNonCombatEffects.AddCardToDeck(
-            engine.State,
-            new CardInstance(IC.Bash, Upgraded: false)
-        );
+        RunNonCombatEffects.AddCardToDeck(engine.State, new CardInstance(IC.Bash, Upgraded: false));
 
         // One added, one cloned -- on top of the Bash the starter deck already holds.
         Assert.Equal(before + 2, engine.State.Deck.Count);
@@ -433,10 +426,7 @@ public class ActTwoEventRelicTests
             fight.Play(0);
         }
 
-        Assert.Equal(
-            plain.State.Enemies.Select(e => e.Hp),
-            wisp.State.Enemies.Select(e => e.Hp)
-        );
+        Assert.Equal(plain.State.Enemies.Select(e => e.Hp), wisp.State.Enemies.Select(e => e.Hp));
     }
 
     /// <summary>

@@ -94,7 +94,11 @@ public class FeelNoPainTests
     [Fact]
     public void ItTriggersJuggernaut()
     {
-        var fight = Fight.Hand().Enemy(hp: 40).PlayerBuff(BuffId.FeelNoPain, 3).PlayerBuff(BuffId.Juggernaut, 6);
+        var fight = Fight
+            .Hand()
+            .Enemy(hp: 40)
+            .PlayerBuff(BuffId.FeelNoPain, 3)
+            .PlayerBuff(BuffId.Juggernaut, 6);
 
         CardEffects.ExhaustCard(fight.State, new CardInstance(IC.StrikeIronclad, false));
 

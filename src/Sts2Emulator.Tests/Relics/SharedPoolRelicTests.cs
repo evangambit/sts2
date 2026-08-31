@@ -235,7 +235,11 @@ public class JossPaperTests
         fight.State.Hand = [];
         for (int i = 0; i < 4; i++)
         {
-            CardEffects.ExhaustCard(fight.State, new CardInstance(SI.Slice, false), rng: new Random(0));
+            CardEffects.ExhaustCard(
+                fight.State,
+                new CardInstance(SI.Slice, false),
+                rng: new Random(0)
+            );
         }
 
         Assert.Empty(fight.State.Hand);
@@ -448,7 +452,10 @@ public class EternalFeatherTests
             Relics = [new RelicInstance(RelicEffects.EternalFeather)],
             PlayerHp = 10,
             PlayerMaxHp = 200,
-            Deck = [.. Enumerable.Range(0, deckSize).Select(_ => new CardInstance(SI.Slice, false))],
+            Deck =
+            [
+                .. Enumerable.Range(0, deckSize).Select(_ => new CardInstance(SI.Slice, false)),
+            ],
         };
 
         RelicEffects.ApplyAfterRoomEntered(state, isRestSite: true, cameFromUnknown: false);
@@ -635,14 +642,7 @@ public class JuzuBraceletTests
         // A guard rather than a behaviour test: if the removal is ever deleted, the
         // predicate is left with no caller and this says so.
         string engine = System.IO.File.ReadAllText(
-            System.IO.Path.Combine(
-                RepoRoot(),
-                "src",
-                "Sts2Emulator",
-                "Core",
-                "Run",
-                "RunEngine.cs"
-            )
+            System.IO.Path.Combine(RepoRoot(), "src", "Sts2Emulator", "Core", "Run", "RunEngine.cs")
         );
 
         Assert.Contains("ForbidsUnknownMonsterRooms(State)", engine);
@@ -652,7 +652,10 @@ public class JuzuBraceletTests
     private static string RepoRoot()
     {
         var dir = new System.IO.DirectoryInfo(System.AppContext.BaseDirectory);
-        while (dir is not null && !System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "HANDOFF.md")))
+        while (
+            dir is not null
+            && !System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "HANDOFF.md"))
+        )
         {
             dir = dir.Parent;
         }

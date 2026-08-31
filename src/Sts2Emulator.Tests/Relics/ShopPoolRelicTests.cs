@@ -102,11 +102,19 @@ public class BurningSticksTests
         var fight = Fight.WithRelics(RelicEffects.BurningSticks);
         fight.State.Hand = [];
 
-        CardEffects.ExhaustCard(fight.State, new CardInstance(SI.DefendSilent, false), rng: new Random(0));
+        CardEffects.ExhaustCard(
+            fight.State,
+            new CardInstance(SI.DefendSilent, false),
+            rng: new Random(0)
+        );
         Assert.Contains(fight.State.Hand, c => c.DefId == SI.DefendSilent);
 
         fight.State.Hand.Clear();
-        CardEffects.ExhaustCard(fight.State, new CardInstance(SI.DefendSilent, false), rng: new Random(0));
+        CardEffects.ExhaustCard(
+            fight.State,
+            new CardInstance(SI.DefendSilent, false),
+            rng: new Random(0)
+        );
         Assert.Empty(fight.State.Hand);
     }
 
@@ -119,7 +127,11 @@ public class BurningSticksTests
         CardEffects.ExhaustCard(fight.State, new CardInstance(SI.Slice, false), rng: new Random(0));
         Assert.Empty(fight.State.Hand);
 
-        CardEffects.ExhaustCard(fight.State, new CardInstance(SI.DefendSilent, false), rng: new Random(0));
+        CardEffects.ExhaustCard(
+            fight.State,
+            new CardInstance(SI.DefendSilent, false),
+            rng: new Random(0)
+        );
         Assert.Contains(fight.State.Hand, c => c.DefId == SI.DefendSilent);
     }
 }
@@ -170,10 +182,7 @@ public class RingingTriangleTests
         // Ethereal cards exhaust before the retain check, so an Ascender's Bane in the
         // opening hand goes whatever the relic says -- the relic stops the FLUSH, not the
         // Ethereal exhaust.
-        var opening = fight
-            .State.Hand.Where(c => !c.IsEthereal())
-            .Select(c => c.DefId)
-            .ToList();
+        var opening = fight.State.Hand.Where(c => !c.IsEthereal()).Select(c => c.DefId).ToList();
 
         fight.EndTurn();
 
@@ -218,7 +227,10 @@ public class GhostSeedTests
 
         fight.EndTurn();
 
-        Assert.Equal(2, fight.State.ExhaustPile.Count(c => c.DefId is SI.StrikeSilent or SI.DefendSilent));
+        Assert.Equal(
+            2,
+            fight.State.ExhaustPile.Count(c => c.DefId is SI.StrikeSilent or SI.DefendSilent)
+        );
         Assert.Contains(fight.State.DiscardPile, c => c.DefId == SI.Backstab);
     }
 

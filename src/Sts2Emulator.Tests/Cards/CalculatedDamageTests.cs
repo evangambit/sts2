@@ -147,11 +147,17 @@ public class CalculatedDamageTests
     [Fact]
     public void WithoutTheEnchantmentBothArePrinted()
     {
-        var boomerang = Fight.Hand(new CardInstance(IC.SwordBoomerang, false)).Energy(3).Enemy(hp: 200);
+        var boomerang = Fight
+            .Hand(new CardInstance(IC.SwordBoomerang, false))
+            .Energy(3)
+            .Enemy(hp: 200);
         boomerang.Play(0);
         Assert.Equal(200 - 3 * 3, boomerang.Enemy0.Hp);
 
-        var conflagration = Fight.Hand(new CardInstance(IC.Conflagration, false)).Energy(3).Enemy(hp: 200);
+        var conflagration = Fight
+            .Hand(new CardInstance(IC.Conflagration, false))
+            .Energy(3)
+            .Enemy(hp: 200);
         conflagration.Play(0);
         Assert.Equal(200 - 4 * 2, conflagration.Enemy0.Hp);
     }

@@ -165,7 +165,11 @@ public class DrainPowerTests
 
     private static Fight Played(int discardCount, bool upgraded = false)
     {
-        var fight = Fight.Hand(new CardInstance(DrainPower, upgraded)).Energy(9).Enemy(hp: 200).Seed(7);
+        var fight = Fight
+            .Hand(new CardInstance(DrainPower, upgraded))
+            .Energy(9)
+            .Enemy(hp: 200)
+            .Seed(7);
         for (int i = 0; i < discardCount; i++)
         {
             fight.State.DiscardPile.Add(new CardInstance(Strike, false));

@@ -43,17 +43,20 @@ public class RelicConstantTests
     [MemberData(nameof(Files))]
     public void EveryIdConstantMatchesTheExtractedTable(string relativePath)
     {
-        var table = GeneratedData
-            .Relics.All.ToArray()
-            .ToDictionary(def => def.Name, def => def.Id);
+        var table = GeneratedData.Relics.All.ToArray().ToDictionary(def => def.Name, def => def.Id);
         string source = System.IO.File.ReadAllText(
-            System.IO.Path.Combine(RepoRoot(), relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar))
+            System.IO.Path.Combine(
+                RepoRoot(),
+                relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar)
+            )
         );
 
         var wrong = Declaration
             .Matches(source)
             // `RunConstants` prefixes them; `RelicEffects` does not.
-            .Select(m => (Name: StripRelicPrefix(m.Groups[1].Value), Value: int.Parse(m.Groups[2].Value)))
+            .Select(m =>
+                (Name: StripRelicPrefix(m.Groups[1].Value), Value: int.Parse(m.Groups[2].Value))
+            )
             .Where(pair => table.ContainsKey(pair.Name))
             .Where(pair => table[pair.Name] != pair.Value)
             .Select(pair => $"{pair.Name} = {pair.Value}, table says {table[pair.Name]}")
@@ -117,7 +120,10 @@ public class RelicConstantTests
     private static string RepoRoot()
     {
         var dir = new System.IO.DirectoryInfo(System.AppContext.BaseDirectory);
-        while (dir is not null && !System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "README.md")))
+        while (
+            dir is not null
+            && !System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "README.md"))
+        )
         {
             dir = dir.Parent;
         }

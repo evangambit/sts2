@@ -113,10 +113,7 @@ public class UnsettlingLampTests
     // relic test about debuff MAGNITUDE has to pick a roster that can actually receive
     // one. Encounter 3 is three enemies, none protected.
     private static Fight Lamped() =>
-        Fight.Encounter(
-            (CombatFactory.ActOneEncounter)3,
-            relicIds: [RelicEffects.UnsettlingLamp]
-        );
+        Fight.Encounter((CombatFactory.ActOneEncounter)3, relicIds: [RelicEffects.UnsettlingLamp]);
 
     [Fact]
     public void TheFirstDebuffingCardIsDoubled()

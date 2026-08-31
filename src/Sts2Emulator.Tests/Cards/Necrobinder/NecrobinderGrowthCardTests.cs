@@ -17,7 +17,8 @@ public class TimesUpTests
     [Fact]
     public void ItHitsForTheTargetsDoom()
     {
-        var fight = Fight.Hand(new CardInstance(TimesUp, false))
+        var fight = Fight
+            .Hand(new CardInstance(TimesUp, false))
             .Energy(9)
             .Enemy(hp: 200, buffs: [new BuffState(BuffId.Doom, 12)]);
 
@@ -40,7 +41,8 @@ public class TimesUpTests
     [Fact]
     public void CardsPlayedDoNotFeedIt()
     {
-        var fight = Fight.Hand(
+        var fight = Fight
+            .Hand(
                 new CardInstance(473, false),
                 new CardInstance(473, false),
                 new CardInstance(TimesUp, false)
@@ -334,7 +336,11 @@ public class SowTests
     [Fact]
     public void ItHitsEveryEnemyForEight()
     {
-        var fight = Fight.Hand(new CardInstance(Sow, false)).Energy(9).Enemy(hp: 200).Enemy(hp: 200);
+        var fight = Fight
+            .Hand(new CardInstance(Sow, false))
+            .Energy(9)
+            .Enemy(hp: 200)
+            .Enemy(hp: 200);
 
         fight.Play();
 

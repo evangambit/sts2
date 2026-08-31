@@ -127,7 +127,8 @@ public class InfernalBladeTests
         var seen = new HashSet<int>();
         for (int seed = 0; seed < 400; seed++)
         {
-            var fight = Fight.Hand(new CardInstance(IC.Stoke, false), new CardInstance(IC.Bludgeon, false))
+            var fight = Fight
+                .Hand(new CardInstance(IC.Stoke, false), new CardInstance(IC.Bludgeon, false))
                 .Energy(3);
             fight.State.CardGenerationRng = new CountingRandom(seed);
             fight.Play(0);

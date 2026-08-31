@@ -57,7 +57,11 @@ public class HandOfGreedTests
             .Hand(Card(CL.HandOfGreed))
             .Energy(2)
             .Enemy(hp: 1, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25))
-            .Enemy(hp: 40, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25));
+            .Enemy(
+                hp: 40,
+                defId: KE.DecimillipedeSegment,
+                buffs: new BuffState(BuffId.Reattach, 25)
+            );
         early.Play();
         Assert.Equal(0, early.State.PlayerGold);
 
@@ -65,9 +69,12 @@ public class HandOfGreedTests
             .Hand(Card(CL.HandOfGreed))
             .Energy(2)
             .Enemy(hp: 1, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25))
-            .Enemy(hp: 0, defId: KE.DecimillipedeSegment, buffs: new BuffState(BuffId.Reattach, 25));
+            .Enemy(
+                hp: 0,
+                defId: KE.DecimillipedeSegment,
+                buffs: new BuffState(BuffId.Reattach, 25)
+            );
         last.Play();
         Assert.Equal(20, last.State.PlayerGold);
     }
-
 }

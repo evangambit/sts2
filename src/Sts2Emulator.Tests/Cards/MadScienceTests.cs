@@ -16,7 +16,11 @@ public class MadScienceTests
     private const int MadScience = 292;
 
     private static CardInstance Tinkered(CardType type, TinkerRider rider = TinkerRider.None) =>
-        new CardInstance(MadScience, false) with { TinkerType = type, TinkerRider = rider };
+        new CardInstance(MadScience, false) with
+        {
+            TinkerType = type,
+            TinkerRider = rider,
+        };
 
     [Fact]
     public void AnAttackDealsTwelveAndNothingElse()
@@ -72,7 +76,10 @@ public class MadScienceTests
     [Fact]
     public void ViolenceMakesTheAttackHitThreeTimes()
     {
-        var fight = Fight.Hand(Tinkered(CardType.Attack, TinkerRider.Violence)).Energy(3).Enemy(hp: 100);
+        var fight = Fight
+            .Hand(Tinkered(CardType.Attack, TinkerRider.Violence))
+            .Energy(3)
+            .Enemy(hp: 100);
 
         fight.Play(0);
 
@@ -82,7 +89,10 @@ public class MadScienceTests
     [Fact]
     public void SappingAddsBothDebuffsOnTopOfTheChosenForm()
     {
-        var fight = Fight.Hand(Tinkered(CardType.Skill, TinkerRider.Sapping)).Energy(3).Enemy(hp: 60);
+        var fight = Fight
+            .Hand(Tinkered(CardType.Skill, TinkerRider.Sapping))
+            .Energy(3)
+            .Enemy(hp: 60);
 
         fight.Play(0);
 

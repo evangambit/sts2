@@ -14,7 +14,11 @@ public class BuryTests
     [Fact]
     public void ItHitsOneEnemyForFiftyTwo()
     {
-        var fight = Fight.Hand(new CardInstance(Bury, false)).Energy(9).Enemy(hp: 200).Enemy(hp: 200);
+        var fight = Fight
+            .Hand(new CardInstance(Bury, false))
+            .Energy(9)
+            .Enemy(hp: 200)
+            .Enemy(hp: 200);
 
         fight.Play();
 
@@ -41,7 +45,11 @@ public class DefyTests
 
     private static Fight Played(bool upgraded = false)
     {
-        var fight = Fight.Hand(new CardInstance(Defy, upgraded)).Energy(9).Enemy(hp: 200).Enemy(hp: 200);
+        var fight = Fight
+            .Hand(new CardInstance(Defy, upgraded))
+            .Energy(9)
+            .Enemy(hp: 200)
+            .Enemy(hp: 200);
         fight.Play();
         return fight;
     }

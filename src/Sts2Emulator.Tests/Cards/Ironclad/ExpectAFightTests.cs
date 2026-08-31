@@ -43,7 +43,10 @@ public class ExpectAFightTests
     public void ItLocksOutFurtherEnergyGainsThisTurn()
     {
         var fight = Fight
-            .Hand(new CardInstance(IC.ExpectAFight, false), new CardInstance(IC.StrikeIronclad, false))
+            .Hand(
+                new CardInstance(IC.ExpectAFight, false),
+                new CardInstance(IC.StrikeIronclad, false)
+            )
             .Energy(3);
 
         fight.Play(0);

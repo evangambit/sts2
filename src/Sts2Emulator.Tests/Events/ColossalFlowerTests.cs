@@ -120,10 +120,7 @@ public class ColossalFlowerTests
 
         Assert.Equal(
             allowed,
-            RunNonCombatEffects.IsEventAllowedForRun(
-                engine.State,
-                RunConstants.EventColossalFlower
-            )
+            RunNonCombatEffects.IsEventAllowedForRun(engine.State, RunConstants.EventColossalFlower)
         );
     }
 }

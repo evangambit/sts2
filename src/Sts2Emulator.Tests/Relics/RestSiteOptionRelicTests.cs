@@ -37,10 +37,7 @@ public class GiryaTests
     public void TheLiftOptionIsOfferedOnlyWhileTheRelicIsHeld()
     {
         Assert.DoesNotContain(RunConstants.RestLiftAction, RestActions(AtARestSite()));
-        Assert.Contains(
-            RunConstants.RestLiftAction,
-            RestActions(AtARestSite(RelicEffects.Girya))
-        );
+        Assert.Contains(RunConstants.RestLiftAction, RestActions(AtARestSite(RelicEffects.Girya)));
     }
 
     /// <summary>
@@ -73,13 +70,7 @@ public class GiryaTests
     public void EachLiftIsAPointOfStrengthInEveryCombat(int lifts, int strength)
     {
         var state = new CombatState();
-        CombatFactory.Reset(
-            state,
-            new Random(0),
-            TestDeck.StarterDeckIds,
-            1,
-            [RelicEffects.Girya]
-        );
+        CombatFactory.Reset(state, new Random(0), TestDeck.StarterDeckIds, 1, [RelicEffects.Girya]);
         int index = state.Relics.FindIndex(relic => relic.DefId == RelicEffects.Girya);
         state.Relics[index] = state.Relics[index] with { Counter = lifts };
 
@@ -135,10 +126,7 @@ public class ShovelTests
     public void TheDigOptionIsOfferedOnlyWhileTheRelicIsHeld()
     {
         Assert.DoesNotContain(RunConstants.RestDigAction, RestActions(AtARestSite()));
-        Assert.Contains(
-            RunConstants.RestDigAction,
-            RestActions(AtARestSite(RelicEffects.Shovel))
-        );
+        Assert.Contains(RunConstants.RestDigAction, RestActions(AtARestSite(RelicEffects.Shovel)));
     }
 
     /// <summary>

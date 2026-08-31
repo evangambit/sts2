@@ -12,7 +12,8 @@ public class DeathbringerTests
 
     private static Fight Played(bool upgraded = false)
     {
-        var fight = Fight.Hand(new CardInstance(Deathbringer, upgraded))
+        var fight = Fight
+            .Hand(new CardInstance(Deathbringer, upgraded))
             .Energy(9)
             .Enemy(hp: 200)
             .Enemy(hp: 200);

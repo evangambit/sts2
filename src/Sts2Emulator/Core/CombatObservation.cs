@@ -40,6 +40,7 @@ public static class CombatObservation
     public const int SelectionKindOffset = GoldOffset + 1;
     public const int SelectionCountOffset = SelectionKindOffset + 1;
     public const int SelectionOffset = SelectionCountOffset + 1;
+
     /// <summary>
     /// The orb ring. <c>Recursion</c> and its kin cap capacity at 10, so ten slots hold
     /// any legal ring.

@@ -58,10 +58,8 @@ public class AfterlifeTests
     [Fact]
     public void ASecondSummonGrowsTheSameOsty()
     {
-        var fight = Fight.Hand(
-                new CardInstance(Bodyguard, false),
-                new CardInstance(Afterlife, false)
-            )
+        var fight = Fight
+            .Hand(new CardInstance(Bodyguard, false), new CardInstance(Afterlife, false))
             .Energy(9)
             .Enemy(hp: 200);
 

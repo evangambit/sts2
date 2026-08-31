@@ -94,9 +94,7 @@ public class GraveOfTheForgottenTests
             .First(i => RunNonCombatEffects.CanSelectCard(engine.State, i));
         engine.Step(index, -1, out _, out _, out _);
 
-        var enchanted = engine.State.Deck.Where(card =>
-            card.Enchantment == Enchantment.SoulsPower
-        );
+        var enchanted = engine.State.Deck.Where(card => card.Enchantment == Enchantment.SoulsPower);
         Assert.Single(enchanted);
         Assert.Equal(1, enchanted.First().EnchantAmount);
     }
@@ -122,7 +120,10 @@ public class GraveOfTheForgottenTests
     [Fact]
     public void OnlyAnExhaustingCardCanTakeIt()
     {
-        var afterlife = new CardInstance(RunNonCombatEffects.NamedCard("Afterlife"), Upgraded: false);
+        var afterlife = new CardInstance(
+            RunNonCombatEffects.NamedCard("Afterlife"),
+            Upgraded: false
+        );
         var strike = new CardInstance(RunNonCombatEffects.NamedCard("StrikeIronclad"), false);
 
         Assert.True(Enchantments.CanEnchant(afterlife, Enchantment.SoulsPower));

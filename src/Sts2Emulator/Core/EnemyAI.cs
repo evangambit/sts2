@@ -3758,10 +3758,7 @@ public static class EnemyAI
                 // SOUL_SIPHON takes the Strength and Dexterity it gives itself: the
                 // matriarch's attacks climb by 2 every fourth turn, which is the whole
                 // shape of the fight after the first cycle.
-                Effects.RelicEffects.GainPlayerStrength(
-                    state,
-                    -enemy.CurrentIntent.Magnitude
-                );
+                Effects.RelicEffects.GainPlayerStrength(state, -enemy.CurrentIntent.Magnitude);
                 BuffSystem.Apply(
                     state.PlayerBuffs,
                     BuffId.Dexterity,
@@ -3915,10 +3912,7 @@ public static class EnemyAI
                 break;
 
             case KE.TheLost:
-                Effects.RelicEffects.GainPlayerStrength(
-                    state,
-                    -enemy.CurrentIntent.Magnitude
-                );
+                Effects.RelicEffects.GainPlayerStrength(state, -enemy.CurrentIntent.Magnitude);
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
                 break;
 

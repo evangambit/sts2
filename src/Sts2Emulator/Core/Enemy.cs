@@ -76,6 +76,7 @@ public sealed class EnemyState
     public Intent CurrentIntent;
     public Intent? SecondaryIntent;
     public List<BuffState> Buffs = [];
+
     /// <summary>
     /// `DamageReceivedEntry`s against this enemy from the player, this turn, from POWERED
     /// attacks. Beat Into Shape counts them to size its Forge, and it counts damage

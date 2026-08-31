@@ -29,7 +29,12 @@ internal static class RegentBoard
     /// same name -- `fight.Play(someDefId)` binds to `Fight.Play(index)` and plays whatever
     /// happens to be at that index.
     /// </summary>
-    internal static Fight PlayCard(this Fight fight, int defId, bool upgraded = false, int target = 0)
+    internal static Fight PlayCard(
+        this Fight fight,
+        int defId,
+        bool upgraded = false,
+        int target = 0
+    )
     {
         fight.State.Hand.Add(new CardInstance(defId, upgraded));
         fight.Play(fight.State.Hand.Count - 1, target: target);
@@ -37,7 +42,9 @@ internal static class RegentBoard
     }
 
     internal static int ForgedDamage(this Fight fight) =>
-        fight.State.Hand.Concat(fight.State.DrawPile).Concat(fight.State.DiscardPile)
+        fight
+            .State.Hand.Concat(fight.State.DrawPile)
+            .Concat(fight.State.DiscardPile)
             .Concat(fight.State.ExhaustPile)
             .Where(c => c.DefId == SovereignBlade)
             .Select(c => c.BonusDamage)

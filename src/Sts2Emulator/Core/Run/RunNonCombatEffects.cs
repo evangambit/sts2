@@ -74,9 +74,7 @@ public static class RunNonCombatEffects
     /// </remarks>
     public static void PayMawBank(RunState state)
     {
-        int index = state.Relics.FindIndex(relic =>
-            relic.DefId == Effects.RelicEffects.MawBank
-        );
+        int index = state.Relics.FindIndex(relic => relic.DefId == Effects.RelicEffects.MawBank);
         if (index >= 0 && state.Relics[index].Counter == 0)
         {
             GainGold(state, 12);
@@ -91,9 +89,7 @@ public static class RunNonCombatEffects
             return;
         }
 
-        int index = state.Relics.FindIndex(relic =>
-            relic.DefId == Effects.RelicEffects.MawBank
-        );
+        int index = state.Relics.FindIndex(relic => relic.DefId == Effects.RelicEffects.MawBank);
         if (index >= 0)
         {
             state.Relics[index] = state.Relics[index] with { Counter = 1 };
@@ -211,7 +207,11 @@ public static class RunNonCombatEffects
             return card;
         }
 
-        return card with { Enchantment = Enchantment.Nimble, EnchantAmount = 2 };
+        return card with
+        {
+            Enchantment = Enchantment.Nimble,
+            EnchantAmount = 2,
+        };
     }
 
     public static CardInstance UpgradedByEggs(RunState state, CardInstance card)
@@ -753,10 +753,7 @@ public static class RunNonCombatEffects
                 //
                 // The emulator added a random card off the whole reward pool on the UpFront
                 // stream: wrong card, wrong pool, wrong stream.
-                AddCardToDeck(
-                    state,
-                    new CardInstance(DustyTomeCard(state), Upgraded: true)
-                );
+                AddCardToDeck(state, new CardInstance(DustyTomeCard(state), Upgraded: true));
                 break;
             case RunConstants.RelicNewLeaf:
                 // CardsVar(1) through CardSelectCmd.FromDeckForTransformation, then
@@ -1376,8 +1373,7 @@ public static class RunNonCombatEffects
                 == CardRarity.Basic,
             DeckSelection.Upgrade => RunConstants.IsRunCardUpgradable(card),
             // Dolly's Mirror excludes only Quest cards; a curse is a legal copy.
-            DeckSelection.Duplicate => GeneratedData.Cards.Get(card.DefId).Type
-                != CardType.Quest,
+            DeckSelection.Duplicate => GeneratedData.Cards.Get(card.DefId).Type != CardType.Quest,
             // `FromDeckForRemoval` filters on `c.IsRemovable && filter(c)`, so the Eternal
             // check applies to this one too.
             DeckSelection.RemoveUpgradable => RunConstants.IsRunCardUpgradable(card)
@@ -3062,9 +3058,7 @@ public static class RunNonCombatEffects
             .CardPools.Ironclad.ToArray()
             .Where(id =>
                 GeneratedData.Cards.Get(id).Rarity == CardRarity.Ancient
-                && !RunConstants.TranscendenceCardNames.Contains(
-                    GeneratedData.Cards.Get(id).Name
-                )
+                && !RunConstants.TranscendenceCardNames.Contains(GeneratedData.Cards.Get(id).Name)
             )
             .ToArray();
         return candidates.Length == 0

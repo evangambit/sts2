@@ -97,11 +97,7 @@ public class ChargeTests
         fight.Choose(1);
         Assert.Null(fight.Pending);
 
-
-        Assert.Equal(
-            2,
-            fight.State.DrawPile.Count(c => c.DefId == RegentSelection.MinionDiveBomb)
-        );
+        Assert.Equal(2, fight.State.DrawPile.Count(c => c.DefId == RegentSelection.MinionDiveBomb));
     }
 
     /// <summary>In place — the pile order the rest of the turn draws from is unchanged.</summary>
@@ -152,10 +148,7 @@ public class GuardsTests
         fight.Choose(0);
         Assert.Null(fight.Pending);
 
-        Assert.Equal(
-            2,
-            fight.State.Hand.Count(c => c.DefId == RegentSelection.MinionSacrifice)
-        );
+        Assert.Equal(2, fight.State.Hand.Count(c => c.DefId == RegentSelection.MinionSacrifice));
     }
 
     /// <summary>A minimum of zero: the screen can be declined.</summary>

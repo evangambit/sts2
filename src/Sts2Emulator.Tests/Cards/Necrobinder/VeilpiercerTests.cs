@@ -95,9 +95,7 @@ public class VeilpiercerTests
     [Fact]
     public void AnEtherealAttackSpendsAStackOfBothItAndFreeAttackPower()
     {
-        var fight = Fresh()
-            .PlayerBuff(BuffId.Veilpiercer, 1)
-            .PlayerBuff(BuffId.FreeAttackPower, 1);
+        var fight = Fresh().PlayerBuff(BuffId.Veilpiercer, 1).PlayerBuff(BuffId.FreeAttackPower, 1);
         fight.State.Hand.Add(new CardInstance(Defile, false));
 
         fight.Play(0, target: 0);

@@ -15,8 +15,7 @@ public class DirgeTests
     private const int Dirge = 145;
     private const int Soul = 446;
 
-    private static Fight WithEnergy(int energy) =>
-        Fight.Hand().Energy(energy).Enemy(hp: 200);
+    private static Fight WithEnergy(int energy) => Fight.Hand().Energy(energy).Enemy(hp: 200);
 
     [Fact]
     public void ItSummonsOncePerEnergySpent()

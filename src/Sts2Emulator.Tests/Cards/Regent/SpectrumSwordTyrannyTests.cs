@@ -39,10 +39,7 @@ public class SpectrumShiftTests
         fight.EndTurn();
 
         Assert.Equal(plain + 1, fight.State.Hand.Count);
-        Assert.Contains(
-            fight.State.Hand,
-            c => GeneratedData.CardPools.Colorless.Contains(c.DefId)
-        );
+        Assert.Contains(fight.State.Hand, c => GeneratedData.CardPools.Colorless.Contains(c.DefId));
     }
 
     /// <summary>

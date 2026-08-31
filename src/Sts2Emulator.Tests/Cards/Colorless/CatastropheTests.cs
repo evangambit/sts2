@@ -96,12 +96,7 @@ public class CatastropheTests
             var fight = Fight
                 .Hand(Card(CL.Catastrophe))
                 .Energy(2)
-                .Draw(
-                    Card(IC.StrikeIronclad),
-                    Card(IC.Bludgeon),
-                    Card(IC.Cinder),
-                    Card(IC.Anger)
-                )
+                .Draw(Card(IC.StrikeIronclad), Card(IC.Bludgeon), Card(IC.Cinder), Card(IC.Anger))
                 .Enemy(hp: 400);
             fight.State.ShuffleRng = new CountingRandom(seed);
 

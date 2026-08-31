@@ -15,10 +15,7 @@ public class DollysMirrorTests
 {
     private static RunState WithDeck(params int[] cardIds)
     {
-        var state = new RunState
-        {
-            Deck = [.. cardIds.Select(id => new CardInstance(id, false))],
-        };
+        var state = new RunState { Deck = [.. cardIds.Select(id => new CardInstance(id, false))] };
         return state;
     }
 

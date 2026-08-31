@@ -48,9 +48,7 @@ public class SymbioteTests
             .First(i => RunNonCombatEffects.CanSelectCard(engine.State, i));
         engine.Step(index, -1, out _, out _, out _);
 
-        var corrupted = engine.State.Deck.Where(card =>
-            card.Enchantment == Enchantment.Corrupted
-        );
+        var corrupted = engine.State.Deck.Where(card => card.Enchantment == Enchantment.Corrupted);
         Assert.Single(corrupted);
         // `CardCmd.Enchant<Corrupted>(cardModel, 1m)` -- every event enchantment is 1.
         Assert.Equal(1, corrupted.First().EnchantAmount);
@@ -95,10 +93,7 @@ public class SymbioteTests
         // One in, one out: the transform replaces rather than adds, and the replacement
         // is not the card it ate.
         Assert.Equal(deck, engine.State.Deck.Count);
-        Assert.Equal(
-            copiesBefore - 1,
-            engine.State.Deck.Count(card => card.DefId == burned)
-        );
+        Assert.Equal(copiesBefore - 1, engine.State.Deck.Count(card => card.DefId == burned));
     }
 
     /// <summary>

@@ -254,7 +254,10 @@ public class FlakCannonTests
         fight.Play();
 
         Assert.Equal(400 - damage * 3, fight.Enemy0.Hp);
-        Assert.Equal(3, fight.State.ExhaustPile.Count(c => c.DefId is ST.Dazed or ST.Slimed or ST.Wound));
+        Assert.Equal(
+            3,
+            fight.State.ExhaustPile.Count(c => c.DefId is ST.Dazed or ST.Slimed or ST.Wound)
+        );
     }
 
     [Fact]
@@ -662,7 +665,10 @@ public class TrashToTreasureTests
         var seen = new HashSet<OrbType>();
         for (int seed = 0; seed < 40; seed++)
         {
-            var fight = DefectFight.Hand(Card(TrashToTreasure), Card(GunkUp)).Energy(9).Enemy(hp: 400);
+            var fight = DefectFight
+                .Hand(Card(TrashToTreasure), Card(GunkUp))
+                .Energy(9)
+                .Enemy(hp: 400);
             fight.State.OrbGenerationRng = new CountingRandom(seed);
             fight.Play();
             fight.Play();
