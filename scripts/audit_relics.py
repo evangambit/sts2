@@ -155,6 +155,40 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "AlchemicalCoffer": (
+        "2f97e5a40e58",
+        "+4 potion slots then four potions off CombatPotionGeneration, slots first so they all fit; correct.",
+    ),
+    "ArcaneScroll": (
+        "ff74c3fb7138",
+        "One RARE card from the character's own pool at Uniform odds with NoUpgradeRoll, into the deck; correct.",
+    ),
+    "BiiigHug": (
+        "31993acb6a98",
+        "Remove four CHOSEN cards on pickup -- and then a SOOT into the draw pile on every shuffle for the rest of the run. Only the pickup was modelled, which made a hug that costs nothing.",
+    ),
+    "BlackBlood": (
+        "2511fa8bcc83",
+        "Heal 12 after a combat victory; correct. Burning Blood's Ancient twin.",
+    ),
+    "BlessedAntler": (
+        "42864be085a2",
+        "+1 max energy, and three Dazed into the draw pile before turn one's hand; both halves correct.",
+    ),
+    "BoomingConch": (
+        "3013ed9dced0",
+        "In an ELITE only: two cards on turn one through `ModifyHandDraw`, and +1 energy at turn start. The cards were a separate `DrawCards` at combat start -- the third relic with that mechanic and the second modelled the wrong way.",
+    ),
+    "CursedPearl": ("5e6436a77046", "A Greed curse and 333 gold on pickup; correct."),
+    "LeadPaperweight": (
+        "26d28dd678a7",
+        "Two COLOURLESS cards at RegularEncounter odds on a skippable choose-a-card screen; correct.",
+    ),
+    "NeowsTorment": ("3f921eca9c5f", "A Neow's Fury into the deck on pickup; correct."),
+    "SilkenTress": (
+        "51ca42828b23",
+        "Pickup takes ALL the player's gold; correct. Its other half -- enchanting card REWARDS with Glam until used -- needs an enchantment the emulator does not model, and is not there.",
+    ),
     "Akabeko": ("b0c13a3b38d2", "Vigor 8 on turn one; correct."),
     "Anchor": ("2a4f263578aa", "10 unpowered block at combat start; correct."),
     "ArtOfWar": (

@@ -10,6 +10,7 @@ public static class RelicEffects
     public const int BagOfMarbles = 9;
     public const int BagOfPreparation = 10;
     public const int BlessedAntler = 21;
+    public const int BiiigHug = 17;
     public const int BloodVial = 23;
     public const int BoomingConch = 29;
     public const int BronzeScales = 35;
@@ -399,9 +400,11 @@ public static class RelicEffects
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Thorns, 3);
         }
 
+        // Only the energy is the conch's combat-start effect. Its two CARDS are a
+        // `ModifyHandDraw`, and they ride `ExtraOpeningHandDraw` with Ring of the Snake's
+        // and Bag of Preparation's -- see the remark there.
         if (HasRelic(state, BoomingConch) && state.IsEliteCombat)
         {
-            CardEffects.DrawCards(state, 2, rng);
             CardEffects.GainEnergy(state, 1);
         }
     }
@@ -537,11 +540,20 @@ public static class RelicEffects
     /// opening-hand size feeds `ApplyTurnOneDrawPileReorder`, which is what decides how
     /// many Innate cards the hand is guaranteed to hold.
     ///
-    /// The two relics are the SAME mechanic and were modelled two different ways, which is
-    /// the more useful half of the finding: one of them had to be wrong.
+    /// THREE relics carry the same mechanic and the emulator had them three different
+    /// ways: Ring of the Snake through this path and correct, Bag of Preparation and
+    /// Booming Conch through a separate `DrawCards` at combat start. One shape modelled
+    /// more than once is a shape modelled wrongly somewhere, which is the more useful half
+    /// of the finding.
+    ///
+    /// Booming Conch also asks the ROOM: its `ModifyHandDraw` pays only in an Elite, and
+    /// only on turn one. Its energy is a separate `AfterSideTurnStart` and stays where it
+    /// is, in `ApplyCombatStart`.
     /// </remarks>
     public static int ExtraOpeningHandDraw(CombatState state) =>
-        (HasRelic(state, RingOfTheSnake) ? 2 : 0) + (HasRelic(state, BagOfPreparation) ? 2 : 0);
+        (HasRelic(state, RingOfTheSnake) ? 2 : 0)
+        + (HasRelic(state, BagOfPreparation) ? 2 : 0)
+        + (HasRelic(state, BoomingConch) && state.IsEliteCombat ? 2 : 0);
 
     /// <summary>
     /// The relics that pay out every Nth card of a type played in one turn. The game holds
@@ -1277,6 +1289,14 @@ public static class RelicEffects
         if (HasRelic(state, TheAbacus))
         {
             CardEffects.GainUnpoweredBlock(state, 6, rng);
+        }
+
+        // `BiiigHug.AfterShuffle`: a SOOT into the draw pile at a random position, every
+        // shuffle, for the whole run. Only its pickup half -- remove four chosen cards --
+        // was modelled, which made a hug that costs nothing a hug that only pays.
+        if (HasRelic(state, BiiigHug))
+        {
+            CardEffects.AddCardToDrawPileRandomly(state, ST.Soot, 1, rng ?? new Random());
         }
     }
 

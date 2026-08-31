@@ -284,4 +284,5 @@ public static class ST
     public const int MindRot = 10033;
     public const int Sloth = 10038;
     public const int WasteAway = 10041;
+    public const int Soot = 10039;
 }
