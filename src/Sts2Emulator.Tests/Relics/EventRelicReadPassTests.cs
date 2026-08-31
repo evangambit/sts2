@@ -159,3 +159,70 @@ public class LavaRockTests
         Assert.False(engine.State.LavaRockTriggered);
     }
 }
+
+/// <summary>
+/// `PaelsLegion` is a PET that doubles a card's block, then sits out `Turns` (2) of its
+/// owner's turns before it will again.
+/// </summary>
+/// <remarks>
+/// The emulator had the creature in `EnemyAI` and the relic in Pael's blessing options,
+/// and no behaviour at all: the pet existed and did nothing. `ModifyBlockMultiplicative`
+/// returns 2 while the cooldown is clear; `AfterCardPlayed` starts the cooldown once the
+/// doubled gain has actually landed, which is Vambrace's latch with a timer instead of a
+/// once-per-combat flag.
+/// </remarks>
+public class PaelsLegionTests
+{
+    private const int DefendIronclad = 131;
+
+    private static Fight WithLegion() =>
+        Fight.WithRelics(RelicEffects.PaelsLegion).Energy(9).Enemy(hp: 200);
+
+    [Fact]
+    public void ItDoublesTheFirstCardBlock()
+    {
+        var plain = Fight.WithRelics().Energy(9).Enemy(hp: 200);
+        plain.State.Hand.Add(new CardInstance(DefendIronclad, false));
+        plain.Play(plain.State.Hand.Count - 1);
+
+        var legion = WithLegion();
+        legion.State.Hand.Add(new CardInstance(DefendIronclad, false));
+        legion.Play(legion.State.Hand.Count - 1);
+
+        Assert.Equal(plain.State.PlayerBlock * 2, legion.State.PlayerBlock);
+    }
+
+    /// <summary>And then it sits out — the very next card is not doubled.</summary>
+    [Fact]
+    public void TheNextCardIsNotDoubled()
+    {
+        var legion = WithLegion();
+        legion.State.Hand.Add(new CardInstance(DefendIronclad, false));
+        legion.Play(legion.State.Hand.Count - 1);
+        int afterFirst = legion.State.PlayerBlock;
+
+        legion.State.Hand.Add(new CardInstance(DefendIronclad, false));
+        legion.Play(legion.State.Hand.Count - 1);
+
+        // The second gain is the plain one: half of what the first paid.
+        Assert.Equal(afterFirst + afterFirst / 2, legion.State.PlayerBlock);
+    }
+
+    /// <summary>Two of the owner's turns and the pet is ready again.</summary>
+    [Fact]
+    public void ItComesBackAfterTwoTurns()
+    {
+        var legion = WithLegion();
+        legion.State.Hand.Add(new CardInstance(DefendIronclad, false));
+        legion.Play(legion.State.Hand.Count - 1);
+        int doubled = legion.State.PlayerBlock;
+
+        legion.EndTurn();
+        legion.EndTurn();
+        legion.State.PlayerBlock = 0;
+        legion.State.Hand.Add(new CardInstance(DefendIronclad, false));
+        legion.Play(legion.State.Hand.Count - 1);
+
+        Assert.Equal(doubled, legion.State.PlayerBlock);
+    }
+}

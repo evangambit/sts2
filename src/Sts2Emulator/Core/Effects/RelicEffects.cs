@@ -11,6 +11,7 @@ public static class RelicEffects
     public const int BagOfPreparation = 10;
     public const int BlessedAntler = 21;
     public const int BiiigHug = 17;
+    public const int PaelsLegion = 181;
     public const int BloodVial = 23;
     public const int BoomingConch = 29;
     public const int BronzeScales = 35;
@@ -1044,6 +1045,29 @@ public static class RelicEffects
     /// </summary>
     internal static bool DoublesCardBlock(CombatState state) =>
         HasRelic(state, Vambrace) && !state.VambraceSpent;
+
+    /// <summary>`PaelsLegion`'s `DynamicVar("Turns", 2)`.</summary>
+    internal const int PaelsLegionCooldownTurns = 2;
+
+    /// <summary>
+    /// `PaelsLegion.ModifyBlockMultiplicative`: the pet doubles a CARD's block whenever
+    /// its cooldown is clear, then sits out `Turns` of them. The relic was an id in
+    /// `EnemyAI` and a Pael blessing option -- the pet existed and did nothing.
+    /// </summary>
+    internal static bool PaelsLegionDoublesBlock(CombatState state) =>
+        HasRelic(state, PaelsLegion) && state.PaelsLegionCooldown <= 0;
+
+    /// <summary>
+    /// `PaelsLegion.AfterSideTurnStart` ticks the cooldown down at the start of each of
+    /// its owner's turns.
+    /// </summary>
+    internal static void TickPaelsLegionCooldown(CombatState state)
+    {
+        if (state.PaelsLegionCooldown > 0)
+        {
+            state.PaelsLegionCooldown--;
+        }
+    }
 
     /// <summary>
     /// `ModifyHpLostAfterOsty` from the two relics that reduce or cap HP loss. Both are

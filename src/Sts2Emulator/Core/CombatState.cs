@@ -53,6 +53,13 @@ public sealed class CombatState
     public bool BattlewornDummyRanOutOfTime;
 
     /// <summary>
+    /// `PaelsLegion`'s `Cooldown`: turns left before the pet will double a card's block
+    /// again. Set to `Turns` (2) when a doubled gain lands, decremented at the owner's
+    /// side turn start.
+    /// </summary>
+    public int PaelsLegionCooldown;
+
+    /// <summary>
     /// <c>GremlinMercNormal.GoldWasStolen</c>: the merc died having taken something.
     /// <c>SurprisePower.AfterDeath</c> only marks it when the total is above zero.
     /// </summary>

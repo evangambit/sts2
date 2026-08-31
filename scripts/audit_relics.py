@@ -155,6 +155,23 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "PaelsClaw": (
+        "cc7295a9cb5c",
+        "GOOPY onto every deck card that can take it -- no screen, no choice; correct. Its `CardsVar(3)` is display text, not a count.",
+    ),
+    "PaelsGrowth": (
+        "acdb18543b5b",
+        "One CHOSEN card enchanted with CLONE, and a rest-site option that copies every Clone-enchanted card; both halves correct.",
+    ),
+    "PaelsHorn": ("52d0182ed3ac", "Two Relax into the deck; correct."),
+    "PaelsLegion": (
+        "76d1df9a9d21",
+        "A PET that doubles a card's block and then sits out two of its owner's turns. It had the creature in EnemyAI and the relic in Pael's options and no behaviour at all -- the pet existed and did nothing.",
+    ),
+    "PaelsTooth": (
+        "16c488437c26",
+        "Five CHOSEN cards removed, offered only from the upgradable ones; correct.",
+    ),
     "Ectoplasm": (
         "ff4aca149d60",
         "+1 max energy and all gold gains zeroed; both halves correct.",

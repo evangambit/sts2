@@ -97,6 +97,7 @@ public static class StateCloning
             RoyaltiesGold = combat.RoyaltiesGold,
             FatGremlinEscaped = combat.FatGremlinEscaped,
             BattlewornDummyRanOutOfTime = combat.BattlewornDummyRanOutOfTime,
+            PaelsLegionCooldown = combat.PaelsLegionCooldown,
             MercGoldWasStolen = combat.MercGoldWasStolen,
             Hand = [.. combat.Hand],
             DrawPile = [.. combat.DrawPile],

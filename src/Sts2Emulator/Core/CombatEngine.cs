@@ -1112,6 +1112,7 @@ public static class CombatEngine
 
         // ── Start of next player turn ─────────────────────────────────────────
         state.Turn++;
+        Effects.RelicEffects.TickPaelsLegionCooldown(state);
         state.PlayerTurn = true;
         // `VoidFormPower.BeforeSideTurnStart` clears its own count.
         state.VoidFormCardsPlayedThisTurn = 0;

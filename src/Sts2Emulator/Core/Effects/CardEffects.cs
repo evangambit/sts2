@@ -4258,6 +4258,15 @@ public static class CardEffects
             state.VambraceSpent = true;
         }
 
+        // `PaelsLegion.ModifyBlockMultiplicative` returns 2 while its cooldown is clear,
+        // and `AfterCardPlayed` starts the cooldown once the doubled gain has actually
+        // landed -- Vambrace's latch, with a timer instead of a once-per-combat flag.
+        if (powered && effective > 0 && RelicEffects.PaelsLegionDoublesBlock(state))
+        {
+            effective *= 2;
+            state.PaelsLegionCooldown = RelicEffects.PaelsLegionCooldownTurns;
+        }
+
         int shadowmeld = BuffSystem.Get(state.PlayerBuffs, BuffId.Shadowmeld);
         for (int i = 0; i < shadowmeld; i++)
         {
