@@ -588,6 +588,28 @@ public sealed class RunEngine
                 SetMask(mask, RunConstants.RewardSkipAction);
                 break;
 
+            case RunPhase.FakeMerchant:
+            {
+                var stall = RunNonCombatEffects.FakeMerchantStock(State);
+                for (int i = 0; i < stall.Count; i++)
+                {
+                    if (stall[i] != 0 && State.Gold >= RunConstants.FakeMerchantRelicCost)
+                    {
+                        SetMask(mask, i);
+                    }
+                }
+
+                // The potion is thrown from the belt, so the move exists exactly when the
+                // run is carrying one -- which is half of the event's own IsAllowed.
+                if (State.PotionSlots.Contains(RunNonCombatEffects.NamedPotion("FoulPotion")))
+                {
+                    SetMask(mask, RunConstants.FakeMerchantThrowAction);
+                }
+
+                SetMask(mask, RunConstants.FakeMerchantLeaveAction);
+                break;
+            }
+
             case RunPhase.Shop:
                 for (int i = 0; i < State.ShopCards.Length; i++)
                 {
@@ -1192,6 +1214,11 @@ public sealed class RunEngine
         if (State.Phase == RunPhase.Shop)
         {
             return StepShop(action, out terminal);
+        }
+
+        if (State.Phase == RunPhase.FakeMerchant)
+        {
+            return StepFakeMerchant(action, out terminal);
         }
 
         if (State.Phase == RunPhase.Rest)
@@ -2995,14 +3022,17 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventFakeMerchant:
+                // `GenerateInitialOptions` returns Array.Empty: the stall has no options
+                // at all, only its own screen. Anything but the proceed that opens it is
+                // not a move the event has. Taking one relic off the pool queue -- which
+                // is what was here -- was neither the right relic nor the right screen.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
+                    State.Phase = RunPhase.FakeMerchant;
+                    return 0;
                 }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
@@ -3550,31 +3580,72 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventColorfulPhilosophers:
+                // Each option is one of the OTHER characters' card pools, and taking it
+                // opens three card-reward screens over that pool: one Common, one
+                // Uncommon, one Rare, three cards each. What was here added a single
+                // random Ironclad card to the deck and upgraded it when the player picked
+                // the third option -- the player's own pool, no screen, no rarity, and an
+                // upgrade nothing in the event grants.
                 if (action is >= 0 and <= 2)
                 {
-                    AddEventRewardCard(upgraded: action == 2);
+                    var pools = ColorfulPhilosopherPools();
+                    if (action >= pools.Count)
+                    {
+                        return -1;
+                    }
+
+                    OfferColorfulPhilosopherRewards(pools[action]);
+                    return 0;
                 }
-                else if (action != RunConstants.EventSkipAction)
+
+                if (action != RunConstants.EventSkipAction)
                 {
                     return -1;
                 }
 
                 break;
             case RunConstants.EventColossalFlower:
-                // Two options, not three -- the step used to accept an option
-                // the event does not declare, which the action mask correctly
-                // never offered. What the two DO is transcribed but unverified:
-                // this is an act-2 event with no live capture behind it.
+                // A ladder, not a pair of one-shot options: three prizes at 35/75/135
+                // gold, each dig deeper costing 5/6/7 unblockable damage, and the third
+                // rung swapping the gold for Pollinous Core. `EventPage` is the dig
+                // count, which is exactly the event's own `NumberOfDigs`.
+                //
+                // What was here -- 125 gold or a rolled potion -- was a placeholder: no
+                // ladder, no damage, a number the event never pays and a potion it never
+                // offers.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(125));
+                    // Extract: the prize for the rung the player is standing on. On the
+                    // last rung this is `ExtractInstead`, which pays the same 135.
+                    // The FLAT prize, not a jittered one. `GainGold(_prizeCosts[digs])`
+                    // takes the raw array entry; the `GoldVar`s of the same numbers exist
+                    // only to write the prices into the option text. Lost Wisp's jitter is
+                    // real because Lost Wisp gains `DynamicVars.Gold` -- this one does not.
+                    RunNonCombatEffects.GainGold(
+                        State,
+                        RunConstants.ColossalFlowerPrizes[State.EventPage]
+                    );
                 }
                 else if (action == 1)
                 {
-                    RunRewardGenerator.AddPotion(
-                        State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
-                    );
+                    // Reach deeper takes the damage for the rung BEING LEFT -- the game
+                    // deals `_prizeDamage[NumberOfDigs]` and increments afterwards, so the
+                    // first dig costs 5 and the last costs 7. On the third the option is
+                    // Pollinous Core instead, and it pays the same 7 to get it.
+                    ColossalFlowerDig();
+                    if (State.EventPage == 2)
+                    {
+                        RunNonCombatEffects.ApplyRelicPickup(
+                            State,
+                            RunNonCombatEffects.NamedRelic("PollinousCore")
+                        );
+                    }
+                    else
+                    {
+                        State.EventPage++;
+                        // Still standing at the flower: the next page offers the same two.
+                        return 0;
+                    }
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3870,21 +3941,49 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventGraveOfTheForgotten:
+                // Confront pays a Decay AND asks for a card to enchant with Souls Power;
+                // Accept just takes Forgotten Soul. The placeholder had 13 damage and a
+                // pool relic on one side and a Decay plus 150 gold on the other -- the
+                // curse was the only piece of it the event actually has, and it was on
+                // the wrong option.
                 if (action == 0)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 13);
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
-                }
-                else if (action == 1)
-                {
+                    // CONFRONT_LOCKED is an EventOption with a NULL action, so a deck
+                    // with nothing Souls Power can take does not eat the curse and get
+                    // nothing -- the option does not run at all.
+                    if (
+                        !RunNonCombatEffects.CanBeginDeckSelection(
+                            State,
+                            DeckSelection.Enchant,
+                            (int)Enchantment.SoulsPower
+                        )
+                    )
+                    {
+                        return -1;
+                    }
+
+                    // The curse lands FIRST: `AddCurseToDeck` is awaited before the
+                    // selection screen opens, so it is paid up front and the fresh Decay
+                    // is itself in the deck the screen then offers -- not that it can
+                    // take the enchantment.
                     RunNonCombatEffects.AddCardToDeck(
                         State,
                         new CardInstance(RunNonCombatEffects.NamedCard("Decay"), false)
                     );
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(150));
+                    RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.Enchant,
+                        (int)Enchantment.SoulsPower
+                    );
+                    return 0;
+                }
+
+                if (action == 1)
+                {
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunNonCombatEffects.NamedRelic("ForgottenSoul")
+                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3941,18 +4040,46 @@ public sealed class RunEngine
                 }
 
                 break;
-            case RunConstants.EventRoundTeaParty:
-                // Two options, not three -- the step used to accept an option
-                // the event does not declare, which the action mask correctly
-                // never offered. What the two DO is transcribed but unverified:
-                // this is an act-2 event with no live capture behind it.
+            // Picking the fight is a two-page option: the first page only warns, and
+            // CONTINUE_FIGHT on the second is what charges the 11 and pays the relic.
+            // `.ThatWontSaveToChoiceHistory()` marks it as the continuation of a choice
+            // already made rather than a choice of its own.
+            case RunConstants.EventRoundTeaParty when State.EventPage == 1:
                 if (action == 0)
                 {
-                    HealPlayer(18);
+                    // Unblockable and Unpowered, so no block and no Vulnerable apply --
+                    // and at 11 it can end a run that walked in under 12, which is what
+                    // the event's `CurrentHp >= 12` IsAllowed is there to prevent.
+                    State.PlayerHp = Math.Max(0, State.PlayerHp - 11);
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunRewardGenerator.NextRelic(State)
+                    );
+                }
+                else if (action != RunConstants.EventSkipAction)
+                {
+                    return -1;
+                }
+
+                break;
+            case RunConstants.EventRoundTeaParty:
+                // Royal Poison and a FULL heal, or 11 unblockable for a pool relic. The
+                // 18-heal and 80 gold here were a placeholder: neither number, neither
+                // relic, and no second page.
+                if (action == 0)
+                {
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunNonCombatEffects.NamedRelic("RoyalPoison")
+                    );
+                    // `Heal(MaxHp - CurrentHp)` -- to full, and AFTER the relic, so a
+                    // relic that raises max HP is healed up to its new cap.
+                    HealPlayer(State.PlayerMaxHp - State.PlayerHp);
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(80));
+                    State.EventPage = 1;
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -4158,6 +4285,74 @@ public sealed class RunEngine
 
     /// <summary>
     /// One divination. The action carries both the cell and the tool -- 0..120 is the big
+    /// <summary>
+    /// The Fake Merchant's stall: six relics at a flat 50 apiece, a Foul Potion to throw,
+    /// and the door.
+    /// </summary>
+    /// <remarks>
+    /// Throwing the potion is the interesting move. `FoulPotionThrown` gives the player
+    /// Fake Merchant's Rug AND every relic still on the shelf as combat rewards, so the
+    /// stall is worth more robbed than bought -- buying one at 50 is buying a relic out
+    /// of your own loot pile. The fight is entered with `shouldResumeAfterCombat: false`,
+    /// so the event does not come back afterwards.
+    /// </remarks>
+    private int StepFakeMerchant(int action, out bool terminal)
+    {
+        terminal = false;
+        var stall = RunNonCombatEffects.FakeMerchantStock(State);
+
+        if (action == RunConstants.FakeMerchantLeaveAction)
+        {
+            return AdvanceAfterNode(out terminal);
+        }
+
+        if (action == RunConstants.FakeMerchantThrowAction)
+        {
+            int foul = RunNonCombatEffects.NamedPotion("FoulPotion");
+            int slot = Array.IndexOf(State.PotionSlots, foul);
+            if (slot < 0)
+            {
+                return -1;
+            }
+
+            State.PotionSlots[slot] = 0;
+            // The rug first, then the shelf in slot order -- the order the rewards list
+            // is built in, which is the order the screen offers them.
+            State.PendingBonusRelicRewards.Add(
+                RunNonCombatEffects.NamedRelic("FakeMerchantsRug")
+            );
+            State.PendingBonusRelicRewards.AddRange(stall.Where(relicId => relicId != 0));
+            return StartCombatWithDeck(
+                State.Deck,
+                RunConstants.FakeMerchantEncounterId,
+                State.Relics,
+                State.PlayerHp,
+                State.PlayerMaxHp,
+                State.PotionSlots,
+                State.Gold,
+                Math.Max(0, State.NormalEncountersVisited + State.EliteEncountersVisited - 1)
+            );
+        }
+
+        if (action < 0 || action >= stall.Count)
+        {
+            return -1;
+        }
+
+        if (stall[action] == 0 || State.Gold < RunConstants.FakeMerchantRelicCost)
+        {
+            return -1;
+        }
+
+        State.Gold -= RunConstants.FakeMerchantRelicCost;
+        // Sold out rather than removed: the slot indices have to hold still for the rest
+        // of the visit, and an emptied slot is also one fewer relic the fight would pay.
+        int bought = stall[action];
+        stall[action] = 0;
+        RunNonCombatEffects.ApplyRelicPickup(State, bought);
+        return 0;
+    }
+
     /// tool, 121..241 the small one -- and the last one spent settles up.
     /// </summary>
     private int StepCrystalSphere(int action, out bool terminal)
@@ -4722,6 +4917,63 @@ public sealed class RunEngine
         return Math.Max(0, baseAmount + State.Rng.UpFront.NextInt(-15, 16));
     }
 
+    /// <summary>The surviving pools, in option order. Rolled on entry, never here.</summary>
+    private List<int[]> ColorfulPhilosopherPools()
+    {
+        var order = RunNonCombatEffects.ColorfulPhilosopherPoolOrder;
+        return RunNonCombatEffects
+            .ColorfulPhilosopherPools(State)
+            .Select(index => order[index])
+            .ToList();
+    }
+
+    /// <summary>
+    /// `OfferRewards`: three `CardReward`s over the chosen pool at `CardsVar(3)` cards
+    /// each, one per rarity, offered together by `RewardsCmd.OfferCustom`.
+    /// </summary>
+    /// <remarks>
+    /// `CardRarityOddsType.Uniform` with a rarity filter means `CreateForReward` skips
+    /// `RollForRarity` entirely, so each card is two draws -- itself, then its upgrade
+    /// roll -- rather than three. All nine come off the player's Rewards stream in
+    /// Common, Uncommon, Rare order, which is the order the rewards are constructed in.
+    /// </remarks>
+    private void OfferColorfulPhilosopherRewards(int[] pool)
+    {
+        Array.Clear(State.RewardCards);
+        Array.Clear(State.RewardUpgraded);
+        var offers = new[] { CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare }
+            .Select(rarity =>
+                RunRewardGenerator.GenerateFixedRarityCardOffer(
+                    State,
+                    RunConstants.ColorfulPhilosophersCards,
+                    rarity,
+                    State.PlayerRng.Rewards,
+                    pool
+                )
+            )
+            .ToList();
+        for (int i = 0; i < State.RewardCards.Length && i < offers[0].Length; i++)
+        {
+            State.RewardCards[i] = offers[0][i];
+        }
+
+        State.RewardCardPending = true;
+        State.PendingCardOffers.AddRange(offers.Skip(1));
+        State.Phase = RunPhase.CardReward;
+    }
+
+    /// <summary>
+    /// `ColossalFlower.DealReachDeeperDamage`: `_prizeDamage[NumberOfDigs]`, Unblockable
+    /// and Unpowered, read BEFORE the dig count moves.
+    /// </summary>
+    private void ColossalFlowerDig()
+    {
+        State.PlayerHp = Math.Max(
+            0,
+            State.PlayerHp - RunConstants.ColossalFlowerDigDamage[State.EventPage]
+        );
+    }
+
     private void AddEventRewardCard(bool upgraded = false)
     {
         RunNonCombatEffects.AddCardToDeck(
@@ -4865,11 +5117,46 @@ public sealed class RunEngine
                 SetMask(mask, 1);
                 break;
             case RunConstants.EventSymbiote:
-                // Approach needs a card Corrupted can enchant, which it limits to
-                // Attacks. Kill with Fire is always on the table.
+                // Approach's locked variant is `!pile.Cards.Any(CanEnchant)`, and
+                // `CanEnchant` is the whole enchantment rule, not just the card type: an
+                // Attack that already carries an enchantment cannot take Corrupted
+                // either, and neither can an Unplayable one. Testing only
+                // `Type == Attack` offered the option to a deck of enchanted Strikes and
+                // then refused the step.
                 if (
-                    State.Deck.Any(card =>
-                        GeneratedData.Cards.Get(card.DefId).Type == CardType.Attack
+                    RunNonCombatEffects.CanBeginDeckSelection(
+                        State,
+                        DeckSelection.Enchant,
+                        (int)Enchantment.Corrupted
+                    )
+                )
+                {
+                    SetMask(mask, 0);
+                }
+
+                // Kill with Fire has no locked variant at all -- the game builds it
+                // unconditionally -- so it stays on the table even for a deck nothing can
+                // be transformed out of.
+                SetMask(mask, 1);
+                break;
+            case RunConstants.EventColorfulPhilosophers:
+                // The option count is run state -- one per unlocked pool the player is
+                // not, capped at three -- so it is not in the extracted count table. No
+                // option is ever locked; the event only ever shows what it can offer.
+                for (int i = 0; i < ColorfulPhilosopherPools().Count; i++)
+                {
+                    SetMask(mask, i);
+                }
+
+                break;
+            case RunConstants.EventGraveOfTheForgotten:
+                // CONFRONT_LOCKED when no card in the deck can take Souls Power, which
+                // means no card in the deck exhausts. Accept is never locked.
+                if (
+                    RunNonCombatEffects.CanBeginDeckSelection(
+                        State,
+                        DeckSelection.Enchant,
+                        (int)Enchantment.SoulsPower
                     )
                 )
                 {
@@ -4877,6 +5164,12 @@ public sealed class RunEngine
                 }
 
                 SetMask(mask, 1);
+                break;
+            case RunConstants.EventRoundTeaParty when State.EventPage == 1:
+                // The warning page carries a single CONTINUE_FIGHT option. Falling
+                // through to the count table offered two, and the second was a step that
+                // could only refuse.
+                SetMask(mask, 0);
                 break;
             case RunConstants.EventTeaMaster:
                 if (State.Gold >= RunConstants.BoneTeaCost)
@@ -5075,8 +5368,8 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventFakeMerchant:
-                // The fake shop is not modelled: the step takes one relic and refuses the
-                // rest, so offering three options was offering two the agent cannot use.
+                // The event page carries nothing to choose: option 0 walks up to the
+                // stall, which is its own screen.
                 SetMask(mask, 0);
                 break;
             default:

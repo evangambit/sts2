@@ -233,6 +233,39 @@ public static class RunConstants
     public const int EventBugslayer = 43;
     public const int EventColorfulPhilosophers = 44;
     public const int EventColossalFlower = 45;
+
+    /// <summary>
+    /// Colossal Flower's `_prizeCosts` -- the gold on each of its three rungs -- and its
+    /// `_prizeDamage`, the unblockable cost of leaving each one. Both are indexed by the
+    /// event's `NumberOfDigs`, which the emulator carries in `EventPage`.
+    /// </summary>
+    public static readonly int[] ColossalFlowerPrizes = [35, 75, 135];
+
+    public static readonly int[] ColossalFlowerDigDamage = [5, 6, 7];
+
+    /// <summary>Colorful Philosophers' `CardsVar(3)`: cards per rarity screen.</summary>
+    public const int ColorfulPhilosophersCards = 3;
+
+    /// <summary>`FakeMerchant.relicCost`: every slot in the fake stall is the same price.</summary>
+    public const int FakeMerchantRelicCost = 50;
+
+    /// <summary>
+    /// `_inventoryRelics.UnstableShuffle(Rng).Take(6)`: six of the nine fakes, and which
+    /// six is the event's only roll.
+    /// </summary>
+    public const int FakeMerchantInventorySize = 6;
+
+    /// <summary>Throwing a Foul Potion at the merchant, which starts the fight.</summary>
+    public const int FakeMerchantThrowAction = 6;
+
+    /// <summary>Walking out.</summary>
+    public const int FakeMerchantLeaveAction = 7;
+
+    /// <summary>
+    /// `FakeMerchantEventEncounter`, which `CombatFactory` has always been able to build
+    /// -- the event that reaches it is what was missing.
+    /// </summary>
+    public const int FakeMerchantEncounterId = 57;
     public const int EventFieldOfManSizedHoles = 46;
     public const int EventInfestedAutomaton = 47;
     public const int EventLostWisp = 48;

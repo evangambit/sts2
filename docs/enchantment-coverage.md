@@ -24,7 +24,8 @@ does not announce itself.
 
 `Core/Card.cs` → `enum Enchantment`: `Sharp`, `Nimble`, `Swift`, `Steady`, `Spiral`,
 `Sown`, `Corrupted`, `Slither`, `Vigorous`, `Imbued`, `Clone`, `Goopy`,
-`TezcatarasEmber` (values 1–13; `None` is 0).
+`TezcatarasEmber`, `Inky`, `Adroit`, `Momentum`, `RoyallyApproved`, `PerfectFit`,
+`SoulsPower` (values 1–19; `None` is 0).
 
 Granting relics: Pael's Claw (Goopy), Nutritious Soup (Tezcatara's Ember), Electric
 Shrymp (Imbued), Pael's Growth (Clone at 4) — all in
@@ -32,23 +33,23 @@ Shrymp (Imbued), Pael's Growth (Clone at 4) — all in
 
 **Append to the enum, never insert.** The numeric value is what the observation carries,
 so inserting renumbers every enchantment above it and silently invalidates any trained
-policy and every committed fixture. Next free value is **14**.
+policy and every committed fixture. Next free value is **20**.
 
-## The nine missing enchantments
+## The three missing enchantments
 
 Source: `decompiled/MegaCrit.Sts2.Core.Models.Enchantments/<Name>.cs`.
 
 | Enchantment | Restricted to | Effect |
 | --- | --- | --- |
-| **Adroit** | any | `OnPlay`: gain Block equal to `Amount`. |
 | **Glam** | any | Card plays `Times` (=1) extra times. **Once per combat** — `AfterCardPlayed` sets `UsedThisCombat` and flips its own `Status` to `Disabled`. |
-| **Inky** | any | `OnPlay`: apply Weak 1 to the target, or to `CombatState.HittableEnemies` when the card is `TargetType.AllEnemies`. Also `+1` additive damage, powered attacks only. |
 | **Instinct** | Attack | `EnchantDamageMultiplicative` returns **2×**, powered attacks only. |
-| **Momentum** | Attack | `OnPlay` accumulates `ExtraDamage += Amount`; adds that running total to powered attacks. Grows within the combat, per card instance. |
-| **PerfectFit** | any | `ModifyShuffleOrder`: on any **non-initial** shuffle, move this card to index 0 of the draw pile. |
-| **RoyallyApproved** | Attack, Skill | `OnEnchant`: adds the `Innate` **and** `Retain` keywords. |
 | **SlumberingEssence** | any | `BeforeFlush`: if the card is in **hand**, `EnergyCost.AddUntilPlayed(-1)`. Stacks per flush while it sits in hand. |
-| **SoulsPower** | cards with a **local** `Exhaust` keyword | `OnEnchant`: removes `Exhaust`. `CanEnchant` checks `GetKeywordsWithSources(KeywordSources.Local)`, so a card that gains Exhaust from elsewhere is not a candidate. |
+
+Souls Power was the last of these to land, with Grave of the Forgotten. It is worth
+noting on its own: it is the only enchantment whose `CanEnchant` reads a KEYWORD rather
+than a card type, and the only one whose `OnEnchant` takes something away rather than
+adding it. In the emulator that makes `CardInstanceExtensions.IsExhaust` its home, not the
+per-play hooks the others use.
 
 Two notes for whoever ports these:
 

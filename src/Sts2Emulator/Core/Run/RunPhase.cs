@@ -23,4 +23,12 @@ public enum RunPhase
     /// the game's screen is — select a bundle, then confirm it.
     /// </summary>
     BundleSelect = 12,
+
+    /// <summary>
+    /// The Fake Merchant's stall. `EventLayoutType.Custom` with a `MerchantInventory`
+    /// rather than an option list -- `GenerateInitialOptions` returns an empty array --
+    /// so it is a shop screen wearing an event's clothes, and six relic slots do not fit
+    /// in the three an event gets.
+    /// </summary>
+    FakeMerchant = 13,
 }

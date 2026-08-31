@@ -145,11 +145,16 @@ and reading them found 21 of 45 and 13 of 27 — so **one card in two that nobod
 wrong, whatever its capture says.** The Silent's already-worked-over tail ran 4 in 30, which
 is what a second pass over the same pool is worth.
 
-This is not yet a full game emulator. Exact Neow/shop/reward/event odds, the 125 unmodelled
-relics, and expanded trace parity are still future work. The nearest gaps: the 123 relics
-with no implementation at all, and six act-2 events the emulator cannot yet reach. Every event an
-ordinary run CAN reach has now been read against its source, implemented and captured —
-51 of 57 events carry live fixtures, and the six that do not are the unreachable ones.
+**All 57 modelled events now have a test suite** — `EventCoverageTests.Pending` is empty.
+Every event an ordinary run can reach has also been read against its source and captured
+live; 51 of the 57 carry fixtures, and the six that do not are the ones an Act 1 run cannot
+reach, so they are pinned against `decompiled/` alone. Five of those six were placeholders
+wrong in every particular, which is the argument for testing them: unreachable is not
+untested, and a placeholder reads as finished code until someone opens the source beside it.
+
+This is not yet a full game emulator. Exact Neow/shop/reward/event odds and expanded trace
+parity are still future work, and the nearest gap by a wide margin is the 123 relics with
+no implementation at all.
 
 ## Requirements
 

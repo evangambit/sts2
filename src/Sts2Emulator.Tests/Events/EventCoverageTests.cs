@@ -38,18 +38,17 @@ public class EventCoverageTests
     /// Events the emulator can run that no test exercises yet. Every entry is an event
     /// the emulator will happily run wrongly in silence.
     /// </summary>
-    private static readonly HashSet<string> Pending =
-    [
-        "ColorfulPhilosophers",
-        "ColossalFlower",
-        // No option-list capture exists for this one: it presents as its own
-        // "fake_merchant" state with a shop of fake relics rather than a list of
-        // options, so it needs a shop-shaped capture. See scripts/capture_event.py.
-        "FakeMerchant",
-        "GraveOfTheForgotten",
-        "RoundTeaParty",
-        "Symbiote",
-    ];
+    /// <remarks>
+    /// EMPTY. Every event <c>StepEvent</c> can run now has a suite, including the six the
+    /// emulator's Act 1 never reaches -- four whose pool belongs to a later act, and two
+    /// gated on <c>CurrentActIndex</c>. Unreachable is not the same as untested: each of
+    /// those six was a placeholder that would have run wrongly the moment an act-2 pool
+    /// existed, and five of the six were wrong in every particular.
+    ///
+    /// Keep it empty. An entry here is an event the emulator will happily run wrongly in
+    /// silence.
+    /// </remarks>
+    private static readonly HashSet<string> Pending = [];
 
     [Fact]
     public void EveryModelledEventHasATestSuite()

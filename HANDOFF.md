@@ -1082,6 +1082,26 @@ mind rather than treat it as closed: chasing the five remaining `UpgradeFirstCar
 three turned out to be placeholders end to end — including one offering three options on a
 page the model gives ONE. **Read the decompiled model before trusting an event's options.**
 
+It repeated a third time at the very end, on the six events an Act 1 run cannot reach
+(E372–E382). Five of the six were placeholders, and they were the *last* five because
+being unreachable is what let them survive: no capture could contradict them, no rollout
+could walk into them, and the coverage gate's `Pending` list said "deferred" rather than
+"wrong". Colossal Flower had no ladder, Round Tea Party paid the wrong thing on both
+sides, Grave of the Forgotten had its two options backwards, Colorful Philosophers offered
+the player their own card pool, and the Fake Merchant handed out a free relic where the
+game runs a six-slot stall you can rob. **Unreachable is not untested** — a placeholder
+reads as finished code, and the day an act-2 pool exists is the day all five start running
+wrongly in silence.
+
+Two things fell out of doing them that are worth more than the events. The four Hive/Glory
+events were being refused by a `=> false` arm inside `IsEventAllowed`, which put "not in
+this act's pool" inside the predicate that answers "may THIS RUN see it" — two different
+rules in one place, and it hid four real gates (E381). And Colorful Philosophers' option
+list, derived lazily in the action mask, rolled the event's own stream on a READ (E378);
+`EventRngStabilityTests` caught it before it shipped, and the fix is where the Crystal
+Sphere and Wongo's featured item already say it should be: `CalculateEventVars`, on entry.
+**An event's randomness is spent on entry or it is spent by whoever looks first.**
+
 ### Hive's encounter tags, and why a missing tag is worse than a wrong order
 
 Seven act-2 captures now agree with the emulator on which ancient act 2 opens on. Five did

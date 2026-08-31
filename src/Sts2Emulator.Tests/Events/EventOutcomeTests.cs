@@ -48,6 +48,9 @@ public class EventOutcomeTests
             RunPhase.Treasure => "treasure",
             RunPhase.TransformSelect => "card_select",
             RunPhase.CrystalSphere => "crystal_sphere",
+            // The mod names the fake stall's screen after the event, the way it does the
+            // sphere -- both are EventLayoutType.Custom rather than an option list.
+            RunPhase.FakeMerchant => "fake_merchant",
             // An event that fights without leaving the event is still in a Monster ROOM
             // as far as the mod is concerned -- Battleworn Dummy's three settings, The
             // Lantern Key's knight. No map node was taken, so this is not "battle".

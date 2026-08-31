@@ -877,16 +877,14 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 Card coverage is now the finished part rather than the open one. What is left, in the order
 the evidence argues for:
 
-1. **Events and their relics** — the last layer without a reading pass. Events are NOT
-   untested (58 modelled, 118 live fixtures, ~300 test methods, a bidirectional coverage
-   gate, plus mask/gating/RNG sweeps); what they have never had is a digest-keyed record
-   that anyone compared one to its decompiled source, which is exactly the state the
-   Silent's already-tested tail was in before its pass. Eighteen of the 58 have neither a
-   fixture nor a dedicated test, and the 49 event-pool relics are unread — those can be
-   read today, since reading is source-vs-emulator and needs no reachability. The relic
-   pass suggests what to expect: at 3 defects in 58, **the failures stop being in the
-   items and start being in what is shared between them** — a hand-kept list, a mechanic
-   modelled twice, a hook that predates a character.
+1. **The 123 unmodelled relics** — now the largest gap by a wide margin, and unlike
+   everything above it this is building rather than auditing: there is no arm to compare
+   to a source. The read pass over the 173 that ARE modelled is finished, and its rate
+   says where to be careful: of the 11 defects it found, not one was a wrong number.
+   Every single one was a missing half — a relic wired for pickup and silent for its
+   ongoing hook, or the reverse. **A relic that is picked up correctly looks correct in
+   every test you would think to write for it**, which is why the whole-engine grep in
+   `relic_pair.py` mattered here in a way `card_pair.py` never did for cards.
 2. **The 66 cards still unread**, which are also the 66 still in `Pending` with no tests:
    Curses, Statuses, Tokens, Minions and event cards. Lower value per card than a
    character pool, but Statuses and Curses are what half the game's punishment mechanics

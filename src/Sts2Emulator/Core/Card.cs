@@ -237,6 +237,14 @@ public enum Enchantment
     /// shuffle mid-combat. Field Of Man-Sized Holes is the only source.
     /// </summary>
     PerfectFit,
+
+    /// <summary>
+    /// `SoulsPower.OnEnchant` is `RemoveKeyword(Exhaust)` and nothing else, and its
+    /// `CanEnchant` narrows the base rule to cards that HAVE Exhaust locally -- so it is
+    /// the only enchantment whose eligibility is a keyword rather than a card type, and
+    /// the only one that takes something away. Grave of the Forgotten is the only source.
+    /// </summary>
+    SoulsPower,
 }
 
 /// <summary>
@@ -387,6 +395,13 @@ public static class CardInstanceExtensions
     /// </summary>
     public static bool IsExhaust(this CardInstance card)
     {
+        // SoulsPower.OnEnchant removes the keyword outright, so the card stops exhausting
+        // for good -- the one enchantment that subtracts.
+        if (card.Enchantment == Enchantment.SoulsPower)
+        {
+            return false;
+        }
+
         var def = GeneratedData.Cards.Get(card.DefId);
         return def.Exhaust && !(card.Upgraded && def.ExhaustRemovedWhenUpgraded);
     }
@@ -484,6 +499,13 @@ public static class Enchantments
             // its own, unlike Spiral. The name stand-in this used to carry was blind to
             // Fasten and Ultimate Defend, which are Defend-tagged and are not Basic.
             Enchantment.Goopy => def.DefendTag,
+
+            // SoulsPower.CanEnchant: the card must already have the Exhaust keyword,
+            // because removing it is the entire enchantment. `KeywordSources.Local` is
+            // the card's own keywords, so a card that only exhausts because something
+            // else said so does not qualify -- which for a DECK card means the printed
+            // keyword, minus the nineteen that shed it on upgrade.
+            Enchantment.SoulsPower => card.IsExhaust(),
 
             _ => true,
         };

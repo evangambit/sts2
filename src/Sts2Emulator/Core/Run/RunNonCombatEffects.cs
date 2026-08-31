@@ -904,17 +904,50 @@ public static class RunNonCombatEffects
         RunConstants.EventWelcomeToWongos,
     ];
 
+    /// <summary>
+    /// The four events whose pool is a LATER ACT's -- Hive for the first two, Glory for
+    /// the other two -- rather than one of Act 1's. The emulator models a run's first
+    /// act, so no pool it draws from contains them.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="ActTwoAndLaterEvents"/>, which is a list of
+    /// <c>IsAllowed</c> transcriptions, because this is a different rule: these four
+    /// declare no act gate of their own at all. Conflating the two put "not in this act's
+    /// pool" inside the run predicate, where it read as though the game refuses these
+    /// events to a healthy Act 1 player -- it does not; it simply never offers them.
+    /// Their real gates are transcribed in <see cref="IsEventAllowedForRun"/> below, so
+    /// adding a later act's pool gets a working event rather than a refused one.
+    /// </remarks>
+    private static readonly int[] LaterActPoolEvents =
+    [
+        RunConstants.EventColorfulPhilosophers,
+        RunConstants.EventColossalFlower,
+        RunConstants.EventGraveOfTheForgotten,
+        RunConstants.EventRoundTeaParty,
+    ];
+
     /// <summary>Test seam for <see cref="IsEventAllowed"/>.</summary>
     public static bool IsEventAllowedForTests(RunState state, int eventId) =>
         IsEventAllowed(state, eventId);
 
     internal static bool IsEventAllowed(RunState state, int eventId)
     {
-        if (ActTwoAndLaterEvents.Contains(eventId))
+        if (ActTwoAndLaterEvents.Contains(eventId) || LaterActPoolEvents.Contains(eventId))
         {
             return false;
         }
 
+        return IsEventAllowedForRun(state, eventId);
+    }
+
+    /// <summary>
+    /// Each event's own <c>IsAllowed(IRunState)</c>, transcribed -- whether THIS RUN may
+    /// be shown the event, which is a separate question from whether the act's pool
+    /// contains it. Public because the events an Act 1 pool never offers still have gates
+    /// worth pinning.
+    /// </summary>
+    public static bool IsEventAllowedForRun(RunState state, int eventId)
+    {
         return eventId switch
         {
             RunConstants.EventMorphicGrove => state.Gold >= 100 && state.Deck.Count >= 2,
@@ -983,13 +1016,29 @@ public static class RunNonCombatEffects
             or RunConstants.EventByrdonisNest
             or RunConstants.EventAromaOfChaos
             or RunConstants.EventSimpleReward => true,
-            // Hive and Glory events. The emulator models a run's FIRST act, so none of
-            // these is in a pool it draws from. Refused rather than allowed, so adding a
-            // later act's pool surfaces them instead of silently letting them through.
-            RunConstants.EventColorfulPhilosophers
-            or RunConstants.EventColossalFlower
-            or RunConstants.EventGraveOfTheForgotten
-            or RunConstants.EventRoundTeaParty => false,
+            // Colossal Flower's ladder costs 5 + 6 + 7 = 18 unblockable to walk to the
+            // bottom of, and its gate is `CurrentHp >= 19` -- one more than the whole
+            // climb, so the event can never be the thing that kills you.
+            RunConstants.EventColossalFlower => state.PlayerHp >= 19,
+            // The tea party's fight is 11 unblockable and its gate is `CurrentHp >= 12`,
+            // the same one-more-than-the-damage rule.
+            RunConstants.EventRoundTeaParty => state.PlayerHp >= 12,
+            // `All(HasEnchantableCards)`, where enchantable means Souls Power will take
+            // it -- so a deck with nothing that exhausts never sees the grave at all.
+            // Note this is the WHOLE event's gate, not just Confront's lock: the game
+            // refuses to show it rather than showing it with one option greyed out.
+            RunConstants.EventGraveOfTheForgotten => state.Deck.Any(card =>
+                Enchantments.CanEnchant(card, Enchantment.SoulsPower)
+            ),
+            // `All(p => p.UnlockState.CharacterCardPools.Count() > 1)` -- a profile that
+            // has unlocked a second character. The emulator runs a fixed profile with all
+            // five pools, so this is true. See the fixed-profile note in HANDOFF.md.
+            RunConstants.EventColorfulPhilosophers => true,
+            // Act index aside, the stall wants a customer: `Gold >= 100 || holds a Foul
+            // Potion`. The potion half is the interesting one -- it is the price of the
+            // ROBBERY, not of a purchase, and a broke player carrying one still qualifies.
+            RunConstants.EventFakeMerchant => state.Gold >= 100
+                || state.PotionSlots.Contains(NamedPotion("FoulPotion")),
             _ => true,
         };
     }
@@ -1367,6 +1416,18 @@ public static class RunNonCombatEffects
                 // off the bag on entry whether or not the player buys it.
                 WongosFeaturedItem(state);
                 break;
+            case RunConstants.EventColorfulPhilosophers:
+                // Which three of the four pools survive the cut is decided in
+                // `GenerateInitialOptions`, so it is spent on entry. Deriving it lazily
+                // rolled the event's stream on a mask READ and could show a different
+                // three than the ones the player is looking at -- Tinker Time's bug.
+                ColorfulPhilosopherPools(state);
+                break;
+            case RunConstants.EventFakeMerchant:
+                // `BeforeEventStarted` shuffles the nine fakes and takes six, so the
+                // shelf exists before the player has done anything.
+                FakeMerchantStock(state);
+                break;
         }
     }
 
@@ -1473,6 +1534,87 @@ public static class RunNonCombatEffects
     {
         state.EventRelicStock ??= RollRelicTraderStock(state);
         return state.EventRelicStock;
+    }
+
+    /// <summary>
+    /// Colorful Philosophers' option list: which of the four candidate pools survived the
+    /// cut, as indices into <see cref="ColorfulPhilosopherPoolOrder"/>.
+    /// </summary>
+    /// <remarks>
+    /// `CardPoolColorOrder` is Necrobinder, Ironclad, Regent, Silent, Defect, filtered by
+    /// `character.CardPool != cardPool` -- which for the emulator's Ironclad leaves four
+    /// -- and then `while (list.Count > 3) list.RemoveAt(Rng.NextInt(list.Count))` drops
+    /// one. Removing is not taking three at random: it is ONE draw rather than three, and
+    /// the survivors keep the colour order rather than a shuffled one, so the same seed
+    /// gives a different set under either reading.
+    /// </remarks>
+    public static int[] ColorfulPhilosopherPools(RunState state)
+    {
+        if (state.EventRandomOffer.Length > 0)
+        {
+            return state.EventRandomOffer;
+        }
+
+        var candidates = Enumerable.Range(0, ColorfulPhilosopherPoolOrder.Length).ToList();
+        var rng = EventRng(state, "COLORFUL_PHILOSOPHERS");
+        while (candidates.Count > 3)
+        {
+            candidates.RemoveAt(rng.NextInt(candidates.Count));
+        }
+
+        state.EventRandomOffer = candidates.ToArray();
+        return state.EventRandomOffer;
+    }
+
+    /// <summary>
+    /// The four pools the event can offer an Ironclad, in `CardPoolColorOrder` minus
+    /// Ironclad's own.
+    /// </summary>
+    public static int[][] ColorfulPhilosopherPoolOrder =>
+        [
+            GeneratedData.CardPools.Necrobinder.ToArray(),
+            GeneratedData.CardPools.Regent.ToArray(),
+            GeneratedData.CardPools.Silent.ToArray(),
+            GeneratedData.CardPools.Defect.ToArray(),
+        ];
+
+    /// <summary>
+    /// The Fake Merchant's stall: six of the nine fake relics, in the order it shuffled
+    /// them. A slot the player has bought is set to 0 rather than removed, so the indices
+    /// stay put for the whole visit -- and the still-stocked ones are what the fight pays
+    /// out if the player throws a Foul Potion instead.
+    /// </summary>
+    /// <remarks>
+    /// <c>BeforeEventStarted</c> builds this ONCE, so it does not reroll when the player
+    /// looks again -- the Relic Trader's shelf rule, and the reason both live on
+    /// <c>EventRelicStock</c>. Fake Merchant's Rug is deliberately NOT in the list: the
+    /// game's own comment says it is a combat reward, not something on sale.
+    /// </remarks>
+    public static List<int> FakeMerchantStock(RunState state)
+    {
+        state.EventRelicStock ??= RollFakeMerchantStock(state);
+        return state.EventRelicStock;
+    }
+
+    private static List<int> RollFakeMerchantStock(RunState state)
+    {
+        // `_inventoryRelics` is a fixed array in the game's own order, which is
+        // alphabetical by class name; UnstableShuffle then permutes it in place and the
+        // first six are the stall.
+        var fakes = new List<int>
+        {
+            ResolveRelic("FakeAnchor"),
+            ResolveRelic("FakeBloodVial"),
+            ResolveRelic("FakeHappyFlower"),
+            ResolveRelic("FakeLeesWaffle"),
+            ResolveRelic("FakeMango"),
+            ResolveRelic("FakeOrichalcum"),
+            ResolveRelic("FakeSneckoEye"),
+            ResolveRelic("FakeStrikeDummy"),
+            ResolveRelic("FakeVenerableTeaSet"),
+        };
+        EventRng(state, "FAKE_MERCHANT").Shuffle(fakes);
+        return fakes.Take(RunConstants.FakeMerchantInventorySize).ToList();
     }
 
     /// <summary>
