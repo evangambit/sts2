@@ -226,3 +226,101 @@ public class PaelsLegionTests
         Assert.Equal(doubled, legion.State.PlayerBlock);
     }
 }
+
+/// <summary>
+/// Big Mushroom's `ModifyHandDraw` SUBTRACTS its `CardsVar(2)` on turn one: the opening
+/// hand is three, and that is the price of its twenty max HP.
+/// </summary>
+/// <remarks>
+/// Only its pickup half was modelled — read the `AfterObtained`, stop, and a relic with a
+/// drawback becomes a relic without one. The fourth relic on `ModifyHandDraw`, after Ring
+/// of the Snake, Bag of Preparation and Booming Conch, and the only one that goes down.
+/// </remarks>
+public class BigMushroomTests
+{
+    [Fact]
+    public void TheOpeningHandIsTwoCardsShorter()
+    {
+        var plain = Fight.WithRelics();
+        var mushroom = Fight.WithRelics(RelicEffects.BigMushroom);
+
+        Assert.Equal(plain.State.Hand.Count - 2, mushroom.State.Hand.Count);
+    }
+
+    /// <summary>Turn one only — the next turn draws normally.</summary>
+    [Fact]
+    public void LaterTurnsDrawNormally()
+    {
+        var plain = Fight.WithRelics();
+        var mushroom = Fight.WithRelics(RelicEffects.BigMushroom);
+
+        plain.EndTurn();
+        mushroom.EndTurn();
+
+        Assert.Equal(plain.State.Hand.Count, mushroom.State.Hand.Count);
+    }
+
+    /// <summary>And the twenty max HP it pays for still lands on pickup.</summary>
+    [Fact]
+    public void ThePickupStillPaysTwentyMaxHp()
+    {
+        var engine = new RunEngine();
+        engine.Reset("NXV45HW43K");
+        int maxBefore = engine.State.PlayerMaxHp;
+
+        RunNonCombatEffects.ApplyRelicPickup(
+            engine.State,
+            RunNonCombatEffects.NamedRelic("BigMushroom")
+        );
+
+        Assert.Equal(maxBefore + 20, engine.State.PlayerMaxHp);
+    }
+}
+
+/// <summary>
+/// Neow's Talisman upgrades the LAST BASIC card tagged Strike and the last tagged Defend.
+/// It matched Ironclad's two card ids, so for any other character it upgraded nothing —
+/// Leafy Poultice's bug pointing the other way.
+/// </summary>
+public class NeowsTalismanTests
+{
+    [Fact]
+    public void ItUpgradesTheLastBasicStrikeAndDefend()
+    {
+        var engine = new RunEngine();
+        engine.Reset("NXV45HW43K");
+
+        RunNonCombatEffects.ApplyRelicPickup(
+            engine.State,
+            RunNonCombatEffects.NamedRelic("NeowsTalisman")
+        );
+
+        var upgraded = engine
+            .State.Deck.Where(c => c.Upgraded)
+            .Select(c => GeneratedData.Cards.Get(c.DefId))
+            .ToList();
+
+        Assert.Equal(2, upgraded.Count);
+        Assert.Contains(upgraded, d => d.StrikeTag);
+        Assert.Contains(upgraded, d => d.DefendTag);
+        Assert.All(upgraded, d => Assert.Equal(CardRarity.Basic, d.Rarity));
+    }
+
+    /// <summary>The LAST of each, not the first — the two relics differ only in that.</summary>
+    [Fact]
+    public void ItTakesTheLastOfEachNotTheFirst()
+    {
+        var engine = new RunEngine();
+        engine.Reset("NXV45HW43K");
+        int lastStrike = engine.State.Deck.FindLastIndex(c =>
+            GeneratedData.Cards.Get(c.DefId).StrikeTag
+        );
+
+        RunNonCombatEffects.ApplyRelicPickup(
+            engine.State,
+            RunNonCombatEffects.NamedRelic("NeowsTalisman")
+        );
+
+        Assert.True(engine.State.Deck[lastStrike].Upgraded);
+    }
+}

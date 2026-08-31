@@ -10,6 +10,7 @@ public static class RelicEffects
     public const int BagOfMarbles = 9;
     public const int BagOfPreparation = 10;
     public const int BlessedAntler = 21;
+    public const int BigMushroom = 16;
     public const int BiiigHug = 17;
     public const int PaelsLegion = 181;
     public const int BloodVial = 23;
@@ -554,7 +555,12 @@ public static class RelicEffects
     public static int ExtraOpeningHandDraw(CombatState state) =>
         (HasRelic(state, RingOfTheSnake) ? 2 : 0)
         + (HasRelic(state, BagOfPreparation) ? 2 : 0)
-        + (HasRelic(state, BoomingConch) && state.IsEliteCombat ? 2 : 0);
+        + (HasRelic(state, BoomingConch) && state.IsEliteCombat ? 2 : 0)
+        // Big Mushroom's `ModifyHandDraw` SUBTRACTS its `CardsVar(2)` on turn one: the
+        // opening hand is three, and that is the price of its twenty max HP. Its pickup
+        // half was modelled and this one was not -- read the `AfterObtained` and stop, and
+        // a relic with a drawback becomes a relic without one.
+        - (HasRelic(state, BigMushroom) ? 2 : 0);
 
     /// <summary>
     /// The relics that pay out every Nth card of a type played in one turn. The game holds

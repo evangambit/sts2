@@ -113,9 +113,9 @@ All five character pools have been captured card-by-card against the live game. 
 character's own resource is modelled: the Necrobinder's **Osty** pet, the Regent's **stars**
 and **Forge/Sovereign Blade**, and the Defect's **orb queue** and Focus.
 
-Beyond cards: 171 of 296 relics — every one of the 122 an ordinary run can be handed has
-been read against the source — plus 111 monsters with their movesets, the event pool,
-potions, shops, rest sites, map routing and Neow.
+Beyond cards: 173 of 296 relics, **every one of them read against the source**, plus 111
+monsters with their movesets, the event pool, potions, shops, rest sites, map routing and
+Neow.
 
 ### What is verified, and how
 
@@ -146,8 +146,8 @@ wrong, whatever its capture says.** The Silent's already-worked-over tail ran 4 
 is what a second pass over the same pool is worth.
 
 This is not yet a full game emulator. Exact Neow/shop/reward/event odds, the 125 unmodelled
-relics, and expanded trace parity are still future work. The nearest gaps: 49 event-pool relics that are
-wired up and unread, and six act-2 events the emulator cannot yet reach. Every event an
+relics, and expanded trace parity are still future work. The nearest gaps: the 123 relics
+with no implementation at all, and six act-2 events the emulator cannot yet reach. Every event an
 ordinary run CAN reach has now been read against its source, implemented and captured —
 51 of 57 events carry live fixtures, and the six that do not are the unreachable ones.
 

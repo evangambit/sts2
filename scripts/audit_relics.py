@@ -155,6 +155,78 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "BigMushroom": (
+        "d38b4dfad613",
+        "+20 max HP on pickup (GainMaxHp heals with it), and `ModifyHandDraw` SUBTRACTS 2 on turn one -- the opening hand is three, which is the price. Only the pickup half was modelled; the drawback was missing, so the relic was all upside.",
+    ),
+    "ChosenCheese": ("e5f888237a51", "+1 max HP after every combat; correct."),
+    "FragrantMushroom": (
+        "052f878e0ebd",
+        "15 unblockable damage on pickup and two upgradable deck cards upgraded off Rng.Niche, no type filter; correct.",
+    ),
+    "NeowsBones": (
+        "114c262003a7",
+        "Two relics offered with skipping disallowed, then a curse once they are claimed; correct.",
+    ),
+    "NeowsTalisman": (
+        "850ad1ef7bcc",
+        "Upgrades the LAST BASIC card tagged Strike and the last tagged Defend. It matched Ironclad's two ids, so for any other character it upgraded nothing -- Leafy Poultice's bug in the other direction.",
+    ),
+    "NutritiousOyster": ("4199481b7619", "+11 max HP on pickup; correct."),
+    "NutritiousSoup": (
+        "22479861b577",
+        "Tezcatara's Ember onto every BASIC Strike-tagged card; correct, and the tag test is the real tag now rather than a 'STRIKE' substring.",
+    ),
+    "PhialHolster": (
+        "e7a9890064ec",
+        "+1 potion slot then two potions, slot first so they fit; correct.",
+    ),
+    "PhilosophersStone": (
+        "b0b9d72d22f7",
+        "+1 max energy and Strength 1 to every enemy, including ones that join mid-combat; both correct.",
+    ),
+    "Pomander": ("bc8802baef4c", "One CHOSEN deck card upgraded; correct."),
+    "PrecariousShears": (
+        "b4295aed20df",
+        "Two CHOSEN cards removed and then 16 unpowered damage, the damage owed only once they are gone; correct.",
+    ),
+    "PreciseScissors": ("414755898b04", "One CHOSEN card removed; correct."),
+    "SandCastle": ("39adf06da9b3", "Six cards StableShuffled off Rng.Niche; correct."),
+    "ScrollBoxes": (
+        "02c9c9dd37d4",
+        "Two bundles offered on a choose-a-bundle screen; correct.",
+    ),
+    "SeaGlass": (
+        "ecd35bae95fa",
+        "Fifteen cards from a branded character's pool, five each of Common, Uncommon and Rare; correct.",
+    ),
+    "SilverCrucible": (
+        "49be81553ba6",
+        "Three card-reward upgrades, one per reward, counted down on the relic; correct.",
+    ),
+    "SmallCapsule": (
+        "915148e2c2d4",
+        "A single RelicReward on a SCREEN the player claims from, not a relic granted outright; correct.",
+    ),
+    "Sozu": (
+        "973954fd60b4",
+        "+1 max energy and no potions ever procured; both correct.",
+    ),
+    "SpikedGauntlets": (
+        "93ec361dff23",
+        "+1 max energy and POWERS cost one more; both correct.",
+    ),
+    "StoneHumidifier": ("7cdf8486baea", "+5 max HP after a rest-site heal; correct."),
+    "Storybook": ("283a84fe70c1", "A Brightest Flame into the deck; correct."),
+    "VelvetChoker": (
+        "ccc297357f38",
+        "+1 max energy and no card plays past the sixth in a turn; both correct.",
+    ),
+    "WingedBoots": (
+        "8b13976f606e",
+        "Three free map travels, counted down on the relic; correct.",
+    ),
+    "YummyCookie": ("87b6e72a4475", "Four CHOSEN cards upgraded; correct."),
     "PaelsClaw": (
         "cc7295a9cb5c",
         "GOOPY onto every deck card that can take it -- no screen, no choice; correct. Its `CardsVar(3)` is display text, not a count.",

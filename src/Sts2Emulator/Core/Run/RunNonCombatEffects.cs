@@ -293,8 +293,11 @@ public static class RunNonCombatEffects
                     ? RunFollowUp.TransformSelect
                     : RunFollowUp.None;
             case RunConstants.RelicNeowsTalisman:
-                UpgradeLastCardMatching(state, 472);
-                UpgradeLastCardMatching(state, 131);
+                // The LAST BASIC card tagged Strike and the last tagged Defend -- the real
+                // tags, as Leafy Poultice's are. Ironclad's two ids found nothing for any
+                // other character.
+                UpgradeLastTaggedBasic(state, strike: true);
+                UpgradeLastTaggedBasic(state, strike: false);
                 break;
             case RunConstants.RelicCursedPearl:
                 AddCardToDeck(state, new CardInstance(NamedCard("Greed"), Upgraded: false));
@@ -2223,29 +2226,30 @@ public static class RunNonCombatEffects
     /// not extracted, so this reads the entry name instead — every Strike-tagged card the
     /// game has is named for it, and at Basic rarity there is only the starter Strike.
     /// </summary>
+    /// <summary>
+    /// Nutritious Soup: `c.Rarity == Basic && c.Tags.Contains(CardTag.Strike)`. The tag,
+    /// not a "STRIKE" substring in the entry -- the two agree among Basic cards, which is
+    /// why the stand-in survived, and the tags are extracted now (E358).
+    /// </summary>
     private static bool IsBasicStrike(CardInstance card)
     {
         var def = GeneratedData.Cards.Get(Math.Abs(card.DefId));
-        return def.Rarity == CardRarity.Basic
-            && def.Entry.Contains("STRIKE", StringComparison.Ordinal);
+        return def.Rarity == CardRarity.Basic && def.StrikeTag;
     }
 
     /// <summary>
-    /// Stands in for <c>Goopy.CanEnchant</c>, which is not modelled — the emulator has no
-    /// Goopy enchantment at all.
+    /// `Goopy.CanEnchant`, which Pael's Claw counts against a threshold of three.
     /// </summary>
     /// <remarks>
-    /// Only ever used as a COUNT against a threshold of three, and every deck a run can
-    /// hold clears that on its starting cards alone, so the approximation has no reachable
-    /// effect on which option Pael offers. It is still an approximation: if Goopy turns
-    /// out to refuse a card type this counts, a deck stripped down to two enchantable
-    /// cards would disagree.
+    /// This used to be `not (Curse or Status)` behind a comment saying the emulator had no
+    /// Goopy enchantment at all. It has one, and the comment outlived that: Goopy takes
+    /// Defend-TAGGED cards, at any rarity, which is a far narrower set than "not a curse".
+    /// The threshold made the difference unreachable -- every deck a run can hold clears
+    /// three on its starting cards -- but an approximation nobody can trip is still an
+    /// approximation, and it disagreed with the enchantment it was standing in for.
     /// </remarks>
-    private static bool CanTakeAnEnchantment(CardInstance card)
-    {
-        var def = GeneratedData.Cards.Get(Math.Abs(card.DefId));
-        return def.Type is not (CardType.Curse or CardType.Status);
-    }
+    private static bool CanTakeAnEnchantment(CardInstance card) =>
+        Enchantments.CanEnchant(card, Enchantment.Goopy);
 
     /// <summary>
     /// Stands in for <c>CardModel.IsRemovable</c>, which is not extracted.
@@ -2550,6 +2554,24 @@ public static class RunNonCombatEffects
             {
                 TransformCardAt(state, i, state.PlayerRng.Transformations);
             }
+        }
+    }
+
+    /// <summary>
+    /// Neow's Talisman: the LAST BASIC card carrying `CardTag.Strike`, or `CardTag.Defend`.
+    /// </summary>
+    private static void UpgradeLastTaggedBasic(RunState state, bool strike)
+    {
+        for (int i = state.Deck.Count - 1; i >= 0; i--)
+        {
+            var def = GeneratedData.Cards.Get(state.Deck[i].DefId);
+            if (def.Rarity != CardRarity.Basic || (strike ? !def.StrikeTag : !def.DefendTag))
+            {
+                continue;
+            }
+
+            state.Deck[i] = state.Deck[i] with { Upgraded = true };
+            return;
         }
     }
 
