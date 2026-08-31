@@ -32,9 +32,33 @@ different fixes.
 
 ### The observation
 
-What the agent is handed each step. This surface is currently clean: combat
-exposes `DrawPile.Count`, `DiscardPile.Count` and `ExhaustPile.Count` — sizes,
-never order.
+What the agent is handed each step. Combat exposes `DrawPile.Count`,
+`DiscardPile.Count` and `ExhaustPile.Count` — sizes, never order.
+
+This surface was described here as clean while it was not. Alongside the map's
+node types the run block carried a second array of the same width holding the
+**encounter behind each choice**, read straight off
+`NormalEncounterSequence[NormalEncountersVisited]` — so a policy standing on the
+map was told which fight the next monster node held before it picked one. That
+is the whole of the decision a monster row asks, and the game never shows it: you
+learn what is in a room by walking into it. The block is gone
+(`MapChoiceObsOffset` with it), the run observation is seven integers narrower,
+and `Sts2Run_ObsLayout` no longer publishes an offset by that name.
+`State.MapChoices` is untouched and still resolves the encounter when a node is
+actually entered — it was only ever the observation that had no business with it.
+
+Worth recording how it survived: the map's node types and its encounters were
+written by the same two-line loop, and a leak that sits beside something
+legitimate reads as part of it. **The node types are correct to expose** — the
+game's map draws them as icons — and their neighbour was never questioned. What
+found it was a person playing the CLI and noticing the screen had named the
+monsters before the room was entered, which is the argument for having a reader
+that shows a state to somebody rather than only to a network.
+
+The act's BOSS is the one thing on the map that is named, because the game names
+it from the moment the act opens. It is not in the observation either; screens
+that want it read it through `Sts2RunEnv.map_graph()`, and whether a policy
+should be handed it is a separate question from what a map screen draws.
 
 The run layer used to carry `Deck.Count` and nothing else, which made card
 rewards, shops, rest upgrades and transforms unlearnable — the agent chose
@@ -211,12 +235,11 @@ None of the above weakens the differential harness, by construction:
 - Known-order tracking is bookkeeping beside the pile, not a change to it; the
   order the game produces is untouched.
 
-
 ---
 
 ## What the interface actually measures (`scripts/agent_probe.py`)
 
-The sections above are design. This is what the interface *does* when something walks
+The sections above are design. This is what the interface _does_ when something walks
 it, and the numbers are here so later emulator work has a target rather than a feeling.
 Re-run after any change to the observation, the action encoding or the step path:
 
@@ -239,7 +262,7 @@ CONCURRENT runs at 256, which is fine for clone-simulate-destroy and not fine fo
 design that holds a handle per tree node.
 
 **Card ids reach the network as raw integers.** Nothing in the observation says slot N is
-categorical, so a network reading it as a magnitude learns that card 473 is *more* than
+categorical, so a network reading it as a magnitude learns that card 473 is _more_ than
 card 472. That is an embedding on the agent side, but it is the observation's shape that
 forces the issue, and it is worth stating here rather than rediscovering it in a training
 run.
@@ -251,7 +274,6 @@ telling apart before a network is sized around 630 inputs.
 **A dozen action indices are legal in more than one phase.** The mask keeps that safe, but
 it means one output neuron means different things on different screens, so the phase has
 to be prominent in the observation for the network to disambiguate.
-
 
 ## What the search path measures (`scripts/mcts_probe.py`)
 
@@ -281,16 +303,15 @@ is the concrete reason to work on step cost rather than on forking.
 **The path works end to end, and it scales with search.** Against random play on the same
 seeds, MCTS reaches deeper floors:
 
-| simulations per move | random | search | lift |
-| --- | --- | --- | --- |
-| 40 | 3.5 mean | 5.2 mean | +1.7 floors |
-| 120 | 3.4 mean | 8.0 mean | +4.6 floors |
+| simulations per move | random   | search   | lift        |
+| -------------------- | -------- | -------- | ----------- |
+| 40                   | 3.5 mean | 5.2 mean | +1.7 floors |
+| 120                  | 3.4 mean | 8.0 mean | +4.6 floors |
 
 That is not a claim about the agent — the value function is "how far did the rollout
 get". It is a claim about the plumbing: the clone, the mask, the value and the backup are
 all connected, and more search buys more floors, which is what a working search does.
 Cost at 120 sims/move is about 6s of wall clock per run.
-
 
 ## Where a step's time actually goes (`StepCostProbe`)
 
@@ -302,18 +323,18 @@ because the number that matters is `GC.GetAllocatedBytesForCurrentThread`, which
 can see. **A step that allocates kilobytes is paying a GC bill no algorithmic tidying
 will refund**, and that is the shape of the problem here.
 
-| scenario | time | alloc |
-| --- | ---: | ---: |
-| `WriteObservation` | 1.3 us | 0 KB |
-| end turn, baseline | 79.5 us | 14.6 KB |
-| end turn, **combat already over** | **2.7 us** | **1.0 KB** |
-| end turn, one enemy instead of two | 75.7 us | 13.1 KB |
-| end turn, draw pile stocked (no reshuffle) | 75.5 us | 14.6 KB |
+| scenario                                   |       time |      alloc |
+| ------------------------------------------ | ---------: | ---------: |
+| `WriteObservation`                         |     1.3 us |       0 KB |
+| end turn, baseline                         |    79.5 us |    14.6 KB |
+| end turn, **combat already over**          | **2.7 us** | **1.0 KB** |
+| end turn, one enemy instead of two         |    75.7 us |    13.1 KB |
+| end turn, draw pile stocked (no reshuffle) |    75.5 us |    14.6 KB |
 
 Reading down the table rules out three suspects and leaves one:
 
 - **Not the observation.** 1.3us against a ~72us step; 1.3% of it.
-- **Not the enemy phase.** One enemy costs *more* than two. Whatever this is does not
+- **Not the enemy phase.** One enemy costs _more_ than two. Whatever this is does not
   scale with the number of creatures acting.
 - **Not the reshuffle.** Stocking the draw pile saves ~4us and allocates identically.
 - **It is the START OF THE NEXT PLAYER TURN.** "Combat already over" is the only row that
@@ -329,7 +350,6 @@ Worth recording how this was found, because two plausible readings were wrong fi
 enemy phase looked like the answer until enemy count was varied; the reshuffle looked
 like the answer until allocation was compared. **The measurement that settled it was
 turning the next turn off**, not looking harder at what was on.
-
 
 ### What the allocation fix bought, and what it did not
 
@@ -349,11 +369,11 @@ precomputed int rank, with the original position in the low bits of the key so t
 stays STABLE — two cards can match on Entry and Upgraded while differing in an
 enchantment the key does not see, and an unstable sort would shuffle them differently.
 
-| | before | after |
-| --- | ---: | ---: |
-| `ExecuteIntent`, attacking enemy | 3,080 B | **352 B** |
-| `ExecuteIntent`, buff or unknown intent | ~570 B | **0 B** |
-| end turn, whole step | 14.6 KB | **4.1 KB** |
+|                                         |  before |      after |
+| --------------------------------------- | ------: | ---------: |
+| `ExecuteIntent`, attacking enemy        | 3,080 B |  **352 B** |
+| `ExecuteIntent`, buff or unknown intent |  ~570 B |    **0 B** |
+| end turn, whole step                    | 14.6 KB | **4.1 KB** |
 
 **Wall-clock throughput did not measurably move** — 12,500 steps/s against 13,900 before,
 which is inside the run-to-run spread. So the garbage was not what the time was going on

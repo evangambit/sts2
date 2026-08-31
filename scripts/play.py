@@ -653,7 +653,15 @@ def map_lines(
                 cells.append("   ")
             else:
                 cells.append(f" {glyph} ")
-        lines.append(f"  {row + offset:>3}  " + " ".join(cells).rstrip())
+        # The act's boss is named, and only the boss. The game's map shows who the act
+        # ends on from the moment it opens; what waits behind a monster node it never
+        # shows, which is why nothing else on this drawing carries an encounter.
+        named = (
+            f"   ← {graph.get('boss_encounter', 'unknown')}"
+            if any(nodes.get((col, row)) == rc.NODE_BOSS for col in range(width))
+            else ""
+        )
+        lines.append(f"  {row + offset:>3}  " + " ".join(cells).rstrip() + named)
 
         if index + 1 >= len(rows):
             break
@@ -703,17 +711,23 @@ def map_screen(env: Sts2RunEnv, info, legal: set[int]) -> Screen:
         (choice["x"], choice["y"]): action
         for action, choice in zip(sorted(legal), info["map_choices"])
     }
-    screen.lines += map_lines(env.map_graph(), int(info["floor"]), actions)
+    graph = env.map_graph()
+    screen.lines += map_lines(graph, int(info["floor"]), actions)
     screen.lines.append("")
 
     for (x, y), action in actions.items():
         choice = next(c for c in info["map_choices"] if (c["x"], c["y"]) == (x, y))
         node = NODE_NAMES.get(choice["node_type"], f"node-{choice['node_type']}")
-        # The node's TYPE and nothing else. `info["map_choices"]` also carries the
-        # encounter each node holds, and the game does not: you learn which monsters are
-        # in a room by walking into it. Printing it turned every monster row into a
-        # decision made with the answer already on the screen.
-        screen.offer(action, f"{node:<10} in column {x}")
+        # The node's TYPE, and for the boss its name -- the game's map names the act's
+        # boss and nothing else on the board. What waits behind a monster node is learned
+        # by walking into it, so it is neither printed here nor carried anywhere a policy
+        # can read it.
+        boss = (
+            f"  ({graph['boss_encounter']})"
+            if choice["node_type"] == rc.NODE_BOSS
+            else ""
+        )
+        screen.offer(action, f"{node:<10} in column {x}{boss}")
     return screen
 
 

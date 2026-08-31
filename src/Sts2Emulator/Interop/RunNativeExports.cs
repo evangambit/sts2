@@ -13,7 +13,9 @@ public static class RunNativeExports
     // v17: state list 19 names the enemies in the active combat, and 20 says what an open
     // card-select screen is FOR.
     // v18: state list 21 reports where on the map the run is standing.
-    public const int RUN_NATIVE_API_VERSION = 18;
+    // v19: the observation no longer carries the encounter behind a map choice, so the
+    // layout is one number shorter and every offset after the map's node types moves.
+    public const int RUN_NATIVE_API_VERSION = 19;
     private static readonly RunEngine?[] _pool = new RunEngine?[256];
 
     public static int Sts2Run_NativeApiVersion() => RUN_NATIVE_API_VERSION;
@@ -25,7 +27,7 @@ public static class RunNativeExports
     public static int Sts2Run_InfoSize() => RunConstants.RunInfoSize;
 
     /// <summary>How many numbers <see cref="Sts2Run_ObsLayout"/> writes.</summary>
-    public const int RUN_OBS_LAYOUT_SIZE = 13;
+    public const int RUN_OBS_LAYOUT_SIZE = 12;
 
     /// <summary>
     /// Where the run observation's variable-length blocks sit, so a consumer does not have
@@ -33,7 +35,7 @@ public static class RunNativeExports
     ///
     /// <c>[scalars, deck offset, deck slots, ints per card, relic offset, relic slots,
     /// ints per relic, shop offset, shop slots, ints per shop slot, map choices, map node
-    /// type offset, map choice offset]</c>
+    /// type offset]</c>
     ///
     /// Offsets are relative to the start of the run block, which itself begins at the
     /// combat observation's own size.
@@ -59,7 +61,6 @@ public static class RunNativeExports
         layout[9] = RunConstants.ShopSlotSize;
         layout[10] = RunConstants.MapChoices;
         layout[11] = RunConstants.MapNodeTypeObsOffset;
-        layout[12] = RunConstants.MapChoiceObsOffset;
         return RUN_OBS_LAYOUT_SIZE;
     }
 

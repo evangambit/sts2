@@ -871,8 +871,9 @@ public sealed class RunEngine
         obs[offset + 11] = State.RewardCards[2];
         for (int i = 0; i < RunConstants.MapChoices; i++)
         {
+            // Types only. What is BEHIND a node is not on the game's map -- see
+            // RunConstants, where the encounter block used to be.
             obs[offset + RunConstants.MapNodeTypeObsOffset + i] = State.MapNodeTypes[i];
-            obs[offset + RunConstants.MapChoiceObsOffset + i] = State.MapChoices[i];
         }
 
         obs[offset + RunConstants.RelicRewardObsOffset] = State.RelicReward;

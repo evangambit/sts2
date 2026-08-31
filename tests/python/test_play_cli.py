@@ -223,11 +223,12 @@ class HiddenInformationTests(unittest.TestCase):
     def test_the_map_screen_does_not_name_the_encounter_behind_a_node(self):
         """You learn which monsters are in a room by walking into it.
 
-        `info["map_choices"]` carries the encounter each node holds, and the map screen
-        used to print it -- so every monster row was a decision taken with the answer
-        already on the screen. The check is against the encounter's own NAME rather than
-        against a remembered label, so it fails again if any future screen reaches for the
-        same field.
+        Neither the map screen nor the run info may name what is behind a node. The
+        encounter the run is about to walk into is checked by NAME against the whole
+        rendered screen, so it fails again however a future screen came by it.
+
+        The boss is the exception and is deliberately named: the game's own map shows who
+        the act ends on from the moment it opens.
         """
         env = Sts2RunEnv(seed="CLIPLAY", max_episode_steps=400, max_floors=64)
         obs, info = env.reset()
@@ -237,20 +238,31 @@ class HiddenInformationTests(unittest.TestCase):
                 if not legal:
                     break
                 if int(info["phase"]) == run_constants.PHASE_MAP:
+                    for choice in info["map_choices"]:
+                        self.assertNotIn(
+                            "encounter",
+                            choice,
+                            "run info names what is behind a map node",
+                        )
+
                     screen = play.build_screen(env, obs, info, legal)
                     rendered = play.render(info, "CLIPLAY", screen, colour=False)
-                    named = {
-                        choice["encounter"]
-                        for choice in info["map_choices"]
-                        if choice["encounter"] != "none"
-                    }
-                    self.assertTrue(named, "the seed offers no encounter to leak")
-                    for encounter in named:
-                        self.assertNotIn(
-                            encounter,
-                            rendered,
-                            f"the map screen names {encounter} before the room is entered",
-                        )
+                    # Walk in and find out what was actually there, then check the screen
+                    # that offered it had not already said so.
+                    boss = env.map_graph()["boss_encounter"]
+                    _obs, _reward, _term, _trunc, after = env.step(min(legal))
+                    walked_into = after["encounter"]
+                    self.assertNotEqual(walked_into, "none", "that node held no fight")
+                    self.assertNotEqual(
+                        walked_into,
+                        boss,
+                        "the seed walked into the boss, where naming it is allowed",
+                    )
+                    self.assertNotIn(
+                        walked_into,
+                        rendered,
+                        f"the map named {walked_into} before the room was entered",
+                    )
                     return
                 obs, _reward, terminated, truncated, info = env.step(min(legal))
                 if terminated or truncated:

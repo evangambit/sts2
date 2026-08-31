@@ -12,10 +12,15 @@ public static class RunConstants
     /// <summary>Where the map's node types start in the scalar block; one slot per choice.</summary>
     public const int MapNodeTypeObsOffset = 12;
 
-    /// <summary>Where the encounter behind each map choice starts; one slot per choice.</summary>
-    public const int MapChoiceObsOffset = MapNodeTypeObsOffset + MapChoices;
-
-    public const int RelicRewardObsOffset = MapChoiceObsOffset + MapChoices;
+    // A block used to sit here carrying the ENCOUNTER behind each map choice, and the
+    // game does not put that on its map: you learn which monsters are in a room by
+    // walking into it. A policy reading the observation was told the next fight before it
+    // picked a node, which is the whole of the decision a monster row asks. The node
+    // TYPES above it stay -- those are on the game's map, drawn as icons.
+    //
+    // `State.MapChoices` is unchanged and still resolves the encounter when a node is
+    // actually entered; it is the OBSERVATION that has no business carrying it.
+    public const int RelicRewardObsOffset = MapNodeTypeObsOffset + MapChoices;
     public const int CurrentEventObsOffset = RelicRewardObsOffset + 1;
     public const int PotionObsOffset = CurrentEventObsOffset + 1;
     public const int PotionObsSlots = 3;

@@ -201,9 +201,18 @@ class Sts2RunEnv(gym.Env):
             for i in range(0, len(flat_edges) - 3, 4)
         )
         current = native.run_state_list(self._run_handle, 21, 2)
+        # The act's boss, which the game names on its map from the moment the act opens --
+        # unlike the encounter behind a monster node, which it never names. Read here
+        # rather than put in the observation: this is what a SCREEN needs, and widening
+        # what a policy is handed is a separate decision from drawing a map.
+        act_summary = native.run_state_list(self._run_handle, 14, 3)
         return {
             "nodes": nodes,
             "edges": edges,
+            "boss_encounter": ENCOUNTER_NAMES.get(
+                act_summary[1] if len(act_summary) > 1 else -1,
+                "unknown",
+            ),
             "current": (current[0], current[1]) if len(current) == 2 else None,
         }
 
@@ -333,7 +342,6 @@ class Sts2RunEnv(gym.Env):
         map_option_coords = native.run_state_list(self._run_handle, 7, MAP_CHOICES * 2)
         layout = native.RUN_OBS_LAYOUT
         node_types = run_offset + layout["map_node_type_offset"]
-        encounters = run_offset + layout["map_choice_offset"]
         return {
             "phase": phase,
             "floor": int(info_buf[1]),
@@ -368,16 +376,16 @@ class Sts2RunEnv(gym.Env):
             "bundle_offer": native.run_state_list(self._run_handle, 18, 6),
             "potion_reward_odds": 0.4,
             "event_id": int(info_buf[9]),
+            # What the game's map shows: an icon and a position. NOT the encounter behind
+            # the node -- that used to be here, read out of the observation, and neither
+            # the observation nor a player has it. You learn what is in a room by walking
+            # into it.
             "map_choices": (
                 tuple(
                     {
                         "node_type": int(obs[node_types + i]),
                         "x": int(map_option_coords[i * 2]),
                         "y": int(map_option_coords[i * 2 + 1]),
-                        "encounter": ENCOUNTER_NAMES.get(
-                            int(obs[encounters + i]),
-                            f"unknown-{int(obs[encounters + i])}",
-                        ),
                     }
                     for i in range(MAP_CHOICES)
                     if int(obs[node_types + i]) != NODE_NONE

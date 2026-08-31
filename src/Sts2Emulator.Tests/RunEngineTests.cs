@@ -400,6 +400,9 @@ public class RunEngineTests
             RunConstants.NodeRelic,
             RunConstants.NodeBoss,
         ];
+        // Set, and deliberately NOT expected below: the encounter behind a map choice is
+        // not on the game's map and is not in the observation. See RunConstants, where the
+        // block that used to carry it was.
         engine.State.MapChoices = [201, 202, 203, 204, 205, 206, 207];
         engine.State.ShopCards = [301, 302, 303, 304, 305, 306, 307];
         engine.State.RelicReward = 401;
@@ -434,13 +437,6 @@ public class RunEngineTests
                 RunConstants.NodeEvent,
                 RunConstants.NodeRelic,
                 RunConstants.NodeBoss,
-                201,
-                202,
-                203,
-                204,
-                205,
-                206,
-                207,
                 401,
                 RunConstants.EventBrainLeech,
                 501,
@@ -449,6 +445,11 @@ public class RunEngineTests
             },
             obs[offset..(offset + RunConstants.RunScalarObsSize)]
         );
+
+        // Said again the other way round, because the assertion above would still pass if
+        // the encounters moved somewhere else in the observation rather than leaving it.
+        Assert.DoesNotContain(201, obs.ToArray());
+        Assert.DoesNotContain(207, obs.ToArray());
 
         // The deck and the relics follow the scalars, in the order the run holds them.
         int deck = offset + RunConstants.DeckObsOffset;

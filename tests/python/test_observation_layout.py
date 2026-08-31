@@ -151,14 +151,20 @@ class MapChoiceLayoutTests(unittest.TestCase):
     def test_the_map_blocks_sit_where_the_emulator_says(self):
         layout = native.RUN_OBS_LAYOUT
 
-        self.assertEqual(
-            layout["map_node_type_offset"] + layout["map_choices"],
-            layout["map_choice_offset"],
-        )
         self.assertLessEqual(
-            layout["map_choice_offset"] + layout["map_choices"],
+            layout["map_node_type_offset"] + layout["map_choices"],
             layout["scalars"],
         )
+
+    def test_the_observation_does_not_carry_what_is_behind_a_map_node(self):
+        """The node TYPES are on the game's map. The encounters are not.
+
+        A block used to follow the types carrying the encounter behind each choice, so a
+        policy read the next fight before picking a node -- the whole of the decision a
+        monster row asks. It is gone, and this is the guard: an offset by that name is no
+        longer published, and nothing may reintroduce one without this failing.
+        """
+        self.assertNotIn("map_choice_offset", native.RUN_OBS_LAYOUT)
 
 
 class TargetMapTests(unittest.TestCase):
