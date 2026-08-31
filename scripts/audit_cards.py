@@ -102,6 +102,54 @@ def card_digest(text: str) -> str:
 # guessing would put exactly the false confidence here that the file exists to remove.
 # They are unread until someone re-reads them, and that is the honest starting point.
 READ: dict[str, tuple[str, str]] = {
+    "Clumsy": (
+        "49abf07a482c",
+        "Unplayable + Ethereal, and nothing else -- it exhausts itself at end of turn, so it costs one draw and leaves. Keywords only; both extracted correctly.",
+    ),
+    "CurseOfTheBell": (
+        "ade12ad267fa",
+        "Unplayable + Eternal, nothing else. Calling Bell's price, and Eternal means the removal screens will not offer it. Keywords only.",
+    ),
+    "Folly": (
+        "392cfc186633",
+        "Unplayable + Eternal + Innate + Ethereal -- all four. Innate puts it in the opening hand and Ethereal exhausts it there, so it costs one card of the opening hand every fight and cannot be removed. Keywords only.",
+    ),
+    "Greed": (
+        "94c02475545e",
+        "Unplayable + Eternal, nothing else. Keywords only.",
+    ),
+    "Guilty": (
+        "99cc2a3fb771",
+        "Unplayable, and `AfterCombatEnd` counts the combats it sits through in the DECK -- at FIVE it removes itself. The only card in the game that leaves on its own. Per COPY, because the count is [SavedProperty] on the card model. Written from scratch; the event that hands it out was modelled and the card did nothing.",
+    ),
+    "Injury": (
+        "2d3104bf3233",
+        "Unplayable, nothing else. Keywords only.",
+    ),
+    "Normality": (
+        "2568d9f7cfcf",
+        "Unplayable, and `ShouldPlay` is false once THREE cards have been played this turn while it is in HAND -- so drawing it late can stop a turn dead and shuffling it away costs nothing. Written from scratch, onto the same door as Velvet Choker's limit.",
+    ),
+    "PoorSleep": (
+        "f8167cf4271c",
+        "Unplayable + Retain -- the one curse that does NOT leave the hand at end of turn, so it clogs the same five cards all fight. Keywords only.",
+    ),
+    "Soot": (
+        "499c9162b49d",
+        "Unplayable, `CanBeGeneratedInCombat => false`. Biiig Hug's gift and nothing more. Keywords only.",
+    ),
+    "Void": (
+        "8e443f147881",
+        "Unplayable + Ethereal, and `AfterCardDrawn` on ITSELF loses 1 energy -- the energy it takes on the way past is the whole card. Written from scratch.",
+    ),
+    "Wound": (
+        "bed29a739fb0",
+        "Unplayable, nothing else. Keywords only.",
+    ),
+    "Writhe": (
+        "77e1caeda0da",
+        "Unplayable + Innate -- it is in the opening hand every fight, and unlike Folly it stays there. Keywords only.",
+    ),
     "BadLuck": (
         "02137afba50d",
         "Unplayable, Eternal. At turn end in HAND, 13 Unblockable+Unpowered -- block does not save you, and Eternal means it cannot be removed. Written from scratch; the turn-end list named four cards and this was not one.",

@@ -291,4 +291,14 @@ public static class ST
     public const int Doubt = 10027;
     public const int Regret = 10036;
     public const int Shame = 10037;
+    public const int Void = 10040;
+    public const int Normality = 10034;
+    public const int Guilty = 10030;
+    public const int Clumsy = 10023;
+    public const int Folly = 10028;
+    public const int Greed = 10029;
+    public const int Injury = 10031;
+    public const int PoorSleep = 10035;
+    public const int Writhe = 10042;
+    public const int CurseOfTheBell = 10024;
 }

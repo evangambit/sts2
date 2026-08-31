@@ -2545,6 +2545,14 @@ public static class CardEffects
 
             var card = ConfuseCostOnDraw(state, GrowKinglyCardOnDraw(state.DrawPile[0]));
             state.RemoveFromDrawPileAt(0);
+            // `Void.AfterCardDrawn` when the drawn card IS the Void: `LoseEnergy(1)`. The
+            // card is Unplayable and Ethereal, so its whole existence is the energy it
+            // takes on the way past.
+            if (card.DefId == ST.Void)
+            {
+                state.Energy = Math.Max(0, state.Energy - 1);
+            }
+
             state.CardsDrawnThisCombat++;
             if (!fromHandDraw)
             {

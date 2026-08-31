@@ -267,6 +267,18 @@ public sealed class RunState
     public bool AddingBingBongClone;
 
     /// <summary>
+    /// Combats each Guilty in the deck has sat through. `Guilty.AfterCombatEnd` counts
+    /// while the card is in the DECK and removes it at five -- a curse that serves a
+    /// sentence and leaves, which is the only self-removing card in the game.
+    /// </summary>
+    /// <remarks>
+    /// Per COPY, not per deck: the count is `[SavedProperty]` on the card. A list parallel
+    /// to the copies in the deck says the same thing without putting a counter on every
+    /// CardInstance for the one card that needs it.
+    /// </remarks>
+    public List<int> GuiltyCombatsServed = [];
+
+    /// <summary>
     /// Gold rewards still owed. The reward screen carries one pile at a time, the way it
     /// carries one potion at a time, so anything that offers several -- the Crystal
     /// Sphere can uncover seven -- queues the rest here.

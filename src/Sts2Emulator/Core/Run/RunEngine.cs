@@ -1182,6 +1182,7 @@ public sealed class RunEngine
                 if (result.PlayerWon)
                 {
                     RunNonCombatEffects.TriggerFishingRod(State);
+                    RunNonCombatEffects.ServeGuiltySentences(State);
                     // `SwordOfStone.AfterCombatVictory(room.RoomType == Elite)`: five
                     // elites and it becomes Sword of Jade. Counted on the VICTORY rather
                     // than on entering the room, so fleeing or dying does not count.

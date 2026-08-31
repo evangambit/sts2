@@ -2150,6 +2150,58 @@ public static class RunNonCombatEffects
     /// the counter. The card is a plain <c>Rng.Niche.NextItem</c> over the upgradable
     /// ones, and the counter lives on the relic so it survives a save.
     /// </remarks>
+    /// <summary>
+    /// `Guilty.AfterCombatEnd`: a Guilty sitting in the DECK counts the combat, and at
+    /// FIVE it removes itself. The only card in the game that leaves on its own.
+    /// </summary>
+    /// <remarks>
+    /// Counted per COPY -- the count is `[SavedProperty]` on the card model, so two
+    /// Guilties taken at different times serve their sentences separately. `Pile.Type ==
+    /// Deck` is checked twice in the source, before and after the increment, because the
+    /// removal is awaited; here the list is rebuilt against the deck each time, which
+    /// says the same thing.
+    /// </remarks>
+    public static void ServeGuiltySentences(RunState state)
+    {
+        int guilty = ResolveCard("Guilty");
+        int copies = state.Deck.Count(card => card.DefId == guilty);
+        if (copies == 0)
+        {
+            state.GuiltyCombatsServed.Clear();
+            return;
+        }
+
+        while (state.GuiltyCombatsServed.Count < copies)
+        {
+            state.GuiltyCombatsServed.Add(0);
+        }
+
+        while (state.GuiltyCombatsServed.Count > copies)
+        {
+            state.GuiltyCombatsServed.RemoveAt(state.GuiltyCombatsServed.Count - 1);
+        }
+
+        for (int i = 0; i < state.GuiltyCombatsServed.Count; i++)
+        {
+            state.GuiltyCombatsServed[i]++;
+        }
+
+        int served = state.GuiltyCombatsServed.Count(count => count >= GuiltyCombats);
+        for (int i = 0; i < served; i++)
+        {
+            int index = state.Deck.FindIndex(card => card.DefId == guilty);
+            if (index >= 0)
+            {
+                state.Deck.RemoveAt(index);
+            }
+        }
+
+        state.GuiltyCombatsServed.RemoveAll(count => count >= GuiltyCombats);
+    }
+
+    /// <summary>`Guilty.maxCombats`.</summary>
+    private const int GuiltyCombats = 5;
+
     public static void TriggerFishingRod(RunState state)
     {
         if (state.LastResolvedRoomType != RunConstants.NodeNormal)

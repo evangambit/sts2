@@ -282,7 +282,18 @@ public static class RelicEffects
     /// engine does not — see the approximation table in HANDOFF.md.
     /// </summary>
     public static bool BlocksFurtherCardPlays(CombatState state) =>
-        HasRelic(state, VelvetChoker) && state.CardPlaysThisTurn >= VelvetChokerCardLimit;
+        (HasRelic(state, VelvetChoker) && state.CardPlaysThisTurn >= VelvetChokerCardLimit)
+        // `Normality.ShouldPlay` is false once THREE cards have been played this turn, and
+        // only while the curse is in HAND -- so drawing it late in a turn can stop the
+        // turn dead, and shuffling it away costs nothing. Velvet Choker's rule with the
+        // clock on a card instead of a relic, which is why they share this door.
+        || (
+            state.Hand.Any(card => card.DefId == ST.Normality)
+            && state.CardPlaysThisTurn >= NormalityCardLimit
+        );
+
+    /// <summary>Normality's `_numOfCardsPerTurn`.</summary>
+    private const int NormalityCardLimit = 3;
 
     /// <summary>
     /// Spiked Gauntlets' TryModifyEnergyCostInCombat: Powers cost one more. Returned as an

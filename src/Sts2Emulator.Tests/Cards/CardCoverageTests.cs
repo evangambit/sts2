@@ -61,7 +61,6 @@ public class CardCoverageTests
         "ToricToughness",
         "Whistle",
         "Wish",
-        "Wound",
     ];
 
     [Fact]

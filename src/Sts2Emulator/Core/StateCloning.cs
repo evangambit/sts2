@@ -358,6 +358,7 @@ public static class StateCloning
             EventRngName = state.EventRngName,
             EventRelicStock = state.EventRelicStock is null ? null : [.. state.EventRelicStock],
             AddingBingBongClone = state.AddingBingBongClone,
+            GuiltyCombatsServed = [.. state.GuiltyCombatsServed],
             VisitedEventIds = [.. state.VisitedEventIds],
             PendingSelectionEventEntry = state.PendingSelectionEventEntry,
             PendingGoldRewards = [.. state.PendingGoldRewards],
