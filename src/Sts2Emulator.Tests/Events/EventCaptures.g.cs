@@ -1624,6 +1624,54 @@ public class EventCaptures
         Assert.Equal(RunConstants.EventResultPending, engine.State.EventId);
     }
     /// <summary>
+    /// Trial, 'Accept' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void Trial_Option0()
+    {
+        var engine = Open(RunConstants.EventTrial);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(0, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        // The game answered with a page of 2: 'DECIDE: Guilty', 'DECIDE: Innocent'.
+        Assert.Equal(2, OfferedCount(engine));
+        Assert.NotEqual(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
+    /// Trial, 'Reject' -- captured from v0.107.1 (build 23811903).
+    /// </summary>
+    [Fact]
+    public void Trial_Option1()
+    {
+        var engine = Open(RunConstants.EventTrial);
+
+        // The capture's own starting state. If this drifts, the after-state
+        // comparison below is measuring two different runs.
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+
+        Assert.Equal(0, engine.Step(1, -1, out _, out _, out _));
+
+        AssertPlayer(engine, 64, 80, 99,
+            [(472, false), (472, false), (472, false), (472, false), (472, false), (131, false), (131, false), (131, false), (131, false), (30, false), (10001, false)],
+            [36]);
+        Assert.Equal(RunPhase.Event, engine.State.Phase);
+        // The game answered with a page of 2: 'Accept', 'Double Down'.
+        Assert.Equal(2, OfferedCount(engine));
+        Assert.NotEqual(RunConstants.EventResultPending, engine.State.EventId);
+    }
+    /// <summary>
     /// UnrestSite, 'Rest Anyways' -- captured from v0.107.1 (build 23811903).
     /// </summary>
     [Fact]

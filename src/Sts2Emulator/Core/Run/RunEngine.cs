@@ -3918,15 +3918,55 @@ public sealed class RunEngine
                 }
 
                 break;
+            // The Trial. Accept draws a DEFENDANT off the event's own stream -- merchant,
+            // noble or nondescript -- and each is a page of Guilty / Innocent with its own
+            // pair of outcomes. Reject answers with a page offering Accept again or Double
+            // Down, and Double Down abandons the run outright.
+            //
+            // The emulator had two options: 10 HP for an upgraded random card, or 100 gold.
+            // Neither is any of the eight things this event can do.
+            //
+            // EventPage carries the defendant: 1 merchant, 2 noble, 3 nondescript, and 4
+            // the Reject page. EventValue0 is not used -- the page IS the state.
+            case RunConstants.EventTrial when State.EventPage is 1 or 2 or 3:
+                return StepTrialVerdict(action, out terminal);
+
+            case RunConstants.EventTrial when State.EventPage == 4:
+                // Reject's page: Accept after all, or Double Down and end the run.
+                if (action == 0)
+                {
+                    State.EventPage = TrialDefendantPage();
+                    return 0;
+                }
+
+                if (action == 1)
+                {
+                    // `.ThatWillKillPlayerIf(_ => true)`, and the option opens
+                    // `NAbandonRunConfirmPopup`: Double Down is the run. Taking the HP to
+                    // zero rather than setting `terminal` outright lets the shared
+                    // death guard below run it -- which is what marks the run LOST rather
+                    // than merely over.
+                    State.PlayerHp = 0;
+                    return 0;
+                }
+
+                if (action != RunConstants.EventSkipAction)
+                {
+                    return -1;
+                }
+
+                break;
+
             case RunConstants.EventTrial:
                 if (action == 0)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 10);
-                    AddEventRewardCard(upgraded: true);
+                    State.EventPage = TrialDefendantPage();
+                    return 0;
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(100));
+                    State.EventPage = 4;
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -4436,6 +4476,137 @@ public sealed class RunEngine
         }
     }
 
+    /// <summary>
+    /// Which defendant Accept draws: `base.Rng.NextInt(3)` off the event's own stream,
+    /// mapped to pages 1 (merchant), 2 (noble) and 3 (nondescript).
+    /// </summary>
+    private int TrialDefendantPage() =>
+        1 + RunNonCombatEffects.EventStream(State, "TRIAL").NextInt(3);
+
+    /// <summary>
+    /// A verdict on whichever defendant Accept drew. Six outcomes, and no two of them are
+    /// the same shape: two hand out relics or gold outright, two raise a card selection,
+    /// and one opens a pair of card-reward offers. Every one of them starts with a CURSE
+    /// except the noble's Guilty.
+    /// </summary>
+    private int StepTrialVerdict(int action, out bool terminal)
+    {
+        terminal = false;
+        if (action is not (0 or 1))
+        {
+            return action == RunConstants.EventSkipAction ? AdvanceAfterNode(out terminal) : -1;
+        }
+
+        bool guilty = action == 0;
+        switch (State.EventPage)
+        {
+            case 1 when guilty:
+                // Merchant, Guilty: a Regret, and TWO relics off the front of the pool.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Regret"), false)
+                );
+                for (int i = 0; i < 2; i++)
+                {
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunRewardGenerator.NextRelic(State)
+                    );
+                }
+
+                break;
+
+            case 1:
+                // Merchant, Innocent: a Shame, then TWO cards the player upgrades.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Shame"), false)
+                );
+                if (RunNonCombatEffects.BeginDeckSelection(State, DeckSelection.Upgrade, 0, count: 2))
+                {
+                    State.Phase = RunPhase.TransformSelect;
+                    return 0;
+                }
+
+                break;
+
+            case 2 when guilty:
+                // Noble, Guilty: heal 10, and it is the only verdict with no curse.
+                HealPlayer(10);
+                break;
+
+            case 2:
+                // Noble, Innocent: a Regret and 300 gold, flat.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Regret"), false)
+                );
+                RunNonCombatEffects.GainGold(State, 300);
+                break;
+
+            case 3 when guilty:
+            {
+                // Nondescript, Guilty: a Doubt, then TWO card-reward offers of three from
+                // the character's own pool. The emulator's reward screen carries one offer,
+                // so the second waits behind it the way a second relic does.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Doubt"), false)
+                );
+                // Both offers are rolled HERE, in order, because that is when the game
+                // rolls them: `RewardsCmd.OfferCustom` populates every reward as the screen
+                // opens and the draws all come off the same stream.
+                Array.Clear(State.RewardCards);
+                Array.Clear(State.RewardUpgraded);
+                var first = RunRewardGenerator.GenerateEventOfferCards(
+                    State,
+                    State.RewardCards.Length,
+                    RunRewardGenerator.IroncladRewardPool
+                );
+                var second = RunRewardGenerator.GenerateEventOfferCards(
+                    State,
+                    State.RewardCards.Length,
+                    RunRewardGenerator.IroncladRewardPool
+                );
+                for (int i = 0; i < State.RewardCards.Length && i < first.Length; i++)
+                {
+                    State.RewardCards[i] = first[i];
+                }
+
+                State.RewardCardPending = true;
+                State.PendingCardOffers.Add(second);
+                State.Phase = RunPhase.CardReward;
+                return 0;
+            }
+
+            default:
+                // Nondescript, Innocent: a Doubt, then TWO cards the player picks are
+                // transformed at RANDOM -- `TransformToRandom` off the event's own stream,
+                // not the Transformations one.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Doubt"), false)
+                );
+                if (
+                    RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.TransformToRandom,
+                        0,
+                        count: 2,
+                        eventEntry: "TRIAL"
+                    )
+                )
+                {
+                    State.Phase = RunPhase.TransformSelect;
+                    return 0;
+                }
+
+                break;
+        }
+
+        return AdvanceAfterNode(out terminal);
+    }
+
     private int RestHealAmount() =>
         Math.Max(1, (int)(State.PlayerMaxHp * 0.3))
         // Regal Pillow's ModifyRestSiteHealAmount adds its HealVar(15m) to whatever the
@@ -4687,6 +4858,12 @@ public sealed class RunEngine
             case RunConstants.EventTheLanternKey when State.EventPage == 1:
                 // Keep The Key's page offers only the fight, the same shape as those two.
                 SetMask(mask, 0);
+                break;
+            case RunConstants.EventTrial when State.EventPage != 0:
+                // Every page past the first offers exactly two: Guilty / Innocent on a
+                // defendant's page, Accept / Double Down on Reject's.
+                SetMask(mask, 0);
+                SetMask(mask, 1);
                 break;
             case RunConstants.EventStoneOfAllTime:
                 // Lift needs a potion to drink; Push needs a card Vigorous can enchant,

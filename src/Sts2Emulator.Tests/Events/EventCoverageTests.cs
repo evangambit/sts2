@@ -50,7 +50,6 @@ public class EventCoverageTests
         "GraveOfTheForgotten",
         "RoundTeaParty",
         "Symbiote",
-        "Trial",
     ];
 
     [Fact]
