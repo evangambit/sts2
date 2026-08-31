@@ -136,7 +136,7 @@ READ: dict[str, tuple[str, str]] = {
     ),
     "SporeMind": (
         "47f6999118b7",
-        "1-cost Curse with Exhaust and NO OnPlay AT ALL -- the whole card is paying one energy to be rid of it, Debris's shape as a curse. The emulator applied `NoBlock`, which is invented and one of the harshest debuffs in the game.",
+        "1-cost Curse with Exhaust and NO OnPlay AT ALL -- the whole card is paying one energy to be rid of it, Debris's shape as a curse. The emulator carried an invented `NoBlock` for it -- but behind `ApplyGeneratedCardApproximation`'s `if (def.Type is Status or Curse) return;`, so the line was DEAD and the behaviour was already correct. Removed anyway; see E420.",
     ),
     "SweepingGaze": (
         "72d747d157ec",
