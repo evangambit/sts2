@@ -219,6 +219,47 @@ class MapDrawingTests(unittest.TestCase):
             env.close()
 
 
+class HiddenInformationTests(unittest.TestCase):
+    def test_the_map_screen_does_not_name_the_encounter_behind_a_node(self):
+        """You learn which monsters are in a room by walking into it.
+
+        `info["map_choices"]` carries the encounter each node holds, and the map screen
+        used to print it -- so every monster row was a decision taken with the answer
+        already on the screen. The check is against the encounter's own NAME rather than
+        against a remembered label, so it fails again if any future screen reaches for the
+        same field.
+        """
+        env = Sts2RunEnv(seed="CLIPLAY", max_episode_steps=400, max_floors=64)
+        obs, info = env.reset()
+        try:
+            for _ in range(400):
+                legal = {int(a) for a in np.flatnonzero(env.action_masks())}
+                if not legal:
+                    break
+                if int(info["phase"]) == run_constants.PHASE_MAP:
+                    screen = play.build_screen(env, obs, info, legal)
+                    rendered = play.render(info, "CLIPLAY", screen, colour=False)
+                    named = {
+                        choice["encounter"]
+                        for choice in info["map_choices"]
+                        if choice["encounter"] != "none"
+                    }
+                    self.assertTrue(named, "the seed offers no encounter to leak")
+                    for encounter in named:
+                        self.assertNotIn(
+                            encounter,
+                            rendered,
+                            f"the map screen names {encounter} before the room is entered",
+                        )
+                    return
+                obs, _reward, terminated, truncated, info = env.step(min(legal))
+                if terminated or truncated:
+                    break
+            self.fail("never reached a map")
+        finally:
+            env.close()
+
+
 class DeckSelectionTests(unittest.TestCase):
     def test_a_deck_screen_says_what_answering_it_does(self):
         """One screen answers four questions, and the cards on it tell them apart in none.

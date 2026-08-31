@@ -709,12 +709,11 @@ def map_screen(env: Sts2RunEnv, info, legal: set[int]) -> Screen:
     for (x, y), action in actions.items():
         choice = next(c for c in info["map_choices"] if (c["x"], c["y"]) == (x, y))
         node = NODE_NAMES.get(choice["node_type"], f"node-{choice['node_type']}")
-        encounter = (
-            f"  ({choice['encounter']})"
-            if choice["node_type"] in (rc.NODE_NORMAL, rc.NODE_ELITE, rc.NODE_BOSS)
-            else ""
-        )
-        screen.offer(action, f"{node:<10} in column {x}{encounter}")
+        # The node's TYPE and nothing else. `info["map_choices"]` also carries the
+        # encounter each node holds, and the game does not: you learn which monsters are
+        # in a room by walking into it. Printing it turned every monster row into a
+        # decision made with the answer already on the screen.
+        screen.offer(action, f"{node:<10} in column {x}")
     return screen
 
 
@@ -986,7 +985,9 @@ HELP = """
   map          the nodes on offer, when a map is up
   log          what has happened so far
   undo         take back the last action
-  state        the raw info dict, for debugging the emulator
+  state        the raw info dict — a debugging hatch, and it SPOILS: the dict
+               carries things the game hides from a player, the encounter
+               waiting on each map node among them
   help         this
   quit         leave
 """
