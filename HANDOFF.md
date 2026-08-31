@@ -1102,6 +1102,36 @@ list, derived lazily in the action mask, rolled the event's own stream on a READ
 Sphere and Wongo's featured item already say it should be: `CalculateEventVars`, on entry.
 **An event's randomness is spent on entry or it is spent by whoever looks first.**
 
+### Unmodelled relics: budget for the hook, not for the relic
+
+The 34 reachable relics that had no implementation at all (E383) took far longer than 34
+small arms would suggest, and the reason is worth carrying: five of them needed a hook the
+emulator did not have, and two of those hooks were defects in their own right.
+
+`LoseHp` never dispatched `AfterDamageReceived` (E384). In the game there is no separate
+LoseHp command — Blood Wall, Offering and Hemokinesis all call `CreatureCmd.Damage` with
+`Unblockable | Unpowered`, and that dispatches the hook like any other. Centennial Puzzle
+and Self-Forming Clay had therefore been blind to every card that hurts you to pay for
+itself, and nothing noticed until Demon Tongue, which does nothing else, was added beside
+them. The counterpart detail is what kept the fix honest: `TookUnblockedDamage` is Lava
+Lamp's private flag and Lava Lamp is the one relic on the hook that checks
+`props.HasFlag(Unblockable)` and refuses, so **the hook fires and the relic filters** —
+setting the flag from the hook would have been the same conflation in the other direction.
+
+Player Strength had twenty-eight bare `BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength,
+...)` call sites across three files and no chokepoint (E385). Ruined Helmet doubles the
+first Strength received each combat, and there was simply nowhere to put that. Twenty-eight
+sites in two different card dispatches is exactly the shape that gets a rule applied to
+half of them, which is the same argument the gold and stars chokepoints were built on.
+
+Two smaller lessons from the same pass. The end-of-turn hand dump is **not** a discard
+(E387): `FlushPlayerHand` adds to the pile and dispatches `AfterFlush`, so Tough Bandages
+and Tingsha pay nothing for the five cards that leave your hand every turn — the obvious
+reading of both relics is wrong. And Big Hat does nothing for an Ironclad or a Silent
+(E386), because neither pool contains an Ethereal card; that is the game's answer, not a
+gap, and it is only visible if the filter is computed from the pool rather than
+hard-coded.
+
 ### Hive's encounter tags, and why a missing tag is worse than a wrong order
 
 Seven act-2 captures now agree with the emulator on which ancient act 2 opens on. Five did

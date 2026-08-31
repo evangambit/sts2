@@ -122,6 +122,12 @@ public readonly record struct CardDef(
     // filter is the tag, not the name -- see IsStrikeOrDefend for what the name got wrong.
     bool StrikeTag = false,
     bool DefendTag = false,
+    // CardTag.Shiv: Helical Dart reads it off the card just played. Blade of Ink's Shivs
+    // and Knife Trap's replays are all tagged, so this cannot be "id == 430".
+    bool ShivTag = false,
+    // CardTag.Minion: Vitruvian Minion doubles both the damage and the block of a
+    // Minion-tagged card.
+    bool MinionTag = false,
     // CardModel.IsUpgradable is CurrentUpgradeLevel < MaxUpgradeLevel, and 38 cards
     // override MaxUpgradeLevel to zero -- every curse and status. This is that override,
     // read from the source rather than restated: the hand-kept list of ids it replaces

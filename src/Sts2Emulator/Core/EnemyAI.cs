@@ -3758,9 +3758,8 @@ public static class EnemyAI
                 // SOUL_SIPHON takes the Strength and Dexterity it gives itself: the
                 // matriarch's attacks climb by 2 every fourth turn, which is the whole
                 // shape of the fight after the first cycle.
-                BuffSystem.Apply(
-                    state.PlayerBuffs,
-                    BuffId.Strength,
+                Effects.RelicEffects.GainPlayerStrength(
+                    state,
                     -enemy.CurrentIntent.Magnitude
                 );
                 BuffSystem.Apply(
@@ -3916,9 +3915,8 @@ public static class EnemyAI
                 break;
 
             case KE.TheLost:
-                BuffSystem.Apply(
-                    state.PlayerBuffs,
-                    BuffId.Strength,
+                Effects.RelicEffects.GainPlayerStrength(
+                    state,
                     -enemy.CurrentIntent.Magnitude
                 );
                 BuffSystem.Apply(enemy.Buffs, BuffId.Strength, enemy.CurrentIntent.Magnitude);
@@ -4004,6 +4002,13 @@ public static class EnemyAI
         }
     }
 
+    /// <summary>The enemy attack path, for tests about what modifies it.</summary>
+    internal static void DealAttackDamageForTests(
+        EnemyState enemy,
+        CombatState state,
+        int baseDamage
+    ) => DealAttackDamage(enemy, state, baseDamage);
+
     private static bool DealAttackDamage(
         EnemyState enemy,
         CombatState state,
@@ -4011,7 +4016,19 @@ public static class EnemyAI
         bool triggerSuck = true
     )
     {
-        int damage = BuffSystem.IncomingDamage(baseDamage, enemy.Buffs, state.PlayerBuffs);
+        int damage = BuffSystem.IncomingDamage(
+            baseDamage,
+            enemy.Buffs,
+            state.PlayerBuffs,
+            weakDelta: Effects.RelicEffects.WeakMultiplierDeltaAgainstPlayer(state)
+        );
+
+        // `UndyingSigil.ModifyDamageMultiplicative`: an attacker already at or below its
+        // own Doom hits the relic's owner for half. Applied after the buff chain, as a
+        // multiplicative hook is.
+        damage = (int)(
+            damage * Effects.RelicEffects.IncomingDamageMultiplierFromDoom(state, enemy)
+        );
         if (
             BuffSystem.Get(state.PlayerBuffs, BuffId.Colossus) > 0
             && BuffSystem.Get(enemy.Buffs, BuffId.Vulnerable) > 0
@@ -4057,7 +4074,9 @@ public static class EnemyAI
 
         if (unblocked > 0)
         {
-            Effects.RelicEffects.ApplyAfterUnblockedDamageReceived(state);
+            // An enemy attack lands on the ENEMY side turn, which `state.PlayerTurn`
+            // already says -- so Demon Tongue reads it there rather than being told.
+            Effects.RelicEffects.ApplyAfterUnblockedDamageReceived(state, unblocked: unblocked);
             // Red Skull and Lizard Tail both answer a changed HP total, and a multi-hit
             // intent must not land its later hits on a player the relic already revived.
             Effects.RelicEffects.ApplyAfterPlayerHpChanged(state);

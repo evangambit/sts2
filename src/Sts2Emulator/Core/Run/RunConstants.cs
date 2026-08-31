@@ -570,6 +570,9 @@ public static class RunConstants
     public const int RelicEmptyCage = 1399;
     public const int RelicPandorasBox = 1510;
 
+    /// <summary>Looming Fruit's `MaxHpVar(31m)`, paid on pickup.</summary>
+    public const int RelicLoomingFruit = 138;
+
     /// <summary>Normal rooms drawn from the act's weak pool before the normal one.</summary>
     /// <summary>Endless Conveyor's GoldVar(40): the price of one grab.</summary>
     public const int ConveyorGrabCost = 40;

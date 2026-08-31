@@ -89,7 +89,14 @@ public static class CombatObservation
     /// nine on the turn it hits for fifteen. Non-attack intents carry a count, not damage.
     /// </summary>
     private static int AnnouncedMagnitude(CombatState s, EnemyState enemy) =>
-        enemy.CurrentIntent.AnnouncedDamage(enemy.Buffs, s.PlayerBuffs);
+        enemy.CurrentIntent.AnnouncedDamage(
+            enemy.Buffs,
+            s.PlayerBuffs,
+            // Paper Krane deepens the attacker's Weak, and the readout runs through the
+            // same `Hook.ModifyDamage` chain -- so the announced number moves with it, the
+            // way it already moves with Strength and the Crab's Surrounded.
+            Effects.RelicEffects.WeakMultiplierDeltaAgainstPlayer(s)
+        );
 
     public static void Write(CombatState s, Span<int> obs)
     {

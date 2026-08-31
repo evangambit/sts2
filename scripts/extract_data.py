@@ -391,6 +391,14 @@ def extract_cards() -> str:
             flags.append("StrikeTag: true")
         if "CardTag.Defend" in text:
             flags.append("DefendTag: true")
+        # CardTag.Shiv and CardTag.Minion. Helical Dart reads the Shiv tag off the card it
+        # was just played from, and Vitruvian Minion doubles both damage and block from a
+        # Minion-tagged card -- neither is answerable from the card's name, and Blade of
+        # Ink's Shivs and Knife Trap's replays are the reason.
+        if "CardTag.Shiv" in text:
+            flags.append("ShivTag: true")
+        if "CardTag.Minion" in text:
+            flags.append("MinionTag: true")
         # CardModel.MaxUpgradeLevel. The base is 1; the cards that override it all
         # override it to 0, which is what IsUpgradable reads to refuse an upgrade.
         if "MaxUpgradeLevel => 0" in text:

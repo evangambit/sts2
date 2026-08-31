@@ -153,6 +153,11 @@ public static class CombatEngine
         {
             Effects.CardEffects.GainBlock(state, childOfTheStars * starsToSpend, rng);
         }
+
+        if (starsToSpend > 0)
+        {
+            Effects.RelicEffects.ApplyAfterStarsSpent(state, starsToSpend, rng);
+        }
         // What this play actually cost, which is what CardPlay.Resources.EnergyValue
         // reports: an X card is printed at zero and takes the rest of the bar inside its
         // own effect, so the printed cost would tell a relic the play was free.
@@ -531,7 +536,7 @@ public static class CombatEngine
         // what it takes back at the end of the turn.
         if (monologueBefore > 0)
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, monologueBefore);
+            Effects.RelicEffects.GainPlayerStrength(state, monologueBefore);
             BuffSystem.Apply(state.PlayerBuffs, BuffId.MonologueApplied, monologueBefore);
         }
 
@@ -707,7 +712,7 @@ public static class CombatEngine
         int temporaryStrength = BuffSystem.Get(state.PlayerBuffs, BuffId.TemporaryStrength);
         if (temporaryStrength != 0)
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, -temporaryStrength);
+            Effects.RelicEffects.GainPlayerStrength(state, -temporaryStrength);
             BuffSystem.Remove(state.PlayerBuffs, BuffId.TemporaryStrength);
         }
 
@@ -816,6 +821,9 @@ public static class CombatEngine
         }
         state.Hand.Clear();
         state.Hand.AddRange(nextHand);
+        // `Hook.AfterFlush(cardsToFlush, cardsToRetain)`, dispatched once after the whole
+        // hand has moved -- `nextHand` IS the retained list.
+        Effects.RelicEffects.ApplyAfterFlush(state, rng);
         Effects.RelicEffects.ApplyAfterEndOfPlayerTurnShared(state, rng);
 
         if (retainHand == 1)
@@ -836,7 +844,7 @@ public static class CombatEngine
         int monologueApplied = BuffSystem.Get(state.PlayerBuffs, BuffId.MonologueApplied);
         if (monologueApplied != 0)
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, -monologueApplied);
+            Effects.RelicEffects.GainPlayerStrength(state, -monologueApplied);
             BuffSystem.Remove(state.PlayerBuffs, BuffId.MonologueApplied);
         }
 
@@ -1297,7 +1305,7 @@ public static class CombatEngine
         int demonForm = BuffSystem.Get(state.PlayerBuffs, BuffId.DemonForm);
         if (demonForm > 0)
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, demonForm);
+            Effects.RelicEffects.GainPlayerStrength(state, demonForm);
         }
 
         // Aggression: add random upgraded card at start of player turn.

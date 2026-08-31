@@ -64,7 +64,7 @@ public static class RunNonCombatEffects
     /// </summary>
     public static void AddCardToDeck(RunState state, CardInstance card)
     {
-        state.Deck.Add(UpgradedByEggs(state, card));
+        state.Deck.Add(EnchantedByFresnelLens(state, UpgradedByEggs(state, card)));
 
         // `AfterCardChangedPiles` with the destination pile being the DECK. Two relics
         // read it, and both are per-card rather than per-reward: taking three cards in one
@@ -88,6 +88,35 @@ public static class RunNonCombatEffects
                 state.PlayerHp = Math.Min(state.PlayerMaxHp, state.PlayerHp + 20);
             }
         }
+    }
+
+    /// <summary>
+    /// `FresnelLens.TryModifyCardBeingAddedToDeck`: every card entering the deck that
+    /// Nimble can enchant arrives already carrying Nimble at
+    /// `DynamicVar("NimbleAmount", 2m)`.
+    /// </summary>
+    /// <remarks>
+    /// The lens has three hooks and they are the same rule at three doors --
+    /// `TryModifyCardRewardOptionsLate`, `ModifyMerchantCardCreationResults` and this one.
+    /// The first two only change what the SCREEN shows; this one is what actually lands,
+    /// and it catches every route into the deck including the ones the other two miss.
+    /// Modelling only the reward screen would have enchanted a bought card and not an
+    /// event's gift.
+    ///
+    /// `CanEnchant` is the whole rule, so a card that already carries an enchantment keeps
+    /// it -- the lens does not overwrite.
+    /// </remarks>
+    public static CardInstance EnchantedByFresnelLens(RunState state, CardInstance card)
+    {
+        if (
+            !Effects.RelicEffects.Has(state.Relics, Effects.RelicEffects.FresnelLens)
+            || !Enchantments.CanEnchant(card, Enchantment.Nimble)
+        )
+        {
+            return card;
+        }
+
+        return card with { Enchantment = Enchantment.Nimble, EnchantAmount = 2 };
     }
 
     public static CardInstance UpgradedByEggs(RunState state, CardInstance card)
@@ -249,6 +278,13 @@ public static class RunNonCombatEffects
             // is only the door they come through: the HP swing is the RELIC's, so it lands
             // however the relic is obtained. The emulator had the numbers on the event
             // instead, and had them wrong -- +7 max HP and -9.
+            // `LoomingFruit.AfterObtained`: MaxHpVar(31m), an Ancient relic. The
+            // cornucopia its icon may or may not show is decided by the last byte of the
+            // PROFILE's unique id and is purely cosmetic -- it changes `IconBaseName` and
+            // nothing else, which is a joke about multiplayer rather than a mechanic.
+            case RunConstants.RelicLoomingFruit:
+                GainMaxHp(state, 31);
+                break;
             case RunConstants.RelicBigMushroom:
                 // `MaxHpVar(20)`. GainMaxHp heals by the same amount, which the live
                 // capture shows: 64/80 became 84/100.

@@ -186,11 +186,28 @@ public static class BuffSystem
         return !atRoundStart.Any(other => other.Id == buff.Id);
     }
 
+    /// <param name="weakDelta">
+    /// `Hook.ModifyWeakMultiplier`, which Paper Krane answers with `-0.15` when its owner
+    /// is the TARGET -- a Weak attacker hits them for 0.60 rather than 0.75.
+    /// </param>
+    /// <param name="vulnerableDelta">
+    /// `Hook.ModifyVulnerableMultiplier`, which Paper Phrog answers with `+0.25` when the
+    /// target is NOT its owner -- a Vulnerable enemy takes 1.75 rather than 1.5.
+    /// </param>
+    /// <remarks>
+    /// The two deltas arrive as parameters rather than being read from relics here,
+    /// because this function deliberately cannot see a `CombatState` -- it is called with
+    /// two buff lists and nothing else, including from `Intent.AnnouncedDamage` where the
+    /// caller may not have a combat at all. Each caller that CAN see the relics passes
+    /// them, which is also what keeps the announced intent and the landed damage in step.
+    /// </remarks>
     public static int IncomingDamage(
         int baseDamage,
         List<BuffState> attackerBuffs,
         List<BuffState> defenderBuffs,
-        float cardMultiplier = 1f
+        float cardMultiplier = 1f,
+        float weakDelta = 0f,
+        float vulnerableDelta = 0f
     )
     {
         // Everything in this function is the POWERED-ATTACK path, which is what lets the
@@ -210,7 +227,7 @@ public static class BuffSystem
             // `DebilitatePower.ModifyWeakMultiplier` is `amount - (1 - amount)` for its
             // OWNER's attacks, so a debilitated attacker's Weak lands at 0.5 instead of
             // 0.75. The amount is a duration and does not scale the doubling.
-            dmg *= Get(attackerBuffs, BuffId.Debilitate) > 0 ? 0.5f : 0.75f;
+            dmg *= (Get(attackerBuffs, BuffId.Debilitate) > 0 ? 0.5f : 0.75f) + weakDelta;
         }
 
         if (Get(attackerBuffs, BuffId.Shrink) != 0)
@@ -220,7 +237,7 @@ public static class BuffSystem
 
         if (Get(defenderBuffs, BuffId.Vulnerable) > 0)
         {
-            float mult = 1.5f + Get(attackerBuffs, BuffId.CrueltyPower) / 100f;
+            float mult = 1.5f + Get(attackerBuffs, BuffId.CrueltyPower) / 100f + vulnerableDelta;
             // `DebilitatePower.ModifyVulnerableMultiplier` is `amount + (amount - 1)` when
             // the target is its owner, which doubles the BONUS rather than the multiplier:
             // 1.5 becomes 2.0, and a Cruelty-raised 1.75 becomes 2.5.

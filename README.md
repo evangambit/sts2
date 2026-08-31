@@ -113,9 +113,9 @@ All five character pools have been captured card-by-card against the live game. 
 character's own resource is modelled: the Necrobinder's **Osty** pet, the Regent's **stars**
 and **Forge/Sovereign Blade**, and the Defect's **orb queue** and Focus.
 
-Beyond cards: 173 of 296 relics, **every one of them read against the source**, plus 111
-monsters with their movesets, the event pool, potions, shops, rest sites, map routing and
-Neow.
+Beyond cards: 207 of 296 relics, **every one of them read against the source** — including
+all 156 an ordinary run can actually be handed — plus 111 monsters with their movesets, the
+event pool, potions, shops, rest sites, map routing and Neow.
 
 ### What is verified, and how
 
@@ -153,8 +153,9 @@ wrong in every particular, which is the argument for testing them: unreachable i
 untested, and a placeholder reads as finished code until someone opens the source beside it.
 
 This is not yet a full game emulator. Exact Neow/shop/reward/event odds and expanded trace
-parity are still future work, and the nearest gap by a wide margin is the 123 relics with
-no implementation at all.
+parity are still future work. The 89 relics with no implementation at all are the largest
+remaining surface, and every one of them belongs to an act or a pool this emulator's Act 1
+run cannot reach.
 
 ## Requirements
 

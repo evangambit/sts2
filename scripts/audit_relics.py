@@ -155,6 +155,142 @@ def starter_relics() -> dict[str, str]:
 # guessed digest would put exactly the false confidence here that the file exists to
 # remove. They read as unread, which is true.
 READ: dict[str, tuple[str, str]] = {
+    "BigHat": (
+        "e9dc5b461163",
+        "Two DISTINCT Ethereal cards from the player's OWN pool into hand on turn one. Written from scratch. The Ironclad pool has no Ethereal card at all, and neither does the Silent's, so `readOnlyList.Count > 0` is false and a Rare relic does nothing for two of the five characters -- the emulator runs one of them.",
+    ),
+    "BoneFlute": (
+        "bcab4362f28b",
+        "2 Unpowered block whenever the owner's Osty attacks. Written from scratch. The guard is on the ATTACKER being an Osty whose PetOwner is this player, so it is per swing rather than per card that orders one.",
+    ),
+    "BookRepairKnife": (
+        "40d864612ad1",
+        "Heal 3 per creature that died to Doom, counting only those whose `Powers.All(ShouldOwnerDeathTriggerFatal)` -- a Minion and an attached Decimillipede segment do not count. Written from scratch.",
+    ),
+    "Bookmark": (
+        "ff1177d0a658",
+        "After the flush, one RETAINED card with a non-X cost above zero gets -1 until played, chosen off CombatCardSelection. Written from scratch; it needed the AfterFlush hook, which is a different boundary from AfterCardDiscarded.",
+    ),
+    "Brimstone": (
+        "478a4923b28f",
+        "2 Strength to the player and 1 to every LIVING opponent, every turn, with no turn guard. Written from scratch.",
+    ),
+    "CharonsAshes": (
+        "01de682014e7",
+        "3 Unpowered damage to every hittable enemy per card exhausted, with no Ethereal exception. Written from scratch.",
+    ),
+    "DemonTongue": (
+        "6eee5c9962f0",
+        "The first unblocked hit taken on the player's OWN side turn is healed straight back, once per turn. Written from scratch. Self-inflicted damage only -- an enemy attack lands on the enemy's side and does not qualify.",
+    ),
+    "EmotionChip": (
+        "a1d415cbb391",
+        "If the player took unblocked damage since the last player turn start, every orb fires its passive at the next one. Written from scratch. `HappenedLastPlayerTurn` stamps the entry with the player's TurnNumber, which does not move during the enemy phase, so an enemy attack counts.",
+    ),
+    "FencingManual": (
+        "2e86ce30befb",
+        "Forge 10 on turn one -- a Sovereign Blade from a Common relic. Written from scratch.",
+    ),
+    "FresnelLens": (
+        "160ce3d2e463",
+        "Every card entering the deck that Nimble can take arrives enchanted at 2. Written from scratch. Three hooks, one rule at three doors; `TryModifyCardBeingAddedToDeck` is the one that actually lands, and modelling only the reward screen would have missed an event's gift.",
+    ),
+    "FuneraryMask": (
+        "cb74dc8efe58",
+        "Three Souls into the DRAW pile at random positions before the opening draw. Written from scratch. Its guard is `TurnNumber == 1` where Ninja Scroll's is `<= 1`; both mean turn one.",
+    ),
+    "GalacticDust": (
+        "67ce2a27ae82",
+        "10 Unpowered block per full ten stars spent, counted across the RUN (`[SavedProperty]`). Written from scratch. `floor(StarsSpent / 10) * 10` then modulo, so one spend of twenty-five pays twenty and carries five.",
+    ),
+    "GoldPlatedCables": (
+        "8f83d47ceccc",
+        "The orb at the FRONT of the queue triggers its passive one extra time. Written from scratch, as a repeat of the whole passive rather than a doubled value -- a trigger COUNT, so Lightning re-rolls its target.",
+    ),
+    "HelicalDart": (
+        "2e88fc614088",
+        "1 Dexterity when a card TAGGED Shiv is played. Written from scratch; needed CardTag.Shiv extracted, because Knife Trap carries it too.",
+    ),
+    "LoomingFruit": (
+        "c96e981748cc",
+        "+31 max HP on pickup. Written from scratch. Its cornucopia is decided by the last byte of the PROFILE's unique id and changes only `IconBaseName` -- a joke about multiplayer, not a mechanic.",
+    ),
+    "LunarPastry": (
+        "780b596d45fb",
+        "1 star at the end of the player's side turn, through GainStars so Black Hole sees it. Written from scratch.",
+    ),
+    "Metronome": (
+        "dd14461516c6",
+        "The SEVENTH orb channelled in a combat deals 30 Unpowered to all. Written from scratch. `== OrbCount`, not `>=`, so the eighth does nothing and only entering a combat room resets it.",
+    ),
+    "MiniRegent": (
+        "fe50c2ff37b7",
+        "1 Strength on the first star spend each turn. Written from scratch.",
+    ),
+    "NinjaScroll": (
+        "2610db0185c9",
+        "Three Shivs into HAND before the opening draw. Written from scratch.",
+    ),
+    "OrangeDough": (
+        "cf1d0479f436",
+        "Two DISTINCT colourless cards into hand on turn one, off CombatCardGeneration. Written from scratch.",
+    ),
+    "PaperKrane": (
+        "9150ea947038",
+        "Weak multiplier -0.15 when the relic's owner is the TARGET, so a Weak enemy hits them at 0.60. Written from scratch. It reads the target, not the attacker -- it does nothing to the Weak the player applies.",
+    ),
+    "PaperPhrog": (
+        "6617309e74cf",
+        "Vulnerable multiplier +0.25 when the target is NOT its owner, so a Vulnerable enemy takes 1.75. Written from scratch. Note the asymmetry against Paper Krane: one helps only when you are hit, the other only when you are not.",
+    ),
+    "PowerCell": (
+        "ee637e93e158",
+        "Two ZERO-COST cards MOVED out of the draw pile into hand on turn one, off CombatCardSelection. Written from scratch. A move, not a generation -- and an X-cost card is never free however low its cost reads.",
+    ),
+    "Regalite": (
+        "0619d8df9ecb",
+        "2 Unpowered block per card the player generates for combat. Written from scratch; it rides the same hook as PillarOfCreationPower, and unlike the power its block is Unpowered.",
+    ),
+    "RuinedHelmet": (
+        "5b88e6ac0d64",
+        "The first positive Strength the player receives each combat is doubled. Written from scratch; it needed a chokepoint for player Strength, which had twenty-eight bare call sites. A LOSS passes through untouched and does not spend it.",
+    ),
+    "RunicCapacitor": (
+        "23d95088ec8e",
+        "Three orb slots on turn one. Written from scratch.",
+    ),
+    "SneckoSkull": (
+        "ad002429e4f3",
+        "One more Poison on every Poison the owner applies. Written from scratch. Additive on the amount GIVEN, so once per application rather than once per stack.",
+    ),
+    "SymbioticVirus": (
+        "59319caa0354",
+        "One Dark orb channelled on turn one. Written from scratch.",
+    ),
+    "Tingsha": (
+        "4627ac82f68f",
+        "3 Unpowered damage to one random enemy per card an effect discards, re-rolled per card off CombatTargets. Written from scratch.",
+    ),
+    "ToughBandages": (
+        "dfae95782275",
+        "3 Unpowered block per card an effect discards. Written from scratch. NOT the end-of-turn hand dump: `FlushPlayerHand` is a plain pile add followed by AfterFlush, with no CardDiscarded between them.",
+    ),
+    "TwistedFunnel": (
+        "e3839309fb43",
+        "Poison 4 on every hittable enemy on turn one. Written from scratch. Poison is a debuff, so an Artifact enemy swallows it whole.",
+    ),
+    "UndyingSigil": (
+        "972b6070ebe9",
+        "A powered attack on the owner by an attacker whose HP is at or below its own Doom lands at half. Written from scratch. Its own doc comment says the relic 'doesn't actually do anything' -- that is about its OTHER half, moving enemy Doom to the start of the enemy turn, and the halving right below the comment is real.",
+    ),
+    "VeryHotCocoa": (
+        "a0064c9d7492",
+        "4 energy on turn one. Written from scratch.",
+    ),
+    "VitruvianMinion": (
+        "2f9efd314c17",
+        "2x damage AND 2x block from a Minion-tagged card. Written from scratch; needed CardTag.Minion extracted. Minion Sacrifice is the only Minion card that gains block.",
+    ),
     "BigMushroom": (
         "d38b4dfad613",
         "+20 max HP on pickup (GainMaxHp heals with it), and `ModifyHandDraw` SUBTRACTS 2 on turn one -- the opening hand is three, which is the price. Only the pickup half was modelled; the drawback was missing, so the relic was all upside.",

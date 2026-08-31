@@ -52,9 +52,18 @@ public readonly record struct Intent(
     /// per-hit damage — so a two-hit attack from a +2 Strength monster reads four higher,
     /// not two.
     /// </summary>
-    public int AnnouncedDamage(List<BuffState> attackerBuffs, List<BuffState> defenderBuffs) =>
+    public int AnnouncedDamage(
+        List<BuffState> attackerBuffs,
+        List<BuffState> defenderBuffs,
+        float weakDelta = 0f
+    ) =>
         Type == IntentType.Attack || CarriesDamage
-            ? BuffSystem.IncomingDamage(Magnitude, attackerBuffs, defenderBuffs) * Hits
+            ? BuffSystem.IncomingDamage(
+                Magnitude,
+                attackerBuffs,
+                defenderBuffs,
+                weakDelta: weakDelta
+            ) * Hits
             : Magnitude;
 }
 

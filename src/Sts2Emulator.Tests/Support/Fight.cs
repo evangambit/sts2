@@ -104,7 +104,15 @@ internal sealed class Fight
         State.Enemies.Select(enemy =>
             (
                 enemy.CurrentIntent.Type,
-                enemy.CurrentIntent.AnnouncedDamage(enemy.Buffs, State.PlayerBuffs)
+                enemy.CurrentIntent.AnnouncedDamage(
+                    enemy.Buffs,
+                    State.PlayerBuffs,
+                    // The same delta `CombatObservation` passes: Paper Krane deepens the
+                    // attacker's Weak, and the readout carries it the way it carries
+                    // Strength. The harness has to mirror the observation or a test about
+                    // the readout is testing the harness.
+                    RelicEffects.WeakMultiplierDeltaAgainstPlayer(State)
+                )
             )
         );
 

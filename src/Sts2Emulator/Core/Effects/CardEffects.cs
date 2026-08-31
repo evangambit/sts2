@@ -350,7 +350,7 @@ public static class CardEffects
 
             case IC.FightMe: // 2-cost, 5/6 dmg twice, gain 3/4 Strength, enemy gains 1 Strength
                 DealDamageMultiHit(state, Dmg(state, def, upgraded, card), 2, rng);
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 4 : 3);
+                RelicEffects.GainPlayerStrength(state, upgraded ? 4 : 3);
                 ApplyEnemyDebuff(state, BuffId.Strength, 1, rng);
                 break;
 
@@ -474,7 +474,7 @@ public static class CardEffects
                 {
                     DealDamage(state, Dmg(state, def, upgraded, card));
                     int strength = upgraded ? 3 : 2;
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, strength);
+                    RelicEffects.GainPlayerStrength(state, strength);
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryStrength, strength);
                     break;
                 }
@@ -640,7 +640,7 @@ public static class CardEffects
                 // The game applies the Strength after the exhaust resolves. Nothing reads
                 // Strength during an exhaust, so granting it first is observationally the
                 // same and keeps the pending selection as the last thing this play does.
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
+                RelicEffects.GainPlayerStrength(state, upgraded ? 2 : 1);
                 if (state.Hand.Count > 0)
                 {
                     OpenCardSelection(
@@ -702,9 +702,8 @@ public static class CardEffects
                     var t = FirstEnemy(state);
                     if (t != null)
                     {
-                        BuffSystem.Apply(
-                            state.PlayerBuffs,
-                            BuffId.Strength,
+                        RelicEffects.GainPlayerStrength(
+                            state,
                             BuffSystem.Get(t.Buffs, BuffId.Vulnerable)
                         );
                     }
@@ -913,7 +912,7 @@ public static class CardEffects
                 break;
 
             case IC.Inflame: // 1-cost, immediately gain 2/3 Strength
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 3 : 2);
+                RelicEffects.GainPlayerStrength(state, upgraded ? 3 : 2);
                 break;
 
             case IC.Inferno: // 1-cost, self-damage each turn; taking unblocked self-damage burns all enemies
@@ -1157,7 +1156,7 @@ public static class CardEffects
                 break;
 
             case CL.Prowess: // 1-cost, gain 1/2 Strength and Dexterity
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
+                RelicEffects.GainPlayerStrength(state, upgraded ? 2 : 1);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, upgraded ? 2 : 1);
                 break;
 
@@ -2625,7 +2624,7 @@ public static class CardEffects
         int arsenal = BuffSystem.Get(state.PlayerBuffs, BuffId.Arsenal);
         if (arsenal > 0)
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, arsenal * count);
+            RelicEffects.GainPlayerStrength(state, arsenal * count);
         }
 
         // `PillarOfCreationPower.AfterCardGeneratedForCombat`, the same hook.
@@ -2634,6 +2633,9 @@ public static class CardEffects
         {
             GainBlock(state, pillar * count, rng: null);
         }
+
+        // Regalite rides the same hook, and unlike the power its block is Unpowered.
+        RelicEffects.ApplyAfterCardGenerated(state, count, rng: null);
     }
 
     /// <summary>The Regent's Sovereign Blade, a Token the Forge mechanic hands out.</summary>
@@ -2814,6 +2816,131 @@ public static class CardEffects
             state.Hand.Add(new CardInstance(id, upgraded));
             NoteGeneratedCard(state);
         }
+    }
+
+    /// <summary>
+    /// Big Hat's two: distinct ETHEREAL cards from the player's OWN character pool.
+    /// </summary>
+    /// <remarks>
+    /// The filter is `c.Keywords.Contains(CardKeyword.Ethereal)` over the character pool,
+    /// applied BEFORE `GetDistinctForCombat` layers `FilterForCombat` on top -- so the
+    /// combat-generation rules still apply, and the Ethereal test is the extra one. Same
+    /// shuffle-then-take on `CombatCardGeneration` as every other distinct generator.
+    ///
+    /// A card that DROPS Ethereal on upgrade still counts: the pool is canonical models,
+    /// which are unupgraded, and the generated copies are unupgraded too.
+    ///
+    /// **For an Ironclad this does nothing, and that is the game's answer, not a gap.**
+    /// The Ironclad pool has no Ethereal card in it -- neither does the Silent's -- so
+    /// `readOnlyList.Count > 0` is false and the whole block is skipped. The relic is a
+    /// Necrobinder card (eight Ethereal), a Regent one (two) and a marginal Defect one
+    /// (Echo Form). A run that can be handed Big Hat by an Ironclad is handed a relic that
+    /// will never fire, which is why this is written against the POOL rather than
+    /// hard-coded to two cards.
+    /// </remarks>
+    internal static void AddDistinctEtherealCardsToHand(CombatState state, int count, Random rng) =>
+        AddDistinctEtherealCardsToHandFromPool(
+            state,
+            GeneratedData.CardPools.Ironclad,
+            count,
+            rng
+        );
+
+    /// <summary>As above, over a named character pool.</summary>
+    internal static void AddDistinctEtherealCardsToHandFromPool(
+        CombatState state,
+        ReadOnlySpan<int> characterPool,
+        int count,
+        Random rng
+    )
+    {
+        var pool = CombatGenerationPool(characterPool)
+            .Where(id => GeneratedData.Cards.Get(id).Ethereal)
+            .ToList();
+        if (pool.Count == 0 || count <= 0)
+        {
+            return;
+        }
+
+        var stream = CardGenerationRng(state, rng);
+        for (int i = pool.Count - 1; i > 0; i--)
+        {
+            int j = stream.Next(i + 1);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
+        }
+
+        foreach (int id in pool.Take(count))
+        {
+            if (state.Hand.Count >= MaxCardsInHand)
+            {
+                return;
+            }
+
+            state.Hand.Add(new CardInstance(id, false));
+            NoteGeneratedCard(state);
+        }
+    }
+
+    /// <summary>
+    /// Power Cell's two: zero-cost cards MOVED out of the draw pile and into hand.
+    /// </summary>
+    /// <remarks>
+    /// `drawPile.Where(!CostsX && GetWithModifiers(Local) == 0).StableShuffle(
+    /// Rng.CombatCardSelection).Take(2)`, then a plain `CardPileCmd.Add` -- these cards
+    /// already exist, so this is a MOVE and spends the selection stream rather than the
+    /// generation one. `CostModifiers.Local` is the card's own cost including its
+    /// per-copy bump, which is why this reads `EffectiveCost` rather than the printed one.
+    ///
+    /// `StableShuffle` sorts by `ModelId` before Fisher-Yates, so which two come up does
+    /// not depend on the pile's order.
+    /// </remarks>
+    internal static void MoveZeroCostDrawCardsToHandForPowerCell(
+        CombatState state,
+        int count,
+        Random rng
+    )
+    {
+        var candidates = Enumerable
+            .Range(0, state.DrawPile.Count)
+            .Where(i => IsFreeCostCard(state, state.DrawPile[i]))
+            .OrderBy(
+                i => GeneratedData.Cards.Get(state.DrawPile[i].DefId).Entry,
+                StringComparer.Ordinal
+            )
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        var selection = CardSelectionRng(state, rng);
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = selection.Next(i + 1);
+            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+        }
+
+        // Descending pile index, so removing one does not shift the next.
+        foreach (int index in candidates.Take(count).OrderByDescending(i => i).ToList())
+        {
+            if (state.Hand.Count >= MaxCardsInHand)
+            {
+                continue;
+            }
+
+            state.Hand.Add(state.DrawPile[index]);
+            state.DrawPile.RemoveAt(index);
+        }
+    }
+
+    /// <summary>
+    /// `!c.EnergyCost.CostsX && c.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0`
+    /// -- an X-cost card is never free however low its cost reads.
+    /// </summary>
+    private static bool IsFreeCostCard(CombatState state, CardInstance card)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return !def.HasEnergyCostX && CombatEngine.EffectiveCost(card, state) == 0;
     }
 
     /// <summary>Tyranny's screen: that many cards CHOSEN from hand are exhausted.</summary>
@@ -3208,7 +3335,7 @@ public static class CardEffects
             state.UnblockedDamageThisTurn += hpLoss;
             // Hook.AfterDamageReceived does not care who dealt the damage, so a card that
             // hits its own owner arms Centennial Puzzle and Self-Forming Clay too.
-            RelicEffects.ApplyAfterUnblockedDamageReceived(state);
+            RelicEffects.ApplyAfterUnblockedDamageReceived(state, unblocked: hpLoss);
             RelicEffects.ApplyAfterPlayerHpChanged(state);
         }
     }
@@ -3358,7 +3485,7 @@ public static class CardEffects
                 // does nothing at all.
                 if (card.TinkerRider == TinkerRider.Expertise)
                 {
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 2);
+                    RelicEffects.GainPlayerStrength(state, 2);
                     BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, 2);
                 }
 
@@ -4007,6 +4134,10 @@ public static class CardEffects
     /// EntropyPower); drawing from the combat rng instead desynchronises the stream for
     /// everything after it, exactly as target choice did before TargetRng.
     /// </summary>
+    /// <summary>The card-selection stream, for callers outside this file.</summary>
+    internal static Random CardSelectionRngFor(CombatState state, Random? rng) =>
+        CardSelectionRng(state, rng ?? new Random(0));
+
     private static Random CardSelectionRng(CombatState state, Random rng) =>
         state.CardSelectionRng ?? rng;
 
@@ -4087,7 +4218,8 @@ public static class CardEffects
             amount,
             state.PlayerBuffs,
             target.Buffs,
-            lethalMultiplier
+            lethalMultiplier,
+            vulnerableDelta: RelicEffects.VulnerableMultiplierDeltaAgainstEnemies(state)
         );
         int slowCount = BuffSystem.Get(target.Buffs, BuffId.SlowCount);
         if (BuffSystem.Get(target.Buffs, BuffId.Slow) > 0 && slowCount > 0)
@@ -4477,10 +4609,31 @@ public static class CardEffects
         int rupt = BuffSystem.Get(state.PlayerBuffs, BuffId.RupturePower);
         if (rupt > 0 && hpBefore > state.PlayerHp)
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, rupt);
+            RelicEffects.GainPlayerStrength(state, rupt);
         }
 
         TriggerInfernoAfterPlayerSelfDamage(state, hpBefore - state.PlayerHp);
+
+        // Self-inflicted HP loss IS damage received. Blood Wall, Offering and Hemokinesis
+        // all call `CreatureCmd.Damage(owner, ..., Unblockable | Unpowered)`, and that
+        // command dispatches `Hook.AfterDamageReceived` like any other -- there is no
+        // separate `LoseHp` command that skips it. This path did skip it, so Centennial
+        // Puzzle and Self-Forming Clay were silently blind to every card that hurts you
+        // to pay for itself; Demon Tongue is what made that visible.
+        //
+        // `state.TookUnblockedDamage` deliberately stays OUT of this: it is Lava Lamp's
+        // private flag, and Lava Lamp is the one relic on the hook that checks
+        // `props.HasFlag(ValueProp.Unblockable)` and refuses. The hook fires; the relic
+        // filters. Centennial Puzzle and Self-Forming Clay check no props at all, so they
+        // do fire here -- which is the distinction that makes this a hook rather than a
+        // flag on the state.
+        if (hpBefore > state.PlayerHp)
+        {
+            RelicEffects.ApplyAfterUnblockedDamageReceived(
+                state,
+                unblocked: hpBefore - state.PlayerHp
+            );
+        }
 
         // Every route that changes current HP dispatches `AfterCurrentHpChanged`, and
         // self-damage is a route: Offering and Hemokinesis can put the player under half
@@ -4529,6 +4682,11 @@ public static class CardEffects
             {
                 state.LightningOrbsChanneledThisCombat++;
             }
+
+            // `Hook.AfterOrbChanneled`, which only fires when an orb actually went in --
+            // a channel into a full queue evokes and replaces, so it still counts, but a
+            // slotless character with no capacity does not channel at all.
+            RelicEffects.ApplyAfterOrbChanneled(state);
         }
     }
 
@@ -4574,6 +4732,22 @@ public static class CardEffects
             return;
         }
 
+        // `GoldPlatedCables.ModifyOrbPassiveTriggerCounts`: the orb at the FRONT of the
+        // queue -- `OrbQueue.Orbs[0]`, and only that one -- triggers one extra time.
+        // Modelled as a repeat of the whole passive rather than as a doubled value,
+        // because that is what a trigger COUNT is: Lightning re-rolls its target and Dark
+        // adds its growth twice.
+        int repeats = index == 0 ? 1 + RelicEffects.ExtraFrontOrbPassiveTriggers(state) : 1;
+        for (int repeat = 1; repeat < repeats; repeat++)
+        {
+            TriggerOrbPassiveOnce(state, index, rng);
+        }
+
+        TriggerOrbPassiveOnce(state, index, rng);
+    }
+
+    private static void TriggerOrbPassiveOnce(CombatState state, int index, Random rng)
+    {
         var orb = state.Orbs[index];
         switch (orb.Type)
         {
@@ -4623,6 +4797,20 @@ public static class CardEffects
             {
                 TriggerOrbPassive(state, i, rng);
             }
+        }
+    }
+
+    /// <summary>
+    /// `foreach (orb in OrbQueue.Orbs) OrbCmd.Passive(orb)` -- EVERY orb, whatever its
+    /// type. Emotion Chip's, and the only caller that does not split Plasma from the rest:
+    /// the two hooks above are the turn boundary's own passives, where Plasma fires at the
+    /// start and everything else at the end. This is an extra round on top of both.
+    /// </summary>
+    public static void TriggerEveryOrbPassive(CombatState state, Random rng)
+    {
+        for (int i = 0; i < state.Orbs.Count; i++)
+        {
+            TriggerOrbPassive(state, i, rng);
         }
     }
 
@@ -5124,7 +5312,7 @@ public static class CardEffects
                     state.Orbs.RemoveAt(state.Orbs.Count - 1);
                 }
 
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 3 : 2);
+                RelicEffects.GainPlayerStrength(state, upgraded ? 3 : 2);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, upgraded ? 3 : 2);
                 return true;
             case "Compact":
@@ -5850,7 +6038,7 @@ public static class CardEffects
                 // Two StrengthPowers, both at a NEGATIVE amount: the player loses 2 and the
                 // TARGET loses 2/3, and neither is temporary. The emulator gained Strength
                 // on the player and took the enemy's back at the end of their turn.
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, -2);
+                RelicEffects.GainPlayerStrength(state, -2);
                 ApplyEnemyDebuff(state, BuffId.Strength, upgraded ? -3 : -2, rng);
                 return true;
             case "Shroud":
@@ -6159,7 +6347,7 @@ public static class CardEffects
                 //
                 // The emulator gained Strength and gave a one-shot energy: wrong sign on
                 // one half and wrong duration on the other.
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? -1 : -2);
+                RelicEffects.GainPlayerStrength(state, upgraded ? -1 : -2);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.Friendship, 1);
                 return true;
             case "SleightOfFlesh":
@@ -6705,7 +6893,15 @@ public static class CardEffects
             case "TheGambit":
             case "ToricToughness":
             case "MinionSacrifice":
-                GainBlock(state, Blk(def, upgraded, card), rng);
+                // `Blk` cannot see the relics, so Vitruvian Minion's block half is applied
+                // at the one card it can reach: Minion Sacrifice is the only Minion-tagged
+                // card that gains any. Its damage half rides `CardDamageMultiplier`, which
+                // does see them.
+                GainBlock(
+                    state,
+                    Blk(def, upgraded, card) * RelicEffects.CardBlockMultiplier(state, def),
+                    rng
+                );
                 if (def.Name == "TheGambit")
                 {
                     // TheGambitPower kills you on the next unblocked powered attack.
@@ -7100,7 +7296,7 @@ public static class CardEffects
                 // Resonance: three stars for +1/+2 Strength to the PLAYER and -1 to every
                 // living enemy -- the enemy side is a flat 1 and does not upgrade. The
                 // emulator gave the player's half only.
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
+                RelicEffects.GainPlayerStrength(state, upgraded ? 2 : 1);
                 ApplyAllEnemyDebuff(state, BuffId.Strength, -1, rng);
                 break;
             case "Terraforming":
@@ -7116,7 +7312,7 @@ public static class CardEffects
             case "SharedFate":
             case "Synchronize":
             case "Voltaic":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
+                RelicEffects.GainPlayerStrength(state, upgraded ? 2 : 1);
                 break;
             case "Monologue":
                 // Monologue: a `Power` var of 1, and the upgrade adds Retain. The power
@@ -7140,7 +7336,7 @@ public static class CardEffects
                 // OnUpgrade +3 — temporary Strength for an ally, which is the player in
                 // singleplayer. It was grouped with the retain-hand cards, which is a
                 // different effect entirely.
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 8 : 5);
+                RelicEffects.GainPlayerStrength(state, upgraded ? 8 : 5);
                 BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryStrength, upgraded ? 8 : 5);
                 break;
             case "CorrosiveWave":
@@ -7446,7 +7642,7 @@ public static class CardEffects
             case "Thunder":
             case "Tracking":
             case "TrashToTreasure":
-                BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, upgraded ? 2 : 1);
+                RelicEffects.GainPlayerStrength(state, upgraded ? 2 : 1);
                 break;
             case "TheSealedThrone":
                 // The Sealed Throne: three stars, Ancient, one stack -- and the power gives
@@ -8205,6 +8401,7 @@ public static class CardEffects
         // turn" is recorded -- `AfterAttack` with `command.Attacker == Owner.Osty`, which
         // Flatten watches for.
         state.OstyAttacksThisTurn++;
+        RelicEffects.ApplyAfterOstyAttack(state, rng: null);
         return amount + BuffSystem.Get(state.PlayerBuffs, BuffId.Calcify);
     }
 
@@ -8428,14 +8625,24 @@ public static class CardEffects
 
     private static void KillDoomedEnemies(CombatState state)
     {
+        int fatal = 0;
         foreach (var enemy in state.Enemies.Where(e => e.Hp > 0).ToList())
         {
             int doom = BuffSystem.Get(enemy.Buffs, BuffId.Doom);
             if (doom > 0 && enemy.Hp <= doom)
             {
                 enemy.Hp = 0;
+                // `Powers.All(p => p.ShouldOwnerDeathTriggerFatal())`, the same gate every
+                // "if this kills" payout reads -- a Minion and an attached Decimillipede
+                // segment do not count towards Book Repair Knife's heal.
+                if (TriggersFatal(state, enemy))
+                {
+                    fatal++;
+                }
             }
         }
+
+        RelicEffects.ApplyAfterDiedToDoom(state, fatal);
     }
 
     private static void TriggerInfernoAfterPlayerSelfDamage(CombatState state, int unblockedDamage)
@@ -8768,6 +8975,14 @@ public static class CardEffects
         // first card each combat to land one. Applied here, at the single point every
         // card-driven enemy debuff goes through, rather than at the call sites.
         magnitude = RelicEffects.ModifyEnemyDebuffMagnitude(state, id, magnitude);
+
+        // `SneckoSkull.ModifyPowerAmountGivenAdditive`: one more Poison on every Poison
+        // the player applies. Additive on the amount GIVEN, so it is once per application
+        // and not once per stack -- three separate Poison 1s become three 2s.
+        if (id == BuffId.Poison && magnitude > 0)
+        {
+            magnitude += RelicEffects.ExtraPoisonGiven(state);
+        }
 
         int before = BuffSystem.Get(target.Buffs, id);
         BuffSystem.Apply(target.Buffs, id, magnitude);
@@ -9126,12 +9341,20 @@ public static class CardEffects
     /// game adds it and then plays it FROM the discard, and playing it here sends it to
     /// whichever pile a played card lands in. Doing both would leave a copy behind.
     /// </remarks>
-    internal static void DiscardMovedCards(CombatState state, List<CardInstance> cards)
+    internal static void DiscardMovedCards(
+        CombatState state,
+        List<CardInstance> cards,
+        Random? rng = null
+    )
     {
         var sly = new List<CardInstance>();
         foreach (var card in cards)
         {
             var moved = card with { FreeThisTurn = false };
+            // `Hook.AfterCardDiscarded` fires per card and AFTER the pile add, for Sly
+            // cards too -- `DiscardAndDraw` collects the Sly ones and hooks every card in
+            // the same pass, so a Sly discard still pays Tough Bandages and Tingsha.
+            RelicEffects.ApplyAfterCardDiscarded(state, rng);
             if (moved.IsSlyThisTurn())
             {
                 sly.Add(moved);

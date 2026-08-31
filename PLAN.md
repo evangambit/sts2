@@ -877,18 +877,16 @@ export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/.local/bin:$PATH"
 Card coverage is now the finished part rather than the open one. What is left, in the order
 the evidence argues for:
 
-1. **The 123 unmodelled relics** — now the largest gap by a wide margin, and unlike
-   everything above it this is building rather than auditing: there is no arm to compare
-   to a source. The read pass over the 173 that ARE modelled is finished, and its rate
-   says where to be careful: of the 11 defects it found, not one was a wrong number.
-   Every single one was a missing half — a relic wired for pickup and silent for its
-   ongoing hook, or the reverse. **A relic that is picked up correctly looks correct in
-   every test you would think to write for it**, which is why the whole-engine grep in
-   `relic_pair.py` mattered here in a way `card_pair.py` never did for cards.
-2. **The 66 cards still unread**, which are also the 66 still in `Pending` with no tests:
+1. **The 66 cards still unread**, which are also the 66 still in `Pending` with no tests:
    Curses, Statuses, Tokens, Minions and event cards. Lower value per card than a
    character pool, but Statuses and Curses are what half the game's punishment mechanics
    are made of.
+2. **The 89 relics still unmodelled**, all of them behind an act or a pool this Act 1 run
+   cannot reach. The 34 reachable ones are done, and what that pass cost is the thing to
+   plan around: five of the thirty-four needed a hook the emulator did not have, and two
+   of those hooks turned out to be defects in their own right — `LoseHp` never dispatching
+   `AfterDamageReceived` (E384), and player Strength having twenty-eight call sites and no
+   door (E385). **Budget for the hook, not for the relic.**
 3. **Automate capture over many seeds** with the headless harness, so coverage stops
    depending on which seeds anyone happened to try. Related: exposing each named RNG
    stream's seed and call count from the mod would make the RNG-dependent cards capturable,

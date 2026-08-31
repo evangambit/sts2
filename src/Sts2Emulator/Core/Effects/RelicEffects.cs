@@ -13,6 +13,44 @@ public static class RelicEffects
     public const int BigMushroom = 16;
     public const int BiiigHug = 17;
     public const int PaelsLegion = 181;
+
+    // The unmodelled pass. Every one of these had an entry in `Relics.g.cs` and no id
+    // constant, which means the game could hand it over and the emulator would do nothing
+    // at all -- a relic that is in the run's list, shows in the observation, and is inert.
+    public const int VeryHotCocoa = 283;
+    public const int FencingManual = 86;
+    public const int RunicCapacitor = 226;
+    public const int SymbioticVirus = 257;
+    public const int TwistedFunnel = 275;
+    public const int OrangeDough = 171;
+    public const int BigHat = 15;
+    public const int PowerCell = 203;
+    public const int Brimstone = 34;
+    public const int NinjaScroll = 165;
+    public const int FuneraryMask = 94;
+    public const int ToughBandages = 269;
+    public const int Tingsha = 264;
+    public const int CharonsAshes = 45;
+    public const int HelicalDart = 112;
+    public const int PaperKrane = 187;
+    public const int PaperPhrog = 188;
+    public const int UndyingSigil = 277;
+    public const int VitruvianMinion = 285;
+    public const int SneckoSkull = 244;
+    public const int RuinedHelmet = 225;
+    public const int Regalite = 216;
+    public const int LunarPastry = 143;
+    public const int GoldPlatedCables = 106;
+    public const int BoneFlute = 24;
+    public const int BookRepairKnife = 28;
+    public const int Bookmark = 26;
+    public const int DemonTongue = 59;
+    public const int EmotionChip = 73;
+    public const int MiniRegent = 155;
+    public const int GalacticDust = 96;
+    public const int Metronome = 152;
+    public const int LoomingFruit = 138;
+    public const int FresnelLens = 92;
     public const int BloodVial = 23;
     public const int BoomingConch = 29;
     public const int BronzeScales = 35;
@@ -263,6 +301,24 @@ public static class RelicEffects
             CardEffects.AddCardToDrawPileRandomly(state, ST.Dazed, 3, state.ShuffleRng ?? rng);
         }
 
+        // `NinjaScroll.BeforeHandDraw` at TurnNumber <= 1: `DynamicVar("Shivs", 3m)` into
+        // HAND, before the opening draw -- so the hand is three Shivs plus the usual five.
+        if (HasRelic(state, NinjaScroll))
+        {
+            CardEffects.AddGeneratedCardsToHand(state, 430, 3);
+        }
+
+        // `FuneraryMask.BeforeHandDraw` at TurnNumber == 1: CardsVar(3) Souls into the
+        // DRAW pile at CardPilePosition.Random, one insert point per card off Rng.Shuffle
+        // -- Blessed Antler's shape with a card the player wants.
+        //
+        // Note the guard is `== 1` where Ninja Scroll's is `<= 1`. Both mean turn one, and
+        // both are transcribed as they are written rather than normalised.
+        if (HasRelic(state, FuneraryMask))
+        {
+            CardEffects.AddCardToDrawPileRandomly(state, 446, 3, state.ShuffleRng ?? rng);
+        }
+
         if (!HasRelic(state, StoneCracker))
         {
             return;
@@ -303,7 +359,7 @@ public static class RelicEffects
         // has to be handed over rather than looked up.
         if (state.IsEliteRoom && HasRelic(state, SlingOfCourage))
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 2);
+            GainPlayerStrength(state, 2);
         }
 
         // The three Starter relics that open a combat with something. Every run of that
@@ -337,7 +393,7 @@ public static class RelicEffects
         int girya = state.Relics.FirstOrDefault(relic => relic.DefId == Girya).Counter;
         if (girya > 0)
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, girya);
+            GainPlayerStrength(state, girya);
         }
 
         if (HasRelic(state, PhilosophersStone))
@@ -366,6 +422,69 @@ public static class RelicEffects
             }
         }
 
+        // Every relic below guards on `TurnNumber <= 1` inside `AfterSideTurnStart` or
+        // `BeforeSideTurnStart`, which is the combat-start shape Cracked Core already
+        // uses -- a once-per-fight opener wearing a per-turn hook.
+
+        // `VeryHotCocoa`: EnergyVar(4). An Ancient relic, so a whole extra turn's energy
+        // on turn one.
+        if (HasRelic(state, VeryHotCocoa))
+        {
+            CardEffects.GainEnergy(state, 4);
+        }
+
+        // `FencingManual`: ForgeVar(10) -- a Sovereign Blade at 10, the Regent's own
+        // mechanic handed out by a Common relic.
+        if (HasRelic(state, FencingManual))
+        {
+            CardEffects.Forge(state, 10);
+        }
+
+        // `RunicCapacitor`: RepeatVar(3), `OrbCmd.AddSlots`. Three orb slots for the whole
+        // fight, which for a Defect is more than doubling the ring.
+        if (HasRelic(state, RunicCapacitor))
+        {
+            state.OrbCapacity += 3;
+        }
+
+        // `SymbioticVirus`: `DynamicVar("Dark", 1m)` channelled as a DarkOrb.
+        if (HasRelic(state, SymbioticVirus))
+        {
+            CardEffects.ChannelOrb(state, OrbType.Dark, rng);
+        }
+
+        // `TwistedFunnel`: Poison 4 on every hittable enemy.
+        if (HasRelic(state, TwistedFunnel))
+        {
+            CardEffects.ApplyPoisonToAllEnemies(state, 4, rng);
+        }
+
+        // `OrangeDough`: CardsVar(2) DISTINCT colourless cards into hand, off
+        // `CombatCardGeneration` -- the same shuffle-then-take that every other
+        // `GetDistinctForCombat` caller uses.
+        if (HasRelic(state, OrangeDough))
+        {
+            CardEffects.AddColorlessCardsToHand(state, 2, rng);
+        }
+
+        // `BigHat`: CardsVar(2) distinct ETHEREAL cards from the player's OWN pool. Its
+        // filter is `c.Keywords.Contains(Ethereal)` over the character pool rather than
+        // the colourless one, and the whole block is skipped when the filter is empty --
+        // which for a character with no Ethereal cards is the difference between two
+        // cards and none.
+        if (HasRelic(state, BigHat))
+        {
+            CardEffects.AddDistinctEtherealCardsToHand(state, 2, rng);
+        }
+
+        // `PowerCell`: CardsVar(2) ZERO-COST cards out of the draw pile and into hand.
+        // `StableShuffle(CombatCardSelection)` then Take -- a different stream from the
+        // generation ones above, because these cards already exist.
+        if (HasRelic(state, PowerCell))
+        {
+            CardEffects.MoveZeroCostDrawCardsToHandForPowerCell(state, 2, rng);
+        }
+
         if (HasRelic(state, BloodVial))
         {
             CardEffects.HealPlayer(state, 2);
@@ -379,7 +498,7 @@ public static class RelicEffects
 
         if (HasRelic(state, Vajra))
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 1);
+            GainPlayerStrength(state, 1);
         }
 
         if (HasRelic(state, OddlySmoothStone))
@@ -476,6 +595,34 @@ public static class RelicEffects
                 CardEffects.DealUnpoweredDamageToAll(state, 9);
             }
         }
+
+        // `Brimstone.AfterSideTurnStart` with NO turn guard: 2 Strength to the player and
+        // 1 to every LIVING opponent, every single turn. The enemy half is the point --
+        // it is a Shop relic that arms the room as fast as it arms you.
+        if (HasRelic(state, Brimstone))
+        {
+            GainPlayerStrength(state, 2);
+            foreach (var enemy in state.Enemies.Where(enemy => enemy.Hp > 0))
+            {
+                BuffSystem.Apply(enemy.Buffs, BuffId.Strength, 1);
+            }
+        }
+
+        // `EmotionChip.AfterPlayerTurnStart`: if the player took unblocked damage during
+        // the PREVIOUS player turn, every orb in the queue fires its passive. The history
+        // query is `HappenedLastPlayerTurn`, so it is the last turn's damage rather than
+        // any damage -- the flag is set when damage lands and read here.
+        if (HasRelic(state, EmotionChip) && GetCounter(state, EmotionChip) > 0)
+        {
+            CardEffects.TriggerEveryOrbPassive(state, DrawRng(state, rng));
+        }
+
+        SetCounter(state, EmotionChip, 0);
+
+        // `MiniRegent` and `DemonTongue` both clear a once-per-turn flag in
+        // `BeforeSideTurnStart`; the counter IS that flag.
+        SetCounter(state, MiniRegent, 0);
+        SetCounter(state, DemonTongue, 0);
 
         // Both are BlockVar(..., ValueProp.Unpowered): Dexterity does not raise them.
         if (turnNumber == 2 && HasRelic(state, HornCleat))
@@ -590,12 +737,20 @@ public static class RelicEffects
             CardEffects.GainEnergy(state, 1);
         }
 
+        // `HelicalDart.AfterCardPlayed`: a card tagged Shiv applies
+        // `HelicalDartPower(Dexterity 1)`. The TAG, not the Shiv id -- Knife Trap carries
+        // it too, so it pays on the trap as well as on every Shiv the trap replays.
+        if (HasRelic(state, HelicalDart) && def.ShivTag)
+        {
+            BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, 1);
+        }
+
         switch (def.Type)
         {
             case CardType.Attack:
                 if (CountTowards(state, Shuriken, period: 3))
                 {
-                    BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 1);
+                    GainPlayerStrength(state, 1);
                 }
 
                 if (CountTowards(state, Kunai, period: 3))
@@ -661,7 +816,12 @@ public static class RelicEffects
     /// Hook.AfterDamageReceived, which runs per damage instance; here the caller is the
     /// enemy attack path, so self-damage from a card does not trigger them.
     /// </summary>
-    public static void ApplyAfterUnblockedDamageReceived(CombatState state, Random? rng = null)
+    /// <param name="unblocked">How much of the hit actually landed, for Demon Tongue.</param>
+    public static void ApplyAfterUnblockedDamageReceived(
+        CombatState state,
+        Random? rng = null,
+        int unblocked = 0
+    )
     {
         if (HasRelic(state, SelfFormingClay))
         {
@@ -672,6 +832,31 @@ public static class RelicEffects
         if (FiresOncePerCombat(state, CentennialPuzzle))
         {
             CardEffects.DrawCards(state, 3, DrawRng(state, rng));
+        }
+
+        // `EmotionChip.AfterDamageReceived` sets `Status = Active` on ANY unblocked hit,
+        // whichever side dealt it -- the flag is read at the next player turn start and
+        // cleared there. History stamps an entry with the player's TurnNumber, which does
+        // not move during the enemy phase, so an enemy attack counts as "last turn" too.
+        if (HasRelic(state, EmotionChip))
+        {
+            SetCounter(state, EmotionChip, 1);
+        }
+
+        // `DemonTongue.AfterDamageReceived`: the FIRST unblocked hit the player takes on
+        // their own turn is healed straight back, once per turn.
+        // `CombatState.CurrentSide == Owner.Creature.Side` -- the player's OWN side turn,
+        // which `state.PlayerTurn` is. So it heals self-inflicted damage (Blood Wall,
+        // Offering, Hemokinesis, a card that hits its owner) and never an enemy attack.
+        if (
+            state.PlayerTurn
+            && unblocked > 0
+            && HasRelic(state, DemonTongue)
+            && GetCounter(state, DemonTongue) == 0
+        )
+        {
+            SetCounter(state, DemonTongue, 1);
+            CardEffects.HealPlayer(state, unblocked);
         }
     }
 
@@ -780,6 +965,13 @@ public static class RelicEffects
         return true;
     }
 
+    /// <summary>This relic's counter, or 0 when the run does not hold it.</summary>
+    private static int GetCounter(CombatState state, int relicId)
+    {
+        int index = state.Relics.FindIndex(relic => relic.DefId == relicId);
+        return index >= 0 ? state.Relics[index].Counter : 0;
+    }
+
     private static void SetCounter(CombatState state, int relicId, int counter)
     {
         int index = state.Relics.FindIndex(relic => relic.DefId == relicId);
@@ -823,12 +1015,19 @@ public static class RelicEffects
             return;
         }
 
-        BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, shouldBeActive ? 3 : -3);
+        GainPlayerStrength(state, shouldBeActive ? 3 : -3);
         state.Relics[index] = state.Relics[index] with { Counter = shouldBeActive ? 1 : 0 };
     }
 
     public static void ApplyEndOfPlayerTurn(CombatState state, Random? rng = null)
     {
+        // `LunarPastry.AfterSideTurnEnd`: StarsVar(1) whenever the player's side turn
+        // ends. Through `GainStars` rather than `Stars +=`, so Black Hole sees it.
+        if (HasRelic(state, LunarPastry))
+        {
+            CardEffects.GainStars(state, 1);
+        }
+
         if (HasRelic(state, Orichalcum) && state.PlayerBlock == 0)
         {
             // BlockVar(6m, ValueProp.Unpowered) — flat, whatever the player's Dexterity.
@@ -914,13 +1113,47 @@ public static class RelicEffects
     /// </summary>
     internal static int CardDamageMultiplier(CombatState state, CardDef def)
     {
+        // `VitruvianMinion.ModifyDamageMultiplicative` returns a flat 2 for a card tagged
+        // Minion, whatever its TYPE -- so it is read before the Attack gate rather than
+        // inside it. Its block half is in `ModifyBlockMultiplicative`, the same rule at
+        // the other door: the three Minion cards are Minion Strike, Minion Dive Bomb and
+        // Minion Sacrifice, and the relic doubles whichever half each one pays.
+        int minion = def.MinionTag && HasRelic(state, VitruvianMinion) ? 2 : 1;
+
         if (def.Type != CardType.Attack)
         {
-            return 1;
+            return minion;
         }
 
         int index = state.Relics.FindIndex(relic => relic.DefId == PenNib);
-        return index >= 0 && state.Relics[index].Counter == 0 && state.PenNibArmed ? 2 : 1;
+        return minion
+            * (index >= 0 && state.Relics[index].Counter == 0 && state.PenNibArmed ? 2 : 1);
+    }
+
+    /// <summary>Vitruvian Minion's block half: 2x the block of a Minion-tagged card.</summary>
+    public static int CardBlockMultiplier(CombatState state, CardDef def) =>
+        def.MinionTag && HasRelic(state, VitruvianMinion) ? 2 : 1;
+
+    /// <summary>
+    /// `UndyingSigil.ModifyDamageMultiplicative`: a powered attack aimed at the OWNER by
+    /// an attacker whose current HP is at or below its own Doom lands at half.
+    /// </summary>
+    /// <remarks>
+    /// The relic's own doc comment says it "doesn't actually _do_ anything" and that Doom
+    /// checks for it -- but that is about the SECOND thing it does, moving enemy Doom to
+    /// the start of the enemy turn so they die before they attack. `ModifyDamageMultiplicative`
+    /// right below that comment is a real halving, and it is the reason the relic is worth
+    /// buying: an enemy that is about to die to Doom is also hitting you for half.
+    /// </remarks>
+    public static float IncomingDamageMultiplierFromDoom(CombatState state, EnemyState attacker)
+    {
+        if (!HasRelic(state, UndyingSigil))
+        {
+            return 1f;
+        }
+
+        int doom = BuffSystem.Get(attacker.Buffs, BuffId.Doom);
+        return doom > 0 && attacker.Hp <= doom ? 0.5f : 1f;
     }
 
     /// <summary>
@@ -1010,6 +1243,269 @@ public static class RelicEffects
     }
 
     /// <summary>
+    /// `PaperKrane.ModifyWeakMultiplier`: -0.15 when the relic's owner is the TARGET of a
+    /// powered attack, so a Weak enemy hits them for 0.60 rather than 0.75.
+    /// </summary>
+    /// <remarks>
+    /// It reads the target, not the attacker -- Paper Krane is a defensive relic that
+    /// deepens Weak on things hitting YOU, and does nothing to the Weak you apply.
+    /// </remarks>
+    public static float WeakMultiplierDeltaAgainstPlayer(CombatState state) =>
+        HasRelic(state, PaperKrane) ? -0.15f : 0f;
+
+    /// <summary>
+    /// `PaperPhrog.ModifyVulnerableMultiplier`: +0.25 when the target is NOT its owner, so
+    /// a Vulnerable enemy takes 1.75 rather than 1.5.
+    /// </summary>
+    /// <remarks>
+    /// The mirror of Paper Krane, and note the asymmetry in the source: the Krane checks
+    /// `target != Owner -> unchanged` and the Phrog checks `target == Owner -> unchanged`.
+    /// One helps only when you are hit, the other only when you are not.
+    /// </remarks>
+    public static float VulnerableMultiplierDeltaAgainstEnemies(CombatState state) =>
+        HasRelic(state, PaperPhrog) ? 0.25f : 0f;
+
+    /// <summary>
+    /// `PowerCmd.Apply` of Strength to the PLAYER, which is the one door Ruined Helmet
+    /// stands at. Every grant of player Strength goes through here so the doubling is
+    /// answered once rather than at twenty-eight call sites.
+    /// </summary>
+    /// <remarks>
+    /// A LOSS passes through untouched: `TryModifyPowerAmountReceived` refuses
+    /// `amount <= 0`, so Shockwave's -2 and the end-of-turn unwind of temporary Strength
+    /// are not "doubled" into a bigger loss.
+    /// </remarks>
+    public static void GainPlayerStrength(CombatState state, int amount)
+    {
+        BuffSystem.Apply(
+            state.PlayerBuffs,
+            BuffId.Strength,
+            DoubleFirstStrengthReceived(state, amount)
+        );
+    }
+
+    /// <summary>
+    /// `Bookmark.AfterFlush`: ONE of the cards that survived the flush, chosen at random
+    /// off `Rng.CombatCardSelection`, costs one less until it is played.
+    /// </summary>
+    /// <remarks>
+    /// The candidate list is the RETAINED cards filtered to `!CostsX && cost > 0` -- a
+    /// card already at zero is not a candidate and neither is an X-cost one, so a hand of
+    /// free Shivs gets nothing. `AddUntilPlayed(-1)` rides on the copy and survives the
+    /// turn, which is why this writes `CostBump` rather than `CostForCombat`.
+    ///
+    /// The flush is not a discard (see `ApplyAfterCardDiscarded`), so this fires on a
+    /// boundary where Tough Bandages and Tingsha deliberately do not.
+    /// </remarks>
+    internal static void ApplyAfterFlush(CombatState state, Random? rng)
+    {
+        if (!HasRelic(state, Bookmark))
+        {
+            return;
+        }
+
+        var candidates = Enumerable
+            .Range(0, state.Hand.Count)
+            .Where(i =>
+            {
+                var def = GeneratedData.Cards.Get(state.Hand[i].DefId);
+                return !def.HasEnergyCostX
+                    && CombatEngine.EffectiveCost(state.Hand[i], state) > 0;
+            })
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        var selection = CardEffects.CardSelectionRngFor(state, rng);
+        int chosen = candidates[selection.Next(candidates.Count)];
+        state.Hand[chosen] = state.Hand[chosen] with
+        {
+            CostBump = state.Hand[chosen].CostBump - 1,
+        };
+    }
+
+    /// <summary>
+    /// `GoldPlatedCables.ModifyOrbPassiveTriggerCounts`: `triggerCount + 1` for the orb at
+    /// `OrbQueue.Orbs[0]` and no others.
+    /// </summary>
+    public static int ExtraFrontOrbPassiveTriggers(CombatState state) =>
+        HasRelic(state, GoldPlatedCables) ? 1 : 0;
+
+    /// <summary>
+    /// `Metronome.AfterOrbChanneled`: the SEVENTH orb channelled in a combat deals
+    /// DamageVar(30m, Unpowered) to every hittable enemy. Exactly the seventh -- the test
+    /// is `OrbsChanneled == OrbCount`, not `>=`, so an eighth does nothing and the
+    /// counter is reset only by entering a new combat room.
+    /// </summary>
+    internal static void ApplyAfterOrbChanneled(CombatState state)
+    {
+        if (!HasRelic(state, Metronome))
+        {
+            return;
+        }
+
+        int channelled = GetCounter(state, Metronome) + 1;
+        SetCounter(state, Metronome, channelled);
+        if (channelled == MetronomeOrbCount)
+        {
+            CardEffects.DealUnpoweredDamageToAll(state, MetronomeDamage);
+        }
+    }
+
+    /// <summary>Metronome's `DynamicVar("OrbCount", 7m)` and `DamageVar(30m, Unpowered)`.</summary>
+    private const int MetronomeOrbCount = 7;
+
+    private const int MetronomeDamage = 30;
+
+    /// <summary>
+    /// `Regalite.AfterCardGeneratedForCombat`: BlockVar(2m, Unpowered) per card the player
+    /// generated. Per CARD -- a generator that makes three pays six.
+    /// </summary>
+    internal static void ApplyAfterCardGenerated(CombatState state, int count, Random? rng)
+    {
+        if (count > 0 && HasRelic(state, Regalite))
+        {
+            CardEffects.GainUnpoweredBlock(state, 2 * count, rng);
+        }
+    }
+
+    /// <summary>
+    /// `BoneFlute.AfterAttack`: BlockVar(2m, Unpowered) whenever the OWNER's Osty attacks.
+    /// The guard is on the attacker being an Osty whose `PetOwner` is this player, so it
+    /// is the pet's swing rather than the card that told it to swing -- one block per
+    /// attack, however many the card ordered.
+    /// </summary>
+    internal static void ApplyAfterOstyAttack(CombatState state, Random? rng)
+    {
+        if (HasRelic(state, BoneFlute))
+        {
+            CardEffects.GainUnpoweredBlock(state, 2, rng);
+        }
+    }
+
+    /// <summary>
+    /// `BookRepairKnife.AfterDiedToDoom`: HealVar(3m) for EACH creature that died to Doom,
+    /// counting only those whose death triggers fatal effects -- `Powers.All(
+    /// ShouldOwnerDeathTriggerFatal)`, which a Minion and an un-detached Decimillipede
+    /// segment fail. Nothing at all when the count is zero.
+    /// </summary>
+    internal static void ApplyAfterDiedToDoom(CombatState state, int fatalDeaths)
+    {
+        if (fatalDeaths > 0 && HasRelic(state, BookRepairKnife))
+        {
+            CardEffects.HealPlayer(state, 3 * fatalDeaths);
+        }
+    }
+
+    /// <summary>
+    /// `SneckoSkull.ModifyPowerAmountGivenAdditive`: one more Poison on every Poison the
+    /// OWNER applies. Additive on the amount GIVEN, so it lands once per application
+    /// rather than once per stack.
+    /// </summary>
+    public static int ExtraPoisonGiven(CombatState state) =>
+        HasRelic(state, SneckoSkull) ? 1 : 0;
+
+    /// <summary>
+    /// `RuinedHelmet.TryModifyPowerAmountReceived`: the FIRST positive Strength the player
+    /// receives each combat is doubled, then the relic is spent until the combat ends.
+    /// </summary>
+    /// <remarks>
+    /// It is `amount *= 2` on the amount RECEIVED, so it doubles whatever landed -- a
+    /// Brimstone turn one gives 4, and everything after it gives the printed number.
+    /// </remarks>
+    internal static int DoubleFirstStrengthReceived(CombatState state, int amount)
+    {
+        if (amount <= 0 || !FiresOncePerCombat(state, RuinedHelmet))
+        {
+            return amount;
+        }
+
+        return amount * 2;
+    }
+
+    /// <summary>
+    /// `Hook.AfterStarsSpent`, which only paying a card's star COST dispatches.
+    /// </summary>
+    /// <remarks>
+    /// Mini-Regent fires once a TURN; Galactic Dust counts stars across the whole RUN
+    /// (`[SavedProperty] StarsSpent`) and pays block every tenth. Two relics, two
+    /// different clocks, one hook -- and the dust's counter surviving the combat is the
+    /// part a per-combat model would get wrong.
+    /// </remarks>
+    internal static void ApplyAfterStarsSpent(CombatState state, int amount, Random? rng)
+    {
+        // `MiniRegent`: PowerVar<StrengthPower>(1m), the first spend each turn.
+        if (HasRelic(state, MiniRegent) && GetCounter(state, MiniRegent) == 0)
+        {
+            SetCounter(state, MiniRegent, 1);
+            GainPlayerStrength(state, 1);
+        }
+
+        // `GalacticDust`: StarsVar(10) and BlockVar(10m, Unpowered). It adds the spend to
+        // its counter and, once the counter reaches ten, pays `floor(StarsSpent / 10) * 10`
+        // block and takes the counter modulo ten -- so a single spend of twenty-five pays
+        // twenty block at once and carries five over, rather than paying ten and losing
+        // the rest.
+        if (HasRelic(state, GalacticDust))
+        {
+            int spent = GetCounter(state, GalacticDust) + amount;
+            if (spent >= GalacticDustStarsPerBlock)
+            {
+                CardEffects.GainUnpoweredBlock(
+                    state,
+                    spent / GalacticDustStarsPerBlock * GalacticDustBlock,
+                    rng
+                );
+                spent %= GalacticDustStarsPerBlock;
+            }
+
+            SetCounter(state, GalacticDust, spent);
+        }
+    }
+
+    /// <summary>Galactic Dust's `StarsVar(10)` and `BlockVar(10m, Unpowered)`.</summary>
+    private const int GalacticDustStarsPerBlock = 10;
+
+    private const int GalacticDustBlock = 10;
+
+    /// <summary>
+    /// `Hook.AfterCardDiscarded`, once per card an effect discards.
+    /// </summary>
+    /// <remarks>
+    /// Both relics guard on `Owner.Creature.Side == CombatState.CurrentSide` -- the
+    /// discard has to happen during the player's own turn. Every effect-driven discard in
+    /// the emulator does, and the END-OF-TURN hand dump is not a discard at all:
+    /// `FlushPlayerHand` is a plain `CardPileCmd.Add` followed by `Hook.AfterFlush`, with
+    /// no `CardDiscarded` history row and no `AfterCardDiscarded` between them. **A hand
+    /// emptied at end of turn pays neither of these relics**, which is most of what a
+    /// player would assume they do.
+    /// </remarks>
+    internal static void ApplyAfterCardDiscarded(CombatState state, Random? rng)
+    {
+        // `ToughBandages`: BlockVar(3m, Unpowered) -- Dexterity does not raise it.
+        if (HasRelic(state, ToughBandages))
+        {
+            CardEffects.GainUnpoweredBlock(state, 3, rng);
+        }
+
+        // `Tingsha`: DamageVar(3m, Unpowered) to `Rng.CombatTargets.NextItem(
+        // HittableEnemies)` -- one random enemy per card, re-rolled each time.
+        if (HasRelic(state, Tingsha))
+        {
+            // `state.TargetRng` is the run's CombatTargets stream and takes precedence
+            // inside RandomLivingEnemy; the parameter is only the single-combat fallback.
+            var target = CardEffects.RandomLivingEnemyFor(state, rng ?? new Random(0));
+            if (target is not null)
+            {
+                CardEffects.DealUnpoweredDamage(state, target, 3);
+            }
+        }
+    }
+
+    /// <summary>
+    /// `JossPaper.AfterCardExhausted`: every FIVE cards exhausted draws one. An exhaust    /// <summary>
     /// `JossPaper.AfterCardExhausted`: every FIVE cards exhausted draws one. An exhaust
     /// caused by Ethereal is banked for the end of the turn instead of counting now.
     /// </summary>
@@ -1019,6 +1515,14 @@ public static class RelicEffects
         Random? rng
     )
     {
+        // `CharonsAshes.AfterCardExhausted`: DamageVar(3m, Unpowered) to every hittable
+        // enemy, per card. No Ethereal exception -- a card exhausted by Ethereal at end of
+        // turn pays it too, unlike Joss Paper's banked count below.
+        if (HasRelic(state, CharonsAshes))
+        {
+            CardEffects.DealUnpoweredDamageToAll(state, 3);
+        }
+
         int index = state.Relics.FindIndex(relic => relic.DefId == JossPaper);
         if (index < 0)
         {
@@ -1179,7 +1683,7 @@ public static class RelicEffects
             && state.RainbowRingPowers > 0
         )
         {
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 1);
+            GainPlayerStrength(state, 1);
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Dexterity, 1);
             state.RainbowRingPaidThisTurn = true;
         }
@@ -1507,7 +2011,7 @@ public static class RelicEffects
         {
             // The player's restore is `Strength += -TemporaryStrength`, so a grant that
             // should expire records the SAME sign it was given at, not the opposite.
-            BuffSystem.Apply(state.PlayerBuffs, BuffId.Strength, 3);
+            GainPlayerStrength(state, 3);
             BuffSystem.Apply(state.PlayerBuffs, BuffId.TemporaryStrength, 3);
         }
     }
