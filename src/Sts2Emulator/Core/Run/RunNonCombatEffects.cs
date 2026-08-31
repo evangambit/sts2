@@ -117,12 +117,36 @@ public static class RunNonCombatEffects
     /// War Paint and Whetstone: CardsVar(2) upgraded off the deck on pickup, taken from
     /// Deck.Where(type and IsUpgradable).StableShuffle(Rng.Niche).Take(2).
     /// </summary>
-    private static void UpgradeRandomDeckCards(RunState state, CardType type, int count)
+    /// <param name="type">
+    /// The card type to filter to, or null for ANY upgradable card -- Fragrant Mushroom's
+    /// `Deck.Where(c => c.IsUpgradable)` has no type filter where War Paint's does.
+    /// </param>
+    /// <summary>
+    /// The same StableShuffle-and-take as the pickup relics', off a stream the CALLER
+    /// names -- Battleworn Dummy upgrades off the event's own Rng, not `Rng.Niche`.
+    /// </summary>
+    public static void UpgradeRandomDeckCardsForEvent(RunState state, int count, GameRng rng)
+    {
+        var candidates = Enumerable
+            .Range(0, state.Deck.Count)
+            .Where(index => RunConstants.IsRunCardUpgradable(state.Deck[index]))
+            .ToList();
+
+        candidates.Sort((left, right) => state.Deck[left].DefId.CompareTo(state.Deck[right].DefId));
+        rng.Shuffle(candidates);
+
+        foreach (int index in candidates.Take(count))
+        {
+            state.Deck[index] = state.Deck[index] with { Upgraded = true };
+        }
+    }
+
+    private static void UpgradeRandomDeckCards(RunState state, CardType? type, int count)
     {
         var candidates = Enumerable
             .Range(0, state.Deck.Count)
             .Where(index =>
-                GeneratedData.Cards.Get(state.Deck[index].DefId).Type == type
+                (type is null || GeneratedData.Cards.Get(state.Deck[index].DefId).Type == type)
                 && RunConstants.IsRunCardUpgradable(state.Deck[index])
             )
             .ToList();
@@ -220,6 +244,21 @@ public static class RunNonCombatEffects
                 break;
             case RunConstants.RelicMango:
                 GainMaxHp(state, 14);
+                break;
+            // Both mushrooms are `HasUponPickupEffect`, and the Hungry For Mushrooms event
+            // is only the door they come through: the HP swing is the RELIC's, so it lands
+            // however the relic is obtained. The emulator had the numbers on the event
+            // instead, and had them wrong -- +7 max HP and -9.
+            case RunConstants.RelicBigMushroom:
+                // `MaxHpVar(20)`. GainMaxHp heals by the same amount, which the live
+                // capture shows: 64/80 became 84/100.
+                GainMaxHp(state, 20);
+                break;
+            case RunConstants.RelicFragrantMushroom:
+                // `HpLossVar(15)` Unblockable | Unpowered, then `CardsVar(2)` upgradable
+                // deck cards upgraded off `Rng.Niche` -- no type filter, unlike War Paint.
+                state.PlayerHp = Math.Max(0, state.PlayerHp - 15);
+                UpgradeRandomDeckCards(state, null, 2);
                 break;
             case RunConstants.RelicLeesWaffle:
                 GainMaxHp(state, 7);
@@ -1085,9 +1124,25 @@ public static class RunNonCombatEffects
             // OFFER an Eternal card for removal. Seven curses carry it, Ascender's Bane
             // among them, and the emulator let a run delete every one.
             DeckSelection.Remove => !GeneratedData.Cards.Get(card.DefId).Eternal,
+            DeckSelection.RemoveTaggedBasic => IsRemovableTaggedBasic(
+                card,
+                state.PendingSelectionArg
+            ),
             DeckSelection.TransformToRandom => true,
             _ => false,
         };
+    }
+
+    /// <summary>
+    /// Amalgamator's `IsValid(tag, card)`: the tag, BASIC rarity, and removable.
+    /// </summary>
+    /// <param name="tag">0 for `CardTag.Strike`, 1 for `CardTag.Defend`.</param>
+    private static bool IsRemovableTaggedBasic(CardInstance card, int tag)
+    {
+        var def = GeneratedData.Cards.Get(card.DefId);
+        return (tag == 0 ? def.StrikeTag : def.DefendTag)
+            && def.Rarity == CardRarity.Basic
+            && !def.Eternal;
     }
 
     /// <summary>
@@ -1143,6 +1198,7 @@ public static class RunNonCombatEffects
                 break;
             case DeckSelection.Remove:
             case DeckSelection.RemoveUpgradable:
+            case DeckSelection.RemoveTaggedBasic:
                 state.Deck.RemoveAt(deckIndex);
                 break;
             default:

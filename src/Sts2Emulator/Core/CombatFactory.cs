@@ -945,20 +945,11 @@ public static class CombatFactory
 
             ActOneEncounter.MysteriousKnight => [CreateMysteriousKnight(rng)],
 
-            ActOneEncounter.BattlewornDummy1 =>
-            [
-                CreateEnemy(KE.BattleFriendV1, rng, new Intent(IntentType.Unknown, 0)),
-            ],
+            ActOneEncounter.BattlewornDummy1 => [CreateBattleFriend(KE.BattleFriendV1, rng)],
 
-            ActOneEncounter.BattlewornDummy2 =>
-            [
-                CreateEnemy(KE.BattleFriendV2, rng, new Intent(IntentType.Unknown, 0)),
-            ],
+            ActOneEncounter.BattlewornDummy2 => [CreateBattleFriend(KE.BattleFriendV2, rng)],
 
-            ActOneEncounter.BattlewornDummy3 =>
-            [
-                CreateEnemy(KE.BattleFriendV3, rng, new Intent(IntentType.Unknown, 0)),
-            ],
+            ActOneEncounter.BattlewornDummy3 => [CreateBattleFriend(KE.BattleFriendV3, rng)],
 
             ActOneEncounter.BygoneEffigy =>
             [
@@ -1251,6 +1242,22 @@ public static class CombatFactory
     /// <c>AfterAddedToRoom</c> applies PlatingPower at <c>PlatingAmount</c> — the TOUGH
     /// pair (18, 15), so 18 at A8 — and SlumberPower at a flat 3.
     /// </remarks>
+    /// <summary>
+    /// A Battleworn Dummy's target: 75, 150 or 300 HP, a move state machine that does
+    /// NOTHING, and `AfterAddedToRoom` applying `BattlewornDummyTimeLimitPower` at 3.
+    /// </summary>
+    /// <remarks>
+    /// The time limit is the whole encounter. The dummy never attacks, so the fight is a
+    /// damage check against a clock: three of its side turns and it escapes, and the event
+    /// pays nothing. Without the power the emulator's dummy would stand there for ever.
+    /// </remarks>
+    private static EnemyState CreateBattleFriend(int defId, Random rng)
+    {
+        var enemy = CreateEnemy(defId, rng, new Intent(IntentType.Unknown, 0));
+        BuffSystem.Apply(enemy.Buffs, BuffId.BattlewornDummyTimeLimit, 3);
+        return enemy;
+    }
+
     private static EnemyState CreateSlumberingBeetle(Random rng)
     {
         var enemy = CreateEnemy(KE.SlumberingBeetle, rng, new Intent(IntentType.Unknown, 0));

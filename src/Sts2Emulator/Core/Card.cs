@@ -118,6 +118,10 @@ public readonly record struct CardDef(
     // COUNTS them -- so it is a number the emulator has to be able to derive rather than
     // a label. Generated for the reason every other hand-kept list in here was deleted.
     bool OstyAttack = false,
+    // CardTag.Strike / CardTag.Defend, off each card's CanonicalTags. Amalgamator's deck
+    // filter is the tag, not the name -- see IsStrikeOrDefend for what the name got wrong.
+    bool StrikeTag = false,
+    bool DefendTag = false,
     // CardModel.IsUpgradable is CurrentUpgradeLevel < MaxUpgradeLevel, and 38 cards
     // override MaxUpgradeLevel to zero -- every curse and status. This is that override,
     // read from the source rather than restated: the hand-kept list of ids it replaces
@@ -226,6 +230,13 @@ public enum Enchantment
     /// keywords to the card, permanently. It has no play-time behaviour of its own.
     /// </summary>
     RoyallyApproved,
+
+    /// <summary>
+    /// `PerfectFit.ModifyShuffleOrder`: the card goes to the FRONT of the draw pile on
+    /// every reshuffle except the initial one, so it is the next card drawn after any
+    /// shuffle mid-combat. Field Of Man-Sized Holes is the only source.
+    /// </summary>
+    PerfectFit,
 }
 
 /// <summary>
@@ -454,6 +465,10 @@ public static class Enchantments
             // Slither.CanEnchant also refuses an X-cost card.
             Enchantment.Slither => !def.HasEnergyCostX,
 
+            // `PerfectFit` has no `CanEnchant` override of its own, so the base rule is
+            // the only one: any card the enchantment system will take.
+            Enchantment.PerfectFit => true,
+
             // Imbued.CanEnchantCardType: skills.
             Enchantment.Imbued => def.Type == CardType.Skill,
 
@@ -465,23 +480,25 @@ public static class Enchantments
             // at 0, so the ordinals do not transfer and the names have to.
             Enchantment.RoyallyApproved => def.Type is CardType.Attack or CardType.Skill,
 
-            // Goopy.CanEnchant: tagged Defend. The same stand-in as Spiral's -- among
-            // Basic cards the tag and the name agree -- so this is right for the Defends
-            // a run starts with and blind to any Defend-tagged card that is not Basic.
-            Enchantment.Goopy => IsStrikeOrDefend(def)
-                && def.Entry.StartsWith("DEFEND_", StringComparison.Ordinal),
+            // Goopy.CanEnchant: tagged Defend, at any rarity -- it has no Basic clause of
+            // its own, unlike Spiral. The name stand-in this used to carry was blind to
+            // Fasten and Ultimate Defend, which are Defend-tagged and are not Basic.
+            Enchantment.Goopy => def.DefendTag,
 
             _ => true,
         };
     }
 
     /// <summary>
-    /// The game's <c>CardTag.Strike</c> / <c>CardTag.Defend</c>. Tags are not extracted
-    /// yet, and among Basic cards the tag and the name agree for every character, so the
-    /// entry slug stands in. Extending this past Basic rarity would need the real tags --
-    /// Perfected Strike and its kin are tagged Strike and are not Basic.
+    /// The game's <c>CardTag.Strike</c> / <c>CardTag.Defend</c>, extracted from each card's
+    /// <c>CanonicalTags</c>.
     /// </summary>
-    private static bool IsStrikeOrDefend(CardDef def) =>
-        def.Entry.StartsWith("STRIKE_", StringComparison.Ordinal)
-        || def.Entry.StartsWith("DEFEND_", StringComparison.Ordinal);
+    /// <remarks>
+    /// This used to test the entry slug for a `STRIKE_` / `DEFEND_` prefix, which is true
+    /// for Basic cards -- where the tag and the name agree -- and wrong past them:
+    /// Perfected Strike is tagged Strike and is not Basic, and Shining Strike and Solar
+    /// Strike are tagged and named alike but neither is Basic either. Amalgamator filters
+    /// the deck on the real tag, so the real tag is extracted now.
+    /// </remarks>
+    private static bool IsStrikeOrDefend(CardDef def) => def.StrikeTag || def.DefendTag;
 }

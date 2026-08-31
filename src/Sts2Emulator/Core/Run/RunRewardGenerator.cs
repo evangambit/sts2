@@ -230,6 +230,16 @@ public static class RunRewardGenerator
             state.ActiveCombat.RoyaltiesGold = 0;
         }
 
+        // A `SpecialCardReward` the room owes outright -- the Lantern Key, off its knight.
+        // It is not one of three rolled offers and there is nothing to choose, so it takes
+        // the first slot and the ordinary offer is not rolled over it.
+        if (state.PendingSpecialCardReward != 0)
+        {
+            state.RewardCards[0] = state.PendingSpecialCardReward;
+            state.RewardUpgraded[0] = false;
+            state.PendingSpecialCardReward = 0;
+        }
+
         // The Hunt's kill adds a whole extra CardReward to the room. `CardReward` does not
         // roll its cards in the constructor -- `Populate()` does, when the screen is built
         // -- so the extra offer's three cards come off the rewards stream here with the

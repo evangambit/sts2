@@ -33,6 +33,18 @@ public enum DeckSelection
     RemoveUpgradable,
 
     /// <summary>
+    /// Amalgamator: remove BASIC cards carrying one tag, and the tag is in
+    /// <c>PendingSelectionArg</c> -- 0 for Strike, 1 for Defend.
+    /// </summary>
+    /// <remarks>
+    /// `IsValid(tag, c)` is `c.Tags.Contains(tag) &amp;&amp; c.Rarity == Basic &amp;&amp; c.IsRemovable`,
+    /// so it is narrower than a plain removal in two directions at once: the tag, and
+    /// Basic rarity. Ultimate Strike is Strike-tagged and would be offered by the tag
+    /// alone, which would let the event eat its own reward.
+    /// </remarks>
+    RemoveTaggedBasic,
+
+    /// <summary>
     /// Dolly's Mirror: the chosen card is COPIED into the deck, not changed.
     /// </summary>
     /// <remarks>
@@ -403,6 +415,31 @@ public sealed class RunState
     /// the way it carries one potion at a time, so anything past the first waits here.
     /// </summary>
     public List<int> PendingBonusRelicRewards = [];
+
+    /// <summary>
+    /// A card the next combat's reward screen owes outright, rather than as one of three
+    /// rolled offers -- the game's `SpecialCardReward`. The Lantern Key's knight fight is
+    /// the only one so far: beat it and the key is yours, and it is not a choice.
+    /// </summary>
+    public int PendingSpecialCardReward;
+
+    /// <summary>
+    /// The event to return to when the current combat ends, or 0. The game's
+    /// `EnterCombatWithoutExitingEvent(..., shouldResumeAfterCombat: true)`: the room is
+    /// still the event's, and the fight's outcome is an input to what the event pays.
+    /// </summary>
+    /// <remarks>
+    /// Only the Battleworn Dummy uses it so far, and its `Resume` reads the ENCOUNTER --
+    /// which setting was fought, and whether the dummy ran out of time. The setting is
+    /// `ResumeEventPage`, and the escape is `CombatState.BattlewornDummyRanOutOfTime`,
+    /// carried across by <see cref="ResumeEventDummyEscaped"/> because the combat state is
+    /// gone by the time the event resumes.
+    /// </remarks>
+    public int ResumeEventId;
+
+    public int ResumeEventPage;
+
+    public bool ResumeEventDummyEscaped;
 
     /// <summary>
     /// Neow's Bones adds its curse only once its two relics have been claimed:

@@ -1158,6 +1158,16 @@ public sealed class RunEngine
                 if (result.PlayerWon)
                 {
                     RunNonCombatEffects.TriggerFishingRod(State);
+
+                    // `EnterCombatWithoutExitingEvent(..., shouldResumeAfterCombat: true)`:
+                    // the room was never the combat's, so the event pays instead of the
+                    // fight. `ShouldGiveRewards => false` on the encounter is the same
+                    // statement from the other side.
+                    if (State.ResumeEventId != 0)
+                    {
+                        return ResumeEventAfterCombat(out terminal);
+                    }
+
                     RunRewardGenerator.GenerateCombatRewards(State);
                     terminal = false;
                 }
@@ -1515,6 +1525,10 @@ public sealed class RunEngine
         {
             return;
         }
+
+        // Carried out of the combat before it is dropped: the event that resumes reads the
+        // ENCOUNTER's `RanOutOfTime`, and by then there is no encounter left to read.
+        State.ResumeEventDummyEscaped = State.ActiveCombat.BattlewornDummyRanOutOfTime;
 
         Effects.RelicEffects.CollectUsedUpRelics(State.ActiveCombat, State.UsedUpRelics);
         CarryGoopyGrowthToTheDeck(State.ActiveCombat);
@@ -3457,29 +3471,77 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventAmalgamator:
-                if (action == 0)
+            {
+                // TWO cards the player picks, removed, and ONE named card put in their
+                // place: `FromDeckForRemoval(count: 2, filter: IsValid(tag, c))` then
+                // `CardPileCmd.Add(UltimateStrike)`. `IsValid` is the TAG plus BASIC rarity
+                // plus removable, so the filter is narrower than a plain removal in two
+                // directions -- Ultimate Strike is Strike-tagged, and without the rarity
+                // clause the event could eat its own reward.
+                //
+                // The emulator TRANSFORMED two Ironclad Strikes into random cards off the
+                // Transformations stream. Wrong effect, wrong stream, wrong card, no
+                // choice -- and it matched Ironclad's Strike id rather than the tag, so for
+                // every other character it found nothing and silently did nothing.
+                if (action is not (0 or 1))
                 {
-                    TransformTwoMatchingCards(Effects.IC.StrikeIronclad);
-                }
-                else if (action == 1)
-                {
-                    TransformTwoMatchingCards(Effects.IC.DefendIronclad);
-                }
-                else if (action != RunConstants.EventSkipAction)
-                {
-                    return -1;
+                    if (action != RunConstants.EventSkipAction)
+                    {
+                        return -1;
+                    }
+
+                    break;
                 }
 
-                break;
+                bool strikes = action == 0;
+                if (
+                    !RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.RemoveTaggedBasic,
+                        strikes ? 0 : 1,
+                        count: 2,
+                        followUpCard: RunNonCombatEffects.NamedCard(
+                            strikes ? "UltimateStrike" : "UltimateDefend"
+                        ),
+                        followUpCount: 1
+                    )
+                )
+                {
+                    // Nothing to offer: the game still awaits an empty selection and adds
+                    // the card below it, the way Field Of Man-Sized Holes does.
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(
+                            RunNonCombatEffects.NamedCard(
+                                strikes ? "UltimateStrike" : "UltimateDefend"
+                            ),
+                            false
+                        )
+                    );
+                    break;
+                }
+
+                State.Phase = RunPhase.TransformSelect;
+                return 0;
+            }
             case RunConstants.EventBugslayer:
+                // Both options ADD A NAMED CARD to the deck and nothing else --
+                // `AddAndPreview<Exterminate>` and `AddAndPreview<Squash>`. There is no
+                // gold, no HP cost and no card reward anywhere in the model; the emulator
+                // had 75 gold and an upgraded random card, which is a different event.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(75));
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunNonCombatEffects.NamedCard("Exterminate"), false)
+                    );
                 }
                 else if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 8);
-                    AddEventRewardCard(upgraded: true);
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunNonCombatEffects.NamedCard("Squash"), false)
+                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3552,16 +3614,23 @@ public sealed class RunEngine
                 }
                 else if (action == 1)
                 {
-                    // TODO: EnterYourHole is FromDeckForEnchantment with PerfectFit, an
-                    // enchantment the emulator does not model yet (it moves its card to the
-                    // front of the draw pile on every reshuffle EXCEPT the initial one).
-                    // The 12 HP and a relic below are invented and belong to no option of
-                    // this event; they are left in place only so the branch answers at all.
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 12);
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
+                    // Enter Your Hole is `FromDeckForEnchantment(PerfectFit, 1)` and
+                    // nothing else -- one card the player picks, enchanted. It costs no HP
+                    // and pays no relic; the 12 HP and a relic that used to stand here were
+                    // invented, admitted as such in a TODO, and belonged to no option of
+                    // this event. A live capture caught them: 64 HP in the game, 52 here.
+                    if (
+                        RunNonCombatEffects.BeginDeckSelection(
+                            State,
+                            DeckSelection.Enchant,
+                            (int)Enchantment.PerfectFit,
+                            count: 1
+                        )
+                    )
+                    {
+                        State.Phase = RunPhase.TransformSelect;
+                        return 0;
+                    }
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3570,18 +3639,18 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventInfestedAutomaton:
+                // Both options add ONE card straight to the deck, rolled from the
+                // CHARACTER'S OWN pool at non-combat odds and filtered: Study takes a
+                // POWER, Touch Core takes anything printed at zero energy that is not an X
+                // card. Neither offers a choice and neither costs anything. The emulator
+                // opened a card-reward screen, or took 10 HP for a random relic.
                 if (action == 0)
                 {
-                    RunRewardGenerator.EnterCardReward(State);
-                    return 0;
+                    AddFilteredPoolCardToDeck(def => def.Type == CardType.Power);
                 }
                 else if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 10);
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
+                    AddFilteredPoolCardToDeck(def => def.Cost == 0 && !def.HasEnergyCostX);
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3590,13 +3659,35 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventLostWisp:
+                // Claim takes the LOST WISP relic and a DECAY curse with it; Search is
+                // `GoldVar(60)` and nothing else. The emulator healed as if at a rest site
+                // and handed out an upgraded random card -- neither option, and no curse.
                 if (action == 0)
                 {
-                    HealPlayer(RestHealAmount());
+                    RunNonCombatEffects.AddCardToDeck(
+                        State,
+                        new CardInstance(RunNonCombatEffects.NamedCard("Decay"), false)
+                    );
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunNonCombatEffects.NamedRelic("LostWisp")
+                    );
                 }
                 else if (action == 1)
                 {
-                    AddEventRewardCard(upgraded: true);
+                    // `GoldVar(60)` with `Gold.BaseValue += Rng.NextInt(-15, 16)`, rolled
+                    // in the model when the options are generated -- so the option TEXT
+                    // already names the jittered figure, and a live capture paid 70.
+                    //
+                    // Off the EVENT'S OWN stream, the way Sunken Statue and Luminous Choir
+                    // roll theirs. `EventGoldAmount` applies the same +/-15 from
+                    // `Rng.UpFront`, which is a different sequence: it paid 72 against the
+                    // game's 70. That helper is shared by several other events and is worth
+                    // re-reading for the same reason.
+                    RunNonCombatEffects.GainGold(
+                        State,
+                        60 + RunNonCombatEffects.EventStream(State, "LOST_WISP").NextInt(-15, 16)
+                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3646,21 +3737,44 @@ public sealed class RunEngine
                 }
 
                 break;
+            case RunConstants.EventTheLanternKey when State.EventPage == 1:
+                // Keep The Key answers with a page carrying one option, and that option is
+                // the fight -- `EnterCombatWithoutExitingEvent<MysteriousKnightEventEncounter>`
+                // with a LanternKey card as its reward. Dense Vegetation's shape.
+                if (action != 0)
+                {
+                    return -1;
+                }
+
+                State.PendingSpecialCardReward = RunNonCombatEffects.NamedCard("LanternKey");
+                return StartCombatWithDeck(
+                    State.Deck,
+                    RunConstants.MysteriousKnightEncounterId,
+                    State.Relics,
+                    State.PlayerHp,
+                    State.PlayerMaxHp,
+                    State.PotionSlots,
+                    State.Gold,
+                    Math.Max(
+                        0,
+                        State.NormalEncountersVisited + State.EliteEncountersVisited - 1
+                    )
+                );
+
             case RunConstants.EventTheLanternKey:
+                // Return The Key is `GoldVar(100)` flat -- `Gold.BaseValue`, with none of
+                // the jitter Lost Wisp rolls into its own var. Keep The Key opens the fight
+                // page above. The emulator had the two the wrong way round AND wrong: it
+                // handed out the key card and a relic for FREE where the game makes you
+                // beat a knight for the card, and paid a jittered 99 for the other.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.AddCardToDeck(
-                        State,
-                        new CardInstance(RunNonCombatEffects.NamedCard("LanternKey"), false)
-                    );
-                    RunNonCombatEffects.ApplyRelicPickup(
-                        State,
-                        RunRewardGenerator.NextRelic(State)
-                    );
+                    RunNonCombatEffects.GainGold(State, 100);
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(99));
+                    State.EventPage = 1;
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3724,10 +3838,30 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventBattlewornDummy:
+                // Three settings, and each one is a FIGHT: a Battle Friend of 75, 150 or
+                // 300 HP that never attacks and escapes after three of its own turns.
+                // Beat the clock and the event pays -- a potion, two upgrades, or a relic;
+                // miss it and the dummy walks off with the reward.
+                //
+                // The emulator paid 40/60/80 gold and a card, with no fight at all, which
+                // is the whole event: it is a damage check against a timer.
                 if (action is >= 0 and <= 2)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(40 + action * 20));
-                    AddEventRewardCard(upgraded: action == 2);
+                    State.ResumeEventId = RunConstants.EventBattlewornDummy;
+                    State.ResumeEventPage = action;
+                    return StartCombatWithDeck(
+                        State.Deck,
+                        RunConstants.BattlewornDummyEncounterIds0 + action,
+                        State.Relics,
+                        State.PlayerHp,
+                        State.PlayerMaxHp,
+                        State.PotionSlots,
+                        State.Gold,
+                        Math.Max(
+                            0,
+                            State.NormalEncountersVisited + State.EliteEncountersVisited - 1
+                        )
+                    );
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -3759,16 +3893,27 @@ public sealed class RunEngine
 
                 break;
             case RunConstants.EventHungryForMushrooms:
+                // Two RelicOptions: BIG MUSHROOM outright, or FRAGRANT MUSHROOM with
+                // `.ThatDoesDamage(15m)` on the option. The emulator gave max HP and a
+                // potion. Neither relic does anything yet -- both are in the 125 the
+                // emulator does not model -- but granting the right one puts the run's
+                // relic list where the game puts it, which is what an event owes.
+                // The HP swing belongs to the RELICS, not to the event: both are
+                // `HasUponPickupEffect`, so it lands through `ApplyRelicPickup` and would
+                // land the same way if the relic arrived by any other route. The option's
+                // `.ThatDoesDamage(15m)` is the label, not the effect.
                 if (action == 0)
                 {
-                    RunNonCombatEffects.GainMaxHp(State, 7);
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunNonCombatEffects.NamedRelic("BigMushroom")
+                    );
                 }
                 else if (action == 1)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 9);
-                    RunRewardGenerator.AddPotion(
+                    RunNonCombatEffects.ApplyRelicPickup(
                         State,
-                        RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
+                        RunNonCombatEffects.NamedRelic("FragrantMushroom")
                     );
                 }
                 else if (action != RunConstants.EventSkipAction)
@@ -3815,15 +3960,55 @@ public sealed class RunEngine
                 }
 
                 break;
+            // The Trial. Accept draws a DEFENDANT off the event's own stream -- merchant,
+            // noble or nondescript -- and each is a page of Guilty / Innocent with its own
+            // pair of outcomes. Reject answers with a page offering Accept again or Double
+            // Down, and Double Down abandons the run outright.
+            //
+            // The emulator had two options: 10 HP for an upgraded random card, or 100 gold.
+            // Neither is any of the eight things this event can do.
+            //
+            // EventPage carries the defendant: 1 merchant, 2 noble, 3 nondescript, and 4
+            // the Reject page. EventValue0 is not used -- the page IS the state.
+            case RunConstants.EventTrial when State.EventPage is 1 or 2 or 3:
+                return StepTrialVerdict(action, out terminal);
+
+            case RunConstants.EventTrial when State.EventPage == 4:
+                // Reject's page: Accept after all, or Double Down and end the run.
+                if (action == 0)
+                {
+                    State.EventPage = TrialDefendantPage();
+                    return 0;
+                }
+
+                if (action == 1)
+                {
+                    // `.ThatWillKillPlayerIf(_ => true)`, and the option opens
+                    // `NAbandonRunConfirmPopup`: Double Down is the run. Taking the HP to
+                    // zero rather than setting `terminal` outright lets the shared
+                    // death guard below run it -- which is what marks the run LOST rather
+                    // than merely over.
+                    State.PlayerHp = 0;
+                    return 0;
+                }
+
+                if (action != RunConstants.EventSkipAction)
+                {
+                    return -1;
+                }
+
+                break;
+
             case RunConstants.EventTrial:
                 if (action == 0)
                 {
-                    State.PlayerHp = Math.Max(0, State.PlayerHp - 10);
-                    AddEventRewardCard(upgraded: true);
+                    State.EventPage = TrialDefendantPage();
+                    return 0;
                 }
                 else if (action == 1)
                 {
-                    RunNonCombatEffects.GainGold(State, EventGoldAmount(100));
+                    State.EventPage = 4;
+                    return 0;
                 }
                 else if (action != RunConstants.EventSkipAction)
                 {
@@ -4299,6 +4484,224 @@ public sealed class RunEngine
         return AdvanceAfterNode(out terminal);
     }
 
+    /// <summary>
+    /// One card rolled from the CHARACTER'S OWN pool at non-combat odds, filtered, and put
+    /// straight into the deck -- Infested Automaton's two options, which are
+    /// `CardFactory.CreateForReward(owner, 1, ForNonCombatWithDefaultOdds(pool, filter))`
+    /// followed by `CardPileCmd.Add(card, PileType.Deck)`.
+    /// </summary>
+    /// <remarks>
+    /// The filter narrows the POOL before the roll, not the result after it: rolling from
+    /// the whole pool and rejecting misses would be a different number of draws on the
+    /// Rewards stream and slide every later roll in the run.
+    /// </remarks>
+    private void AddFilteredPoolCardToDeck(Func<CardDef, bool> allowed)
+    {
+        var pool = new List<int>();
+        foreach (int cardId in RunRewardGenerator.IroncladRewardPool)
+        {
+            if (allowed(GeneratedData.Cards.Get(cardId)))
+            {
+                pool.Add(cardId);
+            }
+        }
+
+        if (pool.Count == 0)
+        {
+            return;
+        }
+
+        int[] rolled = RunRewardGenerator.GenerateEventOfferCards(State, 1, pool.ToArray());
+        if (rolled.Length > 0)
+        {
+            RunNonCombatEffects.AddCardToDeck(State, new CardInstance(rolled[0], false));
+        }
+    }
+
+    /// <summary>
+    /// Which defendant Accept draws: `base.Rng.NextInt(3)` off the event's own stream,
+    /// mapped to pages 1 (merchant), 2 (noble) and 3 (nondescript).
+    /// </summary>
+    private int TrialDefendantPage() =>
+        1 + RunNonCombatEffects.EventStream(State, "TRIAL").NextInt(3);
+
+    /// <summary>
+    /// A verdict on whichever defendant Accept drew. Six outcomes, and no two of them are
+    /// the same shape: two hand out relics or gold outright, two raise a card selection,
+    /// and one opens a pair of card-reward offers. Every one of them starts with a CURSE
+    /// except the noble's Guilty.
+    /// </summary>
+    private int StepTrialVerdict(int action, out bool terminal)
+    {
+        terminal = false;
+        if (action is not (0 or 1))
+        {
+            return action == RunConstants.EventSkipAction ? AdvanceAfterNode(out terminal) : -1;
+        }
+
+        bool guilty = action == 0;
+        switch (State.EventPage)
+        {
+            case 1 when guilty:
+                // Merchant, Guilty: a Regret, and TWO relics off the front of the pool.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Regret"), false)
+                );
+                for (int i = 0; i < 2; i++)
+                {
+                    RunNonCombatEffects.ApplyRelicPickup(
+                        State,
+                        RunRewardGenerator.NextRelic(State)
+                    );
+                }
+
+                break;
+
+            case 1:
+                // Merchant, Innocent: a Shame, then TWO cards the player upgrades.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Shame"), false)
+                );
+                if (RunNonCombatEffects.BeginDeckSelection(State, DeckSelection.Upgrade, 0, count: 2))
+                {
+                    State.Phase = RunPhase.TransformSelect;
+                    return 0;
+                }
+
+                break;
+
+            case 2 when guilty:
+                // Noble, Guilty: heal 10, and it is the only verdict with no curse.
+                HealPlayer(10);
+                break;
+
+            case 2:
+                // Noble, Innocent: a Regret and 300 gold, flat.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Regret"), false)
+                );
+                RunNonCombatEffects.GainGold(State, 300);
+                break;
+
+            case 3 when guilty:
+            {
+                // Nondescript, Guilty: a Doubt, then TWO card-reward offers of three from
+                // the character's own pool. The emulator's reward screen carries one offer,
+                // so the second waits behind it the way a second relic does.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Doubt"), false)
+                );
+                // Both offers are rolled HERE, in order, because that is when the game
+                // rolls them: `RewardsCmd.OfferCustom` populates every reward as the screen
+                // opens and the draws all come off the same stream.
+                Array.Clear(State.RewardCards);
+                Array.Clear(State.RewardUpgraded);
+                var first = RunRewardGenerator.GenerateEventOfferCards(
+                    State,
+                    State.RewardCards.Length,
+                    RunRewardGenerator.IroncladRewardPool
+                );
+                var second = RunRewardGenerator.GenerateEventOfferCards(
+                    State,
+                    State.RewardCards.Length,
+                    RunRewardGenerator.IroncladRewardPool
+                );
+                for (int i = 0; i < State.RewardCards.Length && i < first.Length; i++)
+                {
+                    State.RewardCards[i] = first[i];
+                }
+
+                State.RewardCardPending = true;
+                State.PendingCardOffers.Add(second);
+                State.Phase = RunPhase.CardReward;
+                return 0;
+            }
+
+            default:
+                // Nondescript, Innocent: a Doubt, then TWO cards the player picks are
+                // transformed at RANDOM -- `TransformToRandom` off the event's own stream,
+                // not the Transformations one.
+                RunNonCombatEffects.AddCardToDeck(
+                    State,
+                    new CardInstance(RunNonCombatEffects.NamedCard("Doubt"), false)
+                );
+                if (
+                    RunNonCombatEffects.BeginDeckSelection(
+                        State,
+                        DeckSelection.TransformToRandom,
+                        0,
+                        count: 2,
+                        eventEntry: "TRIAL"
+                    )
+                )
+                {
+                    State.Phase = RunPhase.TransformSelect;
+                    return 0;
+                }
+
+                break;
+        }
+
+        return AdvanceAfterNode(out terminal);
+    }
+
+    /// <summary>
+    /// The event picks back up where the fight interrupted it -- `EventModel.Resume(room)`.
+    /// </summary>
+    /// <remarks>
+    /// Battleworn Dummy is the only event that does this so far, and its Resume is a
+    /// switch on which setting was fought, skipped entirely if the dummy ran out of time.
+    /// The rewards are not the fight's: `ShouldGiveRewards => false` on the encounter, so
+    /// nothing goes through `GenerateCombatRewards`.
+    /// </remarks>
+    private int ResumeEventAfterCombat(out bool terminal)
+    {
+        int eventId = State.ResumeEventId;
+        int setting = State.ResumeEventPage;
+        bool escaped = State.ResumeEventDummyEscaped;
+        State.ResumeEventId = 0;
+        State.ResumeEventPage = 0;
+        State.ResumeEventDummyEscaped = false;
+
+        if (eventId != RunConstants.EventBattlewornDummy || escaped)
+        {
+            // Ran out of time: the dummy walks off and the event finishes with nothing.
+            return AdvanceAfterNode(out terminal);
+        }
+
+        switch (setting)
+        {
+            case 0:
+                // Setting 1: a POTION, rolled off the Rewards stream from the character's
+                // own pool concatenated with the shared one.
+                RunRewardGenerator.AddPotion(
+                    State,
+                    RunRewardGenerator.NextPotion(State, State.PlayerRng.Rewards)
+                );
+                break;
+
+            case 1:
+                // Setting 2: two upgradable deck cards upgraded, off the EVENT's stream.
+                RunNonCombatEffects.UpgradeRandomDeckCardsForEvent(
+                    State,
+                    2,
+                    RunNonCombatEffects.EventStream(State, "BATTLEWORN_DUMMY")
+                );
+                break;
+
+            default:
+                // Setting 3: a relic off the front of the pool.
+                RunNonCombatEffects.ApplyRelicPickup(State, RunRewardGenerator.NextRelic(State));
+                break;
+        }
+
+        return AdvanceAfterNode(out terminal);
+    }
+
     private int RestHealAmount() =>
         Math.Max(1, (int)(State.PlayerMaxHp * 0.3))
         // Regal Pillow's ModifyRestSiteHealAmount adds its HealVar(15m) to whatever the
@@ -4546,6 +4949,16 @@ public sealed class RunEngine
             case RunConstants.EventPunchOff when State.EventPage == 1:
                 // "I Can Take Them" answers with a page whose only option is the fight.
                 SetMask(mask, 0);
+                break;
+            case RunConstants.EventTheLanternKey when State.EventPage == 1:
+                // Keep The Key's page offers only the fight, the same shape as those two.
+                SetMask(mask, 0);
+                break;
+            case RunConstants.EventTrial when State.EventPage != 0:
+                // Every page past the first offers exactly two: Guilty / Innocent on a
+                // defendant's page, Accept / Double Down on Reject's.
+                SetMask(mask, 0);
+                SetMask(mask, 1);
                 break;
             case RunConstants.EventStoneOfAllTime:
                 // Lift needs a potion to drink; Push needs a card Vigorous can enchant,

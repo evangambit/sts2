@@ -498,6 +498,11 @@ public static class RunConstants
     public const int RelicLeesWaffle = 135;
     public const int RelicLostCoffer = 140;
     public const int RelicMango = 144;
+    // The two Hungry For Mushrooms relics. Both are `HasUponPickupEffect`; neither has any
+    // combat behaviour modelled yet (they are in the 125 the emulator does not model), but
+    // the pickup half is the event's whole payload and belongs with the relic.
+    public const int RelicBigMushroom = 16;
+    public const int RelicFragrantMushroom = 91;
     public const int RelicLargeCapsule = 129;
     public const int RelicLavaRock = 132;
     public const int RelicNeowsBones = 161;
@@ -539,6 +544,14 @@ public static class RunConstants
     /// <summary>The construct fight Punch Off's second page starts.</summary>
     /// <summary>The fight Dense Vegetation's Rest wakes up, entered from the event.</summary>
     public const int DenseVegetationEncounterId = 55;
+
+    /// <summary>
+    /// The Lantern Key's `EnterCombatWithoutExitingEvent&lt;MysteriousKnightEventEncounter&gt;`,
+    /// and the three Battleworn Dummy settings. `CombatFactory` has built all four since
+    /// the event encounters were modelled; the events that reach them did not.
+    /// </summary>
+    public const int MysteriousKnightEncounterId = 58;
+    public const int BattlewornDummyEncounterIds0 = 59;
 
     /// <summary>SurroundedPower.Direction.Right, the enum's zero and the player's start.</summary>
     public const int FacingRight = 1;

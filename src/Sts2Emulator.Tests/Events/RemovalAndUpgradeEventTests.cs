@@ -14,6 +14,8 @@ namespace Sts2Emulator.Tests;
 /// sites (catalogue E44's closing note). What the reading turned up was worse than the
 /// removal: on both events, BOTH options were somebody else's.
 /// </remarks>
+[CoversEvent("FieldOfManSizedHoles")]
+[CoversEvent("SpiritGrafter")]
 public class RemovalAndUpgradeEventTests
 {
     private static RunEngine At(int eventId)
