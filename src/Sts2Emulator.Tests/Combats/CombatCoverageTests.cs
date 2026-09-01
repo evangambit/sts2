@@ -28,11 +28,25 @@ public class CombatCoverageTests
     ///
     /// Nothing in Act 1 is on this list any more: every encounter either act declares --
     /// weak, normal, elite and boss alike -- has a committed live capture that replays
-    /// turn by turn. What is left is later-act content, which the emulator models well
-    /// enough to build but has never been held to. That is not idle debt: sweeping a
-    /// sample of it found eleven of fifteen diverging on intents or move cycles, so
-    /// these are known-wrong rather than merely unchecked, and the captures were not
-    /// committed precisely because they would have been committing failures.
+    /// turn by turn.
+    ///
+    /// Hive and Glory have now been swept too, which this note used to say had never
+    /// happened and estimated at "eleven of fifteen diverging". Measured, at A8 on one
+    /// seed with `combat_sweep.py --act hive|glory`:
+    ///
+    ///   opening state    38 of 38 match -- deck in order, enemy count and HP, and the
+    ///                    opening intents. Three separate streams, on fights nothing had
+    ///                    ever looked at.
+    ///   `--turns 5 --play`  23 of 33 clean; 10 diverge, and 5 more could not be driven
+    ///                    at all because the auto-player never found a playable card.
+    ///
+    /// So the shape of the debt is narrower than "act 2 is unverified": generation and
+    /// rosters are right, and what is wrong is enemy MOVE TABLES -- intent magnitudes
+    /// that climb wrong (louse-progenitor), buff intents given a magnitude the game
+    /// announces without one (both Scrolls fights), summons that fire early (ovicopter
+    /// fields five where the game has three), and Dazed generation that over-fires
+    /// (entomancer). An empty Pending list means every encounter has a SUITE, not that
+    /// any later-act one is verified: those suites were written from the source.
     /// </summary>
     private static readonly HashSet<string> Pending = [];
 
