@@ -272,6 +272,13 @@ public static class CombatEngine
             oblivionBefore[i] = BuffSystem.Get(state.Enemies[i].Buffs, BuffId.Oblivion);
         }
 
+        // `ReboundPower` redirects a card bound for the discard to the top of the draw
+        // pile and is spent doing it. Snapshotted for the same reason Oblivion and
+        // Monologue are: the power does not exist yet while the card that APPLIES it is
+        // resolving, so Rebound never redirects its own play. The live capture is
+        // unambiguous -- the game leaves Rebound in the discard and the draw pile at 6.
+        int reboundBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.Rebound);
+
         // Read here, with Burst and Serpent Form, for the same reason all three are:
         // the power records what it was worth when the play STARTED.
         CaptureBeforePlayPowers(state);
@@ -438,7 +445,7 @@ public static class CombatEngine
             );
             BuffSystem.Apply(state.PlayerBuffs, BuffId.FeralUsed, 1);
         }
-        else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
+        else if (ShouldPlaceOnDrawPileAfterPlay(state, def, reboundBefore))
         {
             state.TopDeck(
                 card with
@@ -3546,6 +3553,9 @@ public static class CombatEngine
         // BeforeCardPlayed fires for an auto-play too -- it is an ordinary CardModel.Play.
         CaptureBeforePlayPowers(state);
         Effects.RelicEffects.BeforeCardPlayedRelics(state, def);
+        // Snapshotted before the effects for the same reason as the hand-played path:
+        // a Rebound applied by THIS card must not redirect this card.
+        int reboundBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.Rebound);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
         if (def.Type == CardType.Attack)
         {
@@ -3600,7 +3610,7 @@ public static class CombatEngine
         {
             Effects.CardEffects.ExhaustCard(state, card, rng: rng);
         }
-        else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
+        else if (ShouldPlaceOnDrawPileAfterPlay(state, def, reboundBefore))
         {
             state.TopDeck(card with { FreeThisTurn = false });
         }
@@ -3813,7 +3823,13 @@ public static class CombatEngine
     /// </summary>
     private static bool ReturnsToHandAfterPlay(CardDef def) => def.Name == "ParticleWall";
 
-    private static bool ShouldPlaceOnDrawPileAfterPlay(CombatState state, CardDef def)
+    private static bool ShouldPlaceOnDrawPileAfterPlay(
+        CombatState state,
+        CardDef def,
+        // No default: every play site has to say what Rebound was worth BEFORE the card
+        // resolved, because a card that applies Rebound must not redirect itself.
+        int reboundBefore
+    )
     {
         int nostalgia = BuffSystem.Get(state.PlayerBuffs, BuffId.Nostalgia);
         // 429 is ShiningStrike, which returns itself to the TOP of the draw pile. Its own
@@ -3822,7 +3838,7 @@ public static class CombatEngine
         // `ReboundPower.ModifyCardPlayResultPileTypeAndPosition` sends a card bound for the
         // DISCARD to the top of the DRAW pile instead, and is spent doing it -- so it moves
         // the NEXT card played after Rebound itself, once.
-        if (BuffSystem.Get(state.PlayerBuffs, BuffId.Rebound) > 0)
+        if (reboundBefore > 0 && BuffSystem.Get(state.PlayerBuffs, BuffId.Rebound) > 0)
         {
             BuffSystem.Apply(state.PlayerBuffs, BuffId.Rebound, -1);
             return true;
@@ -3923,6 +3939,9 @@ public static class CombatEngine
         Effects.RelicEffects.BeforeCardPlayedRelics(state, def);
         int callerTarget = state.TargetEnemyIndex;
         state.TargetEnemyIndex = targetIndex;
+        // Snapshotted before the effects for the same reason as the hand-played path:
+        // a Rebound applied by THIS card must not redirect this card.
+        int reboundBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.Rebound);
         Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
         state.TargetEnemyIndex = callerTarget;
         if (def.Type == CardType.Attack)
@@ -3941,7 +3960,7 @@ public static class CombatEngine
         {
             Effects.CardEffects.ExhaustCard(state, card, rng: rng);
         }
-        else if (ShouldPlaceOnDrawPileAfterPlay(state, def))
+        else if (ShouldPlaceOnDrawPileAfterPlay(state, def, reboundBefore))
         {
             state.TopDeck(card with { FreeThisTurn = false });
         }

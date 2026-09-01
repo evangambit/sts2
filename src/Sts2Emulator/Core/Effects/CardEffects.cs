@@ -275,14 +275,16 @@ public static class CardEffects
 
             case CL.Catastrophe: // 2-cost: auto-play 2/3 cards off the draw pile
             {
-                AutoPlayFromDrawPile(state, upgraded ? 3 : 2, rng);
+                AutoPlayRandomFromDrawPile(state, upgraded ? 3 : 2, rng);
                 break;
             }
 
             case 546: // Cascade -- X-cost: auto-play X (+1 upgraded) off the draw pile
             {
                 // Cascade used to grant Strength, which is a different card entirely.
-                AutoPlayFromDrawPile(state, state.Energy + (upgraded ? 1 : 0));
+                // It is `CardPileCmd.AutoPlayFromDrawPile(..., CardPilePosition.Top)`,
+                // NOT Catastrophe's random pick -- see AutoPlayFromDrawPileTop.
+                AutoPlayFromDrawPileTop(state, state.Energy + (upgraded ? 1 : 0), rng);
                 state.Energy = 0;
                 break;
             }
@@ -3810,7 +3812,44 @@ public static class CardEffects
     /// deterministic pick where the game rolls, and every later shuffle in the combat
     /// sliding as a result.
     /// </remarks>
-    private static void AutoPlayFromDrawPile(CombatState state, int count, Random? rng = null)
+    /// <summary>
+    /// `CardPileCmd.AutoPlayFromDrawPile(count, CardPilePosition.Top)`: take `count` cards
+    /// off the FRONT of the draw pile -- `drawPile.Cards.FirstOrDefault()`, with no
+    /// shuffle and no Unplayable filter, so Ascender's Bane is taken like anything else.
+    /// </summary>
+    /// <remarks>
+    /// The command takes ALL of them first and only then plays them, which is why this
+    /// loop queues rather than resolving: a card drawn by one of these plays cannot be
+    /// picked up by the same Cascade. `ShuffleIfNecessary` runs before each take, so a
+    /// draw pile that runs dry pulls the discard back in mid-cascade.
+    /// </remarks>
+    private static void AutoPlayFromDrawPileTop(CombatState state, int count, Random rng)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            if (state.DrawPile.Count == 0 && state.DiscardPile.Count > 0)
+            {
+                ShuffleDiscardIntoDraw(state, rng);
+            }
+
+            if (state.DrawPile.Count == 0)
+            {
+                break;
+            }
+
+            var picked = state.DrawPile[0];
+            state.RemoveFromDrawPileAt(0);
+            state.AutoPlayQueue.Add(picked);
+        }
+    }
+
+    /// <summary>
+    /// Catastrophe's shape, and ONLY Catastrophe's: one card at a time, each an
+    /// independent `Where(!Unplayable).StableShuffle(Rng.Shuffle).FirstOrDefault()` with a
+    /// fallback to the unfiltered pile. Cascade was pointed here because the helper's name
+    /// matched its card text; the two run different commands.
+    /// </summary>
+    private static void AutoPlayRandomFromDrawPile(CombatState state, int count, Random? rng = null)
     {
         var shuffle = state.ShuffleRng ?? rng ?? new Random(0);
         for (int i = 0; i < count && state.DrawPile.Count > 0; i++)

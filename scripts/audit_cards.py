@@ -104,7 +104,7 @@ def card_digest(text: str) -> str:
 READ: dict[str, tuple[str, str]] = {
     "Cascade": (
         "c1b2abb765be",
-        "X-cost Rare: auto-play X cards (X+1 upgraded) off the TOP of the draw pile, `forceExhaust: false`. Correct -- and it is one of the raw-id `case 546:` arms the coverage generator could not see until E403.",
+        "X-cost Rare: `CardPileCmd.AutoPlayFromDrawPile(num, CardPilePosition.Top)` -- take num cards off the FRONT of the draw pile, no shuffle and no Unplayable filter, all taken before any are played. Recorded as correct on this read because the emulator's call was named `AutoPlayFromDrawPile`; that helper implements CATASTROPHE's random pick. See E423.",
     ),
     "Disintegration": (
         "e2ceda2a1892",

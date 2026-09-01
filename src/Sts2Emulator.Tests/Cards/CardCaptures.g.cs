@@ -932,6 +932,36 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void BrightestFlame_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card BrightestFlame --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(61), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(11, fight.State.Energy);
+        Assert.Equal(4, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(28, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
+    }
+
+    [Fact]
     public void Buffer_Base_ByrdonisElite_Defect_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -1174,6 +1204,32 @@ public class CardCaptureTests
         Assert.Equal(OrbType.Lightning, fight.State.Orbs[0].Type);
         fight.PlayerPowersAre();
         Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
+    public void Cascade_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Cascade --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(546), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(10, fight.State.PlayerBlock);
+        Assert.Equal(0, fight.State.Energy);
+        Assert.Empty(fight.State.DrawPile);
+        Assert.Equal(7, fight.State.DiscardPile.Count);
+        Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(72, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
     }
@@ -2802,6 +2858,66 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void Enlightenment_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Enlightenment --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(165), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(9, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Empty(fight.State.DiscardPile);
+        Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(28, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
+    }
+
+    [Fact]
+    public void Entrench_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Entrench --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(167), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(7, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(28, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
+    }
+
+    [Fact]
     public void Expose_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -2945,6 +3061,38 @@ public class CardCaptureTests
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Vulnerable, 0));
         Assert.Equal(1, fight.State.OstyHp);
         Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void FeedingFrenzy_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card FeedingFrenzy --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(184), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(9, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(5, fight.PlayerBuffAmount(BuffId.Strength));
+        Assert.Equal(5, fight.PlayerBuffAmount(BuffId.TemporaryStrength));
+        fight.PlayerPowersAre(BuffId.Strength, BuffId.TemporaryStrength);
+        Assert.Equal(28, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
     }
 
     [Fact]
@@ -3425,6 +3573,36 @@ public class CardCaptureTests
         Assert.Equal(85, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
+    public void Fuel_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Fuel --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(209), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(10, fight.State.Energy);
+        Assert.Equal(5, fight.State.DrawPile.Count);
+        Assert.Empty(fight.State.DiscardPile);
+        Assert.Single(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(28, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
     }
 
     [Fact]
@@ -4006,6 +4184,36 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void HandOfGreed_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card HandOfGreed --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(CL.HandOfGreed), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(7, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(8, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
+    }
+
+    [Fact]
     public void Hang_Base_ByrdonisElite_Necrobinder_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -4154,6 +4362,37 @@ public class CardCaptureTests
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
+    public void HelloWorld_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card HelloWorld --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(245), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Empty(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(1, fight.PlayerBuffAmount(BuffId.HelloWorld));
+        fight.PlayerPowersAre(BuffId.HelloWorld);
+        Assert.Equal(28, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
     }
 
     [Fact]
@@ -4948,6 +5187,36 @@ public class CardCaptureTests
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
+    public void Maul_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Maul --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(299), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(18, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
     }
 
     [Fact]
@@ -6657,6 +6926,37 @@ public class CardCaptureTests
         Assert.Equal(90, fight.State.Enemies[0].Hp);
         Assert.Equal(0, fight.State.Enemies[0].Block);
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
+    public void Rebound_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Rebound --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(388), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(1, fight.PlayerBuffAmount(BuffId.Rebound));
+        fight.PlayerPowersAre(BuffId.Rebound);
+        Assert.Equal(19, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
     }
 
     [Fact]
@@ -8868,6 +9168,37 @@ public class CardCaptureTests
         Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
         Assert.Equal(1, fight.State.OstyHp);
         Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
+    public void ToricToughness_Base_CorpseSlugsWeak_Ironclad_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card ToricToughness --encounter CorpseSlugsWeak --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(511), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
+            .PlayerHp(64, 80)
+            .Energy(9)
+            .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
+            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(64, fight.State.PlayerHp);
+        Assert.Equal(5, fight.State.PlayerBlock);
+        Assert.Equal(7, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(2, fight.PlayerBuffAmount(BuffId.ToricToughness));
+        fight.PlayerPowersAre(BuffId.ToricToughness);
+        Assert.Equal(28, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 0));
+        Assert.Equal(29, fight.State.Enemies[1].Hp);
+        Assert.Equal(0, fight.State.Enemies[1].Block);
+        Assert.Equal(4, fight.EnemyBuffAmount(BuffId.Ravenous, 1));
     }
 
     [Fact]

@@ -118,20 +118,38 @@ public class ReboundTests
     private static int ReboundId => GeneratedData.Cards.FindId("Rebound")!.Value;
 
     /// <summary>
-    /// The power has no guard against its own source, so Rebound recycles ITSELF: it goes
-    /// to the top of the draw pile rather than the discard, and spends the power doing it.
-    /// That is the game's behaviour, not a modelling shortcut.
+    /// Rebound does NOT recycle itself: the live capture leaves it in the discard with
+    /// the draw pile untouched. The power does not exist yet while the card applying it
+    /// is resolving -- the same rule as Monologue and Oblivion. This test asserted the
+    /// opposite, on a comment that claimed to be reporting the game.
     /// </summary>
     [Fact]
-    public void ItPutsItselfBackOnTopOfTheDrawPile()
+    public void ItDiscardsItselfLikeAnyOtherCard()
     {
         var fight = Fight.Hand(new CardInstance(ReboundId, false)).Energy(9).Enemy(hp: 300);
         fight.State.DrawPile.Clear();
 
         fight.Play(0);
 
-        Assert.Equal(ReboundId, fight.State.DrawPile[0].DefId);
-        Assert.DoesNotContain(fight.State.DiscardPile, card => card.DefId == ReboundId);
+        Assert.Empty(fight.State.DrawPile);
+        Assert.Contains(fight.State.DiscardPile, card => card.DefId == ReboundId);
+    }
+
+    /// <summary>The NEXT card played is the one that gets recycled.</summary>
+    [Fact]
+    public void TheNextCardPlayedGoesToTheTopOfTheDrawPile()
+    {
+        var fight = Fight
+            .Hand(new CardInstance(ReboundId, false), new CardInstance(IC.StrikeIronclad, false))
+            .Energy(9)
+            .Enemy(hp: 300);
+        fight.State.DrawPile.Clear();
+
+        fight.Play(0);
+        fight.Play(0);
+
+        Assert.Equal(IC.StrikeIronclad, fight.State.DrawPile[0].DefId);
+        Assert.DoesNotContain(fight.State.DiscardPile, card => card.DefId == IC.StrikeIronclad);
     }
 
     [Fact]
@@ -145,22 +163,28 @@ public class ReboundTests
     }
 
     /// <summary>
-    /// `PowerStackType.Counter`, decremented per card — so one Rebound moves one card, and
-    /// the card after it discards normally.
+    /// `PowerStackType.Counter`, decremented per card -- so one Rebound moves one card,
+    /// and the card after THAT discards normally.
     /// </summary>
     [Fact]
     public void ItMovesOneCardOnly()
     {
         var fight = Fight
-            .Hand(new CardInstance(ReboundId, false), new CardInstance(IC.StrikeIronclad, false))
+            .Hand(
+                new CardInstance(ReboundId, false),
+                new CardInstance(IC.StrikeIronclad, false),
+                new CardInstance(IC.Bash, false)
+            )
             .Energy(9)
             .Enemy(hp: 300);
         fight.State.DrawPile.Clear();
 
         fight.Play(0);
         fight.Play(0);
+        fight.Play(0);
 
-        Assert.Contains(fight.State.DiscardPile, card => card.DefId == IC.StrikeIronclad);
+        Assert.Contains(fight.State.DiscardPile, card => card.DefId == IC.Bash);
+        Assert.DoesNotContain(fight.State.DrawPile, card => card.DefId == IC.Bash);
     }
 
     /// <summary>`AfterSideTurnEnd` removes it, so an unspent Rebound does not carry over.</summary>
