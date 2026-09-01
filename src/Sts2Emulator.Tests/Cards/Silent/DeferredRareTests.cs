@@ -112,6 +112,35 @@ public class NightmareTests
     }
 
     /// <summary>
+    /// The power is VISIBLE between the play and the next draw: the game reports
+    /// `NIGHTMARE_POWER 3` on the player, and the emulator carried the copies in a queue
+    /// with nothing on the board to show for them. The live capture could not be rebuilt
+    /// at all until there was a BuffId to assert it against.
+    /// </summary>
+    [Fact]
+    public void ThePowerIsOnTheBoardUntilItPaysOut()
+    {
+        var fight = WithNightmare(Card(SI.Backstab));
+        fight.Play();
+        fight.Choose(0);
+
+        Assert.Equal(3, BuffSystem.Get(fight.State.PlayerBuffs, BuffId.Nightmare));
+    }
+
+    /// <summary>`await PowerCmd.Remove(this)` -- the power goes with the copies.</summary>
+    [Fact]
+    public void ThePowerGoesWhenTheCopiesArrive()
+    {
+        var fight = WithNightmare(Card(SI.Backstab));
+        fight.Play();
+        fight.Choose(0);
+
+        fight.EndTurn();
+
+        Assert.Equal(0, BuffSystem.Get(fight.State.PlayerBuffs, BuffId.Nightmare));
+    }
+
+    /// <summary>
     /// `PowerCmd.Remove(this)` runs right after the clones are handed over, so they come
     /// once. A Nightmare that paid out every turn would be the best card in the game.
     /// </summary>

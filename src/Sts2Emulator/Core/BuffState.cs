@@ -712,6 +712,16 @@ public enum BuffId
     /// because `Amount` is spent tracking the turns.
     /// </summary>
     ToricToughness,
+
+    /// <summary>
+    /// `NightmarePower`: a COUNTER of copies owed. The copies themselves live in
+    /// <c>CombatState.CopiesToHandBeforeDraw</c>, because the power remembers a whole
+    /// CARD and a <see cref="BuffState" /> is an id and a number -- this is the visible
+    /// half, so that the game reporting `NIGHTMARE_POWER 3` and the emulator reporting
+    /// nothing is a difference a capture can see. `BeforeHandDraw` hands the copies over
+    /// and removes the power, so it never survives its own delivery.
+    /// </summary>
+    Nightmare,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

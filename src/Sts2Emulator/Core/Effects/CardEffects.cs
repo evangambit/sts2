@@ -9880,6 +9880,11 @@ public static class CardEffects
         {
             state.CopiesToHandBeforeDraw.Add(card with { FreeThisTurn = false });
         }
+
+        // The visible half. The game shows `NIGHTMARE_POWER 3` on the player between the
+        // play and the next draw, and anything that reads the player's powers -- a
+        // capture among them -- was looking at a board where the card had done nothing.
+        BuffSystem.Apply(state.PlayerBuffs, BuffId.Nightmare, count);
     }
 
     private static int CountRendDebuffs(EnemyState enemy)

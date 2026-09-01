@@ -3368,6 +3368,9 @@ public static class CombatEngine
         }
 
         state.CopiesToHandBeforeDraw.Clear();
+        // `await PowerCmd.Remove(this)` -- the power goes when its copies are handed over,
+        // whether or not the hand had room for them.
+        BuffSystem.Remove(state.PlayerBuffs, BuffId.Nightmare);
     }
 
     /// <summary>

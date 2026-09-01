@@ -39,9 +39,3 @@ The generator globs `../*.json` and never looks in here.
   general, which is worse than not capturing it. Same family as Supermassive above: a card
   that reads COMBAT HISTORY rather than board state has nothing in the snapshot to rebuild
   from.
-- `Nightmare-ByrdonisElite.json` — the game applies a `NIGHTMARE_POWER` the emulator has
-  no `BuffId` for, so the rebuild has nothing to assert the card's whole effect against.
-  The first capture unblocked by selection-screen support to name a gap in the EMULATOR
-  rather than in the harness: the screen answered fine, and what it revealed is a power
-  that is not modelled.
-
