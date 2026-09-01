@@ -31,11 +31,12 @@ rather than Overgrowth.
 
 ## Open
 
-Seven. Two are in act 2 — territory nothing could reach until buffed runs started
+Six. Two are in act 2 — territory nothing could reach until buffed runs started
 winning, and which `--enter-acts` now puts a few seconds away instead of behind a won boss
-fight. O20 is a Glory monster power, recorded rather than approximated on purpose: a buff
-nothing reads is what `BuffId.Ebb` turned out to be. Its sibling O19 turned out not to be
-a gap at all — see E127. **The act-2 ancients are finished**: all sixteen blessings do what they should when
+fight. O20 is CLOSED — see E426; it was the Aeonglass's
+Withering Presence, recorded rather than approximated on the grounds that a buff nothing
+reads is what `BuffId.Ebb` turned out to be, and it turned out to be the boss's whole
+gimmick going missing. Its sibling O19 turned out not to be a gap at all — see E127. **The act-2 ancients are finished**: all sixteen blessings do what they should when
 taken, all four of their enchantments behave in a fight, and Clone's rest option is
 modelled. The third (O17) is act-agnostic and is the tail of the event work in E76-E78.
 
@@ -43,14 +44,24 @@ modelled. The third (O17) is act-agnostic and is the tail of the event work in E
 right about the Fogmog all along. The capture that reproduced it is committed as
 `7WGQ2VNJ4M-a8-buff400`, the only trace that walks a Fogmog's illusion.
 
-**Read "three" narrowly.** This table holds divergences a capture or a test SURFACED and
+**Read the count narrowly.** This table holds divergences a capture or a test SURFACED and
 nobody has closed. It is not a measure of what is wrong with the emulator, and right now
 it is a bad proxy for one: the largest known defect surface is not in it at all. That is
 **no suspect ascension literals left** (`scripts/audit_ascension_literals.py` reports
-zero), **no encounter left unwalked** (`CombatCoverageTests.Pending` is empty), and **three whole characters — Defect,
-Necrobinder, Regent, 264 cards — with not one card verified**. Those are known-wrong or
-never-checked rather than merely unlisted; every batch put through the combat suite so far
-has found something. HANDOFF's "Next work" is the register for that, and it is the one to
+zero) and **three whole characters — Defect, Necrobinder, Regent, 264 cards — with not one
+card verified**.
+
+**"No encounter left unwalked" is not what an empty `CombatCoverageTests.Pending` means**,
+and reading it that way is how acts 2 and 3 stayed unmeasured. It means every encounter
+has a SUITE. Act 1's suites are backed by committed live captures; Hive's and Glory's were
+written from the decompiled source, and sweeping them found **10 of 33 diverging on move
+tables**, with 5 more the auto-player could not drive at all. Their opening states are
+clean — 38 of 38 on deck order, roster, HP and opening intents — so what is wrong is
+narrower than "act 2 is unverified": it is enemy move tables. `combat_sweep.py --act hive`
+and `--act glory` name the fights.
+
+All of it is known-wrong or never-checked rather than merely unlisted; every batch put
+through the combat suite so far has found something. HANDOFF's "Next work" is the register for that, and it is the one to
 read before deciding what to do next.
 
 | # | Metric | Seed | What is known |
@@ -59,9 +70,8 @@ read before deciding what to do next.
 | O17 | Mad Science plays as a plain 12-damage attack whatever Tinker Time built | `ZenWeaverReflectionsTinkerTests` | The event is faithful now — three pages, the right shuffles, and the chosen type and rider recorded on the `CardInstance` — but the CARD is not. `MadScience.OnPlay` branches on its type (attack 12 / block 8 / a power) and then applies one of nine riders; the emulator has the card-table entry, so it plays as the Attack row regardless. Two of the riders need powers that do not exist (`CuriousPower`, `ImprovementPower`) and Chaos plays a mocked random card, so this is a card-implementation job rather than a missed line. |
 | O18 | `RampartPower`'s standing total, and whether it stops when the shield dies | `TurretOperatorTests` | The grant reads the max Rampart over LIVING enemies, so a dead Living Shield should stop arming the Turret Operator — and the emulator still hands it 25 with the shield dead. The accumulation is odd too: 50, 50, then 25 across three turns, where the rule reads as 25 each player turn against a block that clears on the enemy's own turn. **Neither has ground truth**: a live capture compares intents and player HP, not enemy block, and the sweep's policy attacks the shield first so it never outlives the turret. The test asserts only that the turret is armoured while the shield lives; pinning a number this cannot justify is how a wrong reading gets fixed in place. |
 | O15 | Alchemical Coffer wants six potion slots; the emulator caps at three | `AncientBlessingTests` | `RunState.PotionSlots` is a fixed `int[3]`, as are `CombatState`'s and `GameState`'s, and the combat observation is laid out around that width — so a run cannot hold more than three potions whatever `MaxPotionSlots` says. The Coffer grants four slots on top of two. Widening the array is an observation-layout change, which is why it is recorded rather than done in passing; the test deliberately does NOT assert three, because that would bake the cap in as though it were the rule. |
-| O20 | `WitheringPresencePower` is unmodelled, so the Aeonglass's Withers only come from its own move | `AeonglassTests` | `AfterAddedToRoom` gives every opponent a `WitheringPresencePower` with a CardsLeft counter of 6: every sixth card the player plays puts a Wither in their HAND, and the Aeonglass's `WitherUpgradeCount` fake-upgrades each one to match how many times INCREASING_INTENSITY has run. The intensity move's own Withers are modelled; this steady drip is not, and it is the larger source over a long fight. |
 | O23 | whether The Hunt's extra card reward populates BEFORE or AFTER the room's ordinary one | `TheHuntTests` | A Hunt that kills adds a whole extra `CardReward` to the room. `CardReward` does not roll its cards in the constructor — `Populate()` does, when the screen is built — so the extra offer's three options come off `PlayerRng.Rewards` with the rest rather than at the moment of the kill. What is NOT settled is the order: both rewards are `RewardsSetIndex` 5, so they populate in the order they were added, and the extra is added DURING the combat while the ordinary set is built at its end. Modelled as "after", which is a guess; every card the rewards stream produces from the second offer on depends on it. A capture of a run that plays The Hunt to a kill settles it in one fight. |
-| O25 | a Nightmare's promise is invisible in the observation | `NightmareTests` | `NightmarePower` is a real, visible power in the game, and its `StringVar("Card")` names the card it is holding — so a player can see that three Backstabs are arriving next turn and plan the energy for them. The emulator carries the clones in `CombatState.CopiesToHandBeforeDraw`, which nothing in `CombatObservation` reads, so an agent pays three energy for an effect it cannot observe and then discovers the hand next turn. `ReturnToHandBeforeDraw` has the same gap and predates this. Recorded rather than fixed because exposing it is an observation-layout change, the same reason O15 stands. |
+| O25 | a Nightmare names the card it is holding; the emulator only says how many | `NightmareTests` | NARROWED by E425, which gave the power a `BuffId` -- `CombatObservation` writes `PlayerBuffs` generically, so an agent can now see `Nightmare 3` and know three cards are arriving. What it still cannot see is WHICH: the game's `StringVar("Card")` names it, and the emulator keeps the clones in `CopiesToHandBeforeDraw`, which nothing in the observation reads. `ReturnToHandBeforeDraw` has the same gap and is still fully invisible -- it has no buff beside it. Exposing card IDENTITY is an observation-layout change, the same reason O15 stands. |
 
 All fourteen encounter models that roll their own composition now read the encounter's
 own stream, and `EncounterCompositionStreamTests` holds them there by varying the seed and
@@ -98,7 +108,14 @@ earlier that had already been won.
 
 ### How to measure a stream position on the live side
 
-The game exposes no call counts, but a capture pins them anyway. A combat's opening pile
+**The mod now reports them directly.** `battle.rng` carries every named stream's `seed`
+and `counter` -- `Rng` exposes both publicly and `FastForwardCounter` defines what a
+counter means -- and `capture_card.py` records them so a rebuild can stage
+`CountingRandom(seed, counter)`. Prefer that. The reconstruction below predates it and is
+still the way to read a position out of a fixture that has no `rng` block, or off the
+live side with no mod call to hand.
+
+The older method: a capture pins the position even without call counts. A combat's opening pile
 is `hand_ordered + draw_pile_ordered`, its input is the deck in run order, and the shuffle
 is a plain `UnstableShuffle` — so the position the game was at is the one `k` for which
 `shuffle(deck, stream[k:])` reproduces the capture. Sixteen cards make a false match
