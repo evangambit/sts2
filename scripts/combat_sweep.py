@@ -80,9 +80,15 @@ trace_real_game = _load("trace_real_game")
 # What DOES have to hold is stream freshness: the direct combat env assumes every named
 # RNG stream is at CallCount 0, which is true of a run's FIRST combat whichever variant
 # it is. So: embark, jump straight in, never answer Neow, one run per capture.
+# Membership is `EncounterTags.Pool(actId, kind)`, which is generated from each act's
+# own `GenerateAllEncounters()`. Hive and Glory were missing for no reason but that
+# nobody had typed them: `debug_start_encounter` names the encounter model, so act 2 and
+# act 3 fights have been one flag away from a sweep the whole time.
 WEAK_BY_ACT = {
     "overgrowth": ["nibbit", "slimes", "shrinker-beetle", "fuzzy-wurm-crawler"],
     "underdocks": ["corpse-slugs", "seapunk", "sludge-spinner", "toadpoles"],
+    "hive": ["bowlbugs-weak", "exoskeletons-weak", "thieving-hopper", "tunneler"],
+    "glory": ["devoted-sculptor", "scrolls-weak", "turret-operator"],
 }
 # Every normal-pool encounter either act-1 act declares, per
 # decompiled/MegaCrit.Sts2.Core.Models.Acts/{Overgrowth,Underdocks}.cs. The list was eight
@@ -115,6 +121,29 @@ NORMAL_BY_ACT = {
         "cultist-and-seapunk",
         "living-fog",
     ],
+    "hive": [
+        "bowlbugs",
+        "chompers",
+        "exoskeletons-normal",
+        "hunter-killer",
+        "louse-progenitor",
+        "mytes",
+        "ovicopter",
+        "slumbering-beetle",
+        "spiny-toad",
+        "obscura",
+    ],
+    "glory": [
+        "axebot",
+        "construct-menagerie",
+        "fabricator",
+        "frog-knight",
+        "globe-head",
+        "owl-magistrate",
+        "scrolls",
+        "slimed-berserker",
+        "lost-and-forgotten",
+    ],
 }
 # Act-1 elites and bosses. `debug_start_encounter` reaches these the same way it reaches
 # any other encounter — they were simply never listed, so nothing checked the fights an
@@ -122,10 +151,14 @@ NORMAL_BY_ACT = {
 ELITE_BY_ACT = {
     "overgrowth": ["bygone-effigy", "byrdonis", "phrog-parasite"],
     "underdocks": ["phantasmal-gardeners", "skulking-colony", "terror-eel"],
+    "hive": ["decimillipede", "entomancer", "infested-prisms"],
+    "glory": ["knights", "mecha-knight", "soul-nexus"],
 }
 BOSS_BY_ACT = {
     "overgrowth": ["kin", "vantom", "ceremonial-beast"],
     "underdocks": ["lagavulin-matriarch", "soul-fysh", "waterfall-giant"],
+    "hive": ["kaiser-crab", "knowledge-demon", "insatiable"],
+    "glory": ["aeonglass", "queen", "test-subject"],
 }
 ENCOUNTERS_BY_ACT = {
     act: [
