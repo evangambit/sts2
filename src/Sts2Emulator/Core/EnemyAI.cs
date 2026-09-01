@@ -4571,8 +4571,23 @@ public static class EnemyAI
         {
             // The RandomBranchState, reached only from CHEW. CHOMP is always eligible
             // here (the last move was a chew); CHEW is out once it has run twice.
-            bool chewSpent = enemy.RepeatStreak >= 2;
-            next = chewSpent ? chomp : (rng.Next(2) == 0 ? chomp : chew);
+            //
+            // `GetNextState` DRAWS EVERY TIME IT IS REACHED, including when only one
+            // branch is eligible: it sums the weights, takes `rng.NextFloat(max)` and
+            // walks the branches subtracting. Returning CHOMP without drawing left the
+            // MonsterAi stream one short from the first spent chew onwards, which desyncs
+            // every later branch in the fight -- the other scroll's, not just this one's.
+            // That is why one scroll of a pair would run the right chain and the other
+            // would not, and why its CHOMP announced 14 where the game said 16: the
+            // MORE_TEETH that grants the Strength had landed on a different turn.
+            //
+            // Both weights are 1, so with CHEW eligible the boundary is the same one
+            // `rng.Next(2)` drew and only the spent case moves. The draw itself costs the
+            // same single MegaRandom step either way -- `Next(maxValue)` is
+            // `(long)(NextDouble() * maxValue)` -- so this is about WHETHER it happens.
+            double chewWeight = enemy.RepeatStreak >= 2 ? 0d : 1d;
+            double roll = rng.NextDouble() * (1d + chewWeight);
+            next = roll - 1d <= 0d ? chomp : chew;
         }
 
         enemy.RepeatStreak = next == enemy.LastBranch ? enemy.RepeatStreak + 1 : 1;

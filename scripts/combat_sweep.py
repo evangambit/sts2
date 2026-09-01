@@ -693,6 +693,7 @@ def drive_turns(
                 "live_player_hp": live_player.get("hp"),
                 "live_player_max_hp": live_player.get("max_hp"),
                 "emu_player_hp": emu_player.get("hp"),
+                "emu_player_max_hp": emu_player.get("max_hp"),
                 # The hand IN ORDER, by model slug. This is what puts the mid-combat
                 # RESHUFFLE under test: the pile counts can agree turn after turn while
                 # the order coming off the top is wrong, and a status card drawn a turn
@@ -835,9 +836,13 @@ def capture_one(
                 f"vs live {[e['intent'] for e in row['live_enemies']]}",
             )
         if not row["player_match"]:
+            # Max HP as well as HP: `player_match` compares both, and a note that
+            # printed only HP read as "545 vs 545 FAILED" whenever the two sides
+            # disagreed about max HP alone -- which is exactly what Paper Cuts does.
             notes.append(
-                f"turn {row['turn']} player hp: emu {row['emu_player_hp']} "
-                f"vs live {row['live_player_hp']}",
+                f"turn {row['turn']} player: emu {row['emu_player_hp']}"
+                f"/{row['emu_player_max_hp']} vs live {row['live_player_hp']}"
+                f"/{row['live_player_max_hp']}",
             )
         if not row["hand_match"]:
             notes.append(
