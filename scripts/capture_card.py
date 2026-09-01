@@ -439,6 +439,15 @@ def answer_selection(
         trace_real_game.post_action(base_url, {"action": confirm})
 
 
+def _is_player_play_phase(state: dict[str, Any]) -> bool:
+    """Report whether it is the player's turn and they may act."""
+    battle = state.get("battle") or {}
+    if not battle:
+        # Outside combat entirely -- the encounter ended. Nothing left to wait for.
+        return True
+    return battle.get("turn") == "player" and bool(battle.get("is_play_phase"))
+
+
 def wait_for_play_to_settle(
     base_url: str,
     card_count_before: int,
@@ -502,6 +511,17 @@ def wait_for_play_to_settle(
             continue
 
         answered_here = 0
+
+        # A card that ENDS THE TURN has no snapshot in the middle: the game reports the
+        # player's turn over and the enemies yet to act, and the emulator's EndTurn runs
+        # the enemies' whole turn in one step, so there is no moment in it that matches.
+        # There IS a moment on the far side -- the start of the next player turn, which
+        # both describe the same way -- so wait for it rather than snapshotting the seam.
+        # Void Form (`PlayerCmd.EndTurn` inside its OnPlay) is the card this exists for.
+        if not _is_player_play_phase(latest):
+            time.sleep(0.5)
+            latest = start_real_game_run.get_state(base_url)
+            continue
 
         if _card_count(latest) >= target:
             # The count coming back is necessary and not sufficient, for two reasons that
@@ -633,6 +653,17 @@ def capture(
         "game": game_version(),
         "before": before,
         "after": after,
+        # Counts over the combat's HISTORY, which the board does not contain. Voltaic
+        # channels one Lightning per Lightning already channelled and Supermassive scales
+        # on cards generated -- an orb that was channelled and then evoked still counts
+        # and is no longer in the queue, so a rebuild from the piles alone starts these at
+        # zero and the card does nothing. Reported by the mod as `battle.history`.
+        "history": (before_state.get("battle") or {}).get("history") or {},
+        # Seed and call counter for each named RNG stream. A rebuilt combat starts every
+        # stream at zero while the live run's had advanced, so a card that ROLLS -- Chaos
+        # picking an orb -- ran the same logic on a different position and got a different
+        # answer. Recorded from the BEFORE state, which is where the play started.
+        "rng": (before_state.get("battle") or {}).get("rng") or {},
         # Ordered piles are not in the summary and some cards (draw, retain, put-on-top)
         # are only checkable against them.
         "before_piles": ordered_piles(before_state),

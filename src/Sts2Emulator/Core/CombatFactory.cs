@@ -1511,10 +1511,15 @@ public static class CombatFactory
             CreateEnemy(KE.PhantasmalGardener, rng, new Intent(IntentType.Buff, 3), moveIndex: 3),
         ];
 
+    /// <summary>`WitheringPresencePower._baseCardsLeft`, and what it resets to.</summary>
+    internal const int WitheringPresenceCards = 6;
+
     private static EnemyState CreateAeonglass(Random rng)
     {
         var enemy = CreateEnemy(KE.Aeonglass, rng, new Intent(IntentType.Attack, 32));
         BuffSystem.Apply(enemy.Buffs, BuffId.Artifact, 3);
+        // `_baseCardsLeft = 6`, and the live capture of the boss shows it at 6 on turn one.
+        BuffSystem.Apply(enemy.Buffs, BuffId.WitheringPresence, WitheringPresenceCards);
         return enemy;
     }
 

@@ -722,6 +722,15 @@ public enum BuffId
     /// and removes the power, so it never survives its own delivery.
     /// </summary>
     Nightmare,
+
+    /// <summary>
+    /// `WitheringPresencePower` on the Aeonglass: a COUNTER of cards the player has left
+    /// before the next Wither. It starts at 6, `AfterCardPlayed` takes one off for every
+    /// card the player plays, and at zero a Wither joins their hand and the count goes
+    /// back to 6. The boss had Artifact and nothing else, so a 535-HP fight handed out no
+    /// Withers at all.
+    /// </summary>
+    WitheringPresence,
 }
 
 public record struct BuffState(BuffId Id, int Magnitude);

@@ -3655,6 +3655,29 @@ public static class CombatEngine
     {
         Effects.RelicEffects.ApplyAfterCardPlayed(state, def, rng, energySpent);
 
+        // `WitheringPresencePower.AfterCardPlayed`: every card the player plays takes one
+        // off `CardsLeft`, and at zero the player is handed a Wither and the count resets
+        // to 6. It counts EVERY play -- VoidForm's power is the one that filters auto-plays
+        // out, and it has to say so explicitly, so the default is that they count.
+        foreach (var enemy in state.Enemies)
+        {
+            if (enemy.Hp <= 0 || BuffSystem.Get(enemy.Buffs, BuffId.WitheringPresence) <= 0)
+            {
+                continue;
+            }
+
+            BuffSystem.Apply(enemy.Buffs, BuffId.WitheringPresence, -1);
+            if (BuffSystem.Get(enemy.Buffs, BuffId.WitheringPresence) <= 0)
+            {
+                Effects.CardEffects.AddGeneratedCardToHand(state, Effects.ST.Wither);
+                BuffSystem.Apply(
+                    enemy.Buffs,
+                    BuffId.WitheringPresence,
+                    CombatFactory.WitheringPresenceCards
+                );
+            }
+        }
+
         // The Strangle payout, from the snapshot taken before this card resolved.
         // `CreatureCmd.Damage(..., Unblockable | Unpowered)` at the enemy carrying it.
         for (int i = 0; i < state.Enemies.Count && i < state.StrangleBeforePlay.Count; i++)

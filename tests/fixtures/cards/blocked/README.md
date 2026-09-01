@@ -7,35 +7,25 @@ thrown away — each one becomes a test the day the gap it names is closed.
 
 The generator globs `../*.json` and never looks in here.
 
-- `Eradicate-necrobinder-AeonglassBoss.json` — the Aeonglass carries a
-  `WITHERING_PRESENCE_POWER` the emulator has no BuffId for. Eradicate needed a boss
-  because at nine energy it kills any act-one elite outright (E292), and this is the boss
-  it got. The card itself is read and tested; what is missing is the enemy.
-- `VoidForm-regent-ByrdonisElite.json` — the card ENDS THE TURN as part of playing it
-  (`PlayerCmd.EndTurn(canBackOut: false)` inside its OnPlay), and the capture caught the
-  board mid-transition: the player's turn had ended (`turn: enemy`, hand flushed) but the
-  enemies had not acted. The emulator's EndTurn runs the enemies' whole turn atomically, so
-  there is no moment in it that matches. **A card that ends the turn has no snapshot the
-  capture tool can take**, and its behaviour lives in `VoidFormTests` instead.
-- `Chaos-defect-ByrdonisElite.json` — the card rolls its orb on
-  `Rng.CombatOrbGeneration`, and a rebuilt fight starts that stream at zero while the live
-  run's had advanced. The game channelled Frost and the emulator Plasma from the same
-  logic: `_validOrbs` is in the emulator's exact enum order and `NextItem` is the same draw,
-  so nothing is wrong but the POSITION.
+**It is currently empty, and that is the point of it.** Every capture that was set aside
+here has been rebuilt, and each one named something real:
 
-  This is the Sword Boomerang shape (see HANDOFF: "capture randomly-targeted cards against
-  a single enemy or not at all"), and it has a way out nobody has built: the mod could
-  report each named stream's raw seed and call count, and the generator could stage
-  `CountingRandom` at that position — the emulator already models the streams that way. That
-  would make every RNG-dependent card capturable across all four pools. Until then a card
-  that rolls is read, not captured.
-- `Voltaic-defect-ByrdonisElite.json` — the card channels one Lightning orb per Lightning
-  orb CHANNELLED THIS COMBAT, counted over `OrbChanneledEntry` history. The capture records
-  the orb QUEUE, which is not the same thing: an orb that was channelled and then evoked
-  still counts and is no longer in the queue. Cracked Core channels one at combat start, so
-  the game channelled one more and a rebuilt fight channels none.
+- `Nightmare` — no `BuffId` for `NIGHTMARE_POWER`. The card's outcome was right and its
+  board was blank; the refusal was a divergence filed as housekeeping (E425).
+- `Eradicate` — no `BuffId` for `WITHERING_PRESENCE_POWER`, because the Aeonglass did not
+  have the power at all. A 535-HP boss whose whole gimmick is handing out a Wither every
+  six cards was handing out none (E426).
+- `Voltaic` and `Supermassive` — cards that read the combat's HISTORY rather than its
+  board. The mod now reports `battle.history` and the generator stages the counts, which
+  is the only way a pile snapshot can be replayed into "orbs channelled this combat".
+- `Chaos` — a card that ROLLS. The mod now reports every named stream's `seed` and
+  `counter` and the generator stages `CountingRandom(seed, counter)`, so a rebuilt fight
+  draws the number the live run drew. This is the one the old note said "nobody has
+  built", and it applies to every capture, not only the ones that were blocked.
+- `VoidForm` — a card that ENDS THE TURN, whose snapshot the old note said did not exist.
+  It does; it is just on the far side. The capture now waits for the next player turn and
+  the rebuild runs the enemy's turn to meet it, which needs the enemy's announced INTENT
+  staged as well.
 
-  Inferring the count from the staged queue would be right in this fixture and wrong in
-  general, which is worse than not capturing it. Same family as Supermassive above: a card
-  that reads COMBAT HISTORY rather than board state has nothing in the snapshot to rebuild
-  from.
+Add a capture back here when the generator refuses one, with a note saying what is
+missing. A fixture in this directory is a to-do, not a quarantine.

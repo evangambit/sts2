@@ -1,6 +1,6 @@
 {
   "_comment": "Captured from the live game by scripts/capture_card.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "card": "Voltaic",
+  "card": "Chaos",
   "upgraded": false,
   "encounter": "ByrdonisElite",
   "seed": "ABCDEF",
@@ -11,6 +11,7 @@
   "powers": [],
   "enchantment": null,
   "enchant_amount": null,
+  "selections": [],
   "game": {
     "steam_buildid": "23811903",
     "release": "v0.107.1"
@@ -45,10 +46,10 @@
       "hand": [
         {
           "index": 0,
-          "id": "VOLTAIC",
-          "name": "Voltaic",
+          "id": "CHAOS",
+          "name": "Chaos",
           "type": "Skill",
-          "cost": "3",
+          "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
           "target_type": "Self",
@@ -56,8 +57,8 @@
         },
         {
           "index": 1,
-          "id": "DEFEND_DEFECT",
-          "name": "Defend",
+          "id": "ZAP",
+          "name": "Zap",
           "type": "Skill",
           "cost": "1",
           "can_play": true,
@@ -67,13 +68,13 @@
         },
         {
           "index": 2,
-          "id": "STRIKE_DEFECT",
-          "name": "Strike",
-          "type": "Attack",
+          "id": "DEFEND_DEFECT",
+          "name": "Defend",
+          "type": "Skill",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "AnyEnemy",
+          "target_type": "Self",
           "is_upgraded": false
         },
         {
@@ -100,13 +101,13 @@
         },
         {
           "index": 5,
-          "id": "STRIKE_DEFECT",
-          "name": "Strike",
-          "type": "Attack",
+          "id": "DEFEND_DEFECT",
+          "name": "Defend",
+          "type": "Skill",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "AnyEnemy",
+          "target_type": "Self",
           "is_upgraded": false
         }
       ],
@@ -157,11 +158,11 @@
       "hp": 60,
       "max_hp": 75,
       "block": 0,
-      "energy": 6,
+      "energy": 8,
       "max_energy": 3,
       "draw_pile_count": 6,
-      "discard_pile_count": 0,
-      "exhaust_pile_count": 1,
+      "discard_pile_count": 1,
+      "exhaust_pile_count": 0,
       "gold": 99,
       "stars": null,
       "orbs": [
@@ -171,17 +172,17 @@
           "evoke_val": 8
         },
         {
-          "id": "LIGHTNING_ORB",
-          "passive_val": 3,
-          "evoke_val": 8
+          "id": "FROST_ORB",
+          "passive_val": 2,
+          "evoke_val": 5
         }
       ],
       "orb_slots": 3,
       "hand": [
         {
           "index": 0,
-          "id": "DEFEND_DEFECT",
-          "name": "Defend",
+          "id": "ZAP",
+          "name": "Zap",
           "type": "Skill",
           "cost": "1",
           "can_play": true,
@@ -191,13 +192,13 @@
         },
         {
           "index": 1,
-          "id": "STRIKE_DEFECT",
-          "name": "Strike",
-          "type": "Attack",
+          "id": "DEFEND_DEFECT",
+          "name": "Defend",
+          "type": "Skill",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "AnyEnemy",
+          "target_type": "Self",
           "is_upgraded": false
         },
         {
@@ -224,13 +225,13 @@
         },
         {
           "index": 4,
-          "id": "STRIKE_DEFECT",
-          "name": "Strike",
-          "type": "Attack",
+          "id": "DEFEND_DEFECT",
+          "name": "Defend",
+          "type": "Skill",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "AnyEnemy",
+          "target_type": "Self",
           "is_upgraded": false
         }
       ],
@@ -269,10 +270,71 @@
     "menu_screen": null,
     "menu_options": null
   },
+  "history": {
+    "cards_played": 0,
+    "cards_drawn": 5,
+    "cards_generated": 1,
+    "orbs_channeled": 1,
+    "lightning_orbs_channeled": 1
+  },
+  "rng": {
+    "UpFront": {
+      "seed": 2099534518,
+      "counter": 416
+    },
+    "Shuffle": {
+      "seed": 1347594942,
+      "counter": 10
+    },
+    "UnknownMapPoint": {
+      "seed": 2936050207,
+      "counter": 0
+    },
+    "CombatCardGeneration": {
+      "seed": 2044740623,
+      "counter": 0
+    },
+    "CombatPotionGeneration": {
+      "seed": 4183268894,
+      "counter": 0
+    },
+    "CombatCardSelection": {
+      "seed": 3706153427,
+      "counter": 0
+    },
+    "CombatEnergyCosts": {
+      "seed": 1817943625,
+      "counter": 0
+    },
+    "CombatTargets": {
+      "seed": 565245502,
+      "counter": 0
+    },
+    "MonsterAi": {
+      "seed": 743216878,
+      "counter": 0
+    },
+    "Niche": {
+      "seed": 3831748284,
+      "counter": 1
+    },
+    "CombatOrbGeneration": {
+      "seed": 287263396,
+      "counter": 0
+    },
+    "TreasureRoomRelics": {
+      "seed": 1440117335,
+      "counter": 0
+    }
+  },
   "before_piles": {
     "hand_ordered": [
       {
-        "id": "VOLTAIC",
+        "id": "CHAOS",
+        "is_upgraded": false
+      },
+      {
+        "id": "ZAP",
         "is_upgraded": false
       },
       {
@@ -284,15 +346,11 @@
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
-        "is_upgraded": false
-      },
-      {
         "id": "DUALCAST",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
+        "id": "DEFEND_DEFECT",
         "is_upgraded": false
       }
     ],
@@ -306,11 +364,11 @@
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_DEFECT",
+        "id": "STRIKE_DEFECT",
         "is_upgraded": false
       },
       {
-        "id": "ZAP",
+        "id": "DEFEND_DEFECT",
         "is_upgraded": false
       },
       {
@@ -318,7 +376,7 @@
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_DEFECT",
+        "id": "STRIKE_DEFECT",
         "is_upgraded": false
       }
     ],
@@ -328,11 +386,11 @@
   "after_piles": {
     "hand_ordered": [
       {
-        "id": "DEFEND_DEFECT",
+        "id": "ZAP",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
+        "id": "DEFEND_DEFECT",
         "is_upgraded": false
       },
       {
@@ -344,7 +402,7 @@
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
+        "id": "DEFEND_DEFECT",
         "is_upgraded": false
       }
     ],
@@ -358,11 +416,11 @@
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_DEFECT",
+        "id": "STRIKE_DEFECT",
         "is_upgraded": false
       },
       {
-        "id": "ZAP",
+        "id": "DEFEND_DEFECT",
         "is_upgraded": false
       },
       {
@@ -370,16 +428,16 @@
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_DEFECT",
+        "id": "STRIKE_DEFECT",
         "is_upgraded": false
       }
     ],
-    "discard_pile_ordered": [],
-    "exhaust_pile_ordered": [
+    "discard_pile_ordered": [
       {
-        "id": "VOLTAIC",
+        "id": "CHAOS",
         "is_upgraded": false
       }
-    ]
+    ],
+    "exhaust_pile_ordered": []
   }
 }

@@ -14,6 +14,49 @@ public class AeonglassTests
         Fight.Encounter(CombatFactory.ActOneEncounter.Aeonglass, ascension);
 
     /// <summary>
+    /// `WitheringPresencePower` starts at `_baseCardsLeft = 6`, which is what the live
+    /// capture of turn one shows.
+    /// </summary>
+    [Fact]
+    public void ItArrivesCountingSixCards()
+    {
+        var fight = Glass();
+
+        Assert.Equal(6, fight.EnemyBuffAmount(BuffId.WitheringPresence));
+    }
+
+    /// <summary>
+    /// `AfterCardPlayed` takes one off for every card the player plays, and at zero a
+    /// Wither joins their hand and the count goes back to 6. The boss used to carry
+    /// Artifact and nothing else, so a 535-HP fight handed out no Withers at all.
+    /// </summary>
+    [Fact]
+    public void EverySixthCardPlayedIsAWither()
+    {
+        var fight = Glass();
+        fight.State.PlayerHp = 900;
+        fight.State.Hand.Clear();
+        for (int i = 0; i < 6; i++)
+        {
+            fight.State.Hand.Add(new CardInstance(IC.DefendIronclad, false));
+        }
+
+        fight.State.Energy = 9;
+        for (int i = 0; i < 5; i++)
+        {
+            fight.Play(0);
+        }
+
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.WitheringPresence));
+        Assert.DoesNotContain(fight.State.Hand, card => card.DefId == ST.Wither);
+
+        fight.Play(0);
+
+        Assert.Contains(fight.State.Hand, card => card.DefId == ST.Wither);
+        Assert.Equal(6, fight.EnemyBuffAmount(BuffId.WitheringPresence));
+    }
+
+    /// <summary>
     /// EBB -> EYE_LASERS -> INCREASING_INTENSITY, cycling.
     ///
     /// INCREASING_INTENSITY declares StatusIntent before BuffIntent, so it announces as a

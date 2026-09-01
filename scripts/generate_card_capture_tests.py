@@ -310,6 +310,62 @@ def test_name(fixture: dict[str, Any]) -> str:
     return "_".join(parts) + "_MatchesLiveCapture"
 
 
+# `battle.history` keys from the mod, and the CombatState field each one stages. Only the
+# counts some card actually reads are here; a count nothing reads would be a number the
+# rebuild carries around and never checks.
+# The game's stream names, and the CombatState field each one stages.
+RNG_FIELDS = {
+    "Shuffle": "ShuffleRng",
+    "CombatTargets": "TargetRng",
+    "CombatCardSelection": "CardSelectionRng",
+    "CombatCardGeneration": "CardGenerationRng",
+    "CombatEnergyCosts": "EnergyCostRng",
+    "CombatOrbGeneration": "OrbGenerationRng",
+    "Niche": "NicheHpRng",
+}
+
+HISTORY_FIELDS = {
+    "cards_played": "CardsPlayedThisCombat",
+    "cards_drawn": "CardsDrawnThisCombat",
+    "cards_generated": "CardsGeneratedThisCombat",
+    "lightning_orbs_channeled": "LightningOrbsChanneledThisCombat",
+}
+
+
+INTENT_TYPES = {"Attack", "Defend", "Buff", "Debuff", "Unknown"}
+
+
+def intent_literal(enemy: dict[str, Any]) -> str | None:
+    """Render the enemy's announced intent, or None when there is nothing to say.
+
+    The mod reports a label rather than a number -- ``"17"`` for a single hit and
+    ``"4x3"`` for a multi-hit -- because that is what the player sees. A capture that
+    runs past the turn boundary needs it: the enemy acts on the intent it was announcing,
+    and a rebuilt enemy that announces nothing does nothing.
+    """
+    intents = enemy.get("intents") or []
+    if not intents:
+        return None
+    first = intents[0]
+    kind = first.get("type")
+    if kind not in INTENT_TYPES:
+        return None
+    label = str(first.get("label") or "").strip()
+    if not label:
+        return f"new Intent(IntentType.{kind}, 0)"
+    hits = 1
+    if "x" in label:
+        magnitude, _, repeat = label.partition("x")
+        if not (magnitude.strip().isdigit() and repeat.strip().isdigit()):
+            return None
+        hits = int(repeat)
+        label = magnitude
+    if not label.strip().isdigit():
+        return None
+    suffix = f", Hits: {hits}" if hits != 1 else ""
+    return f"new Intent(IntentType.{kind}, {int(label)}{suffix})"
+
+
 def selection_lines(fixture: dict[str, Any]) -> list[str]:
     """Rebuild the screens the card raised, and answer them the way the capture did.
 
@@ -399,6 +455,9 @@ def render_test(
         args = [f"defId: {def_id}", f"hp: {enemy['hp']}", f"maxHp: {enemy['max_hp']}"]
         if enemy.get("block"):
             args.append(f"block: {enemy['block']}")
+        if intent := intent_literal(enemy):
+            args.append(f"intent: {intent}")
+        # `buffs` is the params array, so it goes last.
         if literal := buff_literal(enemy.get("status") or [], buffs):
             args.append(f"buffs: {literal}")
         lines.append(f"            .Enemy({', '.join(args)})")
@@ -447,6 +506,33 @@ def render_test(
         # that assigns the field rebuilds the counter and not the history, and the capture
         # reads as nine hits' worth of damage from a card that gained nothing.
         lines.append(f"        CardEffects.GainStars(fight.State, {before_stars});")
+
+    # Counts over the combat's HISTORY. A card that reads history rather than board state
+    # has nothing in a pile snapshot to rebuild from -- Voltaic channels one Lightning per
+    # Lightning already channelled this combat, and an orb that was channelled and then
+    # evoked still counts while being nowhere in the queue. The mod reports the counts and
+    # they are assigned here; the emulator already keeps exactly these fields.
+    for key, field in HISTORY_FIELDS.items():
+        recorded = (fixture.get("history") or {}).get(key)
+        if recorded:
+            lines.append(f"        fight.State.{field} = {recorded};")
+
+    # Each named stream staged where the live run had it, so a card that ROLLS rolls the
+    # same number. Without this the rebuild starts at counter 0 and the game and the
+    # emulator disagree about the RESULT while agreeing about the logic -- which is a
+    # capture that cannot tell you anything.
+    for name, field in RNG_FIELDS.items():
+        stream = (fixture.get("rng") or {}).get(name)
+        if not stream:
+            continue
+        seed = int(stream["seed"])
+        # The mod reports the raw uint; CountingRandom takes it as an int and casts back.
+        if seed > 0x7FFFFFFF:
+            seed -= 0x100000000
+        lines.append(
+            f"        fight.State.{field} = new CountingRandom({seed}, "
+            f"{stream['counter']});"
+        )
 
     if "hand_index" not in fixture:
         raise UnsupportedCaptureError(

@@ -1,6 +1,6 @@
 {
   "_comment": "Captured from the live game by scripts/capture_card.py. Expected values here are the GAME's, never the emulator's; re-capturing re-reads ground truth and cannot rubber-stamp an emulator regression.",
-  "card": "Chaos",
+  "card": "VoidForm",
   "upgraded": false,
   "encounter": "ByrdonisElite",
   "seed": "ABCDEF",
@@ -11,6 +11,7 @@
   "powers": [],
   "enchantment": null,
   "enchant_amount": null,
+  "selections": [],
   "game": {
     "steam_buildid": "23811903",
     "release": "v0.107.1"
@@ -23,7 +24,7 @@
       "ascension": 8
     },
     "player": {
-      "character": "The Defect",
+      "character": "The Regent",
       "hp": 60,
       "max_hp": 75,
       "block": 0,
@@ -33,22 +34,16 @@
       "discard_pile_count": 0,
       "exhaust_pile_count": 0,
       "gold": 99,
-      "stars": null,
-      "orbs": [
-        {
-          "id": "LIGHTNING_ORB",
-          "passive_val": 3,
-          "evoke_val": 8
-        }
-      ],
-      "orb_slots": 3,
+      "stars": 3,
+      "orbs": [],
+      "orb_slots": null,
       "hand": [
         {
           "index": 0,
-          "id": "CHAOS",
-          "name": "Chaos",
-          "type": "Skill",
-          "cost": "1",
+          "id": "VOID_FORM",
+          "name": "Void Form",
+          "type": "Power",
+          "cost": "3",
           "can_play": true,
           "unplayable_reason": null,
           "target_type": "Self",
@@ -56,7 +51,18 @@
         },
         {
           "index": 1,
-          "id": "DEFEND_DEFECT",
+          "id": "FALLING_STAR",
+          "name": "Falling Star",
+          "type": "Attack",
+          "cost": "0",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "AnyEnemy",
+          "is_upgraded": false
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_REGENT",
           "name": "Defend",
           "type": "Skill",
           "cost": "1",
@@ -66,19 +72,8 @@
           "is_upgraded": false
         },
         {
-          "index": 2,
-          "id": "STRIKE_DEFECT",
-          "name": "Strike",
-          "type": "Attack",
-          "cost": "1",
-          "can_play": true,
-          "unplayable_reason": null,
-          "target_type": "AnyEnemy",
-          "is_upgraded": false
-        },
-        {
           "index": 3,
-          "id": "STRIKE_DEFECT",
+          "id": "STRIKE_REGENT",
           "name": "Strike",
           "type": "Attack",
           "cost": "1",
@@ -89,18 +84,18 @@
         },
         {
           "index": 4,
-          "id": "STRIKE_DEFECT",
-          "name": "Strike",
-          "type": "Attack",
+          "id": "VENERATE",
+          "name": "Venerate",
+          "type": "Skill",
           "cost": "1",
           "can_play": true,
           "unplayable_reason": null,
-          "target_type": "AnyEnemy",
+          "target_type": "Self",
           "is_upgraded": false
         },
         {
           "index": 5,
-          "id": "DEFEND_DEFECT",
+          "id": "DEFEND_REGENT",
           "name": "Defend",
           "type": "Skill",
           "cost": "1",
@@ -153,59 +148,48 @@
       "ascension": 8
     },
     "player": {
-      "character": "The Defect",
-      "hp": 60,
+      "character": "The Regent",
+      "hp": 43,
       "max_hp": 75,
       "block": 0,
-      "energy": 8,
+      "energy": 3,
       "max_energy": 3,
-      "draw_pile_count": 6,
-      "discard_pile_count": 1,
+      "draw_pile_count": 1,
+      "discard_pile_count": 5,
       "exhaust_pile_count": 0,
       "gold": 99,
-      "stars": null,
-      "orbs": [
-        {
-          "id": "LIGHTNING_ORB",
-          "passive_val": 3,
-          "evoke_val": 8
-        },
-        {
-          "id": "FROST_ORB",
-          "passive_val": 2,
-          "evoke_val": 5
-        }
-      ],
-      "orb_slots": 3,
+      "stars": 3,
+      "orbs": [],
+      "orb_slots": null,
       "hand": [
         {
           "index": 0,
-          "id": "DEFEND_DEFECT",
-          "name": "Defend",
-          "type": "Skill",
-          "cost": "1",
-          "can_play": true,
-          "unplayable_reason": null,
-          "target_type": "Self",
-          "is_upgraded": false
-        },
-        {
-          "index": 1,
-          "id": "STRIKE_DEFECT",
+          "id": "STRIKE_REGENT",
           "name": "Strike",
           "type": "Attack",
-          "cost": "1",
+          "cost": "0",
           "can_play": true,
           "unplayable_reason": null,
           "target_type": "AnyEnemy",
           "is_upgraded": false
         },
         {
+          "index": 1,
+          "id": "DEFEND_REGENT",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "0",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
+          "is_upgraded": false
+        },
+        {
           "index": 2,
-          "id": "STRIKE_DEFECT",
+          "id": "STRIKE_REGENT",
           "name": "Strike",
           "type": "Attack",
-          "cost": "1",
+          "cost": "0",
           "can_play": true,
           "unplayable_reason": null,
           "target_type": "AnyEnemy",
@@ -213,31 +197,38 @@
         },
         {
           "index": 3,
-          "id": "STRIKE_DEFECT",
-          "name": "Strike",
-          "type": "Attack",
-          "cost": "1",
-          "can_play": true,
-          "unplayable_reason": null,
-          "target_type": "AnyEnemy",
-          "is_upgraded": false
-        },
-        {
-          "index": 4,
-          "id": "DEFEND_DEFECT",
+          "id": "DEFEND_REGENT",
           "name": "Defend",
           "type": "Skill",
-          "cost": "1",
+          "cost": "0",
           "can_play": true,
           "unplayable_reason": null,
           "target_type": "Self",
           "is_upgraded": false
+        },
+        {
+          "index": 4,
+          "id": "ASCENDERS_BANE",
+          "name": "Ascender's Bane",
+          "type": "Curse",
+          "cost": "0",
+          "can_play": false,
+          "unplayable_reason": "HasUnplayableKeyword",
+          "target_type": "None",
+          "is_upgraded": false
         }
       ],
-      "status": []
+      "status": [
+        {
+          "id": "VOID_FORM_POWER",
+          "name": "Void Form",
+          "amount": 2,
+          "type": "Buff"
+        }
+      ]
     },
     "battle": {
-      "round": 1,
+      "round": 2,
       "turn": "player",
       "is_play_phase": true
     },
@@ -251,7 +242,7 @@
         "intents": [
           {
             "type": "Attack",
-            "label": "17",
+            "label": "4x3",
             "title": "Aggressive"
           }
         ],
@@ -259,6 +250,12 @@
           {
             "id": "TERRITORIAL_POWER",
             "name": "Territorial",
+            "amount": 1,
+            "type": "Buff"
+          },
+          {
+            "id": "STRENGTH_POWER",
+            "name": "Strength",
             "amount": 1,
             "type": "Buff"
           }
@@ -269,40 +266,105 @@
     "menu_screen": null,
     "menu_options": null
   },
+  "history": {
+    "cards_played": 0,
+    "cards_drawn": 5,
+    "cards_generated": 1,
+    "orbs_channeled": 0,
+    "lightning_orbs_channeled": 0
+  },
+  "rng": {
+    "UpFront": {
+      "seed": 2099534518,
+      "counter": 416
+    },
+    "Shuffle": {
+      "seed": 1347594942,
+      "counter": 10
+    },
+    "UnknownMapPoint": {
+      "seed": 2936050207,
+      "counter": 0
+    },
+    "CombatCardGeneration": {
+      "seed": 2044740623,
+      "counter": 0
+    },
+    "CombatPotionGeneration": {
+      "seed": 4183268894,
+      "counter": 0
+    },
+    "CombatCardSelection": {
+      "seed": 3706153427,
+      "counter": 0
+    },
+    "CombatEnergyCosts": {
+      "seed": 1817943625,
+      "counter": 0
+    },
+    "CombatTargets": {
+      "seed": 565245502,
+      "counter": 0
+    },
+    "MonsterAi": {
+      "seed": 743216878,
+      "counter": 0
+    },
+    "Niche": {
+      "seed": 3831748284,
+      "counter": 1
+    },
+    "CombatOrbGeneration": {
+      "seed": 287263396,
+      "counter": 0
+    },
+    "TreasureRoomRelics": {
+      "seed": 1440117335,
+      "counter": 0
+    }
+  },
   "before_piles": {
     "hand_ordered": [
       {
-        "id": "CHAOS",
+        "id": "VOID_FORM",
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_DEFECT",
+        "id": "FALLING_STAR",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
+        "id": "DEFEND_REGENT",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
+        "id": "STRIKE_REGENT",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
+        "id": "VENERATE",
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_DEFECT",
+        "id": "DEFEND_REGENT",
         "is_upgraded": false
       }
     ],
     "draw_pile_ordered": [
       {
-        "id": "STRIKE_DEFECT",
+        "id": "STRIKE_REGENT",
         "is_upgraded": false
       },
       {
-        "id": "DEFEND_DEFECT",
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
         "is_upgraded": false
       },
       {
@@ -310,15 +372,7 @@
         "is_upgraded": false
       },
       {
-        "id": "DUALCAST",
-        "is_upgraded": false
-      },
-      {
-        "id": "ZAP",
-        "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_DEFECT",
+        "id": "STRIKE_REGENT",
         "is_upgraded": false
       }
     ],
@@ -328,55 +382,51 @@
   "after_piles": {
     "hand_ordered": [
       {
-        "id": "DEFEND_DEFECT",
+        "id": "STRIKE_REGENT",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
+        "id": "DEFEND_REGENT",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
+        "id": "STRIKE_REGENT",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_DEFECT",
-        "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_DEFECT",
-        "is_upgraded": false
-      }
-    ],
-    "draw_pile_ordered": [
-      {
-        "id": "STRIKE_DEFECT",
-        "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_DEFECT",
+        "id": "DEFEND_REGENT",
         "is_upgraded": false
       },
       {
         "id": "ASCENDERS_BANE",
         "is_upgraded": false
-      },
+      }
+    ],
+    "draw_pile_ordered": [
       {
-        "id": "DUALCAST",
-        "is_upgraded": false
-      },
-      {
-        "id": "ZAP",
-        "is_upgraded": false
-      },
-      {
-        "id": "DEFEND_DEFECT",
+        "id": "STRIKE_REGENT",
         "is_upgraded": false
       }
     ],
     "discard_pile_ordered": [
       {
-        "id": "CHAOS",
+        "id": "FALLING_STAR",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "VENERATE",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
         "is_upgraded": false
       }
     ],

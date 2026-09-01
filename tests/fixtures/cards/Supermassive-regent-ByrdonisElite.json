@@ -11,6 +11,7 @@
   "powers": [],
   "enchantment": null,
   "enchant_amount": null,
+  "selections": [],
   "game": {
     "steam_buildid": "23811903",
     "release": "v0.107.1"
@@ -33,7 +34,9 @@
       "discard_pile_count": 0,
       "exhaust_pile_count": 0,
       "gold": 99,
-      "stars": 9,
+      "stars": 3,
+      "orbs": [],
+      "orb_slots": null,
       "hand": [
         {
           "index": 0,
@@ -70,17 +73,6 @@
         },
         {
           "index": 3,
-          "id": "ASCENDERS_BANE",
-          "name": "Ascender's Bane",
-          "type": "Curse",
-          "cost": "0",
-          "can_play": false,
-          "unplayable_reason": "HasUnplayableKeyword",
-          "target_type": "None",
-          "is_upgraded": false
-        },
-        {
-          "index": 4,
           "id": "STRIKE_REGENT",
           "name": "Strike",
           "type": "Attack",
@@ -88,6 +80,17 @@
           "can_play": true,
           "unplayable_reason": null,
           "target_type": "AnyEnemy",
+          "is_upgraded": false
+        },
+        {
+          "index": 4,
+          "id": "VENERATE",
+          "name": "Venerate",
+          "type": "Skill",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
           "is_upgraded": false
         },
         {
@@ -155,7 +158,9 @@
       "discard_pile_count": 1,
       "exhaust_pile_count": 0,
       "gold": 99,
-      "stars": 9,
+      "stars": 3,
+      "orbs": [],
+      "orb_slots": null,
       "hand": [
         {
           "index": 0,
@@ -181,17 +186,6 @@
         },
         {
           "index": 2,
-          "id": "ASCENDERS_BANE",
-          "name": "Ascender's Bane",
-          "type": "Curse",
-          "cost": "0",
-          "can_play": false,
-          "unplayable_reason": "HasUnplayableKeyword",
-          "target_type": "None",
-          "is_upgraded": false
-        },
-        {
-          "index": 3,
           "id": "STRIKE_REGENT",
           "name": "Strike",
           "type": "Attack",
@@ -199,6 +193,17 @@
           "can_play": true,
           "unplayable_reason": null,
           "target_type": "AnyEnemy",
+          "is_upgraded": false
+        },
+        {
+          "index": 3,
+          "id": "VENERATE",
+          "name": "Venerate",
+          "type": "Skill",
+          "cost": "1",
+          "can_play": true,
+          "unplayable_reason": null,
+          "target_type": "Self",
           "is_upgraded": false
         },
         {
@@ -248,6 +253,13 @@
     "menu_screen": null,
     "menu_options": null
   },
+  "history": {
+    "cards_played": 0,
+    "cards_drawn": 5,
+    "cards_generated": 1,
+    "orbs_channeled": 0,
+    "lightning_orbs_channeled": 0
+  },
   "before_piles": {
     "hand_ordered": [
       {
@@ -263,11 +275,11 @@
         "is_upgraded": false
       },
       {
-        "id": "ASCENDERS_BANE",
+        "id": "STRIKE_REGENT",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_REGENT",
+        "id": "VENERATE",
         "is_upgraded": false
       },
       {
@@ -277,14 +289,6 @@
     ],
     "draw_pile_ordered": [
       {
-        "id": "DEFEND_REGENT",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_REGENT",
-        "is_upgraded": false
-      },
-      {
         "id": "STRIKE_REGENT",
         "is_upgraded": false
       },
@@ -293,7 +297,15 @@
         "is_upgraded": false
       },
       {
-        "id": "VENERATE",
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "ASCENDERS_BANE",
         "is_upgraded": false
       },
       {
@@ -315,11 +327,11 @@
         "is_upgraded": false
       },
       {
-        "id": "ASCENDERS_BANE",
+        "id": "STRIKE_REGENT",
         "is_upgraded": false
       },
       {
-        "id": "STRIKE_REGENT",
+        "id": "VENERATE",
         "is_upgraded": false
       },
       {
@@ -329,14 +341,6 @@
     ],
     "draw_pile_ordered": [
       {
-        "id": "DEFEND_REGENT",
-        "is_upgraded": false
-      },
-      {
-        "id": "STRIKE_REGENT",
-        "is_upgraded": false
-      },
-      {
         "id": "STRIKE_REGENT",
         "is_upgraded": false
       },
@@ -345,7 +349,15 @@
         "is_upgraded": false
       },
       {
-        "id": "VENERATE",
+        "id": "STRIKE_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "DEFEND_REGENT",
+        "is_upgraded": false
+      },
+      {
+        "id": "ASCENDERS_BANE",
         "is_upgraded": false
       },
       {

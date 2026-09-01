@@ -21,7 +21,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -53,7 +53,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(471), Card(471), Card(471), Card(130), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -85,7 +85,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(473), Card(132), Card(473), Card(132), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -115,7 +115,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -143,7 +143,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(471), Card(130), Card(545), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -175,8 +175,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash))
-            .Enemy(defId: 17, hp: 27, maxHp: 27, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 27, maxHp: 27, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -205,7 +205,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -237,7 +237,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(IC.AscendersBane), Card(532), Card(474), Card(179), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -266,8 +266,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.AscendersBane), Card(IC.Bash), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 27, maxHp: 27, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 27, maxHp: 27, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -296,7 +296,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(474), Card(474), Card(133), Card(532), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -324,7 +324,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.Bash))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -350,7 +350,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(130), Card(471), Card(130), Card(471), Card(156))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -383,7 +383,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -413,7 +413,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(471), Card(130), Card(IC.AscendersBane), Card(545), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -445,8 +445,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.DefendIronclad), Card(IC.AscendersBane))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -476,7 +476,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(471), Card(545), Card(130), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -509,7 +509,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.AscendersBane), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.Bash))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -535,7 +535,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -563,7 +563,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -593,7 +593,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -625,7 +625,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(471), Card(156), Card(IC.AscendersBane), Card(471), Card(545))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -659,7 +659,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -687,7 +687,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(474), Card(133), Card(474), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -716,7 +716,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(524), Card(132), Card(132), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -747,7 +747,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.AscendersBane), Card(IC.DefendIronclad), Card(IC.Bash), Card(IC.StrikeIronclad), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -773,8 +773,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 27, maxHp: 27, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 27, maxHp: 27, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -803,7 +803,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(524), Card(132), Card(473), Card(49), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -833,7 +833,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.DefendIronclad), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -859,7 +859,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -887,7 +887,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(IC.AscendersBane), Card(524), Card(473), Card(49), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -916,7 +916,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(130), Card(471), Card(IC.AscendersBane), Card(156), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -948,7 +948,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(IC.AscendersBane), Card(156), Card(471), Card(545), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -980,7 +980,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(524), Card(473), Card(473), Card(132), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -1011,7 +1011,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -1044,7 +1044,7 @@ public class CardCaptureTests
             .PlayerHp(62, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -1070,8 +1070,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -1100,7 +1100,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(471), Card(130), Card(156), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1133,7 +1133,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(471), Card(IC.AscendersBane), Card(471), Card(130), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1167,7 +1167,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -1195,7 +1195,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -1223,7 +1223,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -1255,7 +1255,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -1285,7 +1285,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(132), Card(IC.AscendersBane), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -1316,7 +1316,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(IC.AscendersBane), Card(473), Card(473), Card(524), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -1347,7 +1347,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(545), Card(471), Card(471), Card(471), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1379,7 +1379,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -1405,7 +1405,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -1424,6 +1424,49 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void Chaos_Base_ByrdonisElite_Defect_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Chaos --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(82), Card(545), Card(130), Card(471), Card(156), Card(130))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(471), Card(130), Card(471), Card(130), Card(IC.AscendersBane), Card(471))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OrbCapacity = 3;
+        fight.State.BaseOrbSlots = 3;
+        fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
+        fight.State.CardsDrawnThisCombat = 5;
+        fight.State.CardsGeneratedThisCombat = 1;
+        fight.State.LightningOrbsChanneledThisCombat = 1;
+        fight.State.ShuffleRng = new CountingRandom(1347594942, 10);
+        fight.State.TargetRng = new CountingRandom(565245502, 0);
+        fight.State.CardSelectionRng = new CountingRandom(-588813869, 0);
+        fight.State.CardGenerationRng = new CountingRandom(2044740623, 0);
+        fight.State.EnergyCostRng = new CountingRandom(1817943625, 0);
+        fight.State.OrbGenerationRng = new CountingRandom(287263396, 0);
+        fight.State.NicheHpRng = new CountingRandom(-463219012, 1);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.OrbCapacity);
+        Assert.Equal(2, fight.State.Orbs.Count);
+        Assert.Equal(OrbType.Lightning, fight.State.Orbs[0].Type);
+        Assert.Equal(OrbType.Frost, fight.State.Orbs[1].Type);
+        fight.PlayerPowersAre();
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
     public void Charge_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -1433,7 +1476,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -1471,7 +1514,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(130), Card(130), Card(IC.AscendersBane), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1504,7 +1547,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -1533,7 +1576,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(130), Card(130), Card(471), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1566,7 +1609,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.AscendersBane), Card(IC.Bash), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -1592,7 +1635,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(156), Card(471), Card(130), Card(130), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1624,7 +1667,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -1658,7 +1701,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -1686,7 +1729,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(545), Card(471), Card(471), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1719,7 +1762,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -1747,7 +1790,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -1777,7 +1820,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(130), Card(IC.AscendersBane), Card(471), Card(130), Card(156))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1809,7 +1852,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(156), Card(130), Card(471), Card(545), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1841,7 +1884,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -1870,7 +1913,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(130), Card(471), Card(545), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -1907,7 +1950,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(473), Card(473), Card(473), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -1938,7 +1981,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -1969,7 +2012,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(130), Card(471), Card(130), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -2002,7 +2045,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(130), Card(471), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -2035,7 +2078,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -2063,7 +2106,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(132), Card(49), Card(IC.AscendersBane), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2094,7 +2137,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(IC.AscendersBane), Card(532), Card(474), Card(179), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -2122,7 +2165,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(471), Card(156), Card(IC.AscendersBane), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -2155,7 +2198,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(474), Card(474), Card(133), Card(532), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -2183,7 +2226,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -2213,7 +2256,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -2245,7 +2288,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(473), Card(473), Card(132), Card(49), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2276,7 +2319,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(471), Card(130), Card(130), Card(130), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -2310,7 +2353,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -2337,7 +2380,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(132), Card(IC.AscendersBane), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2367,7 +2410,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2399,7 +2442,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(49), Card(473), Card(473), Card(132), Card(473), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2429,7 +2472,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2460,7 +2503,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 6);
 
         fight.Play(index: 0, target: 0);
@@ -2494,7 +2537,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(IC.AscendersBane), Card(130), Card(156), Card(471), Card(545))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -2526,7 +2569,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(132), Card(132), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2556,7 +2599,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -2584,7 +2627,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(49), Card(473), Card(473), Card(132), Card(473), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2614,7 +2657,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(156), Card(IC.AscendersBane), Card(545), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -2647,7 +2690,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(132), Card(473), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2678,7 +2721,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(473), Card(132), Card(IC.AscendersBane), Card(49), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2709,7 +2752,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(473), Card(132), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2740,7 +2783,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -2768,7 +2811,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(132), Card(132), Card(473), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2799,7 +2842,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2829,7 +2872,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -2861,7 +2904,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -2887,7 +2930,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(IC.AscendersBane), Card(471), Card(130), Card(156), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -2919,7 +2962,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(473), Card(49), Card(132), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2949,7 +2992,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(IC.AscendersBane), Card(524), Card(473), Card(49), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -2979,7 +3022,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3011,7 +3054,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(471), Card(471), Card(130), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -3042,7 +3085,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(IC.AscendersBane), Card(532), Card(179), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -3072,7 +3115,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(471), Card(130), Card(130), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -3105,7 +3148,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(473), Card(473), Card(132), Card(524), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3135,7 +3178,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(49), Card(473), Card(473), Card(473), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3166,7 +3209,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(545), Card(IC.AscendersBane), Card(471), Card(130), Card(156))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -3198,7 +3241,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(IC.AscendersBane), Card(524), Card(49), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3230,8 +3273,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3260,8 +3303,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3281,6 +3324,37 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void Eradicate_Base_AeonglassBoss_Necrobinder_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Eradicate --encounter AeonglassBoss --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(171), Card(132), Card(49), Card(524), Card(473), Card(473))
+            .PlayerHp(52, 66)
+            .Energy(9)
+            .Draw(Card(132), Card(IC.AscendersBane), Card(473), Card(132), Card(132), Card(473))
+            .Enemy(defId: 1, hp: 535, maxHp: 535, intent: new Intent(IntentType.Attack, 26), buffs: [new BuffState(BuffId.WitheringPresence, 6), new BuffState(BuffId.Artifact, 3)]);
+        fight.State.OstyHp = 1;
+        fight.State.OstyMaxHp = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(52, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(0, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        fight.PlayerPowersAre();
+        Assert.Equal(436, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(5, fight.EnemyBuffAmount(BuffId.WitheringPresence, 0));
+        Assert.Equal(3, fight.EnemyBuffAmount(BuffId.Artifact, 0));
+        Assert.Equal(1, fight.State.OstyHp);
+        Assert.Equal(1, fight.State.OstyMaxHp);
+    }
+
+    [Fact]
     public void Expose_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -3290,7 +3364,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3317,7 +3391,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -3347,7 +3421,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3374,7 +3448,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3405,7 +3479,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(132), Card(132), Card(IC.AscendersBane), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3436,8 +3510,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3468,7 +3542,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(IC.AscendersBane), Card(156), Card(130), Card(130), Card(545))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -3501,7 +3575,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3532,7 +3606,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(524), Card(473), Card(132), Card(132), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3562,7 +3636,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3588,7 +3662,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(471), Card(130), Card(IC.AscendersBane), Card(156))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -3620,7 +3694,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.AscendersBane), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3646,7 +3720,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(IC.AscendersBane), Card(545), Card(471), Card(156))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -3678,7 +3752,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.Bash))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3704,7 +3778,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(IC.AscendersBane), Card(524), Card(49), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3734,7 +3808,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.AscendersBane), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3760,7 +3834,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(471), Card(471), Card(130), Card(130), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -3794,7 +3868,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(IC.AscendersBane), Card(49), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3825,7 +3899,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(532), Card(133), Card(133), Card(IC.AscendersBane), Card(474), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -3854,7 +3928,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3884,7 +3958,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(132), Card(132), Card(473), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -3916,7 +3990,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(130), Card(IC.AscendersBane), Card(130), Card(545), Card(156))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -3948,8 +4022,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -3978,7 +4052,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(532), Card(133), Card(133), Card(474), Card(474), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4007,7 +4081,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(471), Card(130), Card(156), Card(545), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -4040,7 +4114,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(474), Card(474), Card(532), Card(IC.AscendersBane), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4070,7 +4144,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(532), Card(474), Card(133), Card(133), Card(133), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4098,7 +4172,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(532), Card(IC.AscendersBane), Card(179), Card(474), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4127,7 +4201,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(130), Card(130), Card(IC.AscendersBane), Card(130), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -4159,7 +4233,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(130), Card(156), Card(545), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -4193,7 +4267,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(471), Card(471), Card(130), Card(545))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -4227,7 +4301,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -4259,7 +4333,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(524), Card(473), Card(132), Card(132), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -4289,7 +4363,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(474), Card(133), Card(532), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4318,7 +4392,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4347,7 +4421,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(130), Card(471), Card(156), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -4380,7 +4454,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -4406,7 +4480,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -4436,7 +4510,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(473), Card(132), Card(IC.AscendersBane), Card(49), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -4466,7 +4540,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -4498,7 +4572,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4526,7 +4600,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(471), Card(130), Card(IC.AscendersBane), Card(130), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -4558,7 +4632,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(545), Card(130), Card(471), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -4591,7 +4665,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4620,8 +4694,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -4650,7 +4724,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -4682,7 +4756,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(49), Card(473), Card(473), Card(132), Card(473), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -4713,7 +4787,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(473), Card(IC.AscendersBane), Card(473), Card(132), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -4744,7 +4818,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -4770,7 +4844,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4799,7 +4873,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4827,7 +4901,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(130), Card(130), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -4859,8 +4933,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -4890,7 +4964,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.DefendIronclad), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -4916,7 +4990,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -4945,7 +5019,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -4983,7 +5057,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(132), Card(132), Card(473), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -5014,7 +5088,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(130), Card(130), Card(130), Card(130), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5046,7 +5120,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(IC.AscendersBane), Card(130), Card(471), Card(130), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5080,7 +5154,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(471), Card(130), Card(130), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5113,7 +5187,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -5141,7 +5215,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(130), Card(130), Card(130), Card(156), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5175,7 +5249,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(524), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -5207,8 +5281,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 27, maxHp: 27, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 27, maxHp: 27, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -5237,7 +5311,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(IC.AscendersBane), Card(130), Card(156), Card(471), Card(545))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5270,8 +5344,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -5301,8 +5375,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -5332,7 +5406,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -5360,7 +5434,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -5388,7 +5462,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -5416,7 +5490,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -5446,7 +5520,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(471), Card(156), Card(130), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5478,7 +5552,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(473), Card(49), Card(132), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -5508,7 +5582,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(473), Card(132), Card(132), Card(473), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -5539,7 +5613,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(471), Card(471), Card(130), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5572,7 +5646,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(130), Card(471), Card(130), Card(471), Card(156))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5605,7 +5679,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -5633,7 +5707,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(471), Card(130), Card(IC.AscendersBane), Card(545), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5666,7 +5740,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -5694,7 +5768,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -5722,8 +5796,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -5752,7 +5826,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(132), Card(132), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -5782,7 +5856,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -5812,7 +5886,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(471), Card(545), Card(130), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5846,7 +5920,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -5872,7 +5946,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(IC.AscendersBane), Card(473), Card(132), Card(132), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -5902,7 +5976,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(IC.AscendersBane), Card(156), Card(471), Card(545), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -5934,8 +6008,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -5964,8 +6038,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -5994,8 +6068,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4), new BuffState(BuffId.Vulnerable, 2)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4), new BuffState(BuffId.Vulnerable, 2)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -6025,7 +6099,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(471), Card(130), Card(156), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -6057,7 +6131,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -6086,7 +6160,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -6115,7 +6189,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(545), Card(471), Card(471), Card(471), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -6146,7 +6220,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(132), Card(IC.AscendersBane), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6177,7 +6251,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6208,7 +6282,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(132), Card(473), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6239,7 +6313,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -6266,7 +6340,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -6295,7 +6369,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -6328,7 +6402,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(524), Card(IC.AscendersBane), Card(132), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6359,7 +6433,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(49), Card(473), Card(473), Card(132), Card(473), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6390,7 +6464,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(IC.AscendersBane), Card(156), Card(545), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -6425,7 +6499,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(IC.AscendersBane), Card(473), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6456,7 +6530,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -6482,7 +6556,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(IC.AscendersBane), Card(532), Card(474), Card(179), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -6511,7 +6585,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(473), Card(524), Card(IC.AscendersBane), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6542,7 +6616,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(130), Card(130), Card(IC.AscendersBane), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -6574,7 +6648,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(132), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6604,7 +6678,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(524), Card(473), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6635,7 +6709,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(474), Card(474), Card(133), Card(532), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -6664,7 +6738,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(474), Card(133), Card(474), Card(133), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -6693,7 +6767,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(132), Card(473), Card(473), Card(49), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6723,7 +6797,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -6751,7 +6825,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6782,7 +6856,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(IC.AscendersBane), Card(532), Card(179), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -6811,8 +6885,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.Bash), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 27, maxHp: 27, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 27, maxHp: 27, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -6841,7 +6915,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(49), Card(473), Card(473), Card(132), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6872,7 +6946,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -6904,7 +6978,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -6933,7 +7007,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.Bash), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -6960,7 +7034,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(473), Card(49), Card(132), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -6990,7 +7064,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.Bash), Card(IC.AscendersBane), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -7017,7 +7091,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -7049,7 +7123,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -7075,7 +7149,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7105,7 +7179,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -7133,7 +7207,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7163,7 +7237,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(49), Card(132), Card(473), Card(524), Card(132), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7193,7 +7267,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7223,7 +7297,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -7255,7 +7329,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(524), Card(132), Card(132), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7287,7 +7361,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(130), Card(130), Card(471), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -7318,7 +7392,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -7346,7 +7420,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(156), Card(471), Card(130), Card(130), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -7381,7 +7455,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.Bash), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -7407,7 +7481,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7437,7 +7511,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(524), Card(473), Card(473), Card(132), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7467,7 +7541,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(132), Card(473), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7497,7 +7571,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(473), Card(132), Card(132), Card(IC.AscendersBane), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7528,7 +7602,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7558,7 +7632,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(545), Card(471), Card(471), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -7590,8 +7664,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -7621,7 +7695,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -7650,7 +7724,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(IC.AscendersBane), Card(133), Card(532), Card(474), Card(179))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -7679,7 +7753,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(156), Card(130), Card(471), Card(545), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -7715,7 +7789,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -7741,7 +7815,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -7771,7 +7845,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(132), Card(473), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7801,7 +7875,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(49), Card(473), Card(473), Card(473), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7831,7 +7905,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(130), Card(471), Card(545), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -7863,7 +7937,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -7891,7 +7965,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(179), Card(474), Card(474), Card(133), Card(474), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -7920,7 +7994,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(IC.AscendersBane), Card(49), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -7949,7 +8023,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -7976,7 +8050,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8009,7 +8083,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8040,7 +8114,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(IC.AscendersBane), Card(130), Card(156), Card(471), Card(545))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -8072,7 +8146,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8102,7 +8176,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8134,7 +8208,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8166,8 +8240,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8196,7 +8270,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8228,7 +8302,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8260,7 +8334,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8292,7 +8366,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(133), Card(474), Card(179), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -8321,7 +8395,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(IC.AscendersBane), Card(132), Card(49), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8352,7 +8426,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -8380,7 +8454,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8410,7 +8484,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(471), Card(156), Card(130), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -8444,7 +8518,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(473), Card(132), Card(473), Card(49), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8476,7 +8550,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(471), Card(471), Card(130), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -8507,7 +8581,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(133), Card(474), Card(133), Card(474), Card(532))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -8535,7 +8609,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.DefendIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8563,7 +8637,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(473), Card(132), Card(132), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8594,7 +8668,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(524), Card(132), Card(132), Card(IC.AscendersBane), Card(473), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8625,7 +8699,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(130), Card(471), Card(130), Card(471), Card(156))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -8658,7 +8732,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8684,7 +8758,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(471), Card(130), Card(IC.AscendersBane), Card(545), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -8716,7 +8790,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(132), Card(473), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8747,7 +8821,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.Bash), Card(IC.DefendIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8773,7 +8847,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(471), Card(545), Card(130), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -8806,7 +8880,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(IC.AscendersBane), Card(524), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8837,7 +8911,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8869,7 +8943,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -8897,8 +8971,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -8927,7 +9001,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(524), Card(473), Card(473), Card(132), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8957,7 +9031,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(132), Card(IC.AscendersBane), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -8987,7 +9061,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(532), Card(474), Card(179), Card(133), Card(474), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -9016,7 +9090,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(IC.AscendersBane), Card(156), Card(471), Card(545), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9049,7 +9123,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(473), Card(132), Card(IC.AscendersBane), Card(49), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -9080,7 +9154,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(IC.AscendersBane), Card(132), Card(473), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -9111,7 +9185,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -9143,7 +9217,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(532), Card(133), Card(474), Card(179), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -9171,7 +9245,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -9201,7 +9275,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(473), Card(132), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -9231,7 +9305,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(49), Card(473), Card(473), Card(132), Card(473), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -9262,7 +9336,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -9292,7 +9366,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(IC.AscendersBane), Card(532), Card(474), Card(179), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -9320,7 +9394,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(471), Card(130), Card(156), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9353,7 +9427,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -9380,7 +9454,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(471), Card(130), Card(IC.AscendersBane), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9413,8 +9487,8 @@ public class CardCaptureTests
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
             .PlayerBuff(BuffId.CrueltyPower, 25)
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4), new BuffState(BuffId.Vulnerable, 2)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4), new BuffState(BuffId.Vulnerable, 2)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -9445,7 +9519,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(132), Card(473), Card(473), Card(132), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -9475,7 +9549,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(474), Card(532), Card(133), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -9503,7 +9577,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(545), Card(471), Card(471), Card(471), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9536,7 +9610,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -9563,7 +9637,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(179), Card(133), Card(IC.AscendersBane), Card(474), Card(133), Card(532))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -9591,7 +9665,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(IC.AscendersBane), Card(156), Card(545), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9623,7 +9697,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(130), Card(130), Card(IC.AscendersBane), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9646,6 +9720,36 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void Supermassive_Base_ByrdonisElite_Regent_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Supermassive --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(481), Card(179), Card(133), Card(474), Card(532), Card(133))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
+        CardEffects.GainStars(fight.State, 3);
+        fight.State.CardsDrawnThisCombat = 5;
+        fight.State.CardsGeneratedThisCombat = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(8, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Single(fight.State.DiscardPile);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.Stars);
+        fight.PlayerPowersAre();
+        Assert.Equal(82, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
     public void Survivor_Base_ByrdonisElite_Ironclad_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -9655,7 +9759,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -9687,7 +9791,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(156), Card(130), Card(130), Card(471), Card(471), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9719,7 +9823,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(49), Card(132), Card(IC.AscendersBane), Card(473), Card(132), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -9749,7 +9853,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(133), Card(179), Card(474), Card(474), Card(474), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -9778,7 +9882,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(156), Card(471), Card(130), Card(130), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9812,7 +9916,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(545), Card(471), Card(471), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9845,7 +9949,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(545), Card(130), Card(IC.AscendersBane), Card(471), Card(130), Card(156))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9879,7 +9983,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(133), Card(IC.AscendersBane), Card(532), Card(179), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -9908,7 +10012,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(156), Card(130), Card(471), Card(545), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -9940,7 +10044,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(132), Card(132), Card(524))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -9970,7 +10074,7 @@ public class CardCaptureTests
             .PlayerHp(43, 75)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(532), Card(474), Card(133), Card(133), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -9999,7 +10103,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -10027,7 +10131,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10059,7 +10163,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.AscendersBane), Card(IC.DefendIronclad), Card(IC.DefendIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10085,7 +10189,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(130), Card(471), Card(545), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -10118,8 +10222,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10150,7 +10254,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(IC.AscendersBane), Card(473), Card(132), Card(132), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -10180,8 +10284,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 17, hp: 28, maxHp: 28, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 28, maxHp: 28, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10211,7 +10315,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10243,7 +10347,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(130), Card(471), Card(130), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -10276,7 +10380,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(132), Card(IC.AscendersBane), Card(473))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -10307,7 +10411,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10333,7 +10437,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(130), Card(471), Card(471), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -10365,7 +10469,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(532), Card(133), Card(133), Card(IC.AscendersBane), Card(474), Card(474))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -10394,7 +10498,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.DefendIronclad), Card(IC.Bash))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10420,7 +10524,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(473), Card(132), Card(473), Card(473), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -10450,7 +10554,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(49), Card(473), Card(473), Card(132), Card(473), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -10480,7 +10584,7 @@ public class CardCaptureTests
             .PlayerHp(61, 80)
             .Energy(9)
             .Draw(Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.StrikeIronclad), Card(IC.Bash), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10508,8 +10612,8 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.Bash))
-            .Enemy(defId: 17, hp: 27, maxHp: 27, buffs: [new BuffState(BuffId.Ravenous, 4)])
-            .Enemy(defId: 17, hp: 29, maxHp: 29, buffs: [new BuffState(BuffId.Ravenous, 4)]);
+            .Enemy(defId: 17, hp: 27, maxHp: 27, intent: new Intent(IntentType.Attack, 3, Hits: 2), buffs: [new BuffState(BuffId.Ravenous, 4)])
+            .Enemy(defId: 17, hp: 29, maxHp: 29, intent: new Intent(IntentType.Attack, 8), buffs: [new BuffState(BuffId.Ravenous, 4)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10540,7 +10644,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(471), Card(471), Card(156), Card(IC.AscendersBane), Card(130))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -10572,7 +10676,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(132), Card(473), Card(473), Card(524), Card(IC.AscendersBane), Card(132))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -10603,7 +10707,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(132), Card(473), Card(524), Card(132), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -10633,7 +10737,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(474), Card(474), Card(133), Card(IC.AscendersBane), Card(179), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 3);
 
         fight.Play(index: 0, target: 0);
@@ -10652,6 +10756,81 @@ public class CardCaptureTests
     }
 
     [Fact]
+    public void VoidForm_Base_ByrdonisElite_Regent_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card VoidForm --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(534), Card(179), Card(133), Card(474), Card(532), Card(133))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(474), Card(133), Card(474), Card(133), Card(IC.AscendersBane), Card(474))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
+        CardEffects.GainStars(fight.State, 3);
+        fight.State.CardsDrawnThisCombat = 5;
+        fight.State.CardsGeneratedThisCombat = 1;
+        fight.State.ShuffleRng = new CountingRandom(1347594942, 10);
+        fight.State.TargetRng = new CountingRandom(565245502, 0);
+        fight.State.CardSelectionRng = new CountingRandom(-588813869, 0);
+        fight.State.CardGenerationRng = new CountingRandom(2044740623, 0);
+        fight.State.EnergyCostRng = new CountingRandom(1817943625, 0);
+        fight.State.OrbGenerationRng = new CountingRandom(287263396, 0);
+        fight.State.NicheHpRng = new CountingRandom(-463219012, 1);
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(43, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(3, fight.State.Energy);
+        Assert.Single(fight.State.DrawPile);
+        Assert.Equal(5, fight.State.DiscardPile.Count);
+        Assert.Empty(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.Stars);
+        Assert.Equal(2, fight.PlayerBuffAmount(BuffId.VoidForm));
+        fight.PlayerPowersAre(BuffId.VoidForm);
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Strength, 0));
+    }
+
+    [Fact]
+    public void Voltaic_Base_ByrdonisElite_Defect_MatchesLiveCapture()
+    {
+        // Captured from the live game (v0.107.1) by
+        // scripts/capture_card.py --card Voltaic --encounter ByrdonisElite --seed ABCDEF.
+        // Every number below is the game's, not the emulator's.
+        var fight = Fight.Hand(Card(536), Card(545), Card(130), Card(471), Card(156), Card(130))
+            .PlayerHp(60, 75)
+            .Energy(9)
+            .Draw(Card(471), Card(130), Card(471), Card(130), Card(IC.AscendersBane), Card(471))
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
+        fight.State.OrbCapacity = 3;
+        fight.State.BaseOrbSlots = 3;
+        fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
+        fight.State.CardsDrawnThisCombat = 5;
+        fight.State.CardsGeneratedThisCombat = 1;
+        fight.State.LightningOrbsChanneledThisCombat = 1;
+
+        fight.Play(index: 0, target: 0);
+
+        Assert.Equal(60, fight.State.PlayerHp);
+        Assert.Equal(0, fight.State.PlayerBlock);
+        Assert.Equal(6, fight.State.Energy);
+        Assert.Equal(6, fight.State.DrawPile.Count);
+        Assert.Empty(fight.State.DiscardPile);
+        Assert.Single(fight.State.ExhaustPile);
+        Assert.Equal(3, fight.State.OrbCapacity);
+        Assert.Equal(2, fight.State.Orbs.Count);
+        Assert.Equal(OrbType.Lightning, fight.State.Orbs[0].Type);
+        Assert.Equal(OrbType.Lightning, fight.State.Orbs[1].Type);
+        fight.PlayerPowersAre();
+        Assert.Equal(90, fight.State.Enemies[0].Hp);
+        Assert.Equal(0, fight.State.Enemies[0].Block);
+        Assert.Equal(1, fight.EnemyBuffAmount(BuffId.Territorial, 0));
+    }
+
+    [Fact]
     public void WhiteNoise_Base_ByrdonisElite_Defect_MatchesLiveCapture()
     {
         // Captured from the live game (v0.107.1) by
@@ -10661,7 +10840,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(130), Card(IC.AscendersBane), Card(471), Card(471), Card(156), Card(471))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));
@@ -10693,7 +10872,7 @@ public class CardCaptureTests
             .PlayerHp(64, 80)
             .Energy(9)
             .Draw(Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.StrikeIronclad), Card(IC.DefendIronclad), Card(IC.AscendersBane), Card(IC.StrikeIronclad))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
 
         fight.Play(index: 0, target: 0);
 
@@ -10725,7 +10904,7 @@ public class CardCaptureTests
             .PlayerHp(52, 66)
             .Energy(9)
             .Draw(Card(473), Card(IC.AscendersBane), Card(132), Card(524), Card(473), Card(49))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OstyHp = 1;
         fight.State.OstyMaxHp = 1;
 
@@ -10755,7 +10934,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(IC.AscendersBane), Card(532), Card(474), Card(133), Card(133), Card(133))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         CardEffects.GainStars(fight.State, 9);
 
         fight.Play(index: 0, target: 0);
@@ -10783,7 +10962,7 @@ public class CardCaptureTests
             .PlayerHp(60, 75)
             .Energy(9)
             .Draw(Card(471), Card(130), Card(471), Card(156), Card(130), Card(IC.AscendersBane))
-            .Enemy(defId: 12, hp: 90, maxHp: 90, buffs: [new BuffState(BuffId.Territorial, 1)]);
+            .Enemy(defId: 12, hp: 90, maxHp: 90, intent: new Intent(IntentType.Attack, 17), buffs: [new BuffState(BuffId.Territorial, 1)]);
         fight.State.OrbCapacity = 3;
         fight.State.BaseOrbSlots = 3;
         fight.State.Orbs.Add(new OrbState(OrbType.Lightning));

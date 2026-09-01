@@ -230,6 +230,7 @@ internal sealed class Fight
         int block = 0,
         int defId = DummyEnemyDefId,
         int? maxHp = null,
+        Intent? intent = null,
         params BuffState[] buffs
     )
     {
@@ -247,6 +248,12 @@ internal sealed class Fight
                 MaxHp = maxHp ?? hp,
                 Block = block,
                 Buffs = [.. buffs],
+                // The intent the enemy was ANNOUNCING when the capture was taken. It only
+                // matters for a capture that runs past the turn boundary -- a card that
+                // ends the turn, where the enemy then acts on it -- and for the handful of
+                // cards that read the intent. A bare EnemyState announces nothing, so the
+                // enemy's turn was a no-op and the player took no damage.
+                CurrentIntent = intent ?? default,
             }
         );
         return this;
