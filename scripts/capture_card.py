@@ -270,6 +270,8 @@ def play_card(
     index: int,
     target_index: int,
     state: dict[str, Any],
+    picks: list[int] | None = None,
+    recorded: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {"action": "play_card", "card_index": index}
     enemies = (state.get("battle") or {}).get("enemies") or []
@@ -292,6 +294,8 @@ def play_card(
         base_url,
         card_count_before=_card_count(state),
         consumed=consumed,
+        picks=picks,
+        recorded=recorded,
     )
 
 
@@ -347,11 +351,101 @@ def _card_count(state: dict[str, Any]) -> int:
     )
 
 
+# The two shapes a card can stop and ask in. They are different screens with different
+# verbs, and a capture that cannot answer them is a capture that cannot record any card
+# that asks -- Wish, Dual Wield, and every tutor after them.
+SELECTION_STATES = {
+    # `NCombatPileCardSelectScreen` and friends: a list of cards drawn from a PILE.
+    "card_select": ("select_card", "index", "confirm_selection"),
+    # `NPlayerHand.IsInCardSelection`: the choice is made among the cards in HAND, so the
+    # mod addresses them by hand index through a different verb.
+    "hand_select": ("combat_select_card", "card_index", "combat_confirm_selection"),
+}
+
+# A selection that never resolves would spin here forever. Twelve is past any real card:
+# the widest is a multi-pick over a full hand.
+MAX_SELECTION_STEPS = 12
+
+
+def selection_screen(state: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
+    """Return the selection screen the game is sitting on, or None."""
+    kind = state.get("state_type")
+    if kind not in SELECTION_STATES:
+        return None
+    return kind, (state.get(kind) or {})
+
+
+def answer_selection(
+    base_url: str,
+    kind: str,
+    screen: dict[str, Any],
+    picks: list[int],
+    recorded: list[dict[str, Any]],
+    default_index: int = 0,
+) -> None:
+    """Answer one selection screen, recording what was offered and what was taken.
+
+    The OFFER is as much ground truth as the outcome, and it is the half a rebuilt fight
+    gets wrong most easily: Dual Wield's screen lists only the Attacks and Powers in hand,
+    so a capture that recorded the chosen card alone would say nothing about the filter.
+
+    Picks are consumed in order and run out into `default_index`, so `--select` only has
+    to name the choices that matter.
+
+    The default ADVANCES on a screen that stays open, which a screen taking several cards
+    does -- Charge takes two. Defaulting to 0 every time toggled the same card on and off
+    and the capture span until it hit the step cap.
+
+    Raises:
+        RuntimeError: if `--select` names an index the screen does not offer, or the
+            mod refuses the pick.
+
+    """
+    cards = screen.get("cards") or []
+    chosen = picks.pop(0) if picks else default_index
+    if cards and not 0 <= chosen < len(cards):
+        raise RuntimeError(
+            f"--select asked for index {chosen} of a {kind} screen offering "
+            f"{len(cards)} cards",
+        )
+
+    verb, key, confirm = SELECTION_STATES[kind]
+    recorded.append(
+        {
+            "kind": kind,
+            "screen_type": screen.get("screen_type") or screen.get("mode"),
+            "prompt": screen.get("prompt"),
+            "cards": [
+                {k: card.get(k) for k in ("index", "id", "name") if k in card}
+                for card in cards
+            ],
+            "chosen": chosen,
+        },
+    )
+
+    result = trace_real_game.post_action(base_url, {"action": verb, key: chosen})
+    if result.get("status") != "ok":
+        raise RuntimeError(f"{verb} failed on a {kind} screen: {result}")
+
+    # A screen that takes several cards confirms separately; one that takes a single card
+    # resolves on the pick and refuses the confirm. Only send it when the screen says so.
+    after = trace_real_game.wait_for_state(base_url, 0.4)
+    still = selection_screen(after)
+    if (
+        still is not None
+        and still[0] == kind
+        and (still[1].get("can_confirm") or False)
+    ):
+        trace_real_game.post_action(base_url, {"action": confirm})
+
+
 def wait_for_play_to_settle(
     base_url: str,
     card_count_before: int,
     consumed: bool = False,
     timeout: float = 30.0,
+    picks: list[int] | None = None,
+    recorded: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Wait until the played card has LEFT the play pile, then snapshot.
 
@@ -369,11 +463,46 @@ def wait_for_play_to_settle(
     this: Second Wind exhausts a whole hand one card at a time, and ten seconds was not
     enough for it. A refusal here is safe -- it declines to write a fixture rather than
     writing a wrong one -- but a refusal on a card that would have settled is a nuisance.
+
+    A card that ASKS never settles on its own: Wish sits on a pile-select screen and Dual
+    Wield on a hand-select one, and both used to time out here and be reported as "still
+    resolving". Answering the screen is part of playing the card, so it happens in this
+    loop, and the deadline is pushed out afterwards -- the time a screen was open is not
+    time the card spent failing to settle.
     """
+    picks = list(picks or [])
+    recorded = recorded if recorded is not None else []
+    steps = 0
+    # How many answers this screen has already taken, so a multi-pick screen advances
+    # instead of toggling one card forever.
+    answered_here = 0
     target = card_count_before - 1 if consumed else card_count_before
     deadline = time.monotonic() + timeout
     latest = trace_real_game.wait_for_state(base_url, 0.5)
     while time.monotonic() < deadline:
+        pending = selection_screen(latest)
+        if pending is not None:
+            steps += 1
+            if steps > MAX_SELECTION_STEPS:
+                raise RuntimeError(
+                    f"a {pending[0]} screen is still open after {MAX_SELECTION_STEPS} "
+                    "answers; the capture is looping rather than resolving.",
+                )
+            answer_selection(
+                base_url,
+                pending[0],
+                pending[1],
+                picks,
+                recorded,
+                default_index=answered_here,
+            )
+            answered_here += 1
+            deadline = time.monotonic() + timeout
+            latest = trace_real_game.wait_for_state(base_url, 0.5)
+            continue
+
+        answered_here = 0
+
         if _card_count(latest) >= target:
             # The count coming back is necessary and not sufficient, for two reasons that
             # meet here. A CONSUMED card's count returns the instant it leaves hand, before
@@ -414,6 +543,7 @@ def capture(
     enchantment: str | None = None,
     enchant_amount: float = 1.0,
     character: str = "IRONCLAD",
+    picks: list[int] | None = None,
 ) -> dict[str, Any]:
     if not reuse_run:
         wait_for_menu_options(base_url)
@@ -456,7 +586,15 @@ def capture(
         enchant_amount=enchant_amount,
     )
     assert_playable(before_state, index, card)
-    after_state = play_card(base_url, index, target_index, before_state)
+    selections: list[dict[str, Any]] = []
+    after_state = play_card(
+        base_url,
+        index,
+        target_index,
+        before_state,
+        picks=list(picks or []),
+        recorded=selections,
+    )
 
     before = trace_real_game.summarize_state(before_state)
     after = trace_real_game.summarize_state(after_state)
@@ -489,6 +627,9 @@ def capture(
         # for a reason nothing in it explains.
         "enchantment": enchantment,
         "enchant_amount": enchant_amount if enchantment else None,
+        # What the card ASKED, and what was answered. Empty for the cards that ask
+        # nothing, which is most of them; a card that asks cannot be rebuilt without it.
+        "selections": selections,
         "game": game_version(),
         "before": before,
         "after": after,
@@ -513,6 +654,7 @@ def default_out(
     powers: list[str],
     enchantment: str | None = None,
     character: str = "IRONCLAD",
+    picks: list[int] | None = None,
 ) -> Path:
     suffix = "-upgraded" if upgraded else ""
     # Staged powers change what the capture proves, so they belong in the filename --
@@ -524,10 +666,14 @@ def default_out(
         else ""
     )
     enchanted = f"-{enchantment.lower()}" if enchantment else ""
+    # Two captures of the same card that answered its screen differently are two
+    # different facts, the same way two captures with different staged powers are.
+    # Index 0 is the default and stays unmarked so existing filenames do not move.
+    picked = "-pick" + "".join(str(p) for p in picks) if picks and any(picks) else ""
     # The character is part of what a capture proves: the same card played by a
     # Necrobinder has Osty on the board and by an Ironclad does not.
     who = "" if character.upper() == "IRONCLAD" else f"-{character.lower()}"
-    return FIXTURES / f"{card}{suffix}{staged}{enchanted}{who}-{encounter}.json"
+    return FIXTURES / f"{card}{suffix}{staged}{enchanted}{picked}{who}-{encounter}.json"
 
 
 def main() -> None:
@@ -594,6 +740,15 @@ def main() -> None:
         metavar="POWER=AMOUNT[@target]",
         help="stage a power first, e.g. VULNERABLE_POWER=2 or STRENGTH_POWER=3@player",
     )
+    parser.add_argument(
+        "--select",
+        default="",
+        help=(
+            "comma-separated choices for the selection screens the card raises, in the "
+            "order they appear, e.g. --select 2 to take the third card offered. "
+            "Unspecified screens take index 0."
+        ),
+    )
     parser.add_argument("--out", type=Path)
     parser.add_argument("--base-url", default=trace_real_game.DEFAULT_BASE_URL)
     args = parser.parse_args()
@@ -613,6 +768,7 @@ def main() -> None:
         enchantment=args.enchantment,
         enchant_amount=args.enchant_amount,
         character=args.character,
+        picks=[int(x) for x in args.select.split(",") if x.strip()],
     )
 
     out = args.out or default_out(
@@ -622,6 +778,7 @@ def main() -> None:
         args.power,
         args.enchantment,
         args.character,
+        [int(x) for x in args.select.split(",") if x.strip()],
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8")

@@ -2545,14 +2545,19 @@ public static class CombatEngine
             case CardSelectionKind.AutoPlaySkillThrice:
                 if (index < state.Hand.Count)
                 {
-                    // `CardCmd.AutoPlay(card)` three times over -- the card leaves hand once
-                    // and is played from the queue, which is what an auto-play is.
+                    // `CardCmd.AutoPlay(card)` three times over on the SAME CardModel.
+                    // Queueing the instance three times made three cards: the live capture
+                    // shows one Defend in the discard and 15 block, and the emulator left
+                    // three Defends there -- two cards manufactured out of nothing, which
+                    // stay in the deck for the rest of the combat.
                     var chosenSkill = state.Hand[index];
                     state.Hand.RemoveAt(index);
-                    for (int i = 0; i < 3; i++)
-                    {
-                        state.AutoPlayQueue.Add(chosenSkill);
-                    }
+                    state.AutoPlayQueue.Add(
+                        chosenSkill with
+                        {
+                            ReplayCount = chosenSkill.ReplayCount + 2,
+                        }
+                    );
                 }
 
                 break;
@@ -3942,7 +3947,17 @@ public static class CombatEngine
         // Snapshotted before the effects for the same reason as the hand-played path:
         // a Rebound applied by THIS card must not redirect this card.
         int reboundBefore = BuffSystem.Get(state.PlayerBuffs, BuffId.Rebound);
-        Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
+        // `ReplayCount` is the card playing again, not another card: the hand-played path
+        // has always honoured it and this one did not, so a replay granted to a card that
+        // is then auto-played was simply lost. It is also how Decisions, Decisions gets
+        // its three plays out of ONE card -- the game calls `CardCmd.AutoPlay` three times
+        // on the same model, so the effects happen three times and the card comes to rest
+        // in one pile, once.
+        for (int play = 0; play <= card.ReplayCount; play++)
+        {
+            Effects.CardEffects.Apply(def, card.Upgraded, state, rng, card);
+        }
+
         state.TargetEnemyIndex = callerTarget;
         if (def.Type == CardType.Attack)
         {

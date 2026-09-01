@@ -152,6 +152,22 @@
   python scripts/generate_card_capture_tests.py               # -> Cards/CardCaptures.g.cs
   ```
 
+  `--select` answers the selection screens a card raises, in the order they appear:
+
+  ```
+  python scripts/capture_card.py --card Wish --select 5        # take the sixth card offered
+  python scripts/capture_card.py --card Charge                 # a two-pick screen; 0 then 1
+  ```
+
+  A card that ASKS cannot be captured without this -- it sits on its screen and the play
+  never settles, which the tool used to report as "still resolving". Both screen shapes
+  are handled: `card_select` (a pile, answered with `select_card`) and `hand_select` (the
+  hand, answered with `combat_select_card`). Unspecified picks default to 0, then 1, then
+  2 as a screen stays open, because a screen taking several cards TOGGLES and answering it
+  with 0 twice selects and deselects the same card. What the screen OFFERED is recorded
+  too, and asserted: the offer is where a filter lives, and Dual Wield listing only the
+  Attacks in hand is a fact about the card that its outcome alone does not show.
+
   `--enchantment Sharp` stages an enchantment on the card first, through the mod's
   `debug_enchant_card`. That exists for one question `decompiled/` cannot settle:
   whether an enchantment reaches a card whose damage is a CALCULATION rather than a

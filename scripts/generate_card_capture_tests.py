@@ -310,6 +310,37 @@ def test_name(fixture: dict[str, Any]) -> str:
     return "_".join(parts) + "_MatchesLiveCapture"
 
 
+def selection_lines(fixture: dict[str, Any]) -> list[str]:
+    """Rebuild the screens the card raised, and answer them the way the capture did.
+
+    A card that ASKS is not capturable without this: the game sits on its screen and the
+    play never settles. What the screen OFFERED is asserted as well as what was taken,
+    because the offer is where the filter lives -- Dual Wield lists the Attacks and the
+    Powers in hand and nothing else, and a test that only checked the outcome would pass
+    against an emulator that offered the whole hand.
+
+    Both sides index the same way: the mod reports the offered cards in pile order and
+    `PendingCardSelection.Candidates` is in pile order, so the recorded choice is the
+    action the emulator takes.
+    """
+    lines: list[str] = []
+    for step in fixture.get("selections") or []:
+        cards = step.get("cards") or []
+        chosen = step["chosen"]
+        taken = next((c.get("id") for c in cards if c.get("index") == chosen), None)
+        prompt = step.get("prompt")
+        screen = step.get("screen_type")
+        lines += [
+            "",
+            f"        // The game stopped and asked: {prompt!r} ({screen}),",
+            f"        // offering {len(cards)} cards.",
+            "        Assert.NotNull(fight.Pending);",
+            f"        Assert.Equal({len(cards)}, fight.Pending!.Candidates.Count);",
+            f"        fight.Choose({chosen}); // {taken}",
+        ]
+    return lines
+
+
 def render_test(
     fixture: dict[str, Any],
     constants: dict[str, str],
@@ -429,6 +460,7 @@ def render_test(
     lines += [
         "",
         f"        fight.Play(index: {hand_index}, target: {fixture['target_index']});",
+        *selection_lines(fixture),
         "",
         f"        Assert.Equal({after_player['hp']}, fight.State.PlayerHp);",
         f"        Assert.Equal({after_player['block']}, fight.State.PlayerBlock);",
